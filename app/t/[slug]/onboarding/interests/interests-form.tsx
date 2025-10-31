@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Loader2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { createClient } from "@/lib/supabase/client"
 
 interface InterestsFormProps {
   tenant: {
@@ -27,6 +28,7 @@ interface InterestsFormProps {
 
 export function InterestsForm({ tenant, resident, interests, residentInterests, isSuperAdmin }: InterestsFormProps) {
   const router = useRouter()
+  const supabase = createClient()
   const [isLoading, setIsLoading] = useState(false)
   const [selectedInterests, setSelectedInterests] = useState<string[]>(residentInterests)
 
@@ -47,8 +49,27 @@ export function InterestsForm({ tenant, resident, interests, residentInterests, 
         return
       }
 
-      // TODO: Save interests to database
-      console.log("[v0] Interests:", selectedInterests)
+      // First, delete existing interests
+      const { error: deleteError } = await supabase.from("user_interests").delete().eq("user_id", resident.id)
+
+      if (deleteError) {
+        console.error("[v0] Error deleting old interests:", deleteError)
+        return
+      }
+
+      // Then insert new interests
+      if (selectedInterests.length > 0) {
+        const { error: insertError } = await supabase
+          .from("user_interests")
+          .insert(selectedInterests.map((interestId) => ({ user_id: resident.id, interest_id: interestId })))
+
+        if (insertError) {
+          console.error("[v0] Error inserting interests:", insertError)
+          return
+        }
+      }
+
+      console.log("[v0] Interests saved successfully")
       router.push(`/t/${tenant.slug}/onboarding/skills`)
     } catch (error) {
       console.error("[v0] Error updating interests:", error)

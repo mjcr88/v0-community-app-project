@@ -13,26 +13,25 @@ import { Badge } from "@/components/ui/badge"
 import { Combobox } from "@/components/ui/combobox"
 import { COUNTRIES, LANGUAGES } from "@/lib/data/countries-languages"
 import { createClient } from "@/lib/supabase/client"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 const COUNTRY_CODES = [
-  { code: "+1", country: "US/Canada" },
-  { code: "+44", country: "UK" },
-  { code: "+49", country: "Germany" },
-  { code: "+33", country: "France" },
-  { code: "+34", country: "Spain" },
-  { code: "+39", country: "Italy" },
-  { code: "+351", country: "Portugal" },
-  { code: "+506", country: "Costa Rica" },
-  { code: "+52", country: "Mexico" },
-  { code: "+55", country: "Brazil" },
-  { code: "+54", country: "Argentina" },
-  { code: "+57", country: "Colombia" },
-  { code: "+61", country: "Australia" },
-  { code: "+64", country: "New Zealand" },
-  { code: "+81", country: "Japan" },
-  { code: "+86", country: "China" },
-  { code: "+91", country: "India" },
+  { value: "+1", label: "+1 (US/Canada)" },
+  { value: "+44", label: "+44 (UK)" },
+  { value: "+49", label: "+49 (Germany)" },
+  { value: "+33", label: "+33 (France)" },
+  { value: "+34", label: "+34 (Spain)" },
+  { value: "+39", label: "+39 (Italy)" },
+  { value: "+351", label: "+351 (Portugal)" },
+  { value: "+506", label: "+506 (Costa Rica)" },
+  { value: "+52", label: "+52 (Mexico)" },
+  { value: "+55", label: "+55 (Brazil)" },
+  { value: "+54", label: "+54 (Argentina)" },
+  { value: "+57", label: "+57 (Colombia)" },
+  { value: "+61", label: "+61 (Australia)" },
+  { value: "+64", label: "+64 (New Zealand)" },
+  { value: "+81", label: "+81 (Japan)" },
+  { value: "+86", label: "+86 (China)" },
+  { value: "+91", label: "+91 (India)" },
 ]
 
 interface ProfileFormProps {
@@ -213,21 +212,17 @@ export function ProfileForm({ tenant, resident, isSuperAdmin }: ProfileFormProps
             <div className="space-y-2">
               <Label htmlFor="phone">Phone Number</Label>
               <div className="flex gap-2">
-                <Select
-                  value={formData.countryCode}
-                  onValueChange={(value) => setFormData({ ...formData, countryCode: value })}
-                >
-                  <SelectTrigger className="w-[140px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {COUNTRY_CODES.map((item) => (
-                      <SelectItem key={item.code} value={item.code}>
-                        {item.code} {item.country}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="w-[100px]">
+                  <Combobox
+                    options={COUNTRY_CODES}
+                    value={formData.countryCode}
+                    onValueChange={(value) => setFormData({ ...formData, countryCode: value })}
+                    placeholder={formData.countryCode}
+                    searchPlaceholder="Search..."
+                    emptyText="Not found"
+                    displayValue={formData.countryCode}
+                  />
+                </div>
                 <Input
                   id="phone"
                   type="tel"

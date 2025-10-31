@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Input } from "@/components/ui/input"
 import { Loader2 } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
 
 interface JourneyFormProps {
   tenant: {
@@ -50,6 +51,7 @@ const JOURNEY_STAGES = [
 
 export function JourneyForm({ tenant, resident, isSuperAdmin }: JourneyFormProps) {
   const router = useRouter()
+  const supabase = createClient()
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
     journeyStage: resident.journey_stage || "",
@@ -67,8 +69,20 @@ export function JourneyForm({ tenant, resident, isSuperAdmin }: JourneyFormProps
         return
       }
 
-      // TODO: Save journey data to database
-      console.log("[v0] Journey data:", formData)
+      const { error } = await supabase
+        .from("users")
+        .update({
+          journey_stage: formData.journeyStage,
+          estimated_move_in_date: formData.estimatedMoveInDate || null,
+        })
+        .eq("id", resident.id)
+
+      if (error) {
+        console.error("[v0] Error updating journey:", error)
+        return
+      }
+
+      console.log("[v0] Journey data saved successfully")
       router.push(`/t/${tenant.slug}/onboarding/profile`)
     } catch (error) {
       console.error("[v0] Error updating journey:", error)

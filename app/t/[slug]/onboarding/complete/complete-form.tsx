@@ -60,6 +60,35 @@ export function CompleteForm({ tenant, resident, isSuperAdmin }: CompleteFormPro
     }
   }
 
+  const handleClose = async () => {
+    setIsLoading(true)
+
+    try {
+      if (!isSuperAdmin) {
+        const { error } = await supabase
+          .from("users")
+          .update({
+            onboarding_completed: true,
+            onboarding_completed_at: new Date().toISOString(),
+          })
+          .eq("id", resident.id)
+
+        if (error) {
+          console.error("[v0] Error completing onboarding:", error)
+          return
+        }
+
+        console.log("[v0] Onboarding marked as complete for resident:", resident.id)
+      }
+
+      router.push(`/t/${tenant.slug}/dashboard`)
+    } catch (error) {
+      console.error("[v0] Error completing onboarding:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
     <Card className="text-center">
       <CardHeader className="space-y-6 pb-8">
@@ -116,7 +145,8 @@ export function CompleteForm({ tenant, resident, isSuperAdmin }: CompleteFormPro
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 pt-4">
-          <Button variant="outline" onClick={() => router.push(`/t/${tenant.slug}/dashboard`)} className="flex-1">
+          <Button variant="outline" onClick={handleClose} disabled={isLoading} className="flex-1 bg-transparent">
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Close
           </Button>
           <Button onClick={handleComplete} disabled={isLoading} className="flex-1">

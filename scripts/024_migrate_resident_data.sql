@@ -34,7 +34,7 @@ INSERT INTO users (
 SELECT 
   r.auth_user_id,  -- Use auth_user_id as the id (links to auth.users)
   r.email,
-  'resident'::user_role,
+  'resident',  -- Use TEXT instead of enum cast
   r.tenant_id,
   r.first_name,
   r.last_name,
@@ -51,7 +51,7 @@ SELECT
   r.estimated_move_in_date,
   COALESCE(r.onboarding_completed, false),
   r.onboarding_completed_at,
-  r.invite_token::uuid,
+  r.invite_token,  -- Remove uuid cast, both are TEXT
   r.invited_at,
   r.created_at,
   r.updated_at

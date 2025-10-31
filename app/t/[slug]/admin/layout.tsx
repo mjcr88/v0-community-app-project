@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/sidebar"
 import { Home, MapPin, Users, Building2, LogOut, HeartHandshake, Lightbulb } from "lucide-react"
 import Link from "next/link"
+import { UserAvatarMenu } from "@/components/user-avatar-menu"
 
 export default async function TenantAdminLayout({
   children,
@@ -50,11 +51,16 @@ export default async function TenantAdminLayout({
   }
 
   let isTenantAdmin = false
+  let residentData = null
   if (!isSuperAdmin) {
-    const { data: residentData } = await supabase
+    const { data } = await supabase
       .from("residents")
       .select(`
         id,
+        first_name,
+        last_name,
+        email,
+        profile_picture_url,
         is_admin,
         lot_id,
         lots!inner (
@@ -67,13 +73,37 @@ export default async function TenantAdminLayout({
       .eq("auth_user_id", user.id)
       .maybeSingle()
 
+    residentData = data
+
     // Check if resident belongs to this tenant and is an admin
-    const residentTenantId = residentData?.lots?.neighborhoods?.tenant_id
-    isTenantAdmin = residentData?.is_admin === true && residentTenantId === tenant.id
+    const residentTenantId = data?.lots?.neighborhoods?.tenant_id
+    isTenantAdmin = data?.is_admin === true && residentTenantId === tenant.id
 
     if (!isTenantAdmin) {
       redirect(`/t/${slug}/login`)
     }
+  } else {
+    const { data } = await supabase
+      .from("residents")
+      .select(`
+        id,
+        first_name,
+        last_name,
+        email,
+        profile_picture_url,
+        is_admin,
+        lot_id,
+        lots!inner (
+          neighborhood_id,
+          neighborhoods!inner (
+            tenant_id
+          )
+        )
+      `)
+      .eq("auth_user_id", user.id)
+      .maybeSingle()
+
+    residentData = data
   }
 
   const features = (tenant?.features as Record<string, boolean>) || {
@@ -180,11 +210,22 @@ export default async function TenantAdminLayout({
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-          <SidebarTrigger />
+        <header className="flex h-16 shrink-0 items-center justify-between gap-2 border-b px-4">
           <div className="flex items-center gap-2">
+            <SidebarTrigger />
             <h1 className="text-lg font-semibold">Community Administration</h1>
           </div>
+          {residentData && (
+            <UserAvatarMenu
+              user={{
+                firstName: residentData.first_name,
+                lastName: residentData.last_name,
+                email: residentData.email,
+                profilePictureUrl: residentData.profile_picture_url,
+              }}
+              tenantSlug={slug}
+            />
+          )}
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4">{children}</div>
       </SidebarInset>

@@ -1,12 +1,18 @@
 -- Phase 1: Extend users table to support residents
 -- This is a NON-BREAKING change that adds resident-specific fields to the users table
 
--- Drop policies and functions that reference the role column before altering it
+-- Drop all policies that depend on get_user_role() function first
 DROP POLICY IF EXISTS "super_admins_all_users" ON public.users;
 DROP POLICY IF EXISTS "tenant_admins_tenant_users" ON public.users;
 DROP POLICY IF EXISTS "users_own_data" ON public.users;
-DROP FUNCTION IF EXISTS public.get_user_role();
-DROP FUNCTION IF EXISTS public.get_user_tenant_id();
+
+-- Drop policies on other tables that might use these functions
+DROP POLICY IF EXISTS "super_admins_all_tenants" ON public.tenants;
+DROP POLICY IF EXISTS "tenant_admins_own_tenant" ON public.tenants;
+
+-- Now drop functions with CASCADE to handle any remaining dependencies
+DROP FUNCTION IF EXISTS public.get_user_role() CASCADE;
+DROP FUNCTION IF EXISTS public.get_user_tenant_id() CASCADE;
 
 -- Create the enum type if it doesn't exist
 DO $$ BEGIN
@@ -83,7 +89,7 @@ AS $$
   SELECT tenant_id FROM public.users WHERE id = auth.uid() LIMIT 1;
 $$;
 
--- Recreate RLS policies
+-- Recreate RLS policies for users table
 CREATE POLICY "super_admins_all_users" ON public.users
   FOR ALL
   USING (public.get_user_role() = 'super_admin')
@@ -100,6 +106,19 @@ CREATE POLICY "users_own_data" ON public.users
   FOR ALL
   USING (auth.uid() = id)
   WITH CHECK (auth.uid() = id);
+
+-- Recreate policies on tenants table that were dropped
+CREATE POLICY "super_admins_all_tenants" ON public.tenants
+  FOR ALL
+  USING (public.get_user_role() = 'super_admin')
+  WITH CHECK (public.get_user_role() = 'super_admin');
+
+CREATE POLICY "tenant_admins_own_tenant" ON public.tenants
+  FOR SELECT
+  USING (
+    public.get_user_role() = 'tenant_admin' 
+    AND id = public.get_user_tenant_id()
+  );
 
 -- Add computed column for full name (for backwards compatibility)
 CREATE OR REPLACE FUNCTION get_user_full_name(users) RETURNS TEXT AS $$

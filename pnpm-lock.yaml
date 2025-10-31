@@ -159,7 +159,7 @@ importers:
         specifier: ^1.0.7
         version: 1.0.7(tailwindcss@4.1.9)
       uuid:
-        specifier: latest
+        specifier: 13.0.0
         version: 13.0.0
       vaul:
         specifier: ^0.9.9

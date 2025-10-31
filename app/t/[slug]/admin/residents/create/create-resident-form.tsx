@@ -12,7 +12,6 @@ import { createBrowserClient } from "@/lib/supabase/client"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle, Plus, Trash2, ArrowLeft } from "lucide-react"
-import { v4 as crypto } from "uuid"
 
 type Lot = {
   id: string
@@ -149,7 +148,6 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
         const membersToInsert = familyData.members
           .filter((m) => m.first_name && m.last_name)
           .map((member) => ({
-            id: crypto(),
             lot_id: selectedLotId,
             first_name: member.first_name,
             last_name: member.last_name,
@@ -197,7 +195,6 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
 
         const { error } = await supabase.from("users").insert([
           {
-            id: crypto(),
             lot_id: selectedLotId,
             first_name: formData.first_name,
             last_name: formData.last_name,

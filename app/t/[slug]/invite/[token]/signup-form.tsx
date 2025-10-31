@@ -56,6 +56,8 @@ export function SignupForm({ tenant, resident, token }: SignupFormProps) {
     try {
       const supabase = createBrowserClient()
 
+      console.log("[v0] Starting signup for:", { email: resident.email, residentId: resident.id })
+
       // Create auth user
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: resident.email,
@@ -67,10 +69,24 @@ export function SignupForm({ tenant, resident, token }: SignupFormProps) {
         },
       })
 
-      console.log("[v0] Signup result:", { user: authData.user?.id, error: signUpError?.message })
+      console.log("[v0] Auth signup result:", {
+        userId: authData.user?.id,
+        userEmail: authData.user?.email,
+        error: signUpError?.message,
+        errorCode: signUpError?.code,
+        errorStatus: signUpError?.status,
+      })
 
-      if (signUpError) throw signUpError
-      if (!authData.user) throw new Error("Failed to create account")
+      if (signUpError) {
+        console.error("[v0] Auth signup error details:", signUpError)
+        throw new Error(signUpError.message || "Failed to create auth account")
+      }
+
+      if (!authData.user) {
+        throw new Error("No user returned from signup")
+      }
+
+      console.log("[v0] Calling link-resident API:", { residentId: resident.id, authUserId: authData.user.id })
 
       const response = await fetch("/api/link-resident", {
         method: "POST",
@@ -81,12 +97,20 @@ export function SignupForm({ tenant, resident, token }: SignupFormProps) {
         }),
       })
 
+      console.log("[v0] Link-resident response:", {
+        ok: response.ok,
+        status: response.status,
+        statusText: response.statusText,
+      })
+
       if (!response.ok) {
         const errorData = await response.json()
+        console.error("[v0] Link-resident error:", errorData)
         throw new Error(errorData.error || "Failed to link account")
       }
 
-      console.log("[v0] Resident linked successfully")
+      const linkResult = await response.json()
+      console.log("[v0] Link-resident success:", linkResult)
 
       const redirectPath = tenant.features?.onboarding
         ? `/t/${tenant.slug}/onboarding/welcome`
@@ -95,7 +119,12 @@ export function SignupForm({ tenant, resident, token }: SignupFormProps) {
       console.log("[v0] Redirecting to:", redirectPath)
       router.push(redirectPath)
     } catch (err: any) {
-      console.error("[v0] Signup error:", err)
+      console.error("[v0] Signup error details:", {
+        message: err.message,
+        name: err.name,
+        stack: err.stack,
+        fullError: err,
+      })
       setError(err.message || "An error occurred during signup")
     } finally {
       setLoading(false)

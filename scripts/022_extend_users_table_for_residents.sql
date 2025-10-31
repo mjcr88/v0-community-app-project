@@ -1,19 +1,29 @@
 -- Phase 1: Extend users table to support residents
 -- This is a NON-BREAKING change that adds resident-specific fields to the users table
 
--- First, convert role from TEXT to ENUM for better type safety
--- Create the enum type if it doesn't exist
+-- Step 1: Drop policies that reference the role column
+DROP POLICY IF EXISTS "super_admins_all_users" ON public.users;
+DROP POLICY IF EXISTS "tenant_admins_tenant_users" ON public.users;
+DROP POLICY IF EXISTS "users_own_data" ON public.users;
+DROP POLICY IF EXISTS "super_admins_all_tenants" ON public.tenants;
+DROP POLICY IF EXISTS "tenant_admins_own_tenant" ON public.tenants;
+
+-- Step 2: Drop the function that references role
+DROP FUNCTION IF EXISTS public.get_user_role();
+DROP FUNCTION IF EXISTS public.get_user_tenant_id();
+
+-- Step 3: Create the enum type if it doesn't exist
 DO $$ BEGIN
   CREATE TYPE user_role AS ENUM ('super_admin', 'tenant_admin', 'resident');
 EXCEPTION
   WHEN duplicate_object THEN null;
 END $$;
 
--- Update role column to use enum type instead of TEXT
+-- Step 4: Convert role column to enum type
 ALTER TABLE users 
   ALTER COLUMN role TYPE user_role USING role::user_role;
 
--- Add resident-specific columns to users table
+-- Step 5: Add resident-specific columns to users table
 ALTER TABLE users
   -- Personal information
   ADD COLUMN IF NOT EXISTS first_name TEXT,
@@ -43,15 +53,65 @@ ALTER TABLE users
   ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN DEFAULT false,
   ADD COLUMN IF NOT EXISTS onboarding_completed_at TIMESTAMPTZ;
 
--- Update existing users to ensure they have correct roles
--- Users with role 'super_admin' stay as super_admin
--- Users with role 'tenant_admin' stay as tenant_admin
--- Any other users become 'resident' (shouldn't be any, but just in case)
+-- Step 6: Update existing users to ensure they have correct roles
 UPDATE users 
 SET role = 'resident'::user_role
-WHERE role NOT IN ('super_admin', 'tenant_admin');
+WHERE role::text NOT IN ('super_admin', 'tenant_admin');
 
--- Create indexes for performance
+-- Step 7: Recreate the helper functions with the new enum type
+CREATE OR REPLACE FUNCTION public.get_user_role()
+RETURNS user_role
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+AS $$
+  SELECT role FROM public.users WHERE id = auth.uid() LIMIT 1;
+$$;
+
+CREATE OR REPLACE FUNCTION public.get_user_tenant_id()
+RETURNS UUID
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+AS $$
+  SELECT tenant_id FROM public.users WHERE id = auth.uid() LIMIT 1;
+$$;
+
+-- Step 8: Recreate RLS policies with the new enum type
+-- Super admins can do everything with users
+CREATE POLICY "super_admins_all_users" ON public.users
+  FOR ALL
+  USING (public.get_user_role() = 'super_admin')
+  WITH CHECK (public.get_user_role() = 'super_admin');
+
+-- Tenant admins can see users in their tenant
+CREATE POLICY "tenant_admins_tenant_users" ON public.users
+  FOR SELECT
+  USING (
+    public.get_user_role() = 'tenant_admin' 
+    AND tenant_id = public.get_user_tenant_id()
+  );
+
+-- Users can see and update their own data
+CREATE POLICY "users_own_data" ON public.users
+  FOR ALL
+  USING (auth.uid() = id)
+  WITH CHECK (auth.uid() = id);
+
+-- Recreate tenant policies
+CREATE POLICY "super_admins_all_tenants" ON public.tenants
+  FOR ALL
+  USING (public.get_user_role() = 'super_admin')
+  WITH CHECK (public.get_user_role() = 'super_admin');
+
+CREATE POLICY "tenant_admins_own_tenant" ON public.tenants
+  FOR SELECT
+  USING (
+    public.get_user_role() = 'tenant_admin' 
+    AND id = public.get_user_tenant_id()
+  );
+
+-- Step 9: Create indexes for performance
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 CREATE INDEX IF NOT EXISTS idx_users_tenant_role ON users(tenant_id, role);
 CREATE INDEX IF NOT EXISTS idx_users_lot_id ON users(lot_id);
@@ -59,7 +119,7 @@ CREATE INDEX IF NOT EXISTS idx_users_family_unit_id ON users(family_unit_id);
 CREATE INDEX IF NOT EXISTS idx_users_invite_token ON users(invite_token) WHERE invite_token IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_users_onboarding ON users(onboarding_completed) WHERE role = 'resident';
 
--- Add computed column for full name (for backwards compatibility)
+-- Step 10: Add computed column for full name (for backwards compatibility)
 CREATE OR REPLACE FUNCTION get_user_full_name(users) RETURNS TEXT AS $$
   SELECT CASE 
     WHEN $1.first_name IS NOT NULL AND $1.last_name IS NOT NULL 

@@ -25,7 +25,6 @@ INSERT INTO users (
   journey_stage,
   estimated_move_in_date,
   onboarding_completed,
-  onboarding_completed_at,
   invite_token,
   invited_at,
   created_at,
@@ -50,8 +49,7 @@ SELECT
   r.journey_stage,
   r.estimated_move_in_date,
   COALESCE(r.onboarding_completed, false),
-  r.onboarding_completed_at,
-  r.invite_token,  -- Remove uuid cast, both are TEXT
+  r.invite_token,
   r.invited_at,
   r.created_at,
   r.updated_at

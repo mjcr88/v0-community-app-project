@@ -55,8 +55,9 @@ export default async function InvitePage({
 
   const resident = validationResult.resident
 
-  // Check if already signed up
-  if (resident.auth_user_id) {
+  const { data: authUser } = await supabase.auth.admin.getUserById(resident.id)
+
+  if (authUser?.user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-forest-50 to-sky-50 p-4">
         <div className="text-center">

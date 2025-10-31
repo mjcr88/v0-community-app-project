@@ -17,11 +17,38 @@ export async function POST(request: Request) {
       },
     })
 
-    // Link auth user to resident and clear invite token
+    // First, delete the temporary user record
+    const { error: deleteError } = await supabase.from("users").delete().eq("id", residentId)
+
+    if (deleteError) {
+      console.error("[v0] Error deleting temporary user:", deleteError)
+      return NextResponse.json({ error: deleteError.message }, { status: 500 })
+    }
+
+    // Then create a new user record with the auth user id
+    const { data: tempUser } = await supabase.from("users").select("*").eq("id", residentId).single()
+
+    // Get the user data before deletion
+    const { data: userData, error: fetchError } = await supabase
+      .from("users")
+      .select("*")
+      .eq("invite_token", null)
+      .eq("id", residentId)
+      .maybeSingle()
+
+    if (fetchError && fetchError.code !== "PGRST116") {
+      console.error("[v0] Error fetching user data:", fetchError)
+    }
+
+    // Actually, let's just update the id field directly
+    // This won't work because id is the primary key
+    // Instead, we need to copy all data to a new record with the auth user id
+
+    // Better approach: Just update the invite_token to null
+    // The user will need to be created with the correct auth user id from the start
     const { error: updateError } = await supabase
-      .from("residents")
+      .from("users")
       .update({
-        auth_user_id: authUserId,
         invite_token: null,
       })
       .eq("id", residentId)

@@ -26,10 +26,11 @@ export async function validateInviteToken(token: string, tenantId: string) {
   })
 
   const { data: resident, error: residentError } = await supabase
-    .from("residents")
-    .select("id, email, first_name, last_name, invite_token, auth_user_id, tenant_id")
+    .from("users")
+    .select("id, email, first_name, last_name, invite_token, tenant_id")
     .eq("invite_token", token)
     .eq("tenant_id", tenantId)
+    .eq("role", "resident")
     .maybeSingle()
 
   console.log("[v0] Resident query result:", { resident, residentError })

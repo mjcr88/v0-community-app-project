@@ -37,7 +37,7 @@ export default async function ProfileSettingsPage({ params }: { params: Promise<
       )
     `,
     )
-    .eq("auth_user_id", user.id)
+    .eq("id", user.id)
     .eq("role", "resident")
     .maybeSingle()
 

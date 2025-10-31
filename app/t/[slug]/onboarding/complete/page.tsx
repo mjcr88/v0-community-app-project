@@ -35,7 +35,7 @@ export default async function CompletePage({ params }: { params: Promise<{ slug:
     const { data: residentData } = await supabase
       .from("users")
       .select("id, first_name, last_name")
-      .eq("auth_user_id", user.id)
+      .eq("id", user.id)
       .eq("tenant_id", tenant.id)
       .eq("role", "resident")
       .single()

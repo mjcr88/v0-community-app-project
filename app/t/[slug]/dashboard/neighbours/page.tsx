@@ -28,7 +28,7 @@ export default async function NeighboursPage({ params }: { params: Promise<{ slu
       )
     `,
     )
-    .eq("auth_user_id", user.id)
+    .eq("id", user.id)
     .eq("role", "resident")
     .single()
 

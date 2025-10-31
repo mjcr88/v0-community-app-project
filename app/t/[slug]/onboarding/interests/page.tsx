@@ -42,7 +42,7 @@ export default async function InterestsPage({ params }: { params: Promise<{ slug
     const { data: residentData } = await supabase
       .from("users")
       .select("id")
-      .eq("auth_user_id", user.id)
+      .eq("id", user.id)
       .eq("tenant_id", tenant.id)
       .eq("role", "resident")
       .single()

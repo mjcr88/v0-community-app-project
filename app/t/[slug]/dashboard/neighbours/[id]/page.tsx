@@ -39,7 +39,7 @@ export default async function PublicProfilePage({
   const { data: currentResident } = await supabase
     .from("users")
     .select("id, tenant_id")
-    .eq("auth_user_id", user.id)
+    .eq("id", user.id) // Changed from auth_user_id to id
     .eq("role", "resident")
     .single()
 

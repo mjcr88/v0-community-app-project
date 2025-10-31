@@ -54,7 +54,7 @@ export default async function WelcomePage({
   const { data: resident } = await supabase
     .from("users")
     .select("*, tenants:tenant_id(id, name, slug, features)")
-    .eq("auth_user_id", user.id)
+    .eq("id", user.id)
     .eq("role", "resident")
     .single()
 

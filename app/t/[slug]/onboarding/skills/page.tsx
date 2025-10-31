@@ -43,7 +43,7 @@ export default async function SkillsPage({ params }: { params: Promise<{ slug: s
     const { data: residentData } = await supabase
       .from("users")
       .select("id")
-      .eq("auth_user_id", user.id)
+      .eq("id", user.id)
       .eq("tenant_id", tenant.id)
       .eq("role", "resident")
       .single()

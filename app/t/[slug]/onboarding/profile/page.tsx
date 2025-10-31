@@ -55,12 +55,7 @@ export default async function ProfilePage({
   }
 
   // For regular users, get their resident record
-  const { data: resident } = await supabase
-    .from("users")
-    .select("*")
-    .eq("auth_user_id", user.id)
-    .eq("role", "resident")
-    .single()
+  const { data: resident } = await supabase.from("users").select("*").eq("id", user.id).eq("role", "resident").single()
 
   if (!resident) {
     redirect(`/t/${slug}/login`)

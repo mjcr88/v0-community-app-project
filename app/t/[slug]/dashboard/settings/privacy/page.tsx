@@ -18,7 +18,7 @@ export default async function PrivacySettingsPage({ params }: { params: Promise<
   const { data: resident } = await supabase
     .from("users")
     .select("*")
-    .eq("auth_user_id", user.id)
+    .eq("id", user.id)
     .eq("role", "resident")
     .maybeSingle()
 

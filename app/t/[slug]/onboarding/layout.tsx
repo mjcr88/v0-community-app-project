@@ -91,7 +91,7 @@ export default async function OnboardingLayout({
     <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4">
       <Card className="w-full max-w-2xl">
         <CardHeader>
-          <OnboardingStepHeader tenantName={userRecord.tenants.name} tenantSlug={slug} />
+          <OnboardingStepHeader tenantName={userRecord.tenants.name} tenantSlug={slug} showCloseButton />
         </CardHeader>
         <CardContent>{children}</CardContent>
       </Card>

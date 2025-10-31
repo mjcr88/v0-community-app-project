@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { CheckCircle2, Sparkles, Loader2 } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
 
 interface CompleteFormProps {
   tenant: {
@@ -22,6 +23,7 @@ interface CompleteFormProps {
 
 export function CompleteForm({ tenant, resident, isSuperAdmin }: CompleteFormProps) {
   const router = useRouter()
+  const supabase = createClient()
   const [isLoading, setIsLoading] = useState(false)
   const displayName = [resident.first_name, resident.last_name].filter(Boolean).join(" ") || "there"
 
@@ -35,11 +37,22 @@ export function CompleteForm({ tenant, resident, isSuperAdmin }: CompleteFormPro
         return
       }
 
-      // TODO: Mark onboarding as completed in database
-      console.log("[v0] Marking onboarding as complete for resident:", resident.id)
+      const { error } = await supabase
+        .from("users")
+        .update({
+          onboarding_completed: true,
+          onboarding_completed_at: new Date().toISOString(),
+        })
+        .eq("id", resident.id)
 
-      // Redirect to main app (profile page when it exists, for now go to admin)
-      router.push(`/t/${tenant.slug}/admin`)
+      if (error) {
+        console.error("[v0] Error completing onboarding:", error)
+        return
+      }
+
+      console.log("[v0] Onboarding marked as complete for resident:", resident.id)
+
+      router.push(`/t/${tenant.slug}/dashboard`)
     } catch (error) {
       console.error("[v0] Error completing onboarding:", error)
     } finally {
@@ -103,12 +116,12 @@ export function CompleteForm({ tenant, resident, isSuperAdmin }: CompleteFormPro
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 pt-4">
-          <Button variant="outline" onClick={() => router.push(`/t/${tenant.slug}/admin`)} className="flex-1">
+          <Button variant="outline" onClick={() => router.push(`/t/${tenant.slug}/dashboard`)} className="flex-1">
             Close
           </Button>
           <Button onClick={handleComplete} disabled={isLoading} className="flex-1">
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Go to My Profile
+            Go to Dashboard
           </Button>
         </div>
       </CardContent>

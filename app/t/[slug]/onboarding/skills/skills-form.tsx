@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Loader2, Plus, Check } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
+import { createClient } from "@/lib/supabase/client"
 
 interface SkillsFormProps {
   tenant: {
@@ -26,6 +27,7 @@ interface SkillsFormProps {
 
 export function SkillsForm({ tenant, resident, skills, residentSkills, isSuperAdmin }: SkillsFormProps) {
   const router = useRouter()
+  const supabase = createClient()
   const [isLoading, setIsLoading] = useState(false)
   const [allSkills, setAllSkills] = useState<Array<{ id: string; name: string; description: string | null }>>(skills)
   const [selectedSkills, setSelectedSkills] = useState<Array<{ id: string; name: string; open_to_requests: boolean }>>(
@@ -70,8 +72,23 @@ export function SkillsForm({ tenant, resident, skills, residentSkills, isSuperAd
         return
       }
 
-      // TODO: Create skill in database and add to both arrays
-      console.log("[v0] Creating new skill:", newSkillName)
+      const { data: newSkill, error } = await supabase
+        .from("skills")
+        .insert({
+          name: newSkillName.trim(),
+          tenant_id: tenant.id,
+        })
+        .select()
+        .single()
+
+      if (error) {
+        console.error("[v0] Error creating skill:", error)
+        return
+      }
+
+      console.log("[v0] Created new skill:", newSkill)
+      setAllSkills((prev) => [...prev, newSkill])
+      setSelectedSkills((prev) => [...prev, { id: newSkill.id, name: newSkill.name, open_to_requests: false }])
       setNewSkillName("")
     } catch (error) {
       console.error("[v0] Error creating skill:", error)
@@ -91,8 +108,26 @@ export function SkillsForm({ tenant, resident, skills, residentSkills, isSuperAd
         return
       }
 
-      // TODO: Save skills to database
-      console.log("[v0] Skills:", selectedSkills)
+      // First, delete existing skills
+      await supabase.from("user_skills").delete().eq("user_id", resident.id)
+
+      // Then insert selected skills
+      if (selectedSkills.length > 0) {
+        const { error } = await supabase.from("user_skills").insert(
+          selectedSkills.map((skill) => ({
+            user_id: resident.id,
+            skill_id: skill.id,
+            open_to_requests: skill.open_to_requests,
+          })),
+        )
+
+        if (error) {
+          console.error("[v0] Error saving skills:", error)
+          return
+        }
+      }
+
+      console.log("[v0] Skills saved successfully")
       router.push(`/t/${tenant.slug}/onboarding/complete`)
     } catch (error) {
       console.error("[v0] Error updating skills:", error)

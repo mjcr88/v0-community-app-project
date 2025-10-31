@@ -63,7 +63,13 @@ export function OnboardingStepHeader({
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => router.push(`/t/${tenantSlug}/admin/dashboard`)}
+              onClick={() => {
+                if (isTestMode) {
+                  router.push(`/t/${tenantSlug}/admin/dashboard`)
+                } else {
+                  router.push(`/t/${tenantSlug}/dashboard`)
+                }
+              }}
               className="h-8 w-8"
             >
               <X className="h-4 w-4" />

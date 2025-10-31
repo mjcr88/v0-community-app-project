@@ -4,13 +4,13 @@ import type React from "react"
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { createBrowserClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Spinner } from "@/components/ui/spinner"
+import { createAuthUserAction } from "./create-auth-user-action"
 
 interface SignupFormProps {
   tenant: {
@@ -54,46 +54,31 @@ export function SignupForm({ tenant, resident, token }: SignupFormProps) {
     setLoading(true)
 
     try {
-      const supabase = createBrowserClient()
-
       console.log("[v0] Starting signup for:", { email: resident.email, residentId: resident.id })
 
-      // Create auth user
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
-        email: resident.email,
-        password,
-        options: {
-          emailRedirectTo:
-            process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ||
-            `${window.location.origin}/t/${tenant.slug}/onboarding`,
-        },
-      })
+      const authResult = await createAuthUserAction(resident.email, password)
 
-      console.log("[v0] Auth signup result:", {
-        userId: authData.user?.id,
-        userEmail: authData.user?.email,
-        error: signUpError?.message,
-        errorCode: signUpError?.code,
-        errorStatus: signUpError?.status,
-      })
+      console.log("[v0] Auth result:", authResult)
 
-      if (signUpError) {
-        console.error("[v0] Auth signup error details:", signUpError)
-        throw new Error(signUpError.message || "Failed to create auth account")
+      if (authResult.error) {
+        console.error("[v0] Auth signup error:", authResult.error)
+        throw new Error(authResult.error)
       }
 
-      if (!authData.user) {
+      if (!authResult.user) {
         throw new Error("No user returned from signup")
       }
 
-      console.log("[v0] Calling link-resident API:", { residentId: resident.id, authUserId: authData.user.id })
+      console.log("[v0] Auth user created:", authResult.user.id)
+
+      console.log("[v0] Calling link-resident API:", { residentId: resident.id, authUserId: authResult.user.id })
 
       const response = await fetch("/api/link-resident", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           residentId: resident.id,
-          authUserId: authData.user.id,
+          authUserId: authResult.user.id,
         }),
       })
 

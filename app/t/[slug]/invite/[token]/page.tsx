@@ -30,14 +30,14 @@ export default async function InvitePage({
     redirect(`/t/${slug}/admin/dashboard`)
   }
 
-  // Validate invite token
   const { data: resident, error: residentError } = await supabase
     .from("residents")
-    .select("id, email, first_name, last_name, invite_token, auth_user_id")
+    .select("id, email, first_name, last_name, invite_token, auth_user_id, tenant_id")
     .eq("invite_token", token)
+    .eq("tenant_id", tenant.id)
     .maybeSingle()
 
-  if (residentError || !resident || !resident.invite_token) {
+  if (residentError || !resident || resident.invite_token !== token) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-forest-50 to-sky-50 p-4">
         <div className="text-center">

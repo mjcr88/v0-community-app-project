@@ -33,6 +33,7 @@ type Resident = {
   family_unit_id: string | null
   invited_at: string | null
   onboarding_completed: boolean
+  tenant_id: string | null
 }
 
 type Lot = {
@@ -86,15 +87,24 @@ export function EditResidentForm({
     setInviteLoading(true)
     const supabase = createBrowserClient()
 
+    const { data: tenant } = await supabase.from("tenants").select("id").eq("slug", slug).single()
+
+    if (!tenant) {
+      console.error("Tenant not found")
+      setInviteLoading(false)
+      return
+    }
+
     // Generate invite token
     const inviteToken = crypto.randomUUID()
 
-    // Update resident with invite token and timestamp
+    // Update resident with invite token, timestamp, and ensure tenant_id is set
     const { error: updateError } = await supabase
       .from("residents")
       .update({
         invite_token: inviteToken,
         invited_at: new Date().toISOString(),
+        tenant_id: tenant.id, // Ensure tenant_id is set when sending invite
       })
       .eq("id", resident.id)
 
@@ -118,6 +128,14 @@ export function EditResidentForm({
 
     const supabase = createBrowserClient()
 
+    const { data: tenant } = await supabase.from("tenants").select("id").eq("slug", slug).single()
+
+    if (!tenant) {
+      console.error("Tenant not found")
+      setLoading(false)
+      return
+    }
+
     const { error } = await supabase
       .from("residents")
       .update({
@@ -127,6 +145,7 @@ export function EditResidentForm({
         email: formData.email || null,
         phone: formData.phone || null,
         family_unit_id: formData.family_unit_id || null,
+        tenant_id: tenant.id, // Ensure tenant_id is always set
         updated_at: new Date().toISOString(),
       })
       .eq("id", resident.id)

@@ -116,6 +116,10 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
     const supabase = createBrowserClient()
 
     try {
+      const { data: tenant } = await supabase.from("tenants").select("id").eq("slug", slug).single()
+
+      if (!tenant) throw new Error("Tenant not found")
+
       if (assignmentChoice === "reassign" && existingResidents.length > 0) {
         const { error: updateError } = await supabase
           .from("residents")
@@ -129,10 +133,6 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
       }
 
       if (creationType === "family") {
-        const { data: tenant } = await supabase.from("tenants").select("id").eq("slug", slug).single()
-
-        if (!tenant) throw new Error("Tenant not found")
-
         const { data: familyUnit, error: familyError } = await supabase
           .from("family_units")
           .insert({
@@ -153,6 +153,7 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
             email: member.email || null,
             phone: member.phone || null,
             family_unit_id: familyUnit.id,
+            tenant_id: tenant.id, // Added tenant_id to family members
           }))
 
         if (membersToInsert.length > 0) {
@@ -178,6 +179,7 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
             species: pet.species,
             breed: pet.breed || null,
             family_unit_id: familyUnit.id,
+            tenant_id: tenant.id, // Added tenant_id to pets
           }))
 
         if (petsToInsert.length > 0) {
@@ -196,6 +198,7 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
           species: petData.species,
           breed: petData.breed || null,
           family_unit_id,
+          tenant_id: tenant.id, // Added tenant_id to single pet
         })
 
         if (error) throw error
@@ -212,6 +215,7 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
           email: formData.email || null,
           phone: formData.phone || null,
           family_unit_id,
+          tenant_id: tenant.id, // Added tenant_id to single resident
         })
 
         if (error) throw error

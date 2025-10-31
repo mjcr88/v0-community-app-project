@@ -16,7 +16,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
-import { Home, Users, Settings, Shield } from "lucide-react"
+import { Home, Users, Settings } from "lucide-react"
 import Link from "next/link"
 import { UserAvatarMenu } from "@/components/user-avatar-menu"
 
@@ -38,6 +38,9 @@ export default async function ResidentDashboardLayout({
   if (!user) {
     redirect(`/t/${slug}/login`)
   }
+
+  const { data: superAdminData } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle()
+  const isSuperAdmin = superAdminData?.role === "super_admin"
 
   // Get tenant info
   const { data: tenant } = await supabase.from("tenants").select("*").eq("slug", slug).single()
@@ -143,27 +146,7 @@ export default async function ResidentDashboardLayout({
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
-        <SidebarFooter className="border-t border-sidebar-border">
-          <SidebarMenu>
-            {isAdmin && (
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link href={`/t/${slug}/admin/dashboard`}>
-                    <Shield />
-                    <span>Admin Panel</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            )}
-          </SidebarMenu>
-        </SidebarFooter>
-      </Sidebar>
-      <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center justify-between gap-2 border-b px-4">
-          <div className="flex items-center gap-2">
-            <SidebarTrigger />
-            <h1 className="text-lg font-semibold">Dashboard</h1>
-          </div>
+        <SidebarFooter className="border-t border-sidebar-border p-2">
           <UserAvatarMenu
             user={{
               firstName: resident.first_name,
@@ -172,7 +155,16 @@ export default async function ResidentDashboardLayout({
               profilePictureUrl: resident.profile_picture_url,
             }}
             tenantSlug={slug}
+            showAdminView={isAdmin}
+            showBackToSuperAdmin={isSuperAdmin}
+            isSuperAdmin={isSuperAdmin}
           />
+        </SidebarFooter>
+      </Sidebar>
+      <SidebarInset>
+        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+          <SidebarTrigger />
+          <h1 className="text-lg font-semibold">Dashboard</h1>
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4">{children}</div>
       </SidebarInset>

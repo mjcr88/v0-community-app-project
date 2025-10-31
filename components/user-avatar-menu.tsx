@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { User, Settings, LogOut } from "lucide-react"
+import { User, Settings, LogOut, Home, Shield } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
@@ -22,9 +22,20 @@ interface UserAvatarMenuProps {
     profilePictureUrl: string | null
   }
   tenantSlug: string
+  showResidentView?: boolean
+  showAdminView?: boolean
+  showBackToSuperAdmin?: boolean
+  isSuperAdmin?: boolean
 }
 
-export function UserAvatarMenu({ user, tenantSlug }: UserAvatarMenuProps) {
+export function UserAvatarMenu({
+  user,
+  tenantSlug,
+  showResidentView = false,
+  showAdminView = false,
+  showBackToSuperAdmin = false,
+  isSuperAdmin = false,
+}: UserAvatarMenuProps) {
   const router = useRouter()
   const supabase = createClient()
 
@@ -44,14 +55,18 @@ export function UserAvatarMenu({ user, tenantSlug }: UserAvatarMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
-          <Avatar className="h-8 w-8 cursor-pointer">
+        <button className="flex w-full items-center gap-3 rounded-lg px-2 py-2 hover:bg-sidebar-accent focus:outline-none focus:ring-2 focus:ring-ring">
+          <Avatar className="h-9 w-9">
             <AvatarImage src={user.profilePictureUrl || undefined} alt={displayName} />
-            <AvatarFallback className="text-xs">{initials || "?"}</AvatarFallback>
+            <AvatarFallback className="text-sm">{initials || "?"}</AvatarFallback>
           </Avatar>
+          <div className="flex flex-col items-start text-left">
+            <p className="text-sm font-medium leading-none">{displayName}</p>
+            <p className="text-xs text-muted-foreground">{isSuperAdmin ? "Super Admin" : "Resident"}</p>
+          </div>
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent align="end" side="top" className="w-56">
         <DropdownMenuLabel>
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">{displayName}</p>
@@ -59,8 +74,25 @@ export function UserAvatarMenu({ user, tenantSlug }: UserAvatarMenuProps) {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        {showResidentView && (
+          <DropdownMenuItem asChild>
+            <Link href={`/t/${tenantSlug}/dashboard`} className="cursor-pointer">
+              <Home className="mr-2 h-4 w-4" />
+              <span>Resident View</span>
+            </Link>
+          </DropdownMenuItem>
+        )}
+        {showAdminView && (
+          <DropdownMenuItem asChild>
+            <Link href={`/t/${tenantSlug}/admin/dashboard`} className="cursor-pointer">
+              <Shield className="mr-2 h-4 w-4" />
+              <span>Admin Panel</span>
+            </Link>
+          </DropdownMenuItem>
+        )}
+        {(showResidentView || showAdminView) && <DropdownMenuSeparator />}
         <DropdownMenuItem asChild>
-          <Link href={`/t/${tenantSlug}/dashboard/profile`} className="cursor-pointer">
+          <Link href={`/t/${tenantSlug}/dashboard/settings/profile`} className="cursor-pointer">
             <User className="mr-2 h-4 w-4" />
             <span>My Profile</span>
           </Link>
@@ -72,6 +104,17 @@ export function UserAvatarMenu({ user, tenantSlug }: UserAvatarMenuProps) {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
+        {showBackToSuperAdmin && (
+          <>
+            <DropdownMenuItem asChild>
+              <Link href="/backoffice/dashboard" className="cursor-pointer">
+                <Shield className="mr-2 h-4 w-4" />
+                <span>Back to Super Admin</span>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        )}
         <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-destructive focus:text-destructive">
           <LogOut className="mr-2 h-4 w-4" />
           <span>Sign Out</span>

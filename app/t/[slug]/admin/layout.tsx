@@ -16,7 +16,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
-import { Home, MapPin, Users, Building2, LogOut, HeartHandshake, Lightbulb } from "lucide-react"
+import { Home, MapPin, Users, Building2, HeartHandshake, Lightbulb } from "lucide-react"
 import Link from "next/link"
 import { UserAvatarMenu } from "@/components/user-avatar-menu"
 
@@ -194,27 +194,7 @@ export default async function TenantAdminLayout({
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
-        <SidebarFooter className="border-t border-sidebar-border">
-          <SidebarMenu>
-            {isSuperAdmin && (
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link href="/backoffice/dashboard">
-                    <LogOut className="rotate-180" />
-                    <span>Back to Super Admin</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            )}
-          </SidebarMenu>
-        </SidebarFooter>
-      </Sidebar>
-      <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center justify-between gap-2 border-b px-4">
-          <div className="flex items-center gap-2">
-            <SidebarTrigger />
-            <h1 className="text-lg font-semibold">Community Administration</h1>
-          </div>
+        <SidebarFooter className="border-t border-sidebar-border p-2">
           {residentData && (
             <UserAvatarMenu
               user={{
@@ -224,8 +204,17 @@ export default async function TenantAdminLayout({
                 profilePictureUrl: residentData.profile_picture_url,
               }}
               tenantSlug={slug}
+              showResidentView={true}
+              showBackToSuperAdmin={isSuperAdmin}
+              isSuperAdmin={isSuperAdmin}
             />
           )}
+        </SidebarFooter>
+      </Sidebar>
+      <SidebarInset>
+        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+          <SidebarTrigger />
+          <h1 className="text-lg font-semibold">Community Administration</h1>
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4">{children}</div>
       </SidebarInset>

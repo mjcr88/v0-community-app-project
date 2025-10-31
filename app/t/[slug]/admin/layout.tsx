@@ -93,14 +93,15 @@ export default async function TenantAdminLayout({
         profile_picture_url,
         is_admin,
         lot_id,
-        lots!inner (
+        lots (
           neighborhood_id,
-          neighborhoods!inner (
+          neighborhoods (
             tenant_id
           )
         )
       `)
       .eq("auth_user_id", user.id)
+      .eq("lots.neighborhoods.tenant_id", tenant.id)
       .maybeSingle()
 
     residentData = data
@@ -195,20 +196,18 @@ export default async function TenantAdminLayout({
           </SidebarGroup>
         </SidebarContent>
         <SidebarFooter className="border-t border-sidebar-border p-2">
-          {residentData && (
-            <UserAvatarMenu
-              user={{
-                firstName: residentData.first_name,
-                lastName: residentData.last_name,
-                email: residentData.email,
-                profilePictureUrl: residentData.profile_picture_url,
-              }}
-              tenantSlug={slug}
-              showResidentView={true}
-              showBackToSuperAdmin={isSuperAdmin}
-              isSuperAdmin={isSuperAdmin}
-            />
-          )}
+          <UserAvatarMenu
+            user={{
+              firstName: residentData?.first_name || null,
+              lastName: residentData?.last_name || null,
+              email: residentData?.email || user.email || "",
+              profilePictureUrl: residentData?.profile_picture_url || null,
+            }}
+            tenantSlug={slug}
+            showResidentView={true}
+            showBackToSuperAdmin={isSuperAdmin}
+            isSuperAdmin={isSuperAdmin}
+          />
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>

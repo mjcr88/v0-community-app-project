@@ -220,7 +220,7 @@ export function ProfileForm({ tenant, resident, isSuperAdmin }: ProfileFormProps
                     placeholder={formData.countryCode}
                     searchPlaceholder="Search..."
                     emptyText="Not found"
-                    displayValue={formData.countryCode}
+                    displayValue={() => formData.countryCode}
                   />
                 </div>
                 <Input

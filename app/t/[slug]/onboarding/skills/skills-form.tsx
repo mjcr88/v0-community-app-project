@@ -31,11 +31,12 @@ export function SkillsForm({ tenant, resident, skills, residentSkills, isSuperAd
   const [isLoading, setIsLoading] = useState(false)
   const [allSkills, setAllSkills] = useState<Array<{ id: string; name: string; description: string | null }>>(skills)
   const [selectedSkills, setSelectedSkills] = useState<Array<{ id: string; name: string; open_to_requests: boolean }>>(
-    residentSkills.map((rs) => ({
-      id: rs.id,
-      name: skills.find((s) => s.id === rs.id)?.name || "",
-      open_to_requests: rs.open_to_requests,
-    })),
+    residentSkills
+      .map((rs) => {
+        const skill = skills.find((s) => s.id === rs.id)
+        return skill ? { id: skill.id, name: skill.name, open_to_requests: rs.open_to_requests } : null
+      })
+      .filter((s): s is { id: string; name: string; open_to_requests: boolean } => s !== null),
   )
   const [newSkillName, setNewSkillName] = useState("")
   const [isAddingSkill, setIsAddingSkill] = useState(false)

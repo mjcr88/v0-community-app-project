@@ -65,9 +65,10 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
 
       const supabase = createBrowserClient()
       const { data } = await supabase
-        .from("residents")
+        .from("users")
         .select("id, first_name, last_name, family_unit_id")
         .eq("lot_id", selectedLotId)
+        .eq("role", "resident")
 
       if (data && data.length > 0) {
         setExistingResidents(data)
@@ -122,7 +123,7 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
 
       if (assignmentChoice === "reassign" && existingResidents.length > 0) {
         const { error: updateError } = await supabase
-          .from("residents")
+          .from("users")
           .update({ lot_id: null })
           .in(
             "id",
@@ -153,12 +154,13 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
             email: member.email || null,
             phone: member.phone || null,
             family_unit_id: familyUnit.id,
-            tenant_id: tenant.id, // Added tenant_id to family members
+            tenant_id: tenant.id,
+            role: "resident" as const,
           }))
 
         if (membersToInsert.length > 0) {
           const { data: insertedResidents, error: membersError } = await supabase
-            .from("residents")
+            .from("users")
             .insert(membersToInsert)
             .select()
 
@@ -179,43 +181,28 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
             species: pet.species,
             breed: pet.breed || null,
             family_unit_id: familyUnit.id,
-            tenant_id: tenant.id, // Added tenant_id to pets
+            tenant_id: tenant.id,
           }))
 
         if (petsToInsert.length > 0) {
           const { error: petsError } = await supabase.from("pets").insert(petsToInsert)
           if (petsError) throw petsError
         }
-      } else if (entityType === "pet") {
-        const family_unit_id =
-          assignmentChoice === "add_to_family" && existingResidents[0]?.family_unit_id
-            ? existingResidents[0].family_unit_id
-            : null
-
-        const { error } = await supabase.from("pets").insert({
-          lot_id: selectedLotId,
-          name: petData.name,
-          species: petData.species,
-          breed: petData.breed || null,
-          family_unit_id,
-          tenant_id: tenant.id, // Added tenant_id to single pet
-        })
-
-        if (error) throw error
       } else {
         const family_unit_id =
           assignmentChoice === "add_to_family" && existingResidents[0]?.family_unit_id
             ? existingResidents[0].family_unit_id
             : null
 
-        const { error } = await supabase.from("residents").insert({
+        const { error } = await supabase.from("users").insert({
           lot_id: selectedLotId,
           first_name: formData.first_name,
           last_name: formData.last_name,
           email: formData.email || null,
           phone: formData.phone || null,
           family_unit_id,
-          tenant_id: tenant.id, // Added tenant_id to single resident
+          tenant_id: tenant.id,
+          role: "resident" as const,
         })
 
         if (error) throw error

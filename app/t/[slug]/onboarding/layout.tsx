@@ -72,19 +72,19 @@ export default async function OnboardingLayout({
     )
   }
 
-  // Get resident record for regular users
-  const { data: resident } = await supabase
-    .from("residents")
+  const { data: userRecord } = await supabase
+    .from("users")
     .select("*, tenants:tenant_id(id, name, slug, features)")
     .eq("auth_user_id", user.id)
+    .eq("role", "resident")
     .maybeSingle()
 
-  if (!resident) {
+  if (!userRecord) {
     redirect(`/t/${slug}/login`)
   }
 
   // Redirect if onboarding already completed
-  if (resident.onboarding_completed) {
+  if (userRecord.onboarding_completed) {
     redirect(`/t/${slug}/dashboard`)
   }
 
@@ -92,7 +92,7 @@ export default async function OnboardingLayout({
     <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4">
       <Card className="w-full max-w-2xl">
         <CardHeader>
-          <OnboardingStepHeader tenantName={resident.tenants.name} tenantSlug={slug} />
+          <OnboardingStepHeader tenantName={userRecord.tenants.name} tenantSlug={slug} />
         </CardHeader>
         <CardContent>{children}</CardContent>
       </Card>

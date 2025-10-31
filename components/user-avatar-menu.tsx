@@ -45,7 +45,9 @@ export function UserAvatarMenu({
     .join("")
     .toUpperCase()
 
-  const displayName = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email
+  const displayName =
+    [user.firstName, user.lastName].filter(Boolean).join(" ") ||
+    (user.email.length > 20 ? user.email.substring(0, 20) + "..." : user.email)
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
@@ -60,8 +62,8 @@ export function UserAvatarMenu({
             <AvatarImage src={user.profilePictureUrl || undefined} alt={displayName} />
             <AvatarFallback className="text-sm">{initials || "?"}</AvatarFallback>
           </Avatar>
-          <div className="flex flex-col items-start text-left">
-            <p className="text-sm font-medium leading-none">{displayName}</p>
+          <div className="flex flex-col items-start text-left overflow-hidden">
+            <p className="text-sm font-medium leading-none truncate w-full">{displayName}</p>
             <p className="text-xs text-muted-foreground">{isSuperAdmin ? "Super Admin" : "Resident"}</p>
           </div>
         </button>

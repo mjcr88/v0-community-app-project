@@ -15,10 +15,23 @@ export default async function PrivacySettingsPage({ params }: { params: Promise<
     redirect(`/t/${slug}/login`)
   }
 
-  const { data: resident } = await supabase.from("residents").select("*").eq("auth_user_id", user.id).single()
+  const { data: resident } = await supabase.from("residents").select("*").eq("auth_user_id", user.id).maybeSingle()
 
   if (!resident) {
-    redirect(`/t/${slug}/login`)
+    // Check if user is a super admin
+    const { data: superAdmin } = await supabase
+      .from("super_admins")
+      .select("id")
+      .eq("auth_user_id", user.id)
+      .maybeSingle()
+
+    if (superAdmin) {
+      // Super admin without resident profile - redirect to admin dashboard
+      redirect(`/t/${slug}/admin/dashboard`)
+    } else {
+      // Regular user without resident profile - redirect to login
+      redirect(`/t/${slug}/login`)
+    }
   }
 
   // Get or create privacy settings

@@ -15,8 +15,7 @@ export default async function ProfileSettingsPage({ params }: { params: Promise<
     redirect(`/t/${slug}/login`)
   }
 
-  // Get resident data with interests and skills
-  const { data: resident } = await supabase
+  const { data: resident, error: residentError } = await supabase
     .from("residents")
     .select(
       `
@@ -29,17 +28,29 @@ export default async function ProfileSettingsPage({ params }: { params: Promise<
         )
       ),
       resident_skills (
-        id,
         skill_name,
         open_to_requests
       )
     `,
     )
     .eq("auth_user_id", user.id)
-    .single()
+    .maybeSingle()
 
   if (!resident) {
-    redirect(`/t/${slug}/login`)
+    // Check if user is a super admin
+    const { data: superAdmin } = await supabase
+      .from("super_admins")
+      .select("id")
+      .eq("auth_user_id", user.id)
+      .maybeSingle()
+
+    if (superAdmin) {
+      // Super admin without resident profile - redirect to admin dashboard
+      redirect(`/t/${slug}/admin/dashboard`)
+    } else {
+      // Regular user without resident profile - redirect to login
+      redirect(`/t/${slug}/login`)
+    }
   }
 
   // Get tenant to check features

@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -22,6 +21,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { Trash2, Mail } from "lucide-react"
+import { InviteLinkDialog } from "@/components/invite-link-dialog"
 
 type Resident = {
   id: string
@@ -65,6 +65,8 @@ export function EditResidentForm({
   const [loading, setLoading] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [inviteLoading, setInviteLoading] = useState(false)
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false)
+  const [inviteUrl, setInviteUrl] = useState("")
   const [formData, setFormData] = useState({
     lot_id: resident.lot_id,
     first_name: resident.first_name,
@@ -102,12 +104,9 @@ export function EditResidentForm({
       return
     }
 
-    // Send invite email via Supabase Auth
-    const inviteUrl = `${window.location.origin}/t/${slug}/invite/${inviteToken}`
-
-    // For now, we'll use a simple approach - in production, you'd use Supabase Edge Functions
-    // to send custom emails. For now, show the invite link
-    alert(`Invite link generated! Share this with the resident:\n\n${inviteUrl}`)
+    const url = `${window.location.origin}/t/${slug}/invite/${inviteToken}`
+    setInviteUrl(url)
+    setInviteDialogOpen(true)
 
     setInviteLoading(false)
     router.refresh()
@@ -326,6 +325,13 @@ export function EditResidentForm({
             </div>
           </div>
         </form>
+        <InviteLinkDialog
+          open={inviteDialogOpen}
+          onOpenChange={setInviteDialogOpen}
+          inviteUrl={inviteUrl}
+          title="Resident Invitation Link"
+          description="Share this link with the resident to complete their onboarding."
+        />
       </CardContent>
     </Card>
   )

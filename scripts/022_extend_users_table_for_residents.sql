@@ -1,19 +1,21 @@
 -- Phase 1: Extend users table to support residents
 -- This is a NON-BREAKING change that adds resident-specific fields to the users table
 
--- Add role enum type
+-- First, convert role from TEXT to ENUM for better type safety
+-- Create the enum type if it doesn't exist
 DO $$ BEGIN
   CREATE TYPE user_role AS ENUM ('super_admin', 'tenant_admin', 'resident');
 EXCEPTION
   WHEN duplicate_object THEN null;
 END $$;
 
+-- Update role column to use enum type instead of TEXT
+ALTER TABLE users 
+  ALTER COLUMN role TYPE user_role USING role::user_role;
+
 -- Add resident-specific columns to users table
 ALTER TABLE users
-  -- Role management
-  ADD COLUMN IF NOT EXISTS role user_role DEFAULT 'resident',
-  
-  -- Personal information (some may already exist)
+  -- Personal information
   ADD COLUMN IF NOT EXISTS first_name TEXT,
   ADD COLUMN IF NOT EXISTS last_name TEXT,
   ADD COLUMN IF NOT EXISTS phone TEXT,
@@ -39,21 +41,15 @@ ALTER TABLE users
   
   -- Onboarding tracking
   ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN DEFAULT false,
-  ADD COLUMN IF NOT EXISTS onboarding_completed_at TIMESTAMPTZ,
-  
-  -- Invite tracking (may already exist)
-  ADD COLUMN IF NOT EXISTS invite_token UUID,
-  ADD COLUMN IF NOT EXISTS invite_sent_at TIMESTAMPTZ;
+  ADD COLUMN IF NOT EXISTS onboarding_completed_at TIMESTAMPTZ;
 
--- Update existing super admins to have the correct role
+-- Update existing users to ensure they have correct roles
+-- Users with role 'super_admin' stay as super_admin
+-- Users with role 'tenant_admin' stay as tenant_admin
+-- Any other users become 'resident' (shouldn't be any, but just in case)
 UPDATE users 
-SET role = 'super_admin' 
-WHERE is_super_admin = true;
-
--- Update existing tenant admins to have the correct role
-UPDATE users 
-SET role = 'tenant_admin' 
-WHERE is_super_admin = false AND tenant_id IS NOT NULL;
+SET role = 'resident'::user_role
+WHERE role NOT IN ('super_admin', 'tenant_admin');
 
 -- Create indexes for performance
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
@@ -64,7 +60,6 @@ CREATE INDEX IF NOT EXISTS idx_users_invite_token ON users(invite_token) WHERE i
 CREATE INDEX IF NOT EXISTS idx_users_onboarding ON users(onboarding_completed) WHERE role = 'resident';
 
 -- Add computed column for full name (for backwards compatibility)
--- This will be used in queries that expect a 'name' field
 CREATE OR REPLACE FUNCTION get_user_full_name(users) RETURNS TEXT AS $$
   SELECT CASE 
     WHEN $1.first_name IS NOT NULL AND $1.last_name IS NOT NULL 
@@ -75,7 +70,16 @@ CREATE OR REPLACE FUNCTION get_user_full_name(users) RETURNS TEXT AS $$
   END;
 $$ LANGUAGE SQL STABLE;
 
--- Add comment explaining the migration
+-- Add comments explaining the migration
 COMMENT ON TABLE users IS 'Unified user table containing super_admins, tenant_admins, and residents. Role field determines user type.';
 COMMENT ON COLUMN users.role IS 'User role: super_admin (platform admin), tenant_admin (community admin), or resident (community member)';
 COMMENT ON COLUMN users.is_tenant_admin IS 'Flag for residents who also have admin privileges in their tenant';
+
+-- Log completion
+DO $$
+BEGIN
+  RAISE NOTICE 'Phase 1 complete: Users table extended with resident fields';
+  RAISE NOTICE 'Existing users: %', (SELECT COUNT(*) FROM users);
+  RAISE NOTICE 'Super admins: %', (SELECT COUNT(*) FROM users WHERE role = 'super_admin');
+  RAISE NOTICE 'Tenant admins: %', (SELECT COUNT(*) FROM users WHERE role = 'tenant_admin');
+END $$;

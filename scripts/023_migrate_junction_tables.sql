@@ -61,21 +61,22 @@ ALTER TABLE user_interests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_skills ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_privacy_settings ENABLE ROW LEVEL SECURITY;
 
+-- Fixed RLS policies to use users.id instead of auth_user_id
 -- Create RLS policies for user_interests
 CREATE POLICY "Users can view their own interests"
   ON user_interests FOR SELECT
-  USING (auth.uid()::text = (SELECT auth_user_id::text FROM users WHERE id = user_interests.user_id));
+  USING (auth.uid() = user_id);
 
 CREATE POLICY "Users can manage their own interests"
   ON user_interests FOR ALL
-  USING (auth.uid()::text = (SELECT auth_user_id::text FROM users WHERE id = user_interests.user_id));
+  USING (auth.uid() = user_id);
 
 CREATE POLICY "Tenant members can view interests of users in their tenant"
   ON user_interests FOR SELECT
   USING (
     EXISTS (
       SELECT 1 FROM users u1, users u2
-      WHERE u1.auth_user_id = auth.uid()
+      WHERE u1.id = auth.uid()
         AND u2.id = user_interests.user_id
         AND u1.tenant_id = u2.tenant_id
         AND u1.tenant_id IS NOT NULL
@@ -85,18 +86,18 @@ CREATE POLICY "Tenant members can view interests of users in their tenant"
 -- Create RLS policies for user_skills
 CREATE POLICY "Users can view their own skills"
   ON user_skills FOR SELECT
-  USING (auth.uid()::text = (SELECT auth_user_id::text FROM users WHERE id = user_skills.user_id));
+  USING (auth.uid() = user_id);
 
 CREATE POLICY "Users can manage their own skills"
   ON user_skills FOR ALL
-  USING (auth.uid()::text = (SELECT auth_user_id::text FROM users WHERE id = user_skills.user_id));
+  USING (auth.uid() = user_id);
 
 CREATE POLICY "Tenant members can view skills of users in their tenant"
   ON user_skills FOR SELECT
   USING (
     EXISTS (
       SELECT 1 FROM users u1, users u2
-      WHERE u1.auth_user_id = auth.uid()
+      WHERE u1.id = auth.uid()
         AND u2.id = user_skills.user_id
         AND u1.tenant_id = u2.tenant_id
         AND u1.tenant_id IS NOT NULL
@@ -106,13 +107,19 @@ CREATE POLICY "Tenant members can view skills of users in their tenant"
 -- Create RLS policies for user_privacy_settings
 CREATE POLICY "Users can view their own privacy settings"
   ON user_privacy_settings FOR SELECT
-  USING (auth.uid()::text = (SELECT auth_user_id::text FROM users WHERE id = user_privacy_settings.user_id));
+  USING (auth.uid() = user_id);
 
 CREATE POLICY "Users can manage their own privacy settings"
   ON user_privacy_settings FOR ALL
-  USING (auth.uid()::text = (SELECT auth_user_id::text FROM users WHERE id = user_privacy_settings.user_id));
+  USING (auth.uid() = user_id);
 
 -- Add comments
 COMMENT ON TABLE user_interests IS 'Junction table linking users to their interests';
 COMMENT ON TABLE user_skills IS 'Junction table linking users to their skills, with optional help availability';
 COMMENT ON TABLE user_privacy_settings IS 'Privacy settings controlling visibility of user profile fields';
+
+-- Log completion
+DO $$
+BEGIN
+  RAISE NOTICE 'Phase 2 complete: Junction tables created (user_interests, user_skills, user_privacy_settings)';
+END $$;

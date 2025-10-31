@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation"
 import { useState } from "react"
 import Link from "next/link"
 import { Loader2 } from "lucide-react"
+import { InviteLinkDialog } from "@/components/invite-link-dialog"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,6 +47,8 @@ export default function EditTenantForm({ tenant }: { tenant: Tenant }) {
   const [error, setError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false)
+  const [inviteUrl, setInviteUrl] = useState<string | null>(null)
   const router = useRouter()
   const supabase = createClient()
 
@@ -102,9 +105,11 @@ export default function EditTenantForm({ tenant }: { tenant: Tenant }) {
           newAdminId = existingUser.id
         } else {
           console.log("[v0] Creating new user")
+          const newUserId = crypto.randomUUID()
           const { data: newUser, error: createError } = await supabase
             .from("users")
             .insert({
+              id: newUserId,
               email: adminEmail,
               name: adminName,
               role: "tenant_admin",
@@ -123,10 +128,10 @@ export default function EditTenantForm({ tenant }: { tenant: Tenant }) {
           console.log("[v0] New user created:", newUser.id)
         }
 
-        // Show invite link if inviting
         if (shouldInvite && inviteToken) {
-          const inviteUrl = `${window.location.origin}/t/${slug}/invite/${inviteToken}`
-          alert(`Tenant admin ${existingUser ? "updated" : "created"} and invited!\n\nInvite link:\n${inviteUrl}`)
+          const inviteUrl = `${window.location.origin}/backoffice/invite/${inviteToken}`
+          setInviteUrl(inviteUrl)
+          setInviteDialogOpen(true)
         }
       }
 
@@ -361,6 +366,17 @@ export default function EditTenantForm({ tenant }: { tenant: Tenant }) {
             </div>
           </CardContent>
         </Card>
+
+        {/* Invite link dialog */}
+        {inviteDialogOpen && (
+          <InviteLinkDialog
+            open={inviteDialogOpen}
+            onOpenChange={setInviteDialogOpen}
+            inviteUrl={inviteUrl || ""}
+            title="Tenant Admin Invitation Link"
+            description="Share this link with the tenant admin to complete their account setup."
+          />
+        )}
       </div>
     </div>
   )

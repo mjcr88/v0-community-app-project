@@ -1,11 +1,16 @@
 "use server"
 
-import { createClient } from "@/lib/supabase/server"
+import { createClient } from "@supabase/supabase-js"
 
 export async function createAuthUserAction(email: string, password: string) {
-  const supabase = await createClient()
-
   console.log("[v0] Creating auth user with admin API:", email)
+
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  })
 
   // Use admin API to create user
   const { data, error } = await supabase.auth.admin.createUser({

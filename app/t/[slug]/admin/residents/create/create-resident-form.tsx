@@ -194,16 +194,18 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
             ? existingResidents[0].family_unit_id
             : null
 
-        const { error } = await supabase.from("users").insert({
-          lot_id: selectedLotId,
-          first_name: formData.first_name,
-          last_name: formData.last_name,
-          email: formData.email || null,
-          phone: formData.phone || null,
-          family_unit_id,
-          tenant_id: tenant.id,
-          role: "resident" as const,
-        })
+        const { error } = await supabase.from("users").insert([
+          {
+            lot_id: selectedLotId,
+            first_name: formData.first_name,
+            last_name: formData.last_name,
+            email: formData.email || null,
+            phone: formData.phone || null,
+            family_unit_id,
+            tenant_id: tenant.id,
+            role: "resident" as const,
+          },
+        ])
 
         if (error) throw error
       }

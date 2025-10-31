@@ -61,7 +61,7 @@ export default async function TenantAdminLayout({
         last_name,
         email,
         profile_picture_url,
-        is_admin,
+        is_tenant_admin,
         lot_id,
         lots!inner (
           neighborhood_id,
@@ -70,15 +70,14 @@ export default async function TenantAdminLayout({
           )
         )
       `)
-      .eq("auth_user_id", user.id)
+      .eq("id", user.id)
       .eq("role", "resident")
       .maybeSingle()
 
     residentData = data
 
-    // Check if resident belongs to this tenant and is an admin
     const residentTenantId = data?.lots?.neighborhoods?.tenant_id
-    isTenantAdmin = data?.is_admin === true && residentTenantId === tenant.id
+    isTenantAdmin = data?.is_tenant_admin === true && residentTenantId === tenant.id
 
     if (!isTenantAdmin) {
       redirect(`/t/${slug}/login`)
@@ -92,7 +91,7 @@ export default async function TenantAdminLayout({
         last_name,
         email,
         profile_picture_url,
-        is_admin,
+        is_tenant_admin,
         lot_id,
         lots (
           neighborhood_id,
@@ -101,7 +100,7 @@ export default async function TenantAdminLayout({
           )
         )
       `)
-      .eq("auth_user_id", user.id)
+      .eq("id", user.id)
       .eq("role", "resident")
       .eq("lots.neighborhoods.tenant_id", tenant.id)
       .maybeSingle()

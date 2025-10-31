@@ -1,9 +1,11 @@
 "use client"
 
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { CardTitle, CardDescription } from "@/components/ui/card"
 import { OnboardingProgress } from "@/components/onboarding-progress"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { X } from "lucide-react"
 
 const ONBOARDING_STEPS = [
   { path: "welcome", title: "Welcome", description: "Get started with your community" },
@@ -30,10 +32,17 @@ interface OnboardingStepHeaderProps {
   tenantName: string
   tenantSlug: string
   isTestMode?: boolean
+  showCloseButton?: boolean
 }
 
-export function OnboardingStepHeader({ tenantName, tenantSlug, isTestMode }: OnboardingStepHeaderProps) {
+export function OnboardingStepHeader({
+  tenantName,
+  tenantSlug,
+  isTestMode,
+  showCloseButton,
+}: OnboardingStepHeaderProps) {
   const pathname = usePathname()
+  const router = useRouter()
   const currentStep = getCurrentStep(pathname)
   const stepInfo = getStepInfo(pathname)
 
@@ -48,7 +57,19 @@ export function OnboardingStepHeader({ tenantName, tenantSlug, isTestMode }: Onb
             tenantSlug={tenantSlug}
           />
         </div>
-        {isTestMode && <Badge variant="secondary">Test Mode</Badge>}
+        <div className="flex items-center gap-2">
+          {isTestMode && <Badge variant="secondary">Test Mode</Badge>}
+          {showCloseButton && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => router.push(`/t/${tenantSlug}/admin/dashboard`)}
+              className="h-8 w-8"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </div>
       <div className="space-y-1.5">
         <CardTitle className="text-2xl">{stepInfo.title}</CardTitle>

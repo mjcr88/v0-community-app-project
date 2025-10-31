@@ -12,6 +12,7 @@ import { createBrowserClient } from "@/lib/supabase/client"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle, Plus, Trash2, ArrowLeft } from "lucide-react"
+import { v4 as crypto } from "uuid"
 
 type Lot = {
   id: string
@@ -148,6 +149,7 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
         const membersToInsert = familyData.members
           .filter((m) => m.first_name && m.last_name)
           .map((member) => ({
+            id: crypto(),
             lot_id: selectedLotId,
             first_name: member.first_name,
             last_name: member.last_name,
@@ -181,7 +183,6 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
             species: pet.species,
             breed: pet.breed || null,
             family_unit_id: familyUnit.id,
-            tenant_id: tenant.id,
           }))
 
         if (petsToInsert.length > 0) {
@@ -196,6 +197,7 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
 
         const { error } = await supabase.from("users").insert([
           {
+            id: crypto(),
             lot_id: selectedLotId,
             first_name: formData.first_name,
             last_name: formData.last_name,
@@ -212,8 +214,8 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
 
       setLoading(false)
       window.location.href = `/t/${slug}/admin/residents`
-    } catch (error) {
-      console.error("Error creating:", error)
+    } catch (error: any) {
+      console.error("Error creating:", error.message)
       setLoading(false)
     }
   }

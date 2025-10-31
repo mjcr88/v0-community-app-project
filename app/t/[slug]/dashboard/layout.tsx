@@ -59,28 +59,18 @@ export default async function ResidentDashboardLayout({
       last_name,
       email,
       profile_picture_url,
-      is_admin,
+      is_tenant_admin,
       onboarding_completed,
-      lot_id,
-      lots!inner (
-        neighborhood_id,
-        neighborhoods!inner (
-          tenant_id
-        )
-      )
+      tenant_id,
+      lot_id
     `,
     )
-    .eq("auth_user_id", user.id)
+    .eq("id", user.id)
     .eq("role", "resident")
+    .eq("tenant_id", tenant.id)
     .maybeSingle()
 
   if (!resident) {
-    redirect(`/t/${slug}/login`)
-  }
-
-  // Check if resident belongs to this tenant
-  const residentTenantId = resident.lots?.neighborhoods?.tenant_id
-  if (residentTenantId !== tenant.id) {
     redirect(`/t/${slug}/login`)
   }
 
@@ -89,7 +79,7 @@ export default async function ResidentDashboardLayout({
     redirect(`/t/${slug}/onboarding`)
   }
 
-  const isAdmin = resident.is_admin === true
+  const isAdmin = resident.is_tenant_admin === true
 
   return (
     <SidebarProvider>

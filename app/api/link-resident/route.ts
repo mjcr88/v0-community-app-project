@@ -5,6 +5,8 @@ export async function POST(request: Request) {
   try {
     const { residentId, authUserId } = await request.json()
 
+    console.log("[v0] Link resident request:", { residentId, authUserId })
+
     if (!residentId || !authUserId) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
@@ -17,46 +19,44 @@ export async function POST(request: Request) {
       },
     })
 
-    // First, delete the temporary user record
+    const { data: oldResident, error: fetchError } = await supabase
+      .from("users")
+      .select("*")
+      .eq("id", residentId)
+      .single()
+
+    console.log("[v0] Old resident data:", { oldResident, fetchError })
+
+    if (fetchError || !oldResident) {
+      console.error("[v0] Error fetching old resident:", fetchError)
+      return NextResponse.json({ error: "Resident not found" }, { status: 404 })
+    }
+
     const { error: deleteError } = await supabase.from("users").delete().eq("id", residentId)
 
+    console.log("[v0] Delete result:", { deleteError })
+
     if (deleteError) {
-      console.error("[v0] Error deleting temporary user:", deleteError)
+      console.error("[v0] Error deleting old resident:", deleteError)
       return NextResponse.json({ error: deleteError.message }, { status: 500 })
     }
 
-    // Then create a new user record with the auth user id
-    const { data: tempUser } = await supabase.from("users").select("*").eq("id", residentId).single()
+    const { error: insertError } = await supabase.from("users").insert({
+      ...oldResident,
+      id: authUserId, // Use the auth user's ID as the new primary key
+      invite_token: null, // Clear the invite token
+    })
 
-    // Get the user data before deletion
-    const { data: userData, error: fetchError } = await supabase
-      .from("users")
-      .select("*")
-      .eq("invite_token", null)
-      .eq("id", residentId)
-      .maybeSingle()
+    console.log("[v0] Insert result:", { insertError })
 
-    if (fetchError && fetchError.code !== "PGRST116") {
-      console.error("[v0] Error fetching user data:", fetchError)
+    if (insertError) {
+      console.error("[v0] Error inserting new resident:", insertError)
+      // Try to restore the old record if insert fails
+      await supabase.from("users").insert(oldResident)
+      return NextResponse.json({ error: insertError.message }, { status: 500 })
     }
 
-    // Actually, let's just update the id field directly
-    // This won't work because id is the primary key
-    // Instead, we need to copy all data to a new record with the auth user id
-
-    // Better approach: Just update the invite_token to null
-    // The user will need to be created with the correct auth user id from the start
-    const { error: updateError } = await supabase
-      .from("users")
-      .update({
-        invite_token: null,
-      })
-      .eq("id", residentId)
-
-    if (updateError) {
-      console.error("[v0] Error linking resident:", updateError)
-      return NextResponse.json({ error: updateError.message }, { status: 500 })
-    }
+    console.log("[v0] Successfully linked resident to auth user")
 
     return NextResponse.json({ success: true })
   } catch (error: any) {

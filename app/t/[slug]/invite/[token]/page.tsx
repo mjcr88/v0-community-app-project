@@ -16,7 +16,7 @@ export default async function InvitePage({
   // Check if tenant exists
   const { data: tenant, error: tenantError } = await supabase
     .from("tenants")
-    .select("id, name, slug")
+    .select("id, name, slug, features")
     .eq("slug", slug)
     .maybeSingle()
 
@@ -55,24 +55,7 @@ export default async function InvitePage({
 
   const resident = validationResult.resident
 
-  const { data: authUser } = await supabase.auth.admin.getUserById(resident.id)
-
-  if (authUser?.user) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-forest-50 to-sky-50 p-4">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold">Already Registered</h1>
-          <p className="mt-2 text-muted-foreground">
-            This invite has already been used. Please{" "}
-            <a href={`/t/${slug}/login`} className="text-primary underline">
-              sign in
-            </a>
-            .
-          </p>
-        </div>
-      </div>
-    )
-  }
+  // The resident will create their auth account during signup
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-forest-50 to-sky-50 p-4">

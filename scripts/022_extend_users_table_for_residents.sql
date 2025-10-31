@@ -1,29 +1,10 @@
 -- Phase 1: Extend users table to support residents
--- This is a NON-BREAKING change that adds resident-specific fields to the users table
+-- SIMPLIFIED APPROACH: Keep role as TEXT, just add new columns
 
--- Drop all policies that depend on get_user_role() function first
-DROP POLICY IF EXISTS "super_admins_all_users" ON public.users;
-DROP POLICY IF EXISTS "tenant_admins_tenant_users" ON public.users;
-DROP POLICY IF EXISTS "users_own_data" ON public.users;
-
--- Drop policies on other tables that might use these functions
-DROP POLICY IF EXISTS "super_admins_all_tenants" ON public.tenants;
-DROP POLICY IF EXISTS "tenant_admins_own_tenant" ON public.tenants;
-
--- Now drop functions with CASCADE to handle any remaining dependencies
-DROP FUNCTION IF EXISTS public.get_user_role() CASCADE;
-DROP FUNCTION IF EXISTS public.get_user_tenant_id() CASCADE;
-
--- Create the enum type if it doesn't exist
-DO $$ BEGIN
-  CREATE TYPE user_role AS ENUM ('super_admin', 'tenant_admin', 'resident');
-EXCEPTION
-  WHEN duplicate_object THEN null;
-END $$;
-
--- Update role column to use enum type instead of TEXT
-ALTER TABLE users 
-  ALTER COLUMN role TYPE user_role USING role::user_role;
+-- Add a CHECK constraint to enforce valid role values
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
+ALTER TABLE users ADD CONSTRAINT users_role_check 
+  CHECK (role IN ('super_admin', 'tenant_admin', 'resident'));
 
 -- Add resident-specific columns to users table
 ALTER TABLE users
@@ -55,72 +36,14 @@ ALTER TABLE users
   ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN DEFAULT false,
   ADD COLUMN IF NOT EXISTS onboarding_completed_at TIMESTAMPTZ;
 
--- Update existing users to ensure they have correct roles
--- Users with role 'super_admin' stay as super_admin
--- Users with role 'tenant_admin' stay as tenant_admin
-UPDATE users 
-SET role = 'resident'::user_role
-WHERE role::text NOT IN ('super_admin', 'tenant_admin');
-
 -- Create indexes for performance
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 CREATE INDEX IF NOT EXISTS idx_users_tenant_role ON users(tenant_id, role);
 CREATE INDEX IF NOT EXISTS idx_users_lot_id ON users(lot_id);
 CREATE INDEX IF NOT EXISTS idx_users_family_unit_id ON users(family_unit_id);
-CREATE INDEX IF NOT EXISTS idx_users_invite_token ON users(invite_token) WHERE invite_token IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_users_onboarding ON users(onboarding_completed) WHERE role = 'resident';
 
--- Recreate the helper functions with the new enum type
-CREATE OR REPLACE FUNCTION public.get_user_role()
-RETURNS user_role
-LANGUAGE sql
-SECURITY DEFINER
-STABLE
-AS $$
-  SELECT role FROM public.users WHERE id = auth.uid() LIMIT 1;
-$$;
-
-CREATE OR REPLACE FUNCTION public.get_user_tenant_id()
-RETURNS UUID
-LANGUAGE sql
-SECURITY DEFINER
-STABLE
-AS $$
-  SELECT tenant_id FROM public.users WHERE id = auth.uid() LIMIT 1;
-$$;
-
--- Recreate RLS policies for users table
-CREATE POLICY "super_admins_all_users" ON public.users
-  FOR ALL
-  USING (public.get_user_role() = 'super_admin')
-  WITH CHECK (public.get_user_role() = 'super_admin');
-
-CREATE POLICY "tenant_admins_tenant_users" ON public.users
-  FOR SELECT
-  USING (
-    public.get_user_role() = 'tenant_admin' 
-    AND tenant_id = public.get_user_tenant_id()
-  );
-
-CREATE POLICY "users_own_data" ON public.users
-  FOR ALL
-  USING (auth.uid() = id)
-  WITH CHECK (auth.uid() = id);
-
--- Recreate policies on tenants table that were dropped
-CREATE POLICY "super_admins_all_tenants" ON public.tenants
-  FOR ALL
-  USING (public.get_user_role() = 'super_admin')
-  WITH CHECK (public.get_user_role() = 'super_admin');
-
-CREATE POLICY "tenant_admins_own_tenant" ON public.tenants
-  FOR SELECT
-  USING (
-    public.get_user_role() = 'tenant_admin' 
-    AND id = public.get_user_tenant_id()
-  );
-
--- Add computed column for full name (for backwards compatibility)
+-- Add computed column function for full name (for backwards compatibility)
 CREATE OR REPLACE FUNCTION get_user_full_name(users) RETURNS TEXT AS $$
   SELECT CASE 
     WHEN $1.first_name IS NOT NULL AND $1.last_name IS NOT NULL 

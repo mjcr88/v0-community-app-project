@@ -37,9 +37,10 @@ export default async function PublicProfilePage({
 
   // Get current resident's tenant
   const { data: currentResident } = await supabase
-    .from("residents")
+    .from("users")
     .select("id, tenant_id")
     .eq("auth_user_id", user.id)
+    .eq("role", "resident")
     .single()
 
   if (!currentResident) {
@@ -48,7 +49,7 @@ export default async function PublicProfilePage({
 
   // Get the profile resident with all details
   const { data: resident } = await supabase
-    .from("residents")
+    .from("users")
     .select(
       `
       *,
@@ -61,17 +62,20 @@ export default async function PublicProfilePage({
       family_units (
         name
       ),
-      resident_interests (
+      user_interests (
         interests (
           id,
           name
         )
       ),
-      resident_skills (
-        skill_name,
+      user_skills (
+        skills (
+          id,
+          name
+        ),
         open_to_requests
       ),
-      resident_privacy_settings (
+      user_privacy_settings (
         show_email,
         show_phone,
         show_birthday,
@@ -92,13 +96,14 @@ export default async function PublicProfilePage({
     )
     .eq("id", id)
     .eq("tenant_id", currentResident.tenant_id)
+    .eq("role", "resident")
     .single()
 
   if (!resident) {
     notFound()
   }
 
-  const privacySettings = resident.resident_privacy_settings?.[0] || {}
+  const privacySettings = resident.user_privacy_settings?.[0] || {}
   const initials = [resident.first_name, resident.last_name]
     .filter(Boolean)
     .map((n) => n![0])
@@ -267,8 +272,8 @@ export default async function PublicProfilePage({
 
           {/* Interests */}
           {privacySettings.show_interests !== false &&
-            resident.resident_interests &&
-            resident.resident_interests.length > 0 && (
+            resident.user_interests &&
+            resident.user_interests.length > 0 && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -278,9 +283,9 @@ export default async function PublicProfilePage({
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-wrap gap-2">
-                    {resident.resident_interests.map((ri: any) => (
-                      <Badge key={ri.interests.id} variant="outline">
-                        {ri.interests.name}
+                    {resident.user_interests.map((ui: any) => (
+                      <Badge key={ui.interests.id} variant="outline">
+                        {ui.interests.name}
                       </Badge>
                     ))}
                   </div>
@@ -289,7 +294,7 @@ export default async function PublicProfilePage({
             )}
 
           {/* Skills */}
-          {privacySettings.show_skills !== false && resident.resident_skills && resident.resident_skills.length > 0 && (
+          {privacySettings.show_skills !== false && resident.user_skills && resident.user_skills.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -298,7 +303,7 @@ export default async function PublicProfilePage({
                 </CardTitle>
                 {privacySettings.show_open_to_requests !== false && (
                   <CardDescription>
-                    {resident.resident_skills.some((s: any) => s.open_to_requests)
+                    {resident.user_skills.some((s: any) => s.open_to_requests)
                       ? "Open to help requests for some skills"
                       : "Not currently accepting help requests"}
                   </CardDescription>
@@ -306,9 +311,9 @@ export default async function PublicProfilePage({
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {resident.resident_skills.map((skill: any, index: number) => (
+                  {resident.user_skills.map((skill: any, index: number) => (
                     <div key={index} className="flex items-center justify-between">
-                      <span className="text-sm font-medium">{skill.skill_name}</span>
+                      <span className="text-sm font-medium">{skill.skills.name}</span>
                       {privacySettings.show_open_to_requests !== false && skill.open_to_requests && (
                         <Badge variant="secondary" className="gap-1">
                           <CheckCircle2 className="h-3 w-3" />

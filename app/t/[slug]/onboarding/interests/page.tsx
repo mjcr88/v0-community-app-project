@@ -40,10 +40,11 @@ export default async function InterestsPage({ params }: { params: Promise<{ slug
     resident = { id: "test-resident-id" }
   } else {
     const { data: residentData } = await supabase
-      .from("residents")
+      .from("users")
       .select("id")
       .eq("auth_user_id", user.id)
       .eq("tenant_id", tenant.id)
+      .eq("role", "resident")
       .single()
 
     resident = residentData
@@ -51,9 +52,9 @@ export default async function InterestsPage({ params }: { params: Promise<{ slug
     if (resident) {
       // Fetch existing interests
       const { data: existingInterests } = await supabase
-        .from("resident_interests")
+        .from("user_interests")
         .select("interest_id")
-        .eq("resident_id", resident.id)
+        .eq("user_id", resident.id)
 
       residentInterests = existingInterests?.map((i) => i.interest_id) || []
     }

@@ -29,10 +29,7 @@ export default async function BackofficeDashboardPage() {
   // Fetch all tenants
   const { data: tenants, error: tenantsError } = await supabase
     .from("tenants")
-    .select(`
-      *,
-      tenant_admin:users!tenants_tenant_admin_id_fkey(name, email)
-    `)
+    .select("*")
     .order("created_at", { ascending: false })
 
   return (
@@ -79,7 +76,6 @@ export default async function BackofficeDashboardPage() {
                     <TableHead>Name</TableHead>
                     <TableHead>Slug</TableHead>
                     <TableHead>Max Neighborhoods</TableHead>
-                    <TableHead>Tenant Admin</TableHead>
                     <TableHead>Created</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -90,16 +86,6 @@ export default async function BackofficeDashboardPage() {
                       <TableCell className="font-medium">{tenant.name}</TableCell>
                       <TableCell className="font-mono text-sm">{tenant.slug}</TableCell>
                       <TableCell>{tenant.max_neighborhoods}</TableCell>
-                      <TableCell>
-                        {tenant.tenant_admin ? (
-                          <div className="text-sm">
-                            <div>{tenant.tenant_admin.name || "—"}</div>
-                            <div className="text-muted-foreground">{tenant.tenant_admin.email}</div>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">Not assigned</span>
-                        )}
-                      </TableCell>
                       <TableCell className="text-muted-foreground">
                         {new Date(tenant.created_at).toLocaleDateString()}
                       </TableCell>

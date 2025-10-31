@@ -43,9 +43,10 @@ export default async function EditFamilyPage({
   }
 
   const { data: residents } = await supabase
-    .from("residents")
+    .from("users")
     .select("*")
     .eq("family_unit_id", family.id)
+    .eq("role", "resident")
     .order("created_at", { ascending: true })
 
   const { data: pets } = await supabase

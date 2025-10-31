@@ -29,8 +29,10 @@ export function NeighboursTable({ residents, allInterests, neighborhoods, tenant
   const uniqueSkills = useMemo(() => {
     const skills = new Set<string>()
     residents.forEach((resident) => {
-      resident.resident_skills?.forEach((skill: any) => {
-        skills.add(skill.skill_name)
+      resident.user_skills?.forEach((skill: any) => {
+        if (skill.skills?.name) {
+          skills.add(skill.skills.name)
+        }
       })
     })
     return Array.from(skills).sort()
@@ -49,7 +51,7 @@ export function NeighboursTable({ residents, allInterests, neighborhoods, tenant
   // Filter residents
   const filteredResidents = useMemo(() => {
     return residents.filter((resident) => {
-      const privacySettings = resident.resident_privacy_settings?.[0]
+      const privacySettings = resident.user_privacy_settings?.[0]
 
       // Search filter (name)
       const fullName = `${resident.first_name || ""} ${resident.last_name || ""}`.toLowerCase()
@@ -67,14 +69,13 @@ export function NeighboursTable({ residents, allInterests, neighborhoods, tenant
         (privacySettings?.show_journey_stage !== false && resident.journey_stage === journeyStageFilter)
 
       // Interest filter
-      const residentInterestNames =
-        resident.resident_interests?.map((ri: any) => ri.interests?.name).filter(Boolean) || []
+      const residentInterestNames = resident.user_interests?.map((ui: any) => ui.interests?.name).filter(Boolean) || []
       const matchesInterest =
         interestFilter === "all" ||
         (privacySettings?.show_interests !== false && residentInterestNames.includes(interestFilter))
 
       // Skill filter
-      const residentSkillNames = resident.resident_skills?.map((rs: any) => rs.skill_name) || []
+      const residentSkillNames = resident.user_skills?.map((us: any) => us.skills?.name).filter(Boolean) || []
       const matchesSkill =
         skillFilter === "all" || (privacySettings?.show_skills !== false && residentSkillNames.includes(skillFilter))
 
@@ -203,7 +204,7 @@ export function NeighboursTable({ residents, allInterests, neighborhoods, tenant
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filteredResidents.map((resident) => {
-              const privacySettings = resident.resident_privacy_settings?.[0]
+              const privacySettings = resident.user_privacy_settings?.[0]
               const initials = getInitials(resident.first_name, resident.last_name)
               const displayName = `${resident.first_name || ""} ${resident.last_name || ""}`.trim()
 
@@ -253,18 +254,18 @@ export function NeighboursTable({ residents, allInterests, neighborhoods, tenant
 
                       {/* Interests */}
                       {privacySettings?.show_interests !== false &&
-                        resident.resident_interests &&
-                        resident.resident_interests.length > 0 && (
+                        resident.user_interests &&
+                        resident.user_interests.length > 0 && (
                           <div className="flex flex-wrap gap-1 justify-center">
                             <Lightbulb className="h-3 w-3 text-muted-foreground" />
-                            {resident.resident_interests.slice(0, 3).map((ri: any) => (
-                              <Badge key={ri.interests.id} variant="outline" className="text-xs">
-                                {ri.interests.name}
+                            {resident.user_interests.slice(0, 3).map((ui: any) => (
+                              <Badge key={ui.interests.id} variant="outline" className="text-xs">
+                                {ui.interests.name}
                               </Badge>
                             ))}
-                            {resident.resident_interests.length > 3 && (
+                            {resident.user_interests.length > 3 && (
                               <Badge variant="outline" className="text-xs">
-                                +{resident.resident_interests.length - 3}
+                                +{resident.user_interests.length - 3}
                               </Badge>
                             )}
                           </div>
@@ -272,18 +273,18 @@ export function NeighboursTable({ residents, allInterests, neighborhoods, tenant
 
                       {/* Skills */}
                       {privacySettings?.show_skills !== false &&
-                        resident.resident_skills &&
-                        resident.resident_skills.length > 0 && (
+                        resident.user_skills &&
+                        resident.user_skills.length > 0 && (
                           <div className="flex flex-wrap gap-1 justify-center">
                             <Wrench className="h-3 w-3 text-muted-foreground" />
-                            {resident.resident_skills.slice(0, 2).map((skill: any, index: number) => (
+                            {resident.user_skills.slice(0, 2).map((skill: any, index: number) => (
                               <Badge key={index} variant="secondary" className="text-xs">
-                                {skill.skill_name}
+                                {skill.skills.name}
                               </Badge>
                             ))}
-                            {resident.resident_skills.length > 2 && (
+                            {resident.user_skills.length > 2 && (
                               <Badge variant="secondary" className="text-xs">
-                                +{resident.resident_skills.length - 2}
+                                +{resident.user_skills.length - 2}
                               </Badge>
                             )}
                           </div>

@@ -28,7 +28,7 @@ export default async function EditResidentPage({
 
   // Get resident
   const { data: resident } = await supabase
-    .from("residents")
+    .from("users")
     .select(`
       *,
       lots:lot_id (
@@ -42,6 +42,7 @@ export default async function EditResidentPage({
       )
     `)
     .eq("id", id)
+    .eq("role", "resident")
     .single()
 
   if (!resident || resident.lots?.neighborhoods?.tenant_id !== tenant.id) {

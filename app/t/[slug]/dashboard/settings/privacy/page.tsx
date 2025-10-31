@@ -15,14 +15,20 @@ export default async function PrivacySettingsPage({ params }: { params: Promise<
     redirect(`/t/${slug}/login`)
   }
 
-  const { data: resident } = await supabase.from("residents").select("*").eq("auth_user_id", user.id).maybeSingle()
+  const { data: resident } = await supabase
+    .from("users")
+    .select("*")
+    .eq("auth_user_id", user.id)
+    .eq("role", "resident")
+    .maybeSingle()
 
   if (!resident) {
     // Check if user is a super admin
     const { data: superAdmin } = await supabase
-      .from("super_admins")
+      .from("users")
       .select("id")
-      .eq("auth_user_id", user.id)
+      .eq("id", user.id)
+      .eq("role", "super_admin")
       .maybeSingle()
 
     if (superAdmin) {
@@ -36,16 +42,16 @@ export default async function PrivacySettingsPage({ params }: { params: Promise<
 
   // Get or create privacy settings
   let { data: privacySettings } = await supabase
-    .from("resident_privacy_settings")
+    .from("user_privacy_settings")
     .select("*")
-    .eq("resident_id", resident.id)
+    .eq("user_id", resident.id)
     .maybeSingle()
 
   // If no privacy settings exist, create default ones
   if (!privacySettings) {
     const { data: newSettings } = await supabase
-      .from("resident_privacy_settings")
-      .insert({ resident_id: resident.id })
+      .from("user_privacy_settings")
+      .insert({ user_id: resident.id })
       .select()
       .single()
     privacySettings = newSettings

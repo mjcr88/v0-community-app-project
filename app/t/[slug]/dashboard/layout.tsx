@@ -51,7 +51,7 @@ export default async function ResidentDashboardLayout({
 
   // Get resident info
   const { data: resident } = await supabase
-    .from("residents")
+    .from("users")
     .select(
       `
       id,
@@ -71,6 +71,7 @@ export default async function ResidentDashboardLayout({
     `,
     )
     .eq("auth_user_id", user.id)
+    .eq("role", "resident")
     .maybeSingle()
 
   if (!resident) {

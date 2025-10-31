@@ -16,7 +16,7 @@ export default async function NeighboursPage({ params }: { params: Promise<{ slu
 
   // Get current resident's tenant
   const { data: currentResident } = await supabase
-    .from("residents")
+    .from("users")
     .select(
       `
       id,
@@ -29,6 +29,7 @@ export default async function NeighboursPage({ params }: { params: Promise<{ slu
     `,
     )
     .eq("auth_user_id", user.id)
+    .eq("role", "resident")
     .single()
 
   if (!currentResident) {
@@ -37,7 +38,7 @@ export default async function NeighboursPage({ params }: { params: Promise<{ slu
 
   // Get all residents in the same tenant with their privacy settings
   const { data: residents } = await supabase
-    .from("residents")
+    .from("users")
     .select(
       `
       id,
@@ -59,17 +60,20 @@ export default async function NeighboursPage({ params }: { params: Promise<{ slu
           name
         )
       ),
-      resident_interests (
+      user_interests (
         interests (
           id,
           name
         )
       ),
-      resident_skills (
-        skill_name,
+      user_skills (
+        skills (
+          id,
+          name
+        ),
         open_to_requests
       ),
-      resident_privacy_settings (
+      user_privacy_settings (
         show_email,
         show_phone,
         show_birthday,
@@ -89,6 +93,7 @@ export default async function NeighboursPage({ params }: { params: Promise<{ slu
     `,
     )
     .eq("tenant_id", currentResident.tenant_id)
+    .eq("role", "resident")
     .eq("onboarding_completed", true)
     .neq("id", currentResident.id)
     .order("first_name")

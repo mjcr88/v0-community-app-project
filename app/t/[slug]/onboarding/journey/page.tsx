@@ -36,10 +36,11 @@ export default async function JourneyPage({ params }: { params: Promise<{ slug: 
     }
   } else {
     const { data: residentData } = await supabase
-      .from("residents")
+      .from("users")
       .select("id, journey_stage, estimated_move_in_date")
       .eq("auth_user_id", user.id)
       .eq("tenant_id", tenant.id)
+      .eq("role", "resident")
       .single()
 
     resident = residentData

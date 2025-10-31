@@ -52,9 +52,10 @@ export default async function FamiliesPage({
   const familiesWithCounts = await Promise.all(
     (families || []).map(async (family) => {
       const { count: residentCount } = await supabase
-        .from("residents")
+        .from("users")
         .select("*", { count: "exact", head: true })
         .eq("family_unit_id", family.id)
+        .eq("role", "resident")
 
       const { count: petCount } = await supabase
         .from("pets")

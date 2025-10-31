@@ -54,7 +54,7 @@ export default async function TenantAdminLayout({
   let residentData = null
   if (!isSuperAdmin) {
     const { data } = await supabase
-      .from("residents")
+      .from("users")
       .select(`
         id,
         first_name,
@@ -71,6 +71,7 @@ export default async function TenantAdminLayout({
         )
       `)
       .eq("auth_user_id", user.id)
+      .eq("role", "resident")
       .maybeSingle()
 
     residentData = data
@@ -84,7 +85,7 @@ export default async function TenantAdminLayout({
     }
   } else {
     const { data } = await supabase
-      .from("residents")
+      .from("users")
       .select(`
         id,
         first_name,
@@ -101,6 +102,7 @@ export default async function TenantAdminLayout({
         )
       `)
       .eq("auth_user_id", user.id)
+      .eq("role", "resident")
       .eq("lots.neighborhoods.tenant_id", tenant.id)
       .maybeSingle()
 

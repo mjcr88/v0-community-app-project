@@ -100,7 +100,7 @@ export function EditResidentForm({
 
     // Update resident with invite token, timestamp, and ensure tenant_id is set
     const { error: updateError } = await supabase
-      .from("residents")
+      .from("users")
       .update({
         invite_token: inviteToken,
         invited_at: new Date().toISOString(),
@@ -137,7 +137,7 @@ export function EditResidentForm({
     }
 
     const { error } = await supabase
-      .from("residents")
+      .from("users")
       .update({
         lot_id: formData.lot_id,
         first_name: formData.first_name,
@@ -169,7 +169,7 @@ export function EditResidentForm({
     setDeleteLoading(true)
     const supabase = createBrowserClient()
 
-    const { error } = await supabase.from("residents").delete().eq("id", resident.id)
+    const { error } = await supabase.from("users").delete().eq("id", resident.id)
 
     if (error) {
       console.error("Error deleting resident:", error)

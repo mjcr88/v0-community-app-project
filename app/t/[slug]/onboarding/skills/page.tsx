@@ -41,10 +41,11 @@ export default async function SkillsPage({ params }: { params: Promise<{ slug: s
     resident = { id: "test-resident-id" }
   } else {
     const { data: residentData } = await supabase
-      .from("residents")
+      .from("users")
       .select("id")
       .eq("auth_user_id", user.id)
       .eq("tenant_id", tenant.id)
+      .eq("role", "resident")
       .single()
 
     resident = residentData
@@ -52,9 +53,9 @@ export default async function SkillsPage({ params }: { params: Promise<{ slug: s
     if (resident) {
       // Fetch existing skills
       const { data: existingSkills } = await supabase
-        .from("resident_skills")
+        .from("user_skills")
         .select("skill_id, open_to_requests")
-        .eq("resident_id", resident.id)
+        .eq("user_id", resident.id)
 
       residentSkills = existingSkills?.map((s) => ({ id: s.skill_id, open_to_requests: s.open_to_requests })) || []
     }

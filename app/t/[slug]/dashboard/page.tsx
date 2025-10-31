@@ -16,7 +16,7 @@ export default async function ResidentDashboardPage({ params }: { params: Promis
 
   // Get resident info with related data
   const { data: resident } = await supabase
-    .from("residents")
+    .from("users")
     .select(
       `
       *,
@@ -29,13 +29,15 @@ export default async function ResidentDashboardPage({ params }: { params: Promis
     `,
     )
     .eq("auth_user_id", user.id)
+    .eq("role", "resident")
     .single()
 
   // Get total residents count in tenant
   const { count: totalResidents } = await supabase
-    .from("residents")
+    .from("users")
     .select("*", { count: "only", head: true })
     .eq("tenant_id", resident.tenant_id)
+    .eq("role", "resident")
 
   return (
     <div className="space-y-6">

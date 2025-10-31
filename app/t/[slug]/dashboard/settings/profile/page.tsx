@@ -16,32 +16,38 @@ export default async function ProfileSettingsPage({ params }: { params: Promise<
   }
 
   const { data: resident, error: residentError } = await supabase
-    .from("residents")
+    .from("users")
     .select(
       `
       *,
-      resident_interests (
+      user_interests (
         interest_id,
         interests (
           id,
           name
         )
       ),
-      resident_skills (
-        skill_name,
-        open_to_requests
+      user_skills (
+        skill_id,
+        open_to_requests,
+        skills (
+          id,
+          name
+        )
       )
     `,
     )
     .eq("auth_user_id", user.id)
+    .eq("role", "resident")
     .maybeSingle()
 
   if (!resident) {
     // Check if user is a super admin
     const { data: superAdmin } = await supabase
-      .from("super_admins")
+      .from("users")
       .select("id")
-      .eq("auth_user_id", user.id)
+      .eq("id", user.id)
+      .eq("role", "super_admin")
       .maybeSingle()
 
     if (superAdmin) {

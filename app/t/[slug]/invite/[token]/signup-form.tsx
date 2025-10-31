@@ -67,21 +67,32 @@ export function SignupForm({ tenant, resident, token }: SignupFormProps) {
         },
       })
 
+      console.log("[v0] Signup result:", { user: authData.user?.id, error: signUpError?.message })
+
       if (signUpError) throw signUpError
       if (!authData.user) throw new Error("Failed to create account")
 
-      // Link auth user to resident record
-      const { error: updateError } = await supabase
-        .from("residents")
-        .update({
-          auth_user_id: authData.user.id,
-          invite_token: null, // Clear the invite token
-        })
-        .eq("id", resident.id)
+      const response = await fetch("/api/link-resident", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          residentId: resident.id,
+          authUserId: authData.user.id,
+        }),
+      })
 
-      if (updateError) throw updateError
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to link account")
+      }
 
-      const redirectPath = tenant.features?.onboarding ? `/t/${tenant.slug}/onboarding` : `/t/${tenant.slug}/dashboard`
+      console.log("[v0] Resident linked successfully")
+
+      const redirectPath = tenant.features?.onboarding
+        ? `/t/${tenant.slug}/onboarding/welcome`
+        : `/t/${tenant.slug}/dashboard`
+
+      console.log("[v0] Redirecting to:", redirectPath)
       router.push(redirectPath)
     } catch (err: any) {
       console.error("[v0] Signup error:", err)

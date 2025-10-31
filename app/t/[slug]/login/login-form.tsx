@@ -60,18 +60,9 @@ export function TenantLoginForm({ tenant }: TenantLoginFormProps) {
 
       const { data: residentData, error: residentError } = await supabase
         .from("residents")
-        .select(`
-          id,
-          is_admin,
-          lot_id,
-          lots!inner (
-            neighborhood_id,
-            neighborhoods!inner (
-              tenant_id
-            )
-          )
-        `)
+        .select("id, is_admin, tenant_id, onboarding_completed")
         .eq("auth_user_id", authData.user.id)
+        .eq("tenant_id", tenant.id)
         .maybeSingle()
 
       console.log("[v0] Resident data:", residentData)
@@ -81,18 +72,17 @@ export function TenantLoginForm({ tenant }: TenantLoginFormProps) {
         throw new Error("You do not have access to this community")
       }
 
-      // Check if resident belongs to this tenant
-      const residentTenantId = residentData.lots?.neighborhoods?.tenant_id
+      console.log("[v0] Access granted, redirecting...")
 
-      if (residentTenantId !== tenant.id) {
-        await supabase.auth.signOut()
-        throw new Error("You do not have access to this community")
+      if (!residentData.onboarding_completed) {
+        router.push(`/t/${tenant.slug}/onboarding/welcome`)
+      } else if (residentData.is_admin) {
+        router.push(`/t/${tenant.slug}/admin/dashboard`)
+      } else {
+        router.push(`/t/${tenant.slug}/dashboard`)
       }
-
-      console.log("[v0] Access granted, redirecting to dashboard")
-      router.push(`/t/${tenant.slug}/admin/dashboard`)
     } catch (err: any) {
-      console.error("[v0] Login error:", err)
+      console.error("[v0] Login error:", err.message)
       setError(err.message || "An error occurred")
     } finally {
       setLoading(false)

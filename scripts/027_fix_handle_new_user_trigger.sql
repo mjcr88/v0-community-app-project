@@ -7,18 +7,47 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
+DECLARE
+  existing_user RECORD;
 BEGIN
   -- Check if a user with this email already exists (from admin-created resident)
-  IF EXISTS (SELECT 1 FROM public.users WHERE email = new.email) THEN
-    -- Update the existing user record to use the new auth user ID
-    -- This happens when a resident created by admin signs up
-    UPDATE public.users 
-    SET 
-      id = new.id,
-      role = COALESCE(new.raw_user_meta_data->>'role', role),
-      name = COALESCE(new.raw_user_meta_data->>'name', name),
-      updated_at = NOW()
-    WHERE email = new.email;
+  SELECT * INTO existing_user FROM public.users WHERE email = new.email;
+  
+  IF FOUND THEN
+    -- Delete the old record (with random UUID from admin creation)
+    DELETE FROM public.users WHERE email = new.email;
+    
+    -- Insert new record with auth user's ID, preserving all other data
+    INSERT INTO public.users (
+      id, 
+      email, 
+      role, 
+      first_name, 
+      last_name, 
+      phone, 
+      profile_picture_url,
+      lot_id,
+      tenant_id,
+      is_tenant_admin,
+      invite_token,
+      created_at,
+      updated_at
+    )
+    VALUES (
+      new.id, -- Use the auth user's ID
+      existing_user.email,
+      existing_user.role,
+      existing_user.first_name,
+      existing_user.last_name,
+      existing_user.phone,
+      existing_user.profile_picture_url,
+      existing_user.lot_id,
+      existing_user.tenant_id,
+      existing_user.is_tenant_admin,
+      NULL, -- Clear invite token
+      existing_user.created_at,
+      NOW()
+    );
   ELSE
     -- No existing user, create a new one
     INSERT INTO public.users (id, email, role, name)

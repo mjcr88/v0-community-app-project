@@ -69,33 +69,7 @@ export function SignupForm({ tenant, resident, token }: SignupFormProps) {
         throw new Error("No user returned from signup")
       }
 
-      console.log("[v0] Auth user created:", authResult.user.id)
-
-      console.log("[v0] Calling link-resident API:", { residentId: resident.id, authUserId: authResult.user.id })
-
-      const response = await fetch("/api/link-resident", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          residentId: resident.id,
-          authUserId: authResult.user.id,
-        }),
-      })
-
-      console.log("[v0] Link-resident response:", {
-        ok: response.ok,
-        status: response.status,
-        statusText: response.statusText,
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        console.error("[v0] Link-resident error:", errorData)
-        throw new Error(errorData.error || "Failed to link account")
-      }
-
-      const linkResult = await response.json()
-      console.log("[v0] Link-resident success:", linkResult)
+      console.log("[v0] Auth user created successfully:", authResult.user.id)
 
       const redirectPath = tenant.features?.onboarding
         ? `/t/${tenant.slug}/onboarding/welcome`
@@ -104,12 +78,7 @@ export function SignupForm({ tenant, resident, token }: SignupFormProps) {
       console.log("[v0] Redirecting to:", redirectPath)
       router.push(redirectPath)
     } catch (err: any) {
-      console.error("[v0] Signup error details:", {
-        message: err.message,
-        name: err.name,
-        stack: err.stack,
-        fullError: err,
-      })
+      console.error("[v0] Signup error details:", err.message)
       setError(err.message || "An error occurred during signup")
     } finally {
       setLoading(false)

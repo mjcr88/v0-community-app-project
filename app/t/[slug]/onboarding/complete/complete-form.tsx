@@ -33,7 +33,7 @@ export function CompleteForm({ tenant, resident, isSuperAdmin }: CompleteFormPro
     try {
       if (isSuperAdmin) {
         console.log("[v0] Super admin test mode - skipping onboarding completion")
-        router.push(`/t/${tenant.slug}/admin`)
+        window.location.href = `/t/${tenant.slug}/admin`
         return
       }
 
@@ -47,15 +47,15 @@ export function CompleteForm({ tenant, resident, isSuperAdmin }: CompleteFormPro
 
       if (error) {
         console.error("[v0] Error completing onboarding:", error)
+        setIsLoading(false)
         return
       }
 
       console.log("[v0] Onboarding marked as complete for resident:", resident.id)
 
-      router.push(`/t/${tenant.slug}/dashboard`)
+      window.location.href = `/t/${tenant.slug}/dashboard`
     } catch (error) {
       console.error("[v0] Error completing onboarding:", error)
-    } finally {
       setIsLoading(false)
     }
   }
@@ -75,16 +75,16 @@ export function CompleteForm({ tenant, resident, isSuperAdmin }: CompleteFormPro
 
         if (error) {
           console.error("[v0] Error completing onboarding:", error)
+          setIsLoading(false)
           return
         }
 
         console.log("[v0] Onboarding marked as complete for resident:", resident.id)
       }
 
-      router.push(`/t/${tenant.slug}/dashboard`)
+      window.location.href = `/t/${tenant.slug}/dashboard`
     } catch (error) {
       console.error("[v0] Error completing onboarding:", error)
-    } finally {
       setIsLoading(false)
     }
   }

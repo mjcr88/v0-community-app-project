@@ -39,8 +39,13 @@ export function ProfileEditForm({ resident, tenant, availableInterests, tenantSl
     profilePicture: resident.profile_picture_url || "",
     journeyStage: resident.journey_stage || "",
     estimatedMoveInDate: resident.estimated_move_in_date || "",
-    selectedInterests: resident.resident_interests?.map((ri: any) => ri.interest_id) || [],
-    skills: resident.resident_skills || [],
+    selectedInterests: resident.user_interests?.map((ui: any) => ui.interest_id) || [],
+    skills:
+      resident.user_skills?.map((us: any) => ({
+        skill_id: us.skill_id,
+        skill_name: us.skills?.name || "",
+        open_to_requests: us.open_to_requests || false,
+      })) || [],
   })
 
   const [newSkill, setNewSkill] = useState("")

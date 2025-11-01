@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Users, Calendar, MapPin, Globe, Languages, PawPrint } from "lucide-react"
+import { Users, Calendar, MapPin, Globe, Languages, PawPrint, Home } from "lucide-react"
 import Link from "next/link"
 
 export default async function ResidentDashboardPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -27,6 +27,10 @@ export default async function ResidentDashboardPage({ params }: { params: Promis
           name,
           id
         )
+      ),
+      family_units (
+        name,
+        id
       )
     `,
     )
@@ -100,6 +104,17 @@ export default async function ResidentDashboardPage({ params }: { params: Promis
     petsCount = count || 0
   }
 
+  let familyMembersCount = 0
+  if (resident.family_unit_id) {
+    const { count } = await supabase
+      .from("users")
+      .select("*", { count: "only", head: true })
+      .eq("family_unit_id", resident.family_unit_id)
+      .eq("role", "resident")
+
+    familyMembersCount = count || 0
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -131,6 +146,19 @@ export default async function ResidentDashboardPage({ params }: { params: Promis
             </p>
           </CardContent>
         </Card>
+
+        {resident.family_unit_id && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Your Family</CardTitle>
+              <Home className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{familyMembersCount}</div>
+              <p className="text-xs text-muted-foreground">{resident.family_units?.name || "Family members"}</p>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

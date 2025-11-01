@@ -14,18 +14,6 @@ const ONBOARDING_STEPS = [
   { path: "complete", title: "Review & Complete", description: "Confirm your information" },
 ]
 
-function getCurrentStep(pathname: string): number {
-  const pathParts = pathname.split("/")
-  const currentPath = pathParts[pathParts.length - 1]
-  const stepIndex = ONBOARDING_STEPS.findIndex((step) => step.path === currentPath)
-  return stepIndex >= 0 ? stepIndex + 1 : 1
-}
-
-function getStepInfo(pathname: string) {
-  const stepIndex = getCurrentStep(pathname) - 1
-  return ONBOARDING_STEPS[stepIndex] || ONBOARDING_STEPS[0]
-}
-
 export default async function OnboardingLayout({
   children,
   params,
@@ -36,7 +24,6 @@ export default async function OnboardingLayout({
   const { slug } = await params
   const supabase = await createClient()
 
-  // Check authentication
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -45,21 +32,15 @@ export default async function OnboardingLayout({
     redirect(`/t/${slug}/login`)
   }
 
-  // Check if super admin
   const { data: superAdmin } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle()
 
   const isSuperAdmin = superAdmin?.role === "super_admin"
 
-  // Get tenant info
   const { data: tenant } = await supabase.from("tenants").select("*").eq("slug", slug).single()
 
   if (!tenant) {
     redirect(`/t/${slug}/login`)
   }
-
-  // For now, we'll pass step 1 as default since we can't access pathname in server component
-  const currentStep = 1
-  const totalSteps = ONBOARDING_STEPS.length
 
   if (isSuperAdmin) {
     return (
@@ -85,9 +66,7 @@ export default async function OnboardingLayout({
     redirect(`/t/${slug}/login`)
   }
 
-  if (userRecord.onboarding_completed) {
-    redirect(`/t/${slug}/dashboard`)
-  }
+  // Users can now exit onboarding and return via "Complete Onboarding" button
 
   return (
     <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4">

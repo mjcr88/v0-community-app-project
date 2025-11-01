@@ -7,10 +7,11 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Loader2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { createClient } from "@/lib/supabase/client"
+import { Search, Check } from "lucide-react"
+import { Input } from "@/components/ui/input"
 
 interface InterestsFormProps {
   tenant: {
@@ -21,7 +22,7 @@ interface InterestsFormProps {
   resident: {
     id: string
   }
-  interests: Array<{ id: string; name: string; description: string | null }>
+  interests: Array<{ id: string; name: string; description: string | null; user_count?: number }>
   residentInterests: string[]
   isSuperAdmin: boolean
 }
@@ -31,6 +32,7 @@ export function InterestsForm({ tenant, resident, interests, residentInterests, 
   const supabase = createClient()
   const [isLoading, setIsLoading] = useState(false)
   const [selectedInterests, setSelectedInterests] = useState<string[]>(residentInterests)
+  const [searchQuery, setSearchQuery] = useState("")
 
   const toggleInterest = (interestId: string) => {
     setSelectedInterests((prev) =>
@@ -49,7 +51,6 @@ export function InterestsForm({ tenant, resident, interests, residentInterests, 
         return
       }
 
-      // First, delete existing interests
       const { error: deleteError } = await supabase.from("user_interests").delete().eq("user_id", resident.id)
 
       if (deleteError) {
@@ -57,7 +58,6 @@ export function InterestsForm({ tenant, resident, interests, residentInterests, 
         return
       }
 
-      // Then insert new interests
       if (selectedInterests.length > 0) {
         const { error: insertError } = await supabase
           .from("user_interests")
@@ -82,6 +82,13 @@ export function InterestsForm({ tenant, resident, interests, residentInterests, 
     router.push(`/t/${tenant.slug}/onboarding/skills`)
   }
 
+  const filteredInterests = interests.filter((interest) =>
+    interest.name.toLowerCase().includes(searchQuery.toLowerCase()),
+  )
+
+  const selectedInterestObjects = interests.filter((i) => selectedInterests.includes(i.id))
+  const unselectedInterests = filteredInterests.filter((i) => !selectedInterests.includes(i.id))
+
   return (
     <form onSubmit={handleSubmit}>
       <Card>
@@ -90,28 +97,80 @@ export function InterestsForm({ tenant, resident, interests, residentInterests, 
           <CardDescription>Share your interests to connect with like-minded neighbors</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {selectedInterestObjects.length > 0 && (
+            <div className="space-y-3">
+              <Label className="text-base">Your Selected Interests</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {selectedInterestObjects.map((interest) => (
+                  <Card key={interest.id} className="border-primary bg-primary/5">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm leading-tight">{interest.name}</p>
+                          {interest.description && (
+                            <p className="text-xs text-muted-foreground mt-1">{interest.description}</p>
+                          )}
+                        </div>
+                        <button type="button" onClick={() => toggleInterest(interest.id)} className="flex-shrink-0">
+                          <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center hover:bg-primary/80 transition-colors">
+                            <Check className="h-3 w-3 text-primary-foreground" />
+                          </div>
+                        </button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
           {interests.length > 0 && (
             <div className="space-y-3">
-              <Label className="text-base">What are you interested in?</Label>
-              <p className="text-sm text-muted-foreground">
-                Select all that apply to help us connect you with others who share your interests
-              </p>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {interests.map((interest) => (
-                  <div key={interest.id} className="flex items-start space-x-3 space-y-0">
-                    <Checkbox
-                      id={`interest-${interest.id}`}
-                      checked={selectedInterests.includes(interest.id)}
-                      onCheckedChange={() => toggleInterest(interest.id)}
-                    />
-                    <div className="space-y-1 leading-none">
-                      <Label htmlFor={`interest-${interest.id}`} className="font-medium cursor-pointer">
-                        {interest.name}
-                      </Label>
-                      {interest.description && <p className="text-sm text-muted-foreground">{interest.description}</p>}
-                    </div>
+              <Label className="text-base">Search Interests</Label>
+              <p className="text-sm text-muted-foreground">Find and select interests that match your passions</p>
+
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search interests..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+
+                {searchQuery && (
+                  <div className="absolute z-10 w-full mt-1 bg-popover border rounded-lg shadow-lg max-h-[300px] overflow-auto">
+                    {unselectedInterests.length > 0 ? (
+                      unselectedInterests.map((interest) => (
+                        <button
+                          key={interest.id}
+                          type="button"
+                          onClick={() => {
+                            toggleInterest(interest.id)
+                            setSearchQuery("")
+                          }}
+                          className="w-full text-left px-3 py-2 hover:bg-accent transition-colors flex items-center justify-between"
+                        >
+                          <div>
+                            <div className="font-medium text-sm">{interest.name}</div>
+                            {interest.description && (
+                              <div className="text-xs text-muted-foreground mt-0.5">{interest.description}</div>
+                            )}
+                          </div>
+                          {interest.user_count !== undefined && interest.user_count > 0 && (
+                            <Badge variant="secondary" className="text-xs">
+                              {interest.user_count} {interest.user_count === 1 ? "person" : "people"}
+                            </Badge>
+                          )}
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-3 py-2 text-sm text-muted-foreground">
+                        No interests found matching "{searchQuery}"
+                      </div>
+                    )}
                   </div>
-                ))}
+                )}
               </div>
             </div>
           )}
@@ -120,15 +179,6 @@ export function InterestsForm({ tenant, resident, interests, residentInterests, 
             <div className="text-center py-8 text-muted-foreground">
               <p>No interests have been added yet.</p>
               <p className="text-sm">Community admins can add interests from the admin panel.</p>
-            </div>
-          )}
-
-          {selectedInterests.length > 0 && (
-            <div className="space-y-2 pt-2">
-              <Label className="text-sm">Your selections:</Label>
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="secondary">{selectedInterests.length} interests selected</Badge>
-              </div>
             </div>
           )}
 

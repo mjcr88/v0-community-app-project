@@ -6,7 +6,6 @@ import { OnboardingProgress } from "@/components/onboarding-progress"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { X } from "lucide-react"
-import { useState } from "react"
 
 const ONBOARDING_STEPS = [
   { path: "welcome", title: "Welcome", description: "Get started with your community" },
@@ -14,6 +13,7 @@ const ONBOARDING_STEPS = [
   { path: "profile", title: "Basic Information", description: "Tell us about yourself" },
   { path: "interests", title: "Your Interests", description: "What are you passionate about?" },
   { path: "skills", title: "Your Skills", description: "How can you help the community?" },
+  { path: "family", title: "Family", description: "Map your family relationships" },
   { path: "complete", title: "All Set!", description: "Welcome to the community" },
 ]
 
@@ -46,7 +46,6 @@ export function OnboardingStepHeader({
   const router = useRouter()
   const currentStep = getCurrentStep(pathname)
   const stepInfo = getStepInfo(pathname)
-  const [isClosing, setIsClosing] = useState(false)
 
   const handleClose = () => {
     if (isTestMode) {

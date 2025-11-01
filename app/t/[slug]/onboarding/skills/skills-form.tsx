@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Loader2, Plus, Check, Search } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 import { createClient } from "@/lib/supabase/client"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { Badge } from "@/components/ui/badge"
 
 interface SkillsFormProps {
   tenant: {
@@ -21,7 +21,7 @@ interface SkillsFormProps {
   resident: {
     id: string
   }
-  skills: Array<{ id: string; name: string; description: string | null }>
+  skills: Array<{ id: string; name: string; description: string | null; user_count?: number }>
   residentSkills: Array<{ id: string; open_to_requests: boolean }>
   isSuperAdmin: boolean
 }
@@ -30,7 +30,8 @@ export function SkillsForm({ tenant, resident, skills, residentSkills, isSuperAd
   const router = useRouter()
   const supabase = createClient()
   const [isLoading, setIsLoading] = useState(false)
-  const [allSkills, setAllSkills] = useState<Array<{ id: string; name: string; description: string | null }>>(skills)
+  const [allSkills, setAllSkills] =
+    useState<Array<{ id: string; name: string; description: string | null; user_count?: number }>>(skills)
   const [selectedSkills, setSelectedSkills] = useState<Array<{ id: string; name: string; open_to_requests: boolean }>>(
     residentSkills
       .map((rs) => {
@@ -39,9 +40,8 @@ export function SkillsForm({ tenant, resident, skills, residentSkills, isSuperAd
       })
       .filter((s): s is { id: string; name: string; open_to_requests: boolean } => s !== null),
   )
-  const [newSkillName, setNewSkillName] = useState("")
-  const [isAddingSkill, setIsAddingSkill] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const [isAddingSkill, setIsAddingSkill] = useState(false)
 
   const toggleSkill = (skill: { id: string; name: string }) => {
     setSelectedSkills((prev) => {
@@ -59,18 +59,16 @@ export function SkillsForm({ tenant, resident, skills, residentSkills, isSuperAd
     )
   }
 
-  const handleAddSkill = async () => {
-    if (!newSkillName.trim()) return
-
+  const handleCreateSkill = async (skillName: string) => {
     setIsAddingSkill(true)
     try {
       if (isSuperAdmin) {
         console.log("[v0] Super admin test mode - simulating skill creation")
         const tempId = `temp-${Date.now()}`
-        const newSkill = { id: tempId, name: newSkillName.trim(), description: null }
+        const newSkill = { id: tempId, name: skillName.trim(), description: null, user_count: 0 }
         setAllSkills((prev) => [...prev, newSkill])
-        setSelectedSkills((prev) => [...prev, { id: tempId, name: newSkillName.trim(), open_to_requests: false }])
-        setNewSkillName("")
+        setSelectedSkills((prev) => [...prev, { id: tempId, name: skillName.trim(), open_to_requests: false }])
+        setSearchQuery("")
         setIsAddingSkill(false)
         return
       }
@@ -78,7 +76,7 @@ export function SkillsForm({ tenant, resident, skills, residentSkills, isSuperAd
       const { data: newSkill, error } = await supabase
         .from("skills")
         .insert({
-          name: newSkillName.trim(),
+          name: skillName.trim(),
           tenant_id: tenant.id,
         })
         .select()
@@ -90,9 +88,10 @@ export function SkillsForm({ tenant, resident, skills, residentSkills, isSuperAd
       }
 
       console.log("[v0] Created new skill:", newSkill)
-      setAllSkills((prev) => [...prev, newSkill])
+      const skillWithCount = { ...newSkill, user_count: 0 }
+      setAllSkills((prev) => [...prev, skillWithCount])
       setSelectedSkills((prev) => [...prev, { id: newSkill.id, name: newSkill.name, open_to_requests: false }])
-      setNewSkillName("")
+      setSearchQuery("")
     } catch (error) {
       console.error("[v0] Error creating skill:", error)
     } finally {
@@ -107,14 +106,12 @@ export function SkillsForm({ tenant, resident, skills, residentSkills, isSuperAd
     try {
       if (isSuperAdmin) {
         console.log("[v0] Super admin test mode - skipping skills save")
-        router.push(`/t/${tenant.slug}/onboarding/complete`)
+        router.push(`/t/${tenant.slug}/onboarding/family`)
         return
       }
 
-      // First, delete existing skills
       await supabase.from("user_skills").delete().eq("user_id", resident.id)
 
-      // Then insert selected skills
       if (selectedSkills.length > 0) {
         const { error } = await supabase.from("user_skills").insert(
           selectedSkills.map((skill) => ({
@@ -131,7 +128,7 @@ export function SkillsForm({ tenant, resident, skills, residentSkills, isSuperAd
       }
 
       console.log("[v0] Skills saved successfully")
-      router.push(`/t/${tenant.slug}/onboarding/complete`)
+      router.push(`/t/${tenant.slug}/onboarding/family`)
     } catch (error) {
       console.error("[v0] Error updating skills:", error)
     } finally {
@@ -140,14 +137,17 @@ export function SkillsForm({ tenant, resident, skills, residentSkills, isSuperAd
   }
 
   const handleSkip = () => {
-    router.push(`/t/${tenant.slug}/onboarding/complete`)
+    router.push(`/t/${tenant.slug}/onboarding/family`)
   }
 
   const isSkillSelected = (skillId: string) => selectedSkills.some((s) => s.id === skillId)
 
-  const filteredSkills = allSkills.filter((skill) => skill.name.toLowerCase().includes(searchQuery.toLowerCase()))
+  const filteredSkills = allSkills.filter(
+    (skill) => skill.name.toLowerCase().includes(searchQuery.toLowerCase()) && !isSkillSelected(skill.id),
+  )
 
-  const unselectedSkills = filteredSkills.filter((skill) => !isSkillSelected(skill.id))
+  const exactMatch = filteredSkills.find((skill) => skill.name.toLowerCase() === searchQuery.toLowerCase())
+  const showCreateOption = searchQuery.trim() && !exactMatch && !isAddingSkill
 
   return (
     <form onSubmit={handleSubmit}>
@@ -157,33 +157,6 @@ export function SkillsForm({ tenant, resident, skills, residentSkills, isSuperAd
           <CardDescription>Share your skills and let neighbors know how you can help</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="new-skill">Add a New Skill</Label>
-            <div className="flex gap-2">
-              <Input
-                id="new-skill"
-                placeholder="e.g., Carpentry, Gardening, Cooking..."
-                value={newSkillName}
-                onChange={(e) => setNewSkillName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault()
-                    handleAddSkill()
-                  }
-                }}
-              />
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={handleAddSkill}
-                disabled={!newSkillName.trim() || isAddingSkill}
-              >
-                {isAddingSkill ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">Don't see your skill? Add it here!</p>
-          </div>
-
           {selectedSkills.length > 0 && (
             <div className="space-y-3">
               <Label className="text-base">Your Selected Skills</Label>
@@ -226,48 +199,64 @@ export function SkillsForm({ tenant, resident, skills, residentSkills, isSuperAd
           )}
 
           <div className="space-y-3">
-            <Label className="text-base">Available Skills in Your Community</Label>
-            <p className="text-sm text-muted-foreground">Search and select skills you have from the list below</p>
+            <Label className="text-base">Search or Add Skills</Label>
+            <p className="text-sm text-muted-foreground">Search for existing skills or create a new one</p>
 
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search skills..."
+                placeholder="Search skills or type to create new..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"
               />
-            </div>
 
-            {unselectedSkills.length > 0 ? (
-              <ScrollArea className="h-[300px] border rounded-lg">
-                <div className="p-2 space-y-1">
-                  {unselectedSkills.map((skill) => (
+              {searchQuery && (
+                <div className="absolute z-10 w-full mt-1 bg-popover border rounded-lg shadow-lg max-h-[300px] overflow-auto">
+                  {showCreateOption && (
                     <button
-                      key={skill.id}
                       type="button"
-                      onClick={() => toggleSkill({ id: skill.id, name: skill.name })}
-                      className="w-full text-left px-3 py-2 rounded-md hover:bg-accent transition-colors"
+                      onClick={() => handleCreateSkill(searchQuery)}
+                      disabled={isAddingSkill}
+                      className="w-full text-left px-3 py-2 hover:bg-accent transition-colors border-b flex items-center gap-2"
                     >
-                      <div className="font-medium text-sm">{skill.name}</div>
-                      {skill.description && (
-                        <div className="text-xs text-muted-foreground mt-0.5">{skill.description}</div>
-                      )}
+                      {isAddingSkill ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                      <span className="font-medium">Create "{searchQuery}"</span>
                     </button>
-                  ))}
+                  )}
+
+                  {filteredSkills.length > 0 ? (
+                    filteredSkills.map((skill) => (
+                      <button
+                        key={skill.id}
+                        type="button"
+                        onClick={() => {
+                          toggleSkill({ id: skill.id, name: skill.name })
+                          setSearchQuery("")
+                        }}
+                        className="w-full text-left px-3 py-2 hover:bg-accent transition-colors flex items-center justify-between"
+                      >
+                        <div>
+                          <div className="font-medium text-sm">{skill.name}</div>
+                          {skill.description && (
+                            <div className="text-xs text-muted-foreground mt-0.5">{skill.description}</div>
+                          )}
+                        </div>
+                        {skill.user_count !== undefined && skill.user_count > 0 && (
+                          <Badge variant="secondary" className="text-xs">
+                            {skill.user_count} {skill.user_count === 1 ? "person" : "people"}
+                          </Badge>
+                        )}
+                      </button>
+                    ))
+                  ) : !showCreateOption ? (
+                    <div className="px-3 py-2 text-sm text-muted-foreground">
+                      No skills found matching "{searchQuery}"
+                    </div>
+                  ) : null}
                 </div>
-              </ScrollArea>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground border rounded-lg">
-                {searchQuery ? (
-                  <p>No skills found matching "{searchQuery}"</p>
-                ) : selectedSkills.length === allSkills.length ? (
-                  <p>You've selected all available skills!</p>
-                ) : (
-                  <p>No skills available yet.</p>
-                )}
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           <div className="flex justify-between gap-3 pt-4">

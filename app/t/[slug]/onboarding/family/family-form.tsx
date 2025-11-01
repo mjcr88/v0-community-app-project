@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { createClient } from "@/lib/supabase/client"
-import { OnboardingProgress } from "@/components/onboarding-progress"
 import { Users, Plus, X, PawPrint } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Combobox } from "@/components/ui/combobox"
@@ -22,16 +21,6 @@ const RELATIONSHIP_TYPES = [
   { value: "daughter", label: "Daughter" },
   { value: "sibling", label: "Sibling" },
   { value: "other", label: "Other" },
-]
-
-const ONBOARDING_STEPS = [
-  { path: "welcome", title: "Welcome" },
-  { path: "journey", title: "Journey" },
-  { path: "profile", title: "Profile" },
-  { path: "interests", title: "Interests" },
-  { path: "skills", title: "Skills" },
-  { path: "family", title: "Family" },
-  { path: "complete", title: "Complete" },
 ]
 
 interface FamilyFormProps {
@@ -166,8 +155,6 @@ export function FamilyForm({
 
   return (
     <div className="space-y-6">
-      <OnboardingProgress currentStep={6} totalSteps={7} steps={ONBOARDING_STEPS} tenantSlug={tenant.slug} />
-
       <div className="space-y-2 text-center">
         <div className="flex items-center justify-center gap-2">
           <Users className="h-5 w-5 text-primary" />

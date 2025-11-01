@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Spinner } from "@/components/ui/spinner"
 import { createAuthUserAction } from "./create-auth-user-action"
+import { createBrowserClient } from "@/lib/supabase/client"
 
 interface SignupFormProps {
   tenant: {
@@ -39,13 +40,11 @@ export function SignupForm({ tenant, resident, token }: SignupFormProps) {
     e.preventDefault()
     setError("")
 
-    // Validate passwords match
     if (password !== confirmPassword) {
       setError("Passwords do not match")
       return
     }
 
-    // Validate password strength
     if (password.length < 8) {
       setError("Password must be at least 8 characters")
       return
@@ -71,12 +70,26 @@ export function SignupForm({ tenant, resident, token }: SignupFormProps) {
 
       console.log("[v0] Auth user created successfully:", authResult.user.id)
 
+      const supabase = createBrowserClient()
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: resident.email,
+        password: password,
+      })
+
+      if (signInError) {
+        console.error("[v0] Auto-login error:", signInError)
+        throw new Error("Account created but auto-login failed. Please login manually.")
+      }
+
+      console.log("[v0] User auto-logged in successfully")
+
       const redirectPath = tenant.features?.onboarding
         ? `/t/${tenant.slug}/onboarding/welcome`
         : `/t/${tenant.slug}/dashboard`
 
       console.log("[v0] Redirecting to:", redirectPath)
       router.push(redirectPath)
+      router.refresh()
     } catch (err: any) {
       console.error("[v0] Signup error details:", err.message)
       setError(err.message || "An error occurred during signup")

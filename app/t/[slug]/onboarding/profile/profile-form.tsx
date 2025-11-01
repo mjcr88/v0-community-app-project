@@ -212,15 +212,14 @@ export function ProfileForm({ tenant, resident, isSuperAdmin }: ProfileFormProps
             <div className="space-y-2">
               <Label htmlFor="phone">Phone Number</Label>
               <div className="flex gap-2">
-                <div className="w-[100px]">
+                <div className="w-[140px]">
                   <Combobox
                     options={COUNTRY_CODES}
                     value={formData.countryCode}
                     onValueChange={(value) => setFormData({ ...formData, countryCode: value })}
                     placeholder={formData.countryCode}
-                    searchPlaceholder="Search..."
+                    searchPlaceholder="Search code or country..."
                     emptyText="Not found"
-                    displayValue={() => formData.countryCode}
                   />
                 </div>
                 <Input

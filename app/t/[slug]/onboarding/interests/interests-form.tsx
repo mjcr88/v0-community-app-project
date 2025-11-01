@@ -33,6 +33,7 @@ export function InterestsForm({ tenant, resident, interests, residentInterests, 
   const [isLoading, setIsLoading] = useState(false)
   const [selectedInterests, setSelectedInterests] = useState<string[]>(residentInterests)
   const [searchQuery, setSearchQuery] = useState("")
+  const [showDropdown, setShowDropdown] = useState(false)
 
   const toggleInterest = (interestId: string) => {
     setSelectedInterests((prev) =>
@@ -97,33 +98,6 @@ export function InterestsForm({ tenant, resident, interests, residentInterests, 
           <CardDescription>Share your interests to connect with like-minded neighbors</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {selectedInterestObjects.length > 0 && (
-            <div className="space-y-3">
-              <Label className="text-base">Your Selected Interests</Label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {selectedInterestObjects.map((interest) => (
-                  <Card key={interest.id} className="border-primary bg-primary/5">
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm leading-tight">{interest.name}</p>
-                          {interest.description && (
-                            <p className="text-xs text-muted-foreground mt-1">{interest.description}</p>
-                          )}
-                        </div>
-                        <button type="button" onClick={() => toggleInterest(interest.id)} className="flex-shrink-0">
-                          <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center hover:bg-primary/80 transition-colors">
-                            <Check className="h-3 w-3 text-primary-foreground" />
-                          </div>
-                        </button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          )}
-
           {interests.length > 0 && (
             <div className="space-y-3">
               <Label className="text-base">Search Interests</Label>
@@ -135,10 +109,12 @@ export function InterestsForm({ tenant, resident, interests, residentInterests, 
                   placeholder="Search interests..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => setShowDropdown(true)}
+                  onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
                   className="pl-9"
                 />
 
-                {searchQuery && (
+                {showDropdown && (
                   <div className="absolute z-10 w-full mt-1 bg-popover border rounded-lg shadow-lg max-h-[300px] overflow-auto">
                     {unselectedInterests.length > 0 ? (
                       unselectedInterests.map((interest) => (
@@ -166,11 +142,38 @@ export function InterestsForm({ tenant, resident, interests, residentInterests, 
                       ))
                     ) : (
                       <div className="px-3 py-2 text-sm text-muted-foreground">
-                        No interests found matching "{searchQuery}"
+                        {searchQuery ? `No interests found matching "${searchQuery}"` : "No more interests available"}
                       </div>
                     )}
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {selectedInterestObjects.length > 0 && (
+            <div className="space-y-3">
+              <Label className="text-base">Your Selected Interests</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {selectedInterestObjects.map((interest) => (
+                  <Card key={interest.id} className="border-primary bg-primary/5">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm leading-tight">{interest.name}</p>
+                          {interest.description && (
+                            <p className="text-xs text-muted-foreground mt-1">{interest.description}</p>
+                          )}
+                        </div>
+                        <button type="button" onClick={() => toggleInterest(interest.id)} className="flex-shrink-0">
+                          <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center hover:bg-primary/80 transition-colors">
+                            <Check className="h-3 w-3 text-primary-foreground" />
+                          </div>
+                        </button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             </div>
           )}

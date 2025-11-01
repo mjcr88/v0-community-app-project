@@ -42,6 +42,7 @@ export function SkillsForm({ tenant, resident, skills, residentSkills, isSuperAd
   )
   const [searchQuery, setSearchQuery] = useState("")
   const [isAddingSkill, setIsAddingSkill] = useState(false)
+  const [showDropdown, setShowDropdown] = useState(false)
 
   const toggleSkill = (skill: { id: string; name: string }) => {
     setSelectedSkills((prev) => {
@@ -157,6 +158,69 @@ export function SkillsForm({ tenant, resident, skills, residentSkills, isSuperAd
           <CardDescription>Share your skills and let neighbors know how you can help</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          <div className="space-y-3">
+            <Label className="text-base">Search or Add Skills</Label>
+            <p className="text-sm text-muted-foreground">Search for existing skills or create a new one</p>
+
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search skills or type to create new..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => setShowDropdown(true)}
+                onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+                className="pl-9"
+              />
+
+              {showDropdown && (
+                <div className="absolute z-10 w-full mt-1 bg-popover border rounded-lg shadow-lg max-h-[300px] overflow-auto">
+                  {showCreateOption && (
+                    <button
+                      type="button"
+                      onClick={() => handleCreateSkill(searchQuery)}
+                      disabled={isAddingSkill}
+                      className="w-full text-left px-3 py-2 hover:bg-accent transition-colors border-b flex items-center gap-2 bg-primary/5"
+                    >
+                      {isAddingSkill ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                      <span className="font-medium">Create "{searchQuery}"</span>
+                    </button>
+                  )}
+
+                  {filteredSkills.length > 0 ? (
+                    filteredSkills.map((skill) => (
+                      <button
+                        key={skill.id}
+                        type="button"
+                        onClick={() => {
+                          toggleSkill({ id: skill.id, name: skill.name })
+                          setSearchQuery("")
+                        }}
+                        className="w-full text-left px-3 py-2 hover:bg-accent transition-colors flex items-center justify-between"
+                      >
+                        <div>
+                          <div className="font-medium text-sm">{skill.name}</div>
+                          {skill.description && (
+                            <div className="text-xs text-muted-foreground mt-0.5">{skill.description}</div>
+                          )}
+                        </div>
+                        {skill.user_count !== undefined && skill.user_count > 0 && (
+                          <Badge variant="secondary" className="text-xs">
+                            {skill.user_count} {skill.user_count === 1 ? "person" : "people"}
+                          </Badge>
+                        )}
+                      </button>
+                    ))
+                  ) : !showCreateOption ? (
+                    <div className="px-3 py-2 text-sm text-muted-foreground">
+                      {searchQuery ? `No skills found matching "${searchQuery}"` : "No more skills available"}
+                    </div>
+                  ) : null}
+                </div>
+              )}
+            </div>
+          </div>
+
           {selectedSkills.length > 0 && (
             <div className="space-y-3">
               <Label className="text-base">Your Selected Skills</Label>
@@ -197,67 +261,6 @@ export function SkillsForm({ tenant, resident, skills, residentSkills, isSuperAd
               </div>
             </div>
           )}
-
-          <div className="space-y-3">
-            <Label className="text-base">Search or Add Skills</Label>
-            <p className="text-sm text-muted-foreground">Search for existing skills or create a new one</p>
-
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search skills or type to create new..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-
-              {searchQuery && (
-                <div className="absolute z-10 w-full mt-1 bg-popover border rounded-lg shadow-lg max-h-[300px] overflow-auto">
-                  {showCreateOption && (
-                    <button
-                      type="button"
-                      onClick={() => handleCreateSkill(searchQuery)}
-                      disabled={isAddingSkill}
-                      className="w-full text-left px-3 py-2 hover:bg-accent transition-colors border-b flex items-center gap-2"
-                    >
-                      {isAddingSkill ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                      <span className="font-medium">Create "{searchQuery}"</span>
-                    </button>
-                  )}
-
-                  {filteredSkills.length > 0 ? (
-                    filteredSkills.map((skill) => (
-                      <button
-                        key={skill.id}
-                        type="button"
-                        onClick={() => {
-                          toggleSkill({ id: skill.id, name: skill.name })
-                          setSearchQuery("")
-                        }}
-                        className="w-full text-left px-3 py-2 hover:bg-accent transition-colors flex items-center justify-between"
-                      >
-                        <div>
-                          <div className="font-medium text-sm">{skill.name}</div>
-                          {skill.description && (
-                            <div className="text-xs text-muted-foreground mt-0.5">{skill.description}</div>
-                          )}
-                        </div>
-                        {skill.user_count !== undefined && skill.user_count > 0 && (
-                          <Badge variant="secondary" className="text-xs">
-                            {skill.user_count} {skill.user_count === 1 ? "person" : "people"}
-                          </Badge>
-                        )}
-                      </button>
-                    ))
-                  ) : !showCreateOption ? (
-                    <div className="px-3 py-2 text-sm text-muted-foreground">
-                      No skills found matching "{searchQuery}"
-                    </div>
-                  ) : null}
-                </div>
-              )}
-            </div>
-          </div>
 
           <div className="flex justify-between gap-3 pt-4">
             <Button type="button" variant="ghost" onClick={handleSkip}>

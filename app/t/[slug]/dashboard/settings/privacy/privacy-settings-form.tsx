@@ -32,6 +32,7 @@ export function PrivacySettingsForm({ privacySettings, tenantSlug }: PrivacySett
     showProfilePicture: privacySettings?.show_profile_picture ?? true,
     showNeighborhood: privacySettings?.show_neighborhood ?? true,
     showFamily: privacySettings?.show_family ?? true,
+    showFamilyRelationships: privacySettings?.show_family_relationships ?? true,
     showInterests: privacySettings?.show_interests ?? true,
     showSkills: privacySettings?.show_skills ?? true,
     showOpenToRequests: privacySettings?.show_open_to_requests ?? true,
@@ -86,7 +87,8 @@ export function PrivacySettingsForm({ privacySettings, tenantSlug }: PrivacySett
       description: "Manage what community details are visible",
       settings: [
         { key: "showNeighborhood", label: "Neighborhood", value: settings.showNeighborhood },
-        { key: "showFamily", label: "Family Information", value: settings.showFamily },
+        { key: "showFamily", label: "Family Members", value: settings.showFamily },
+        { key: "showFamilyRelationships", label: "Family Relationship Types", value: settings.showFamilyRelationships },
         { key: "showInterests", label: "Interests", value: settings.showInterests },
         { key: "showSkills", label: "Skills", value: settings.showSkills },
         { key: "showOpenToRequests", label: "Open to Help Requests", value: settings.showOpenToRequests },

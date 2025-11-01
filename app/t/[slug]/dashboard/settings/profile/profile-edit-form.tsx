@@ -12,10 +12,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Combobox } from "@/components/ui/combobox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Upload, Loader2, X, Plus, AlertCircle } from "lucide-react"
+import { Upload, Loader2, X, Plus, AlertCircle, Search, Check } from "lucide-react"
 import { COUNTRIES, LANGUAGES } from "@/lib/data/countries-languages"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Switch } from "@/components/ui/switch"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 interface ProfileEditFormProps {
   resident: any
@@ -50,6 +51,8 @@ export function ProfileEditForm({ resident, tenant, availableInterests, tenantSl
 
   const [newSkill, setNewSkill] = useState("")
   const [languageSearch, setLanguageSearch] = useState("")
+  const [interestSearch, setInterestSearch] = useState("")
+  const [skillSearch, setSkillSearch] = useState("")
 
   const features = (tenant?.features as Record<string, boolean>) || {}
 
@@ -143,6 +146,16 @@ export function ProfileEditForm({ resident, tenant, availableInterests, tenantSl
     formData.languages.length === 0 ||
     !formData.preferredLanguage ||
     !formData.journeyStage
+
+  const filteredInterests = availableInterests.filter((interest) =>
+    interest.name.toLowerCase().includes(interestSearch.toLowerCase()),
+  )
+
+  const unselectedInterests = filteredInterests.filter((interest) => !formData.selectedInterests.includes(interest.id))
+
+  const selectedInterestObjects = availableInterests.filter((interest) =>
+    formData.selectedInterests.includes(interest.id),
+  )
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -340,18 +353,60 @@ export function ProfileEditForm({ resident, tenant, availableInterests, tenantSl
             <CardTitle>Your Interests</CardTitle>
             <CardDescription>Select interests to connect with like-minded neighbours</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {availableInterests.map((interest) => (
-                <Badge
-                  key={interest.id}
-                  variant={formData.selectedInterests.includes(interest.id) ? "default" : "outline"}
-                  className="cursor-pointer"
-                  onClick={() => toggleInterest(interest.id)}
-                >
-                  {interest.name}
-                </Badge>
-              ))}
+          <CardContent className="space-y-4">
+            {selectedInterestObjects.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-sm">Selected Interests</Label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {selectedInterestObjects.map((interest) => (
+                    <Card key={interest.id} className="border-primary bg-primary/5">
+                      <CardContent className="p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-sm font-medium">{interest.name}</span>
+                          <button type="button" onClick={() => toggleInterest(interest.id)} className="flex-shrink-0">
+                            <div className="h-4 w-4 rounded-full bg-primary flex items-center justify-center hover:bg-primary/80 transition-colors">
+                              <Check className="h-2.5 w-2.5 text-primary-foreground" />
+                            </div>
+                          </button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label className="text-sm">Add More Interests</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search interests..."
+                  value={interestSearch}
+                  onChange={(e) => setInterestSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+
+              {unselectedInterests.length > 0 && (
+                <ScrollArea className="h-[200px] border rounded-lg">
+                  <div className="p-2 space-y-1">
+                    {unselectedInterests.map((interest) => (
+                      <button
+                        key={interest.id}
+                        type="button"
+                        onClick={() => toggleInterest(interest.id)}
+                        className="w-full text-left px-3 py-2 rounded-md hover:bg-accent transition-colors"
+                      >
+                        <div className="font-medium text-sm">{interest.name}</div>
+                        {interest.description && (
+                          <div className="text-xs text-muted-foreground mt-0.5">{interest.description}</div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </ScrollArea>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -383,23 +438,37 @@ export function ProfileEditForm({ resident, tenant, availableInterests, tenantSl
 
           {formData.skills.length > 0 && (
             <div className="space-y-2">
-              {formData.skills.map((skill: any, index: number) => (
-                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center gap-3 flex-1">
-                    <span className="font-medium">{skill.skill_name}</span>
-                    <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
-                      <Checkbox
-                        checked={skill.open_to_requests}
-                        onCheckedChange={() => toggleSkillOpenToRequests(index)}
-                      />
-                      Open to help requests
-                    </label>
-                  </div>
-                  <Button type="button" variant="ghost" size="icon" onClick={() => removeSkill(index)}>
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
+              <Label className="text-sm">Your Skills</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {formData.skills.map((skill: any, index: number) => (
+                  <Card key={index} className="border-primary bg-primary/5">
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="font-medium text-sm">{skill.skill_name}</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-5 w-5 -mt-1 -mr-1"
+                          onClick={() => removeSkill(index)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      <div className="flex items-center justify-between gap-2 pt-2 border-t">
+                        <Label htmlFor={`skill-${index}`} className="text-xs font-normal cursor-pointer">
+                          Open to help requests
+                        </Label>
+                        <Switch
+                          id={`skill-${index}`}
+                          checked={skill.open_to_requests}
+                          onCheckedChange={() => toggleSkillOpenToRequests(index)}
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </div>
           )}
         </CardContent>

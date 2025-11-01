@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { Loader2, Plus, Check } from "lucide-react"
+import { Loader2, Plus, Check, Search } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 import { createClient } from "@/lib/supabase/client"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 interface SkillsFormProps {
   tenant: {
@@ -40,6 +41,7 @@ export function SkillsForm({ tenant, resident, skills, residentSkills, isSuperAd
   )
   const [newSkillName, setNewSkillName] = useState("")
   const [isAddingSkill, setIsAddingSkill] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
 
   const toggleSkill = (skill: { id: string; name: string }) => {
     setSelectedSkills((prev) => {
@@ -143,6 +145,10 @@ export function SkillsForm({ tenant, resident, skills, residentSkills, isSuperAd
 
   const isSkillSelected = (skillId: string) => selectedSkills.some((s) => s.id === skillId)
 
+  const filteredSkills = allSkills.filter((skill) => skill.name.toLowerCase().includes(searchQuery.toLowerCase()))
+
+  const unselectedSkills = filteredSkills.filter((skill) => !isSkillSelected(skill.id))
+
   return (
     <form onSubmit={handleSubmit}>
       <Card>
@@ -178,65 +184,88 @@ export function SkillsForm({ tenant, resident, skills, residentSkills, isSuperAd
             <p className="text-xs text-muted-foreground">Don't see your skill? Add it here!</p>
           </div>
 
-          <div className="space-y-3">
-            <Label className="text-base">Manage Your Skills</Label>
-            <p className="text-sm text-muted-foreground">
-              Click on skills you have. Toggle "Open to help" if you're willing to assist neighbors.
-            </p>
-            {allSkills.length > 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {allSkills.map((skill) => {
-                  const isSelected = isSkillSelected(skill.id)
-                  const selectedSkill = selectedSkills.find((s) => s.id === skill.id)
-
-                  return (
-                    <Card
-                      key={skill.id}
-                      className={`cursor-pointer transition-all hover:shadow-md ${
-                        isSelected ? "border-primary bg-primary/5" : "hover:border-primary/50"
-                      }`}
-                      onClick={() => toggleSkill({ id: skill.id, name: skill.name })}
-                    >
-                      <CardContent className="p-4 space-y-3">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm leading-tight">{skill.name}</p>
-                            {skill.description && (
-                              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{skill.description}</p>
-                            )}
-                          </div>
-                          {isSelected && (
-                            <div className="flex-shrink-0">
-                              <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center">
-                                <Check className="h-3 w-3 text-primary-foreground" />
-                              </div>
-                            </div>
-                          )}
+          {selectedSkills.length > 0 && (
+            <div className="space-y-3">
+              <Label className="text-base">Your Selected Skills</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {selectedSkills.map((skill) => (
+                  <Card key={skill.id} className="border-primary bg-primary/5">
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm leading-tight">{skill.name}</p>
                         </div>
-                        {isSelected && (
-                          <div
-                            className="flex items-center justify-between gap-2 pt-2 border-t"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <Label htmlFor={`open-${skill.id}`} className="text-xs font-normal cursor-pointer">
-                              Open to help
-                            </Label>
-                            <Switch
-                              id={`open-${skill.id}`}
-                              checked={selectedSkill?.open_to_requests || false}
-                              onCheckedChange={() => toggleOpenToRequests(skill.id)}
-                            />
+                        <button
+                          type="button"
+                          onClick={() => toggleSkill({ id: skill.id, name: skill.name })}
+                          className="flex-shrink-0"
+                        >
+                          <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center hover:bg-primary/80 transition-colors">
+                            <Check className="h-3 w-3 text-primary-foreground" />
                           </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  )
-                })}
+                        </button>
+                      </div>
+                      <div
+                        className="flex items-center justify-between gap-2 pt-2 border-t"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Label htmlFor={`open-${skill.id}`} className="text-xs font-normal cursor-pointer">
+                          Open to help
+                        </Label>
+                        <Switch
+                          id={`open-${skill.id}`}
+                          checked={skill.open_to_requests}
+                          onCheckedChange={() => toggleOpenToRequests(skill.id)}
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
+            </div>
+          )}
+
+          <div className="space-y-3">
+            <Label className="text-base">Available Skills in Your Community</Label>
+            <p className="text-sm text-muted-foreground">Search and select skills you have from the list below</p>
+
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search skills..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+
+            {unselectedSkills.length > 0 ? (
+              <ScrollArea className="h-[300px] border rounded-lg">
+                <div className="p-2 space-y-1">
+                  {unselectedSkills.map((skill) => (
+                    <button
+                      key={skill.id}
+                      type="button"
+                      onClick={() => toggleSkill({ id: skill.id, name: skill.name })}
+                      className="w-full text-left px-3 py-2 rounded-md hover:bg-accent transition-colors"
+                    >
+                      <div className="font-medium text-sm">{skill.name}</div>
+                      {skill.description && (
+                        <div className="text-xs text-muted-foreground mt-0.5">{skill.description}</div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </ScrollArea>
             ) : (
               <div className="text-center py-8 text-muted-foreground border rounded-lg">
-                <p>No skills available yet.</p>
-                <p className="text-sm">Add your first skill above!</p>
+                {searchQuery ? (
+                  <p>No skills found matching "{searchQuery}"</p>
+                ) : selectedSkills.length === allSkills.length ? (
+                  <p>You've selected all available skills!</p>
+                ) : (
+                  <p>No skills available yet.</p>
+                )}
               </div>
             )}
           </div>

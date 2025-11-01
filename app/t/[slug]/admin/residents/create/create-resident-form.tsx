@@ -39,6 +39,10 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
   const [creationType, setCreationType] = useState<"single" | "family" | "">("")
   const [entityType, setEntityType] = useState<"person" | "pet" | "">("")
 
+  const [needsNewFamilyUnit, setNeedsNewFamilyUnit] = useState(false)
+  const [newFamilyUnitName, setNewFamilyUnitName] = useState("")
+  const [primaryContactChoice, setPrimaryContactChoice] = useState<"existing" | "new">("existing")
+
   const [formData, setFormData] = useState({
     first_name: "",
     last_name: "",
@@ -92,6 +96,21 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
 
   const handleAssignmentChoice = () => {
     if (!assignmentChoice) return
+
+    if (assignmentChoice === "add_to_family") {
+      const hasExistingFamilyUnit = existingResidents.some((r) => r.family_unit_id)
+      if (!hasExistingFamilyUnit) {
+        setNeedsNewFamilyUnit(true)
+        setStep(2.5) // New intermediate step
+        return
+      }
+    }
+
+    setStep(3)
+  }
+
+  const handleFamilyUnitSetup = () => {
+    if (!newFamilyUnitName) return
     setStep(3)
   }
 
@@ -133,7 +152,55 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
         if (updateError) throw updateError
       }
 
-      if (creationType === "family") {
+      if (assignmentChoice === "add_to_family" && needsNewFamilyUnit) {
+        // Create new family unit
+        const { data: familyUnit, error: familyError } = await supabase
+          .from("family_units")
+          .insert({
+            name: newFamilyUnitName,
+            tenant_id: tenant.id,
+          })
+          .select()
+          .single()
+
+        if (familyError) throw familyError
+
+        // Insert new resident
+        const { data: newResident, error: newResidentError } = await supabase
+          .from("users")
+          .insert([
+            {
+              lot_id: selectedLotId,
+              first_name: formData.first_name,
+              last_name: formData.last_name,
+              email: formData.email || null,
+              phone: formData.phone || null,
+              family_unit_id: familyUnit.id,
+              tenant_id: tenant.id,
+              role: "resident" as const,
+            },
+          ])
+          .select()
+          .single()
+
+        if (newResidentError) throw newResidentError
+
+        // Update existing residents to link to family unit
+        const { error: updateExistingError } = await supabase
+          .from("users")
+          .update({ family_unit_id: familyUnit.id })
+          .in(
+            "id",
+            existingResidents.map((r) => r.id),
+          )
+
+        if (updateExistingError) throw updateExistingError
+
+        // Set primary contact based on choice
+        const primaryContactId = primaryContactChoice === "new" ? newResident.id : existingResidents[0].id
+
+        await supabase.from("family_units").update({ primary_contact_id: primaryContactId }).eq("id", familyUnit.id)
+      } else if (creationType === "family") {
         const { data: familyUnit, error: familyError } = await supabase
           .from("family_units")
           .insert({
@@ -320,6 +387,65 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
                   Cancel
                 </Button>
                 <Button onClick={handleAssignmentChoice} disabled={!assignmentChoice}>
+                  Continue
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {step === 2.5 && needsNewFamilyUnit && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Create Family Unit</CardTitle>
+            <CardDescription>
+              No family unit exists for this lot yet. Create one to group these residents together.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="family_unit_name">
+                Family Unit Name <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="family_unit_name"
+                placeholder="e.g., Smith Family"
+                value={newFamilyUnitName}
+                onChange={(e) => setNewFamilyUnitName(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Primary Contact</Label>
+              <RadioGroup
+                value={primaryContactChoice}
+                onValueChange={(v) => setPrimaryContactChoice(v as "existing" | "new")}
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="existing" id="existing_contact" />
+                  <Label htmlFor="existing_contact">
+                    Existing resident: {existingResidents[0]?.first_name} {existingResidents[0]?.last_name}
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="new" id="new_contact" />
+                  <Label htmlFor="new_contact">New resident (to be created)</Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            <div className="flex gap-2 justify-between">
+              <Button variant="outline" onClick={() => setStep(2)}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
+              </Button>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" onClick={() => router.push(`/t/${slug}/admin/residents`)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleFamilyUnitSetup} disabled={!newFamilyUnitName}>
                   Continue
                 </Button>
               </div>
@@ -568,8 +694,8 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
                           <div className="space-y-2">
                             <Label>Species</Label>
                             <Input
-                              value={pet.species}
                               placeholder="e.g., Dog, Cat"
+                              value={pet.species}
                               onChange={(e) => {
                                 const newPets = [...familyData.pets]
                                 newPets[index].species = e.target.value

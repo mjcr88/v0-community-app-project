@@ -65,7 +65,19 @@ export default async function ProfileSettingsPage({ params }: { params: Promise<
   // Get available interests for this tenant
   const { data: availableInterests } = await supabase
     .from("interests")
-    .select("*")
+    .select(`
+      *,
+      user_interests(count)
+    `)
+    .eq("tenant_id", resident.tenant_id)
+    .order("name")
+
+  const { data: availableSkills } = await supabase
+    .from("skills")
+    .select(`
+      *,
+      user_skills(count)
+    `)
     .eq("tenant_id", resident.tenant_id)
     .order("name")
 
@@ -76,6 +88,7 @@ export default async function ProfileSettingsPage({ params }: { params: Promise<
         resident={resident}
         tenant={tenant}
         availableInterests={availableInterests || []}
+        availableSkills={availableSkills || []}
         tenantSlug={slug}
       />
     </>

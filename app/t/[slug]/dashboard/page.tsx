@@ -104,12 +104,14 @@ export default async function ResidentDashboardPage({ params }: { params: Promis
     petsCount = count || 0
   }
 
+  const familyUnitId = resident.family_unit_id && resident.family_unit_id !== "" ? resident.family_unit_id : null
+
   let familyMembersCount = 0
-  if (resident.family_unit_id) {
+  if (familyUnitId) {
     const { count } = await supabase
       .from("users")
       .select("*", { count: "only", head: true })
-      .eq("family_unit_id", resident.family_unit_id)
+      .eq("family_unit_id", familyUnitId)
       .eq("role", "resident")
 
     familyMembersCount = count || 0
@@ -147,7 +149,7 @@ export default async function ResidentDashboardPage({ params }: { params: Promis
           </CardContent>
         </Card>
 
-        {resident.family_unit_id && (
+        {familyUnitId && (
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Your Family</CardTitle>

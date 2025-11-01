@@ -27,6 +27,10 @@ type ExistingResident = {
   first_name: string
   last_name: string
   family_unit_id: string | null
+  family_units?: {
+    id: string
+    name: string
+  }
 }
 
 export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }) {
@@ -70,12 +74,18 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
       const supabase = createBrowserClient()
       const { data } = await supabase
         .from("users")
-        .select("id, first_name, last_name, family_unit_id")
+        .select("id, first_name, last_name, family_unit_id, family_units(id, name)")
         .eq("lot_id", selectedLotId)
         .eq("role", "resident")
 
       if (data && data.length > 0) {
         setExistingResidents(data)
+
+        const existingFamilyUnit = data.find((r: any) => r.family_unit_id && r.family_units)
+        if (existingFamilyUnit?.family_units) {
+          setNewFamilyUnitName(existingFamilyUnit.family_units.name)
+          setNeedsNewFamilyUnit(false)
+        }
       } else {
         setExistingResidents([])
       }
@@ -98,7 +108,7 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
     if (!assignmentChoice) return
 
     if (assignmentChoice === "add_to_family") {
-      const hasExistingFamilyUnit = existingResidents.some((r) => r.family_unit_id)
+      const hasExistingFamilyUnit = existingResidents.some((r: any) => r.family_unit_id && r.family_units)
       if (!hasExistingFamilyUnit) {
         setNeedsNewFamilyUnit(true)
         setStep(2.5) // New intermediate step

@@ -22,10 +22,17 @@ interface ProfileEditFormProps {
   resident: any
   tenant: any
   availableInterests: any[]
+  availableSkills: any[]
   tenantSlug: string
 }
 
-export function ProfileEditForm({ resident, tenant, availableInterests, tenantSlug }: ProfileEditFormProps) {
+export function ProfileEditForm({
+  resident,
+  tenant,
+  availableInterests,
+  availableSkills,
+  tenantSlug,
+}: ProfileEditFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
@@ -354,6 +361,45 @@ export function ProfileEditForm({ resident, tenant, availableInterests, tenantSl
             <CardDescription>Select interests to connect with like-minded neighbours</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-sm">Search Interests</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search interests..."
+                  value={interestSearch}
+                  onChange={(e) => setInterestSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+
+              {unselectedInterests.length > 0 && (
+                <ScrollArea className="h-[200px] border rounded-lg">
+                  <div className="p-2 space-y-1">
+                    {unselectedInterests.map((interest) => (
+                      <button
+                        key={interest.id}
+                        type="button"
+                        onClick={() => toggleInterest(interest.id)}
+                        className="w-full text-left px-3 py-2 rounded-md hover:bg-accent transition-colors"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="font-medium text-sm">{interest.name}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {interest.user_interests?.[0]?.count || 0}{" "}
+                            {interest.user_interests?.[0]?.count === 1 ? "person" : "people"}
+                          </div>
+                        </div>
+                        {interest.description && (
+                          <div className="text-xs text-muted-foreground mt-0.5">{interest.description}</div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </ScrollArea>
+              )}
+            </div>
+
             {selectedInterestObjects.length > 0 && (
               <div className="space-y-2">
                 <Label className="text-sm">Selected Interests</Label>
@@ -375,39 +421,6 @@ export function ProfileEditForm({ resident, tenant, availableInterests, tenantSl
                 </div>
               </div>
             )}
-
-            <div className="space-y-2">
-              <Label className="text-sm">Add More Interests</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search interests..."
-                  value={interestSearch}
-                  onChange={(e) => setInterestSearch(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-
-              {unselectedInterests.length > 0 && (
-                <ScrollArea className="h-[200px] border rounded-lg">
-                  <div className="p-2 space-y-1">
-                    {unselectedInterests.map((interest) => (
-                      <button
-                        key={interest.id}
-                        type="button"
-                        onClick={() => toggleInterest(interest.id)}
-                        className="w-full text-left px-3 py-2 rounded-md hover:bg-accent transition-colors"
-                      >
-                        <div className="font-medium text-sm">{interest.name}</div>
-                        {interest.description && (
-                          <div className="text-xs text-muted-foreground mt-0.5">{interest.description}</div>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                </ScrollArea>
-              )}
-            </div>
           </CardContent>
         </Card>
       )}
@@ -419,21 +432,62 @@ export function ProfileEditForm({ resident, tenant, availableInterests, tenantSl
           <CardDescription>Share skills you'd like to offer to the community</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex gap-2">
-            <Input
-              placeholder="Add a skill (e.g., Plumbing, Gardening)"
-              value={newSkill}
-              onChange={(e) => setNewSkill(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault()
-                  addSkill()
-                }
-              }}
-            />
-            <Button type="button" onClick={addSkill} size="icon">
-              <Plus className="h-4 w-4" />
-            </Button>
+          <div className="space-y-2">
+            <Label className="text-sm">Add Skills</Label>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Search or add a skill (e.g., Plumbing, Gardening)"
+                value={newSkill}
+                onChange={(e) => setNewSkill(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault()
+                    addSkill()
+                  }
+                }}
+              />
+              <Button type="button" onClick={addSkill} size="icon">
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {newSkill && availableSkills.length > 0 && (
+              <ScrollArea className="h-[150px] border rounded-lg">
+                <div className="p-2 space-y-1">
+                  {availableSkills
+                    .filter(
+                      (skill) =>
+                        skill.name.toLowerCase().includes(newSkill.toLowerCase()) &&
+                        !formData.skills.some((s: any) => s.skill_name === skill.name),
+                    )
+                    .map((skill) => (
+                      <button
+                        key={skill.id}
+                        type="button"
+                        onClick={() => {
+                          setFormData({
+                            ...formData,
+                            skills: [
+                              ...formData.skills,
+                              { skill_id: skill.id, skill_name: skill.name, open_to_requests: false },
+                            ],
+                          })
+                          setNewSkill("")
+                        }}
+                        className="w-full text-left px-3 py-2 rounded-md hover:bg-accent transition-colors"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="font-medium text-sm">{skill.name}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {skill.user_skills?.[0]?.count || 0}{" "}
+                            {skill.user_skills?.[0]?.count === 1 ? "person" : "people"}
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                </div>
+              </ScrollArea>
+            )}
           </div>
 
           {formData.skills.length > 0 && (

@@ -70,14 +70,7 @@ export default async function ResidentDashboardLayout({
     .eq("tenant_id", tenant.id)
     .maybeSingle()
 
-  if (!resident) {
-    redirect(`/t/${slug}/login`)
-  }
-
-  // Redirect to onboarding if not completed
-  if (!resident.onboarding_completed) {
-    redirect(`/t/${slug}/onboarding`)
-  }
+  // They will see "Complete Onboarding" quick action button instead
 
   const isAdmin = resident.is_tenant_admin === true
 

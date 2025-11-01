@@ -141,19 +141,37 @@ export function FamilyManagementForm({
       {/* Family Members Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Family Members
-          </CardTitle>
-          <CardDescription>
-            {familyUnit
-              ? `Manage your family relationships in ${familyUnit.name}`
-              : "No family unit assigned yet. Contact your administrator to set up your family."}
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Family Members
+              </CardTitle>
+              <CardDescription>
+                {familyUnit
+                  ? `Manage your family relationships in ${familyUnit.name}`
+                  : "No family unit assigned yet. Contact your administrator to set up your family."}
+              </CardDescription>
+            </div>
+            {familyMembers.length === 0 && lotResidents.length > 0 && (
+              <Button variant="default" size="sm">
+                <Plus className="mr-2 h-4 w-4" />
+                Add Family
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {familyMembers.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No other family members found.</p>
+            <div className="rounded-lg border border-dashed p-8 text-center">
+              <Users className="mx-auto h-12 w-12 text-muted-foreground" />
+              <h3 className="mt-4 text-lg font-semibold">No family members yet</h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {lotResidents.length > 0
+                  ? "Add family members from your household to define relationships"
+                  : "No other residents found in your lot"}
+              </p>
+            </div>
           ) : (
             <div className="space-y-4">
               {familyMembers.map((member) => (
@@ -192,15 +210,33 @@ export function FamilyManagementForm({
       {petsEnabled && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <PawPrint className="h-5 w-5" />
-              Pets
-            </CardTitle>
-            <CardDescription>Manage your family pets</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <PawPrint className="h-5 w-5" />
+                  Pets
+                </CardTitle>
+                <CardDescription>Manage your family pets</CardDescription>
+              </div>
+              {pets.length > 0 && !showAddPet && (
+                <Button variant="default" size="sm" onClick={() => setShowAddPet(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Pet
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             {pets.length === 0 && !showAddPet ? (
-              <p className="text-sm text-muted-foreground">No pets added yet.</p>
+              <div className="rounded-lg border border-dashed p-8 text-center">
+                <PawPrint className="mx-auto h-12 w-12 text-muted-foreground" />
+                <h3 className="mt-4 text-lg font-semibold">No pets yet</h3>
+                <p className="mt-2 text-sm text-muted-foreground">Add your family pets to your profile</p>
+                <Button variant="default" size="sm" className="mt-4" onClick={() => setShowAddPet(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Pet
+                </Button>
+              </div>
             ) : (
               <div className="space-y-3">
                 {pets.map((pet) => (
@@ -261,8 +297,8 @@ export function FamilyManagementForm({
               </div>
             )}
 
-            {!showAddPet && (
-              <Button variant="outline" onClick={() => setShowAddPet(true)} className="w-full">
+            {!showAddPet && pets.length > 0 && (
+              <Button variant="default" size="sm" onClick={() => setShowAddPet(true)} className="w-full">
                 <Plus className="mr-2 h-4 w-4" />
                 Add Pet
               </Button>

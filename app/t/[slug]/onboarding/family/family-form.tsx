@@ -181,6 +181,18 @@ export function FamilyForm({
       </div>
 
       <div className="space-y-4">
+        {!familyUnit && lotResidents.length === 0 && (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <Users className="mx-auto h-12 w-12 text-muted-foreground" />
+              <h3 className="mt-4 text-lg font-semibold">No family members yet</h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                No other residents found in your lot. Your administrator can add family members.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
         {familyUnit && familyMembers.length > 0 && (
           <div className="space-y-3">
             <Label>Family Members</Label>

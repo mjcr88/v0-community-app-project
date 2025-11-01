@@ -46,6 +46,10 @@ export default async function FamilyPage({ params }: { params: Promise<{ slug: s
 
     resident = residentData
 
+    if (resident && resident.family_unit_id === "") {
+      resident.family_unit_id = null
+    }
+
     if (resident?.family_unit_id) {
       // Fetch family unit info
       const { data: familyUnitData } = await supabase

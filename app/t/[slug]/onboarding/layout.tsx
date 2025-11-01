@@ -8,8 +8,10 @@ const ONBOARDING_STEPS = [
   { path: "welcome", title: "Welcome", description: "Get started with your community" },
   { path: "profile", title: "Basic Information", description: "Tell us about yourself" },
   { path: "journey", title: "Your Journey", description: "Share your timeline and goals" },
-  { path: "interests", title: "Interests & Skills", description: "Connect with the community" },
-  { path: "review", title: "Review & Complete", description: "Confirm your information" },
+  { path: "interests", title: "Interests", description: "Share what you're passionate about" },
+  { path: "skills", title: "Skills", description: "Offer your expertise to neighbors" },
+  { path: "family", title: "Family", description: "Map your family relationships" },
+  { path: "complete", title: "Review & Complete", description: "Confirm your information" },
 ]
 
 function getCurrentStep(pathname: string): number {

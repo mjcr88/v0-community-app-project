@@ -55,7 +55,7 @@ export function SignupForm({ tenant, resident, token }: SignupFormProps) {
     try {
       console.log("[v0] Starting signup for:", { email: resident.email, residentId: resident.id })
 
-      const authResult = await createAuthUserAction(resident.email, password)
+      const authResult = await createAuthUserAction(resident.email, password, resident.id)
 
       console.log("[v0] Auth result:", authResult)
 

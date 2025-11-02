@@ -29,7 +29,8 @@ type Resident = {
   phone: string | null
   lots: {
     lot_number: string
-  }
+    neighborhoods: { name: string } | null
+  } | null
 }
 
 type FamilyMember = {
@@ -66,6 +67,7 @@ export default function CreateFamilyForm({
   const [creationMode, setCreationMode] = useState<"existing" | "new">("existing")
   const [selectedResidentIds, setSelectedResidentIds] = useState<string[]>([])
   const [searchQuery, setSearchQuery] = useState("")
+  const [selectedLotId, setSelectedLotId] = useState<string>("")
 
   const [members, setMembers] = useState<FamilyMember[]>([
     { id: crypto.randomUUID(), first_name: "", last_name: "", email: "", phone: "" },
@@ -105,28 +107,31 @@ export default function CreateFamilyForm({
 
     try {
       if (creationMode === "existing") {
-        // Create family unit with existing residents
         const { data: family, error: familyError } = await supabase
           .from("family_units")
           .insert({
             tenant_id: tenantId,
             name: familyName,
-            primary_contact_id: selectedResidentIds[0], // First selected resident is primary
+            primary_contact_id: selectedResidentIds[0],
           })
           .select()
           .single()
 
         if (familyError) throw familyError
 
-        // Update selected residents to link to this family
         const { error: updateError } = await supabase
-          .from("residents")
+          .from("users")
           .update({ family_unit_id: family.id })
           .in("id", selectedResidentIds)
 
         if (updateError) throw updateError
       } else {
-        // Create family unit with new members (existing logic)
+        if (!selectedLotId) {
+          alert("Please select a lot for the family members")
+          setLoading(false)
+          return
+        }
+
         const { data: family, error: familyError } = await supabase
           .from("family_units")
           .insert({
@@ -138,35 +143,36 @@ export default function CreateFamilyForm({
 
         if (familyError) throw familyError
 
-        // Create residents
         const residentsToInsert = members.map((member) => ({
           tenant_id: tenantId,
-          lot_id: null, // Removed lot selection, residents already have lots
+          lot_id: selectedLotId,
           family_unit_id: family.id,
+          role: "resident",
           first_name: member.first_name,
           last_name: member.last_name,
-          email: member.email,
-          phone: member.phone,
+          email: member.email || null,
+          phone: member.phone || null,
         }))
 
         const { data: createdResidents, error: residentsError } = await supabase
-          .from("residents")
+          .from("users")
           .insert(residentsToInsert)
           .select()
 
-        if (residentsError) throw residentsError
+        if (residentsError) {
+          console.error("Error creating:", residentsError)
+          throw residentsError
+        }
 
-        // Update family unit with primary contact
         if (createdResidents && createdResidents.length > 0) {
           const primaryContactId = createdResidents[primaryContactIndex]?.id
           await supabase.from("family_units").update({ primary_contact_id: primaryContactId }).eq("id", family.id)
         }
 
-        // Create pets if any
         if (pets.length > 0) {
           const petsToInsert = pets.map((pet) => ({
             tenant_id: tenantId,
-            lot_id: null, // Removed lot requirement
+            lot_id: selectedLotId,
             family_unit_id: family.id,
             name: pet.name,
             species: pet.species,
@@ -196,7 +202,7 @@ export default function CreateFamilyForm({
 
   const filteredResidents = existingResidents.filter((resident) => {
     const fullName = `${resident.first_name} ${resident.last_name}`.toLowerCase()
-    const lotNumber = resident.lots.lot_number.toLowerCase()
+    const lotNumber = resident.lots?.lot_number?.toLowerCase() || ""
     const query = searchQuery.toLowerCase()
     return fullName.includes(query) || lotNumber.includes(query)
   })
@@ -288,8 +294,8 @@ export default function CreateFamilyForm({
                         <TableCell>
                           {resident.first_name} {resident.last_name}
                         </TableCell>
-                        <TableCell>{resident.lots.lot_number}</TableCell>
-                        <TableCell>{resident.lots.neighborhoods?.name || "—"}</TableCell>
+                        <TableCell>{resident.lots?.lot_number || "—"}</TableCell>
+                        <TableCell>{resident.lots?.neighborhoods?.name || "—"}</TableCell>
                       </TableRow>
                     ))
                   )}
@@ -300,6 +306,32 @@ export default function CreateFamilyForm({
         </Card>
       ) : (
         <>
+          <Card>
+            <CardHeader>
+              <CardTitle>Lot Assignment</CardTitle>
+              <CardDescription>Select the lot where this family will reside</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <Label htmlFor="lot">
+                  Lot <span className="text-destructive">*</span>
+                </Label>
+                <Select value={selectedLotId} onValueChange={setSelectedLotId} required>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a lot" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {lots.map((lot) => (
+                      <SelectItem key={lot.id} value={lot.id}>
+                        {lot.lot_number} - {lot.neighborhoods?.name || "No neighborhood"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">

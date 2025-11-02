@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
+import { ArrowUpDown, ArrowUp, ArrowDown, Search } from "lucide-react"
 import Link from "next/link"
 import { filterPrivateData } from "@/lib/privacy-utils"
 
@@ -29,6 +29,7 @@ export function NeighboursTable({
   tenantSlug,
   currentUserFamilyId,
 }: NeighboursTableProps) {
+  const [globalSearch, setGlobalSearch] = useState("")
   const [nameFilter, setNameFilter] = useState("")
   const [neighborhoodFilter, setNeighborhoodFilter] = useState<string>("all")
   const [lotFilter, setLotFilter] = useState("")
@@ -82,6 +83,26 @@ export function NeighboursTable({
     const filtered = residents.filter((resident) => {
       const privacySettings = resident.user_privacy_settings?.[0]
       const isFamily = resident.family_unit_id === currentUserFamilyId
+
+      if (globalSearch) {
+        const searchLower = globalSearch.toLowerCase()
+        const fullName = `${resident.first_name || ""} ${resident.last_name || ""}`.toLowerCase()
+        const lotNumber = resident.lots?.lot_number?.toLowerCase() || ""
+        const neighborhoodName = resident.lots?.neighborhoods?.name?.toLowerCase() || ""
+        const residentInterests =
+          resident.user_interests?.map((ui: any) => ui.interests?.name?.toLowerCase()).filter(Boolean) || []
+        const residentSkills =
+          resident.user_skills?.map((us: any) => us.skills?.name?.toLowerCase()).filter(Boolean) || []
+
+        const matchesGlobalSearch =
+          fullName.includes(searchLower) ||
+          lotNumber.includes(searchLower) ||
+          neighborhoodName.includes(searchLower) ||
+          residentInterests.some((interest: string) => interest.includes(searchLower)) ||
+          residentSkills.some((skill: string) => skill.includes(searchLower))
+
+        if (!matchesGlobalSearch) return false
+      }
 
       // Name filter
       const fullName = `${resident.first_name || ""} ${resident.last_name || ""}`.toLowerCase()
@@ -144,6 +165,7 @@ export function NeighboursTable({
     return filtered
   }, [
     residents,
+    globalSearch,
     nameFilter,
     neighborhoodFilter,
     lotFilter,
@@ -156,6 +178,16 @@ export function NeighboursTable({
 
   return (
     <div className="space-y-4">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search by name, lot, neighborhood, interests, or skills..."
+          value={globalSearch}
+          onChange={(e) => setGlobalSearch(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
       <div className="rounded-md border">
         <Table>
           <TableHeader>

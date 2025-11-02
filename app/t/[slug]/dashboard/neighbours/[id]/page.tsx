@@ -18,6 +18,7 @@ import {
   CheckCircle2,
 } from "lucide-react"
 import Link from "next/link"
+import { filterPrivateData } from "@/lib/privacy-utils"
 
 export default async function PublicProfilePage({
   params,
@@ -35,11 +36,11 @@ export default async function PublicProfilePage({
     redirect(`/t/${slug}/login`)
   }
 
-  // Get current resident's tenant
+  // Get current resident's tenant and family
   const { data: currentResident } = await supabase
     .from("users")
-    .select("id, tenant_id")
-    .eq("id", user.id) // Changed from auth_user_id to id
+    .select("id, tenant_id, family_unit_id")
+    .eq("id", user.id)
     .eq("role", "resident")
     .single()
 
@@ -47,7 +48,6 @@ export default async function PublicProfilePage({
     redirect(`/t/${slug}/login`)
   }
 
-  // Get the profile resident with all details
   const { data: resident } = await supabase
     .from("users")
     .select(
@@ -76,21 +76,16 @@ export default async function PublicProfilePage({
         open_to_requests
       ),
       user_privacy_settings (
-        show_email,
+        show_profile_picture,
         show_phone,
         show_birthday,
         show_birth_country,
         show_current_country,
         show_languages,
-        show_preferred_language,
         show_journey_stage,
         show_estimated_move_in_date,
-        show_profile_picture,
-        show_neighborhood,
-        show_family,
         show_interests,
-        show_skills,
-        show_open_to_requests
+        show_skills
       )
     `,
     )
@@ -103,13 +98,16 @@ export default async function PublicProfilePage({
     notFound()
   }
 
+  const isFamily = resident.family_unit_id === currentResident.family_unit_id
   const privacySettings = resident.user_privacy_settings?.[0] || {}
-  const initials = [resident.first_name, resident.last_name]
+  const filteredResident = filterPrivateData(resident, privacySettings, isFamily)
+
+  const initials = [filteredResident.first_name, filteredResident.last_name]
     .filter(Boolean)
     .map((n) => n![0])
     .join("")
     .toUpperCase()
-  const displayName = `${resident.first_name || ""} ${resident.last_name || ""}`.trim()
+  const displayName = `${filteredResident.first_name || ""} ${filteredResident.last_name || ""}`.trim()
 
   return (
     <div className="space-y-6">
@@ -131,21 +129,14 @@ export default async function PublicProfilePage({
           <CardContent className="pt-6">
             <div className="flex flex-col items-center text-center space-y-4">
               <Avatar className="h-32 w-32">
-                <AvatarImage
-                  src={
-                    privacySettings.show_profile_picture !== false
-                      ? resident.profile_picture_url || undefined
-                      : undefined
-                  }
-                  alt={displayName}
-                />
+                <AvatarImage src={filteredResident.profile_picture_url || undefined} alt={displayName} />
                 <AvatarFallback className="text-3xl">{initials || "?"}</AvatarFallback>
               </Avatar>
 
               <div className="space-y-1 w-full">
                 <h3 className="text-2xl font-bold">{displayName}</h3>
 
-                {privacySettings.show_neighborhood !== false && resident.lots?.neighborhoods?.name && (
+                {resident.lots?.neighborhoods?.name && (
                   <div className="flex items-center justify-center gap-2 text-muted-foreground">
                     <MapPin className="h-4 w-4" />
                     <span>
@@ -154,17 +145,17 @@ export default async function PublicProfilePage({
                   </div>
                 )}
 
-                {privacySettings.show_journey_stage !== false && resident.journey_stage && (
+                {filteredResident.journey_stage && (
                   <Badge variant="secondary" className="capitalize mt-2">
-                    {resident.journey_stage}
+                    {filteredResident.journey_stage}
                   </Badge>
                 )}
               </div>
 
-              {privacySettings.show_estimated_move_in_date !== false && resident.estimated_move_in_date && (
+              {filteredResident.estimated_move_in_date && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Calendar className="h-4 w-4" />
-                  <span>Moving {new Date(resident.estimated_move_in_date).toLocaleDateString()}</span>
+                  <span>Moving {new Date(filteredResident.estimated_move_in_date).toLocaleDateString()}</span>
                 </div>
               )}
             </div>
@@ -173,26 +164,25 @@ export default async function PublicProfilePage({
 
         {/* Details Cards */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Contact Information */}
-          {(privacySettings.show_email !== false || privacySettings.show_phone !== false) && (
+          {(filteredResident.email || filteredResident.phone) && (
             <Card>
               <CardHeader>
                 <CardTitle>Contact Information</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {privacySettings.show_email !== false && resident.email && (
+                {filteredResident.email && (
                   <div className="flex items-center gap-3">
                     <Mail className="h-4 w-4 text-muted-foreground" />
-                    <a href={`mailto:${resident.email}`} className="text-sm hover:underline">
-                      {resident.email}
+                    <a href={`mailto:${filteredResident.email}`} className="text-sm hover:underline">
+                      {filteredResident.email}
                     </a>
                   </div>
                 )}
-                {privacySettings.show_phone !== false && resident.phone && (
+                {filteredResident.phone && (
                   <div className="flex items-center gap-3">
                     <Phone className="h-4 w-4 text-muted-foreground" />
-                    <a href={`tel:${resident.phone}`} className="text-sm hover:underline">
-                      {resident.phone}
+                    <a href={`tel:${filteredResident.phone}`} className="text-sm hover:underline">
+                      {filteredResident.phone}
                     </a>
                   </div>
                 )}
@@ -200,52 +190,50 @@ export default async function PublicProfilePage({
             </Card>
           )}
 
-          {/* Personal Information */}
-          {(privacySettings.show_birth_country !== false ||
-            privacySettings.show_current_country !== false ||
-            privacySettings.show_birthday !== false) && (
+          {(filteredResident.birth_country || filteredResident.current_country || filteredResident.birthday) && (
             <Card>
               <CardHeader>
                 <CardTitle>Personal Information</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {privacySettings.show_birthday !== false && resident.birthday && (
+                {filteredResident.birthday && (
                   <div className="flex items-center gap-3">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">Birthday: {new Date(resident.birthday).toLocaleDateString()}</span>
+                    <span className="text-sm">
+                      Birthday: {new Date(filteredResident.birthday).toLocaleDateString()}
+                    </span>
                   </div>
                 )}
-                {privacySettings.show_birth_country !== false && resident.birth_country && (
+                {filteredResident.birth_country && (
                   <div className="flex items-center gap-3">
                     <Globe className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">From: {resident.birth_country}</span>
+                    <span className="text-sm">From: {filteredResident.birth_country}</span>
                   </div>
                 )}
-                {privacySettings.show_current_country !== false && resident.current_country && (
+                {filteredResident.current_country && (
                   <div className="flex items-center gap-3">
                     <Globe className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">Currently in: {resident.current_country}</span>
+                    <span className="text-sm">Currently in: {filteredResident.current_country}</span>
                   </div>
                 )}
               </CardContent>
             </Card>
           )}
 
-          {/* Languages */}
-          {privacySettings.show_languages !== false && resident.languages && resident.languages.length > 0 && (
+          {filteredResident.languages && filteredResident.languages.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Languages className="h-5 w-5" />
                   Languages
                 </CardTitle>
-                {privacySettings.show_preferred_language !== false && resident.preferred_language && (
-                  <CardDescription>Preferred: {resident.preferred_language}</CardDescription>
+                {filteredResident.preferred_language && (
+                  <CardDescription>Preferred: {filteredResident.preferred_language}</CardDescription>
                 )}
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">
-                  {resident.languages.map((language: string) => (
+                  {filteredResident.languages.map((language: string) => (
                     <Badge key={language} variant="secondary">
                       {language}
                     </Badge>
@@ -255,8 +243,7 @@ export default async function PublicProfilePage({
             </Card>
           )}
 
-          {/* Family */}
-          {privacySettings.show_family !== false && resident.family_units && (
+          {resident.family_units && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -270,51 +257,45 @@ export default async function PublicProfilePage({
             </Card>
           )}
 
-          {/* Interests */}
-          {privacySettings.show_interests !== false &&
-            resident.user_interests &&
-            resident.user_interests.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Lightbulb className="h-5 w-5" />
-                    Interests
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-2">
-                    {resident.user_interests.map((ui: any) => (
-                      <Badge key={ui.interests.id} variant="outline">
-                        {ui.interests.name}
-                      </Badge>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+          {filteredResident.user_interests && filteredResident.user_interests.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Lightbulb className="h-5 w-5" />
+                  Interests
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {filteredResident.user_interests.map((ui: any) => (
+                    <Badge key={ui.interests.id} variant="outline">
+                      {ui.interests.name}
+                    </Badge>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-          {/* Skills */}
-          {privacySettings.show_skills !== false && resident.user_skills && resident.user_skills.length > 0 && (
+          {filteredResident.user_skills && filteredResident.user_skills.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Wrench className="h-5 w-5" />
                   Skills
                 </CardTitle>
-                {privacySettings.show_open_to_requests !== false && (
-                  <CardDescription>
-                    {resident.user_skills.some((s: any) => s.open_to_requests)
-                      ? "Open to help requests for some skills"
-                      : "Not currently accepting help requests"}
-                  </CardDescription>
-                )}
+                <CardDescription>
+                  {filteredResident.user_skills.some((s: any) => s.open_to_requests)
+                    ? "Open to help requests for some skills"
+                    : "Not currently accepting help requests"}
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {resident.user_skills.map((skill: any, index: number) => (
+                  {filteredResident.user_skills.map((skill: any, index: number) => (
                     <div key={index} className="flex items-center justify-between">
                       <span className="text-sm font-medium">{skill.skills.name}</span>
-                      {privacySettings.show_open_to_requests !== false && skill.open_to_requests && (
+                      {skill.open_to_requests && (
                         <Badge variant="secondary" className="gap-1">
                           <CheckCircle2 className="h-3 w-3" />
                           Available to help

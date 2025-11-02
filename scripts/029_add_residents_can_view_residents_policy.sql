@@ -2,6 +2,9 @@
 -- This enables family members to see each other
 -- Also ensures super admins and tenant admins can still query users
 
+-- Drop the existing policy first before recreating it
+DROP POLICY IF EXISTS "Residents can view other residents in their tenant" ON public.users;
+
 CREATE POLICY "Residents can view other residents in their tenant"
   ON public.users
   FOR SELECT

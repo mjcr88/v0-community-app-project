@@ -36,11 +36,13 @@ interface Tenant {
   max_neighborhoods: number
   tenant_admin_id: string | null
   tenant_admin: TenantAdmin | null
+  address: string | null
 }
 
 export default function EditTenantForm({ tenant }: { tenant: Tenant }) {
   const [name, setName] = useState(tenant.name)
   const [maxNeighborhoods, setMaxNeighborhoods] = useState(tenant.max_neighborhoods.toString())
+  const [address, setAddress] = useState(tenant.address || "")
   const [adminName, setAdminName] = useState(tenant.tenant_admin?.name || "")
   const [adminEmail, setAdminEmail] = useState(tenant.tenant_admin?.email || "")
   const [adminId, setAdminId] = useState<string | null>(tenant.tenant_admin_id)
@@ -142,6 +144,7 @@ export default function EditTenantForm({ tenant }: { tenant: Tenant }) {
           name,
           slug,
           max_neighborhoods: Number.parseInt(maxNeighborhoods),
+          address: address || null,
           tenant_admin_id: newAdminId,
         })
         .eq("id", tenant.id)
@@ -248,6 +251,19 @@ export default function EditTenantForm({ tenant }: { tenant: Tenant }) {
                   <p className="text-xs text-muted-foreground">
                     Maximum number of neighborhoods this tenant can create
                   </p>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="address">Address</Label>
+                  <Input
+                    id="address"
+                    type="text"
+                    placeholder="123 Main St, City, State, ZIP"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    disabled={isSaving}
+                  />
+                  <p className="text-xs text-muted-foreground">Optional default address for this community</p>
                 </div>
 
                 <div className="border-t pt-6">

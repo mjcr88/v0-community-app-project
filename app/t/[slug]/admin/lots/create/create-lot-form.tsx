@@ -26,6 +26,7 @@ export default function CreateLotForm({ slug, neighborhoods }: { slug: string; n
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [bulkCreate, setBulkCreate] = useState(false)
+  const [showAddress, setShowAddress] = useState(false)
   const [formData, setFormData] = useState({
     lot_number: "",
     neighborhood_id: "",
@@ -43,24 +44,32 @@ export default function CreateLotForm({ slug, neighborhoods }: { slug: string; n
     try {
       const supabase = createBrowserClient()
 
+      const { data: neighborhood, error: neighborhoodError } = await supabase
+        .from("neighborhoods")
+        .select("tenant_id")
+        .eq("id", formData.neighborhood_id)
+        .single()
+
+      if (neighborhoodError || !neighborhood) {
+        throw new Error("Failed to fetch neighborhood details")
+      }
+
+      const tenantId = neighborhood.tenant_id
+
       if (bulkCreate) {
         const count = Number.parseInt(formData.bulk_count)
-        const startNumber = Number.parseInt(formData.bulk_start_number) || 1
         const prefix = formData.bulk_prefix
 
-        if (count < 1 || count > 100) {
-          throw new Error("Bulk count must be between 1 and 100")
-        }
-
-        if (isNaN(startNumber)) {
-          throw new Error("Starting number must be a valid number")
+        if (count < 1 || count > 999) {
+          throw new Error("Bulk count must be between 1 and 999")
         }
 
         const lotsToInsert = []
         for (let i = 0; i < count; i++) {
-          const lotNumber = `${prefix}${startNumber + i}`
+          const lotNumber = `${prefix}${String(i + 1).padStart(3, "0")}`
           lotsToInsert.push({
             neighborhood_id: formData.neighborhood_id,
+            tenant_id: tenantId,
             lot_number: lotNumber,
             address: null,
           })
@@ -69,15 +78,25 @@ export default function CreateLotForm({ slug, neighborhoods }: { slug: string; n
         const { error: insertError } = await supabase.from("lots").insert(lotsToInsert)
 
         if (insertError) throw insertError
+
+        toast({
+          title: "Success",
+          description: `Created ${count} lots successfully`,
+        })
       } else {
-        // Single lot creation
         const { error: insertError } = await supabase.from("lots").insert({
           neighborhood_id: formData.neighborhood_id,
+          tenant_id: tenantId,
           lot_number: formData.lot_number,
-          address: formData.address || null,
+          address: showAddress && formData.address ? formData.address : null,
         })
 
         if (insertError) throw insertError
+
+        toast({
+          title: "Success",
+          description: "Lot created successfully",
+        })
       }
 
       setLoading(false)
@@ -94,6 +113,7 @@ export default function CreateLotForm({ slug, neighborhoods }: { slug: string; n
       router.push(`/t/${slug}/admin/lots`)
       router.refresh()
     } catch (err: any) {
+      console.error("[v0] Error creating lot:", err)
       setError(err.message || "Failed to create lot(s)")
       setLoading(false)
     }
@@ -142,43 +162,33 @@ export default function CreateLotForm({ slug, neighborhoods }: { slug: string; n
               id="bulk_count"
               type="number"
               min="1"
-              max="100"
+              max="999"
               value={formData.bulk_count}
               onChange={(e) => setFormData({ ...formData, bulk_count: e.target.value })}
               placeholder="e.g., 35"
               required
             />
-            <p className="text-sm text-muted-foreground">Maximum 100 lots at once</p>
+            <p className="text-sm text-muted-foreground">Maximum 999 lots at once</p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="bulk_prefix">Naming Prefix *</Label>
+            <Label htmlFor="bulk_prefix">Lot Prefix *</Label>
             <Input
               id="bulk_prefix"
               value={formData.bulk_prefix}
               onChange={(e) => setFormData({ ...formData, bulk_prefix: e.target.value })}
-              placeholder="e.g., F-"
-              required
-            />
-            <p className="text-sm text-muted-foreground">Prefix for all lot numbers</p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="bulk_start_number">Starting Number *</Label>
-            <Input
-              id="bulk_start_number"
-              type="number"
-              min="1"
-              value={formData.bulk_start_number}
-              onChange={(e) => setFormData({ ...formData, bulk_start_number: e.target.value })}
-              placeholder="e.g., 101"
+              placeholder="e.g., A"
               required
             />
             <p className="text-sm text-muted-foreground">
-              Example: {formData.bulk_prefix || "F-"}
-              {formData.bulk_start_number || "101"}, {formData.bulk_prefix || "F-"}
-              {(Number.parseInt(formData.bulk_start_number) || 101) + 1}, {formData.bulk_prefix || "F-"}
-              {(Number.parseInt(formData.bulk_start_number) || 101) + 2}
+              Lots will be created as {formData.bulk_prefix || "A"}001, {formData.bulk_prefix || "A"}002, etc.
+            </p>
+          </div>
+
+          <div className="p-3 bg-muted/50 rounded-lg">
+            <p className="text-sm text-muted-foreground">
+              Preview: {formData.bulk_prefix || "A"}001, {formData.bulk_prefix || "A"}002, {formData.bulk_prefix || "A"}
+              003...
             </p>
           </div>
         </>
@@ -190,21 +200,30 @@ export default function CreateLotForm({ slug, neighborhoods }: { slug: string; n
               id="lot_number"
               value={formData.lot_number}
               onChange={(e) => setFormData({ ...formData, lot_number: e.target.value })}
-              placeholder="e.g., A-101"
+              placeholder="e.g., A001"
               required
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="address">Address</Label>
-            <Textarea
-              id="address"
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              placeholder="Optional physical address"
-              rows={3}
-            />
+          <div className="flex items-center space-x-2 p-4 bg-muted/50 rounded-lg">
+            <Switch id="show-address" checked={showAddress} onCheckedChange={setShowAddress} />
+            <Label htmlFor="show-address" className="cursor-pointer">
+              Add address for this lot
+            </Label>
           </div>
+
+          {showAddress && (
+            <div className="space-y-2">
+              <Label htmlFor="address">Address</Label>
+              <Textarea
+                id="address"
+                value={formData.address}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                placeholder="Optional physical address"
+                rows={3}
+              />
+            </div>
+          )}
         </>
       )}
 

@@ -46,7 +46,14 @@ export default function CreateNeighborhoodForm({ slug, tenantId }: { slug: strin
         throw insertError
       }
 
-      console.log("[v0] Neighborhood created successfully, resetting form...")
+      console.log("[v0] Neighborhood created successfully")
+
+      setLoading(false)
+
+      toast({
+        title: "Success",
+        description: "Neighborhood created successfully",
+      })
 
       setFormData({
         name: "",

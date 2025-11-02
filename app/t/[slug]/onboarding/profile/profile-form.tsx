@@ -12,6 +12,27 @@ import { Upload, Loader2, X } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Combobox } from "@/components/ui/combobox"
 import { COUNTRIES, LANGUAGES } from "@/lib/data/countries-languages"
+import { createClient } from "@/lib/supabase/client"
+
+const COUNTRY_CODES = [
+  { value: "+1", label: "+1 (US/Canada)" },
+  { value: "+44", label: "+44 (UK)" },
+  { value: "+49", label: "+49 (Germany)" },
+  { value: "+33", label: "+33 (France)" },
+  { value: "+34", label: "+34 (Spain)" },
+  { value: "+39", label: "+39 (Italy)" },
+  { value: "+351", label: "+351 (Portugal)" },
+  { value: "+506", label: "+506 (Costa Rica)" },
+  { value: "+52", label: "+52 (Mexico)" },
+  { value: "+55", label: "+55 (Brazil)" },
+  { value: "+54", label: "+54 (Argentina)" },
+  { value: "+57", label: "+57 (Colombia)" },
+  { value: "+61", label: "+61 (Australia)" },
+  { value: "+64", label: "+64 (New Zealand)" },
+  { value: "+81", label: "+81 (Japan)" },
+  { value: "+86", label: "+86 (China)" },
+  { value: "+91", label: "+91 (India)" },
+]
 
 interface ProfileFormProps {
   tenant: {
@@ -37,11 +58,25 @@ interface ProfileFormProps {
 
 export function ProfileForm({ tenant, resident, isSuperAdmin }: ProfileFormProps) {
   const router = useRouter()
+  const supabase = createClient()
   const [isLoading, setIsLoading] = useState(false)
+
+  const parsePhone = (phone: string | null) => {
+    if (!phone) return { countryCode: "+1", phoneNumber: "" }
+    const match = phone.match(/^(\+\d+)(.*)$/)
+    if (match) {
+      return { countryCode: match[1], phoneNumber: match[2].trim() }
+    }
+    return { countryCode: "+1", phoneNumber: phone }
+  }
+
+  const { countryCode: initialCountryCode, phoneNumber: initialPhoneNumber } = parsePhone(resident.phone)
+
   const [formData, setFormData] = useState({
     firstName: resident.first_name || "",
     lastName: resident.last_name || "",
-    phone: resident.phone || "",
+    countryCode: initialCountryCode,
+    phoneNumber: initialPhoneNumber,
     birthday: resident.birthday || "",
     birthCountry: resident.birth_country || "",
     currentCountry: resident.current_country || "",
@@ -72,8 +107,27 @@ export function ProfileForm({ tenant, resident, isSuperAdmin }: ProfileFormProps
         return
       }
 
-      // TODO: Implement profile update with Vercel Blob for profile picture
-      console.log("[v0] Profile data:", formData)
+      const { error } = await supabase
+        .from("users")
+        .update({
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          phone: formData.countryCode + formData.phoneNumber,
+          birthday: formData.birthday || null,
+          birth_country: formData.birthCountry || null,
+          current_country: formData.currentCountry || null,
+          languages: formData.languages,
+          preferred_language: formData.preferredLanguage || null,
+          profile_picture_url: formData.profilePicture || null,
+        })
+        .eq("id", resident.id)
+
+      if (error) {
+        console.error("[v0] Error updating profile:", error)
+        return
+      }
+
+      console.log("[v0] Profile data saved successfully")
       router.push(`/t/${tenant.slug}/onboarding/interests`)
     } catch (error) {
       console.error("[v0] Error updating profile:", error)
@@ -98,7 +152,7 @@ export function ProfileForm({ tenant, resident, isSuperAdmin }: ProfileFormProps
   }
 
   const handlePhotoUpload = () => {
-    // TODO: Implement Vercel Blob upload
+    // Implement Vercel Blob upload
     alert("Photo upload will be implemented with Vercel Blob storage")
   }
 
@@ -157,13 +211,26 @@ export function ProfileForm({ tenant, resident, isSuperAdmin }: ProfileFormProps
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="phone">Phone Number</Label>
-              <Input
-                id="phone"
-                type="tel"
-                placeholder="+1 (555) 123-4567"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              />
+              <div className="flex gap-2">
+                <div className="w-[140px]">
+                  <Combobox
+                    options={COUNTRY_CODES}
+                    value={formData.countryCode}
+                    onValueChange={(value) => setFormData({ ...formData, countryCode: value })}
+                    placeholder={formData.countryCode}
+                    searchPlaceholder="Search code or country..."
+                    emptyText="Not found"
+                  />
+                </div>
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="123-4567"
+                  value={formData.phoneNumber}
+                  onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                  className="flex-1"
+                />
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="birthday">Birthday</Label>

@@ -14,26 +14,36 @@ export default async function SkillsPage({ params }: { params: Promise<{ slug: s
     redirect(`/t/${slug}/login`)
   }
 
-  // Check if user is super admin (testing mode)
   const { data: superAdminCheck } = await supabase.from("users").select("role").eq("id", user.id).single()
 
   const isSuperAdmin = superAdminCheck?.role === "super_admin"
 
-  // Fetch tenant
   const { data: tenant } = await supabase.from("tenants").select("id, name, slug").eq("slug", slug).single()
 
   if (!tenant) {
     redirect("/")
   }
 
-  // Fetch skills for this tenant
   const { data: skills } = await supabase
     .from("skills")
-    .select("id, name, description")
+    .select(`
+      id, 
+      name, 
+      description,
+      user_skills(count)
+    `)
     .eq("tenant_id", tenant.id)
     .order("name")
 
-  // Fetch resident data
+  // Transform to include user_count
+  const skillsWithCounts =
+    skills?.map((skill) => ({
+      id: skill.id,
+      name: skill.name,
+      description: skill.description,
+      user_count: skill.user_skills?.[0]?.count || 0,
+    })) || []
+
   let resident
   let residentSkills: { id: string; open_to_requests: boolean }[] = []
 
@@ -41,20 +51,20 @@ export default async function SkillsPage({ params }: { params: Promise<{ slug: s
     resident = { id: "test-resident-id" }
   } else {
     const { data: residentData } = await supabase
-      .from("residents")
+      .from("users")
       .select("id")
-      .eq("auth_user_id", user.id)
+      .eq("id", user.id)
       .eq("tenant_id", tenant.id)
+      .eq("role", "resident")
       .single()
 
     resident = residentData
 
     if (resident) {
-      // Fetch existing skills
       const { data: existingSkills } = await supabase
-        .from("resident_skills")
+        .from("user_skills")
         .select("skill_id, open_to_requests")
-        .eq("resident_id", resident.id)
+        .eq("user_id", resident.id)
 
       residentSkills = existingSkills?.map((s) => ({ id: s.skill_id, open_to_requests: s.open_to_requests })) || []
     }
@@ -68,7 +78,7 @@ export default async function SkillsPage({ params }: { params: Promise<{ slug: s
     <SkillsForm
       tenant={tenant}
       resident={resident}
-      skills={skills || []}
+      skills={skillsWithCounts}
       residentSkills={residentSkills}
       isSuperAdmin={isSuperAdmin}
     />

@@ -4,13 +4,14 @@ import type React from "react"
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { createBrowserClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Spinner } from "@/components/ui/spinner"
+import { createAuthUserAction } from "./create-auth-user-action"
+import { createBrowserClient } from "@/lib/supabase/client"
 
 interface SignupFormProps {
   tenant: {
@@ -39,13 +40,11 @@ export function SignupForm({ tenant, resident, token }: SignupFormProps) {
     e.preventDefault()
     setError("")
 
-    // Validate passwords match
     if (password !== confirmPassword) {
       setError("Passwords do not match")
       return
     }
 
-    // Validate password strength
     if (password.length < 8) {
       setError("Password must be at least 8 characters")
       return
@@ -54,37 +53,45 @@ export function SignupForm({ tenant, resident, token }: SignupFormProps) {
     setLoading(true)
 
     try {
-      const supabase = createBrowserClient()
+      console.log("[v0] Starting signup for:", { email: resident.email, residentId: resident.id })
 
-      // Create auth user
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+      const authResult = await createAuthUserAction(resident.email, password, resident.id)
+
+      console.log("[v0] Auth result:", authResult)
+
+      if (authResult.error) {
+        console.error("[v0] Auth signup error:", authResult.error)
+        throw new Error(authResult.error)
+      }
+
+      if (!authResult.user) {
+        throw new Error("No user returned from signup")
+      }
+
+      console.log("[v0] Auth user created successfully:", authResult.user.id)
+
+      const supabase = createBrowserClient()
+      const { error: signInError } = await supabase.auth.signInWithPassword({
         email: resident.email,
-        password,
-        options: {
-          emailRedirectTo:
-            process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ||
-            `${window.location.origin}/t/${tenant.slug}/onboarding`,
-        },
+        password: password,
       })
 
-      if (signUpError) throw signUpError
-      if (!authData.user) throw new Error("Failed to create account")
+      if (signInError) {
+        console.error("[v0] Auto-login error:", signInError)
+        throw new Error("Account created but auto-login failed. Please login manually.")
+      }
 
-      // Link auth user to resident record
-      const { error: updateError } = await supabase
-        .from("residents")
-        .update({
-          auth_user_id: authData.user.id,
-          invite_token: null, // Clear the invite token
-        })
-        .eq("id", resident.id)
+      console.log("[v0] User auto-logged in successfully")
 
-      if (updateError) throw updateError
+      const redirectPath = tenant.features?.onboarding
+        ? `/t/${tenant.slug}/onboarding/welcome`
+        : `/t/${tenant.slug}/dashboard`
 
-      const redirectPath = tenant.features?.onboarding ? `/t/${tenant.slug}/onboarding` : `/t/${tenant.slug}/dashboard`
+      console.log("[v0] Redirecting to:", redirectPath)
       router.push(redirectPath)
+      router.refresh()
     } catch (err: any) {
-      console.error("[v0] Signup error:", err)
+      console.error("[v0] Signup error details:", err.message)
       setError(err.message || "An error occurred during signup")
     } finally {
       setLoading(false)

@@ -46,16 +46,29 @@ type Pet = {
   species: string
 }
 
+const RELATIONSHIP_TYPES = [
+  { value: "spouse", label: "Spouse" },
+  { value: "partner", label: "Partner" },
+  { value: "father", label: "Father" },
+  { value: "mother", label: "Mother" },
+  { value: "son", label: "Son" },
+  { value: "daughter", label: "Daughter" },
+  { value: "sibling", label: "Sibling" },
+  { value: "other", label: "Other" },
+]
+
 export function EditFamilyForm({
   slug,
   family,
   residents,
   pets,
+  existingRelationships,
 }: {
   slug: string
   family: Family
   residents: Resident[]
   pets: Pet[]
+  existingRelationships: any[]
 }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -63,17 +76,37 @@ export function EditFamilyForm({
   const [familyName, setFamilyName] = useState(family.name)
   const [primaryContactId, setPrimaryContactId] = useState(family.primary_contact_id || "")
 
+  const [relationships, setRelationships] = useState<Record<string, Record<string, string>>>(
+    existingRelationships.reduce((acc, rel) => {
+      if (!acc[rel.user_id]) acc[rel.user_id] = {}
+      acc[rel.user_id][rel.related_user_id] = rel.relationship_type
+      return acc
+    }, {}),
+  )
+
+  const handleRelationshipChange = (userId: string, relatedUserId: string, relationshipType: string) => {
+    setRelationships((prev) => ({
+      ...prev,
+      [userId]: {
+        ...prev[userId],
+        [relatedUserId]: relationshipType,
+      },
+    }))
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
     const supabase = createBrowserClient()
 
+    const validPrimaryContact = primaryContactId && residents.some((r) => r.id === primaryContactId)
+
     const { error } = await supabase
       .from("family_units")
       .update({
         name: familyName,
-        primary_contact_id: primaryContactId || null,
+        primary_contact_id: validPrimaryContact ? primaryContactId : null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", family.id)
@@ -82,6 +115,24 @@ export function EditFamilyForm({
       console.error("Error updating family:", error)
       setLoading(false)
       return
+    }
+
+    for (const userId of Object.keys(relationships)) {
+      for (const [relatedUserId, relationshipType] of Object.entries(relationships[userId])) {
+        if (relationshipType) {
+          await supabase.from("family_relationships").upsert(
+            {
+              user_id: userId,
+              related_user_id: relatedUserId,
+              relationship_type: relationshipType,
+              tenant_id: family.tenant_id,
+            },
+            {
+              onConflict: "user_id,related_user_id",
+            },
+          )
+        }
+      }
     }
 
     setLoading(false)
@@ -142,6 +193,48 @@ export function EditFamilyForm({
               ))}
             </ul>
           </div>
+
+          {residents.length > 1 && (
+            <div className="space-y-4">
+              <Label className="text-base">Family Relationships</Label>
+              <p className="text-sm text-muted-foreground">Define how family members are related to each other</p>
+              {residents.map((resident, idx) => (
+                <div key={resident.id} className="space-y-3">
+                  {residents
+                    .filter((_, i) => i !== idx)
+                    .map((relatedResident) => (
+                      <div key={`${resident.id}-${relatedResident.id}`} className="flex items-center gap-3">
+                        <div className="flex-1 text-sm">
+                          <span className="font-medium">{resident.first_name}</span>
+                          <span className="text-muted-foreground"> is </span>
+                        </div>
+                        <div className="w-40">
+                          <Select
+                            value={relationships[resident.id]?.[relatedResident.id] || ""}
+                            onValueChange={(value) => handleRelationshipChange(resident.id, relatedResident.id, value)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Relationship" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {RELATIONSHIP_TYPES.map((type) => (
+                                <SelectItem key={type.value} value={type.value}>
+                                  {type.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex-1 text-sm">
+                          <span className="text-muted-foreground"> of </span>
+                          <span className="font-medium">{relatedResident.first_name}</span>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              ))}
+            </div>
+          )}
 
           {pets.length > 0 && (
             <div className="space-y-2">

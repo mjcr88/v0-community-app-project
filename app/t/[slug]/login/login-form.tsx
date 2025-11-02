@@ -35,6 +35,8 @@ export function TenantLoginForm({ tenant }: TenantLoginFormProps) {
     try {
       const supabase = createClient()
 
+      console.log("[v0] Login attempt with email:", email)
+
       // Sign in
       const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
         email,
@@ -44,12 +46,15 @@ export function TenantLoginForm({ tenant }: TenantLoginFormProps) {
       if (signInError) throw signInError
 
       console.log("[v0] Auth user:", authData.user.id)
+      console.log("[v0] Auth user email:", authData.user.email)
 
       const { data: superAdminData } = await supabase
         .from("users")
         .select("role, tenant_id")
         .eq("id", authData.user.id)
         .maybeSingle()
+
+      console.log("[v0] Super admin check:", superAdminData)
 
       // Super admins can access any tenant
       if (superAdminData?.role === "super_admin") {
@@ -58,41 +63,38 @@ export function TenantLoginForm({ tenant }: TenantLoginFormProps) {
         return
       }
 
+      console.log("[v0] Querying for resident with:", {
+        authUserId: authData.user.id,
+        tenantId: tenant.id,
+      })
+
       const { data: residentData, error: residentError } = await supabase
-        .from("residents")
-        .select(`
-          id,
-          is_admin,
-          lot_id,
-          lots!inner (
-            neighborhood_id,
-            neighborhoods!inner (
-              tenant_id
-            )
-          )
-        `)
-        .eq("auth_user_id", authData.user.id)
+        .from("users")
+        .select("id, is_tenant_admin, tenant_id, onboarding_completed")
+        .eq("id", authData.user.id)
+        .eq("role", "resident")
+        .eq("tenant_id", tenant.id)
         .maybeSingle()
 
       console.log("[v0] Resident data:", residentData)
+      console.log("[v0] Resident error:", residentError)
 
       if (residentError || !residentData) {
         await supabase.auth.signOut()
         throw new Error("You do not have access to this community")
       }
 
-      // Check if resident belongs to this tenant
-      const residentTenantId = residentData.lots?.neighborhoods?.tenant_id
+      console.log("[v0] Access granted, redirecting...")
 
-      if (residentTenantId !== tenant.id) {
-        await supabase.auth.signOut()
-        throw new Error("You do not have access to this community")
+      if (!residentData.onboarding_completed) {
+        router.push(`/t/${tenant.slug}/onboarding/welcome`)
+      } else if (residentData.is_tenant_admin) {
+        router.push(`/t/${tenant.slug}/admin/dashboard`)
+      } else {
+        router.push(`/t/${tenant.slug}/dashboard`)
       }
-
-      console.log("[v0] Access granted, redirecting to dashboard")
-      router.push(`/t/${tenant.slug}/admin/dashboard`)
     } catch (err: any) {
-      console.error("[v0] Login error:", err)
+      console.error("[v0] Login error:", err.message)
       setError(err.message || "An error occurred")
     } finally {
       setLoading(false)

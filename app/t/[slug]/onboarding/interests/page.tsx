@@ -14,12 +14,10 @@ export default async function InterestsPage({ params }: { params: Promise<{ slug
     redirect(`/t/${slug}/login`)
   }
 
-  // Check if user is super admin (testing mode)
   const { data: superAdminCheck } = await supabase.from("users").select("role").eq("id", user.id).single()
 
   const isSuperAdmin = superAdminCheck?.role === "super_admin"
 
-  // Fetch tenant
   const { data: tenant } = await supabase.from("tenants").select("id, name, slug").eq("slug", slug).single()
 
   if (!tenant) {
@@ -28,11 +26,24 @@ export default async function InterestsPage({ params }: { params: Promise<{ slug
 
   const { data: interests } = await supabase
     .from("interests")
-    .select("id, name, description")
+    .select(`
+      id, 
+      name, 
+      description,
+      user_interests(count)
+    `)
     .eq("tenant_id", tenant.id)
     .order("name")
 
-  // Fetch resident data
+  // Transform to include user_count
+  const interestsWithCounts =
+    interests?.map((interest) => ({
+      id: interest.id,
+      name: interest.name,
+      description: interest.description,
+      user_count: interest.user_interests?.[0]?.count || 0,
+    })) || []
+
   let resident
   let residentInterests: string[] = []
 
@@ -40,20 +51,20 @@ export default async function InterestsPage({ params }: { params: Promise<{ slug
     resident = { id: "test-resident-id" }
   } else {
     const { data: residentData } = await supabase
-      .from("residents")
+      .from("users")
       .select("id")
-      .eq("auth_user_id", user.id)
+      .eq("id", user.id)
       .eq("tenant_id", tenant.id)
+      .eq("role", "resident")
       .single()
 
     resident = residentData
 
     if (resident) {
-      // Fetch existing interests
       const { data: existingInterests } = await supabase
-        .from("resident_interests")
+        .from("user_interests")
         .select("interest_id")
-        .eq("resident_id", resident.id)
+        .eq("user_id", resident.id)
 
       residentInterests = existingInterests?.map((i) => i.interest_id) || []
     }
@@ -67,7 +78,7 @@ export default async function InterestsPage({ params }: { params: Promise<{ slug
     <InterestsForm
       tenant={tenant}
       resident={resident}
-      interests={interests || []}
+      interests={interestsWithCounts}
       residentInterests={residentInterests}
       isSuperAdmin={isSuperAdmin}
     />

@@ -57,9 +57,10 @@ export default async function TenantAdminDashboard({
   const lotIdList = lotIds?.map((l) => l.id) || []
 
   const { count: residentsCount } = await supabase
-    .from("residents")
+    .from("users")
     .select("*", { count: "exact", head: true })
-    .in("lot_id", lotIdList)
+    .eq("tenant_id", tenant?.id || "")
+    .eq("role", "resident")
 
   const { count: familiesCount } = await supabase
     .from("family_units")

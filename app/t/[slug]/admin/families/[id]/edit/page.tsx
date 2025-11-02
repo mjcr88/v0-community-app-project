@@ -43,9 +43,10 @@ export default async function EditFamilyPage({
   }
 
   const { data: residents } = await supabase
-    .from("residents")
+    .from("users")
     .select("*")
     .eq("family_unit_id", family.id)
+    .eq("role", "resident")
     .order("created_at", { ascending: true })
 
   const { data: pets } = await supabase
@@ -54,14 +55,25 @@ export default async function EditFamilyPage({
     .eq("family_unit_id", family.id)
     .order("created_at", { ascending: true })
 
+  const { data: existingRelationships } = await supabase
+    .from("family_relationships")
+    .select("*")
+    .in("user_id", residents?.map((r) => r.id) || [])
+
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Edit Family Unit</h2>
-        <p className="text-muted-foreground">Update family information</p>
+        <p className="text-muted-foreground">Update family information and relationships</p>
       </div>
 
-      <EditFamilyForm slug={slug} family={family} residents={residents || []} pets={pets || []} />
+      <EditFamilyForm
+        slug={slug}
+        family={family}
+        residents={residents || []}
+        pets={pets || []}
+        existingRelationships={existingRelationships || []}
+      />
     </div>
   )
 }

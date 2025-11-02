@@ -1,9 +1,11 @@
 "use client"
 
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { CardTitle, CardDescription } from "@/components/ui/card"
 import { OnboardingProgress } from "@/components/onboarding-progress"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { X } from "lucide-react"
 
 const ONBOARDING_STEPS = [
   { path: "welcome", title: "Welcome", description: "Get started with your community" },
@@ -11,6 +13,7 @@ const ONBOARDING_STEPS = [
   { path: "profile", title: "Basic Information", description: "Tell us about yourself" },
   { path: "interests", title: "Your Interests", description: "What are you passionate about?" },
   { path: "skills", title: "Your Skills", description: "How can you help the community?" },
+  { path: "family", title: "Family", description: "Map your family relationships" },
   { path: "complete", title: "All Set!", description: "Welcome to the community" },
 ]
 
@@ -30,12 +33,27 @@ interface OnboardingStepHeaderProps {
   tenantName: string
   tenantSlug: string
   isTestMode?: boolean
+  showCloseButton?: boolean
 }
 
-export function OnboardingStepHeader({ tenantName, tenantSlug, isTestMode }: OnboardingStepHeaderProps) {
+export function OnboardingStepHeader({
+  tenantName,
+  tenantSlug,
+  isTestMode,
+  showCloseButton,
+}: OnboardingStepHeaderProps) {
   const pathname = usePathname()
+  const router = useRouter()
   const currentStep = getCurrentStep(pathname)
   const stepInfo = getStepInfo(pathname)
+
+  const handleClose = () => {
+    if (isTestMode) {
+      router.push(`/t/${tenantSlug}/admin/dashboard`)
+    } else {
+      router.push(`/t/${tenantSlug}/dashboard`)
+    }
+  }
 
   return (
     <>
@@ -48,7 +66,14 @@ export function OnboardingStepHeader({ tenantName, tenantSlug, isTestMode }: Onb
             tenantSlug={tenantSlug}
           />
         </div>
-        {isTestMode && <Badge variant="secondary">Test Mode</Badge>}
+        <div className="flex items-center gap-2">
+          {isTestMode && <Badge variant="secondary">Test Mode</Badge>}
+          {showCloseButton && (
+            <Button variant="ghost" size="icon" onClick={handleClose} className="h-8 w-8">
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </div>
       <div className="space-y-1.5">
         <CardTitle className="text-2xl">{stepInfo.title}</CardTitle>

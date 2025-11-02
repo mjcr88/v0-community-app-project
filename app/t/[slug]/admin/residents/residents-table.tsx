@@ -182,7 +182,7 @@ export function ResidentsTable({
     const petsToDelete = selectedEntities.filter((id) => sortedEntities.find((e) => e.id === id && e.type === "pet"))
 
     if (residentsToDelete.length > 0) {
-      await supabase.from("residents").delete().in("id", residentsToDelete)
+      await supabase.from("users").delete().in("id", residentsToDelete)
     }
 
     if (petsToDelete.length > 0) {

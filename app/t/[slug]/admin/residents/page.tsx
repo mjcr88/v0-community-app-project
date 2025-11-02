@@ -34,7 +34,7 @@ export default async function ResidentsPage({
     .eq("tenant_id", tenant.id)
 
   const { data: residents } = await supabase
-    .from("residents")
+    .from("users")
     .select(`
       *,
       lots:lot_id (
@@ -51,6 +51,7 @@ export default async function ResidentsPage({
       )
     `)
     .eq("tenant_id", tenant.id)
+    .eq("role", "resident")
     .order("created_at", { ascending: false })
 
   const { data: pets } = await supabase

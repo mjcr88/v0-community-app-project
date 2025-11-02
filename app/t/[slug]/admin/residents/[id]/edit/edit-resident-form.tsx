@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -22,6 +21,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { Trash2, Mail } from "lucide-react"
+import { InviteLinkDialog } from "@/components/invite-link-dialog"
 
 type Resident = {
   id: string
@@ -33,6 +33,7 @@ type Resident = {
   family_unit_id: string | null
   invited_at: string | null
   onboarding_completed: boolean
+  tenant_id: string | null
 }
 
 type Lot = {
@@ -65,6 +66,8 @@ export function EditResidentForm({
   const [loading, setLoading] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [inviteLoading, setInviteLoading] = useState(false)
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false)
+  const [inviteUrl, setInviteUrl] = useState("")
   const [formData, setFormData] = useState({
     lot_id: resident.lot_id,
     first_name: resident.first_name,
@@ -84,15 +87,24 @@ export function EditResidentForm({
     setInviteLoading(true)
     const supabase = createBrowserClient()
 
+    const { data: tenant } = await supabase.from("tenants").select("id").eq("slug", slug).single()
+
+    if (!tenant) {
+      console.error("Tenant not found")
+      setInviteLoading(false)
+      return
+    }
+
     // Generate invite token
     const inviteToken = crypto.randomUUID()
 
-    // Update resident with invite token and timestamp
+    // Update resident with invite token, timestamp, and ensure tenant_id is set
     const { error: updateError } = await supabase
-      .from("residents")
+      .from("users")
       .update({
         invite_token: inviteToken,
         invited_at: new Date().toISOString(),
+        tenant_id: tenant.id, // Ensure tenant_id is set when sending invite
       })
       .eq("id", resident.id)
 
@@ -102,12 +114,9 @@ export function EditResidentForm({
       return
     }
 
-    // Send invite email via Supabase Auth
-    const inviteUrl = `${window.location.origin}/t/${slug}/invite/${inviteToken}`
-
-    // For now, we'll use a simple approach - in production, you'd use Supabase Edge Functions
-    // to send custom emails. For now, show the invite link
-    alert(`Invite link generated! Share this with the resident:\n\n${inviteUrl}`)
+    const url = `${window.location.origin}/t/${slug}/invite/${inviteToken}`
+    setInviteUrl(url)
+    setInviteDialogOpen(true)
 
     setInviteLoading(false)
     router.refresh()
@@ -119,8 +128,16 @@ export function EditResidentForm({
 
     const supabase = createBrowserClient()
 
+    const { data: tenant } = await supabase.from("tenants").select("id").eq("slug", slug).single()
+
+    if (!tenant) {
+      console.error("Tenant not found")
+      setLoading(false)
+      return
+    }
+
     const { error } = await supabase
-      .from("residents")
+      .from("users")
       .update({
         lot_id: formData.lot_id,
         first_name: formData.first_name,
@@ -128,6 +145,7 @@ export function EditResidentForm({
         email: formData.email || null,
         phone: formData.phone || null,
         family_unit_id: formData.family_unit_id || null,
+        tenant_id: tenant.id, // Ensure tenant_id is always set
         updated_at: new Date().toISOString(),
       })
       .eq("id", resident.id)
@@ -151,7 +169,7 @@ export function EditResidentForm({
     setDeleteLoading(true)
     const supabase = createBrowserClient()
 
-    const { error } = await supabase.from("residents").delete().eq("id", resident.id)
+    const { error } = await supabase.from("users").delete().eq("id", resident.id)
 
     if (error) {
       console.error("Error deleting resident:", error)
@@ -326,6 +344,13 @@ export function EditResidentForm({
             </div>
           </div>
         </form>
+        <InviteLinkDialog
+          open={inviteDialogOpen}
+          onOpenChange={setInviteDialogOpen}
+          inviteUrl={inviteUrl}
+          title="Resident Invitation Link"
+          description="Share this link with the resident to complete their onboarding."
+        />
       </CardContent>
     </Card>
   )

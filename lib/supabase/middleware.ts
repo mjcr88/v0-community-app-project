@@ -10,6 +10,7 @@ export async function updateSession(request: NextRequest) {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY
 
   if (!supabaseUrl || !supabaseAnonKey) {
+    console.log("[v0] Middleware: Supabase env vars not available, skipping auth refresh")
     return supabaseResponse
   }
 
@@ -28,7 +29,15 @@ export async function updateSession(request: NextRequest) {
     },
   })
 
-  await supabase.auth.getUser()
+  // This is critical for SSR - it refreshes the auth token
+  // If it fails, we still return the response to allow the app to continue
+  try {
+    await supabase.auth.getUser()
+  } catch (error) {
+    // Network errors in Edge Runtime are expected in preview environments
+    // The auth check will happen again in server components
+    console.log("[v0] Middleware: Auth refresh failed (expected in preview), continuing")
+  }
 
   return supabaseResponse
 }

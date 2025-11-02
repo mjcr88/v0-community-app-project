@@ -16,8 +16,9 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
-import { Home, MapPin, Users, Building2, LogOut, HeartHandshake, Lightbulb } from "lucide-react"
+import { Home, MapPin, Users, Building2, HeartHandshake, Lightbulb } from "lucide-react"
 import Link from "next/link"
+import { UserAvatarMenu } from "@/components/user-avatar-menu"
 
 export default async function TenantAdminLayout({
   children,
@@ -50,12 +51,17 @@ export default async function TenantAdminLayout({
   }
 
   let isTenantAdmin = false
+  let residentData = null
   if (!isSuperAdmin) {
-    const { data: residentData } = await supabase
-      .from("residents")
+    const { data } = await supabase
+      .from("users")
       .select(`
         id,
-        is_admin,
+        first_name,
+        last_name,
+        email,
+        profile_picture_url,
+        is_tenant_admin,
         lot_id,
         lots!inner (
           neighborhood_id,
@@ -64,16 +70,42 @@ export default async function TenantAdminLayout({
           )
         )
       `)
-      .eq("auth_user_id", user.id)
+      .eq("id", user.id)
+      .eq("role", "resident")
       .maybeSingle()
 
-    // Check if resident belongs to this tenant and is an admin
-    const residentTenantId = residentData?.lots?.neighborhoods?.tenant_id
-    isTenantAdmin = residentData?.is_admin === true && residentTenantId === tenant.id
+    residentData = data
+
+    const residentTenantId = data?.lots?.neighborhoods?.tenant_id
+    isTenantAdmin = data?.is_tenant_admin === true && residentTenantId === tenant.id
 
     if (!isTenantAdmin) {
       redirect(`/t/${slug}/login`)
     }
+  } else {
+    const { data } = await supabase
+      .from("users")
+      .select(`
+        id,
+        first_name,
+        last_name,
+        email,
+        profile_picture_url,
+        is_tenant_admin,
+        lot_id,
+        lots (
+          neighborhood_id,
+          neighborhoods (
+            tenant_id
+          )
+        )
+      `)
+      .eq("id", user.id)
+      .eq("role", "resident")
+      .eq("lots.neighborhoods.tenant_id", tenant.id)
+      .maybeSingle()
+
+    residentData = data
   }
 
   const features = (tenant?.features as Record<string, boolean>) || {
@@ -164,27 +196,25 @@ export default async function TenantAdminLayout({
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
-        <SidebarFooter className="border-t border-sidebar-border">
-          <SidebarMenu>
-            {isSuperAdmin && (
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link href="/backoffice/dashboard">
-                    <LogOut className="rotate-180" />
-                    <span>Back to Super Admin</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            )}
-          </SidebarMenu>
+        <SidebarFooter className="border-t border-sidebar-border p-2">
+          <UserAvatarMenu
+            user={{
+              firstName: residentData?.first_name || null,
+              lastName: residentData?.last_name || null,
+              email: residentData?.email || user.email || "",
+              profilePictureUrl: residentData?.profile_picture_url || null,
+            }}
+            tenantSlug={slug}
+            showResidentView={true}
+            showBackToSuperAdmin={isSuperAdmin}
+            isSuperAdmin={isSuperAdmin}
+          />
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger />
-          <div className="flex items-center gap-2">
-            <h1 className="text-lg font-semibold">Community Administration</h1>
-          </div>
+          <h1 className="text-lg font-semibold">Community Administration</h1>
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4">{children}</div>
       </SidebarInset>

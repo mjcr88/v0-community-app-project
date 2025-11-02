@@ -20,7 +20,7 @@ import {
 import { createBrowserClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 
-type SortField = "lot_number" | "neighborhood" | "created_at"
+type SortField = "lot_number" | "neighborhood" | "residents" | "created_at"
 type SortDirection = "asc" | "desc"
 
 type Lot = {
@@ -33,6 +33,11 @@ type Lot = {
     name: string
     tenant_id: string
   } | null
+  users: Array<{
+    id: string
+    first_name: string
+    last_name: string
+  }>
 }
 
 export function LotsTable({ slug, initialLots }: { slug: string; initialLots: Lot[] }) {
@@ -100,6 +105,9 @@ export function LotsTable({ slug, initialLots }: { slug: string; initialLots: Lo
       } else if (sortField === "lot_number") {
         aValue = a.lot_number
         bValue = b.lot_number
+      } else if (sortField === "residents") {
+        aValue = a.users?.length || 0
+        bValue = b.users?.length || 0
       } else {
         aValue = new Date(a.created_at).getTime()
         bValue = new Date(b.created_at).getTime()
@@ -178,6 +186,16 @@ export function LotsTable({ slug, initialLots }: { slug: string; initialLots: Lo
                   <TableHead>
                     <Button
                       variant="ghost"
+                      onClick={() => handleSort("residents")}
+                      className="h-auto p-0 font-semibold hover:bg-transparent"
+                    >
+                      Residents
+                      <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button
+                      variant="ghost"
                       onClick={() => handleSort("created_at")}
                       className="h-auto p-0 font-semibold hover:bg-transparent"
                     >
@@ -200,6 +218,20 @@ export function LotsTable({ slug, initialLots }: { slug: string; initialLots: Lo
                     </TableCell>
                     <TableCell className="font-medium">{lot.lot_number}</TableCell>
                     <TableCell>{lot.neighborhoods?.name || "—"}</TableCell>
+                    <TableCell>
+                      {lot.users && lot.users.length > 0 ? (
+                        <div className="flex flex-col gap-1">
+                          <span className="font-medium">
+                            {lot.users.length} resident{lot.users.length !== 1 ? "s" : ""}
+                          </span>
+                          <span className="text-sm text-muted-foreground">
+                            {lot.users.map((u) => `${u.first_name} ${u.last_name}`).join(", ")}
+                          </span>
+                        </div>
+                      ) : (
+                        "—"
+                      )}
+                    </TableCell>
                     <TableCell>{new Date(lot.created_at).toLocaleDateString()}</TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="sm" asChild>

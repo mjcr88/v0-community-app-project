@@ -111,6 +111,72 @@ export function applyPrivacyFilter(user: UserWithPrivacy, viewerId: string, isFa
 }
 
 /**
+ * Filters user data based on privacy settings
+ * @param user - The user object to filter
+ * @param privacySettings - The privacy settings object
+ * @param isFamilyMember - Whether the viewer is a family member (bypasses privacy)
+ * @returns Filtered user object with privacy settings applied
+ */
+export function filterPrivateData(
+  user: UserWithPrivacy,
+  privacySettings: PrivacySettings | null | undefined,
+  isFamilyMember = false,
+): UserWithPrivacy {
+  // Family members see everything
+  if (isFamilyMember) {
+    return user
+  }
+
+  // If no privacy settings, default to showing everything
+  if (!privacySettings) {
+    return user
+  }
+
+  // Create filtered user object
+  const filteredUser = { ...user }
+
+  // Apply privacy filters
+  if (privacySettings.show_email === false) {
+    filteredUser.email = null
+  }
+  if (privacySettings.show_phone === false) {
+    filteredUser.phone = null
+  }
+  if (privacySettings.show_birthday === false) {
+    filteredUser.birthday = null
+  }
+  if (privacySettings.show_birth_country === false) {
+    filteredUser.birth_country = null
+  }
+  if (privacySettings.show_current_country === false) {
+    filteredUser.current_country = null
+  }
+  if (privacySettings.show_languages === false) {
+    filteredUser.languages = null
+  }
+  if (privacySettings.show_preferred_language === false) {
+    filteredUser.preferred_language = null
+  }
+  if (privacySettings.show_journey_stage === false) {
+    filteredUser.journey_stage = null
+  }
+  if (privacySettings.show_estimated_move_in_date === false) {
+    filteredUser.estimated_move_in_date = null
+  }
+  if (privacySettings.show_profile_picture === false) {
+    filteredUser.profile_picture_url = null
+  }
+  if (privacySettings.show_interests === false) {
+    filteredUser.user_interests = []
+  }
+  if (privacySettings.show_skills === false) {
+    filteredUser.user_skills = []
+  }
+
+  return filteredUser
+}
+
+/**
  * Checks if two users are family members
  */
 export function areFamilyMembers(user1FamilyUnitId: string | null, user2FamilyUnitId: string | null): boolean {

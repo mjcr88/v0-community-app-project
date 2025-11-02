@@ -1,29 +1,35 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, MapPin, Languages, Lightbulb, Wrench } from "lucide-react"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Search } from "lucide-react"
 import Link from "next/link"
+import { filterPrivateData } from "@/lib/privacy-utils"
 
 interface NeighboursTableProps {
   residents: any[]
   allInterests: any[]
   neighborhoods: any[]
   tenantSlug: string
+  currentUserFamilyId: string | null
 }
 
-export function NeighboursTable({ residents, allInterests, neighborhoods, tenantSlug }: NeighboursTableProps) {
+export function NeighboursTable({
+  residents,
+  allInterests,
+  neighborhoods,
+  tenantSlug,
+  currentUserFamilyId,
+}: NeighboursTableProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const [neighborhoodFilter, setNeighborhoodFilter] = useState<string>("all")
-  const [journeyStageFilter, setJourneyStageFilter] = useState<string>("all")
   const [interestFilter, setInterestFilter] = useState<string>("all")
   const [skillFilter, setSkillFilter] = useState<string>("all")
-  const [languageFilter, setLanguageFilter] = useState<string>("all")
 
   // Extract unique values for filters
   const uniqueSkills = useMemo(() => {
@@ -38,20 +44,22 @@ export function NeighboursTable({ residents, allInterests, neighborhoods, tenant
     return Array.from(skills).sort()
   }, [residents])
 
-  const uniqueLanguages = useMemo(() => {
-    const languages = new Set<string>()
+  // Extract unique lots
+  const uniqueLots = useMemo(() => {
+    const lots = new Set<string>()
     residents.forEach((resident) => {
-      resident.languages?.forEach((lang: string) => {
-        languages.add(lang)
-      })
+      if (resident.lots?.lot_number) {
+        lots.add(resident.lots.lot_number)
+      }
     })
-    return Array.from(languages).sort()
+    return Array.from(lots).sort()
   }, [residents])
 
   // Filter residents
   const filteredResidents = useMemo(() => {
     return residents.filter((resident) => {
       const privacySettings = resident.user_privacy_settings?.[0]
+      const isFamily = resident.family_unit_id === currentUserFamilyId
 
       // Search filter (name)
       const fullName = `${resident.first_name || ""} ${resident.last_name || ""}`.toLowerCase()
@@ -61,246 +69,186 @@ export function NeighboursTable({ residents, allInterests, neighborhoods, tenant
       const neighborhoodName = resident.lots?.neighborhoods?.name
       const matchesNeighborhood =
         neighborhoodFilter === "all" ||
-        (privacySettings?.show_neighborhood !== false && neighborhoodName === neighborhoodFilter)
-
-      // Journey stage filter
-      const matchesJourneyStage =
-        journeyStageFilter === "all" ||
-        (privacySettings?.show_journey_stage !== false && resident.journey_stage === journeyStageFilter)
+        ((isFamily || privacySettings?.show_neighborhood !== false) && neighborhoodName === neighborhoodFilter)
 
       // Interest filter
       const residentInterestNames = resident.user_interests?.map((ui: any) => ui.interests?.name).filter(Boolean) || []
       const matchesInterest =
         interestFilter === "all" ||
-        (privacySettings?.show_interests !== false && residentInterestNames.includes(interestFilter))
+        ((isFamily || privacySettings?.show_interests !== false) && residentInterestNames.includes(interestFilter))
 
       // Skill filter
       const residentSkillNames = resident.user_skills?.map((us: any) => us.skills?.name).filter(Boolean) || []
       const matchesSkill =
-        skillFilter === "all" || (privacySettings?.show_skills !== false && residentSkillNames.includes(skillFilter))
+        skillFilter === "all" ||
+        ((isFamily || privacySettings?.show_skills !== false) && residentSkillNames.includes(skillFilter))
 
-      // Language filter
-      const matchesLanguage =
-        languageFilter === "all" ||
-        (privacySettings?.show_languages !== false && resident.languages?.includes(languageFilter))
-
-      return (
-        matchesSearch &&
-        matchesNeighborhood &&
-        matchesJourneyStage &&
-        matchesInterest &&
-        matchesSkill &&
-        matchesLanguage
-      )
+      return matchesSearch && matchesNeighborhood && matchesInterest && matchesSkill
     })
-  }, [residents, searchQuery, neighborhoodFilter, journeyStageFilter, interestFilter, skillFilter, languageFilter])
-
-  const getInitials = (firstName: string | null, lastName: string | null) => {
-    return [firstName, lastName]
-      .filter(Boolean)
-      .map((n) => n![0])
-      .join("")
-      .toUpperCase()
-  }
+  }, [residents, searchQuery, neighborhoodFilter, interestFilter, skillFilter, currentUserFamilyId])
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Community Directory</CardTitle>
-        <CardDescription>
-          {filteredResidents.length} of {residents.length} residents
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Search and Filters */}
-        <div className="space-y-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search by name..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            <Select value={neighborhoodFilter} onValueChange={setNeighborhoodFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Neighborhood" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Neighborhoods</SelectItem>
-                {neighborhoods.map((neighborhood) => (
-                  <SelectItem key={neighborhood.id} value={neighborhood.name}>
-                    {neighborhood.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={journeyStageFilter} onValueChange={setJourneyStageFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Journey Stage" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Stages</SelectItem>
-                <SelectItem value="planning">Planning</SelectItem>
-                <SelectItem value="building">Building</SelectItem>
-                <SelectItem value="arriving">Arriving</SelectItem>
-                <SelectItem value="integrating">Integrating</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={interestFilter} onValueChange={setInterestFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Interest" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Interests</SelectItem>
-                {allInterests.map((interest) => (
-                  <SelectItem key={interest.id} value={interest.name}>
-                    {interest.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={skillFilter} onValueChange={setSkillFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Skill" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Skills</SelectItem>
-                {uniqueSkills.map((skill) => (
-                  <SelectItem key={skill} value={skill}>
-                    {skill}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={languageFilter} onValueChange={setLanguageFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Language" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Languages</SelectItem>
-                {uniqueLanguages.map((language) => (
-                  <SelectItem key={language} value={language}>
-                    {language}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+    <div className="space-y-4">
+      <div className="flex flex-col gap-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search by name..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
         </div>
 
-        {/* Residents Grid */}
-        {filteredResidents.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">No residents found matching your filters</p>
-          </div>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredResidents.map((resident) => {
-              const privacySettings = resident.user_privacy_settings?.[0]
-              const initials = getInitials(resident.first_name, resident.last_name)
-              const displayName = `${resident.first_name || ""} ${resident.last_name || ""}`.trim()
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Neighborhood Filter */}
+          <Select value={neighborhoodFilter} onValueChange={setNeighborhoodFilter}>
+            <SelectTrigger>
+              <SelectValue placeholder="All Neighborhoods" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Neighborhoods</SelectItem>
+              {neighborhoods.map((neighborhood) => (
+                <SelectItem key={neighborhood.id} value={neighborhood.name}>
+                  {neighborhood.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-              return (
-                <Card key={resident.id} className="overflow-hidden hover:shadow-md transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="flex flex-col items-center text-center space-y-4">
-                      <Avatar className="h-20 w-20">
-                        <AvatarImage
-                          src={
-                            privacySettings?.show_profile_picture !== false
-                              ? resident.profile_picture_url || undefined
-                              : undefined
-                          }
-                          alt={displayName}
-                        />
-                        <AvatarFallback className="text-lg">{initials || "?"}</AvatarFallback>
-                      </Avatar>
+          {/* Interest Filter */}
+          <Select value={interestFilter} onValueChange={setInterestFilter}>
+            <SelectTrigger>
+              <SelectValue placeholder="All Interests" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Interests</SelectItem>
+              {allInterests.map((interest) => (
+                <SelectItem key={interest.id} value={interest.name}>
+                  {interest.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-                      <div className="space-y-1 w-full">
-                        <h3 className="font-semibold text-lg">{displayName}</h3>
+          {/* Skill Filter */}
+          <Select value={skillFilter} onValueChange={setSkillFilter}>
+            <SelectTrigger>
+              <SelectValue placeholder="All Skills" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Skills</SelectItem>
+              {uniqueSkills.map((skill) => (
+                <SelectItem key={skill} value={skill}>
+                  {skill}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
-                        {privacySettings?.show_neighborhood !== false && resident.lots?.neighborhoods?.name && (
-                          <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
-                            <MapPin className="h-3 w-3" />
-                            <span>{resident.lots.neighborhoods.name}</span>
-                          </div>
-                        )}
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Neighborhood</TableHead>
+              <TableHead>Lot</TableHead>
+              <TableHead>Interests</TableHead>
+              <TableHead>Skills</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredResidents.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                  No residents found matching your filters
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredResidents.map((resident) => {
+                const privacySettings = resident.user_privacy_settings?.[0]
+                const isFamily = resident.family_unit_id === currentUserFamilyId
+                const filteredData = filterPrivateData(resident, privacySettings, isFamily)
 
-                        {privacySettings?.show_journey_stage !== false && resident.journey_stage && (
-                          <Badge variant="secondary" className="capitalize">
-                            {resident.journey_stage}
-                          </Badge>
-                        )}
+                return (
+                  <TableRow key={resident.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar>
+                          {filteredData.profile_picture_url ? (
+                            <AvatarImage
+                              src={filteredData.profile_picture_url || "/placeholder.svg"}
+                              alt={`${filteredData.first_name} ${filteredData.last_name}`}
+                            />
+                          ) : (
+                            <AvatarFallback>
+                              {filteredData.first_name?.[0]}
+                              {filteredData.last_name?.[0]}
+                            </AvatarFallback>
+                          )}
+                        </Avatar>
+                        <div className="font-medium">
+                          {filteredData.first_name} {filteredData.last_name}
+                        </div>
                       </div>
-
-                      {/* Languages */}
-                      {privacySettings?.show_languages !== false &&
-                        resident.languages &&
-                        resident.languages.length > 0 && (
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <Languages className="h-3 w-3" />
-                            <span>{resident.languages.slice(0, 2).join(", ")}</span>
-                            {resident.languages.length > 2 && <span>+{resident.languages.length - 2}</span>}
-                          </div>
-                        )}
-
-                      {/* Interests */}
-                      {privacySettings?.show_interests !== false &&
-                        resident.user_interests &&
-                        resident.user_interests.length > 0 && (
-                          <div className="flex flex-wrap gap-1 justify-center">
-                            <Lightbulb className="h-3 w-3 text-muted-foreground" />
-                            {resident.user_interests.slice(0, 3).map((ui: any) => (
-                              <Badge key={ui.interests.id} variant="outline" className="text-xs">
-                                {ui.interests.name}
-                              </Badge>
-                            ))}
-                            {resident.user_interests.length > 3 && (
-                              <Badge variant="outline" className="text-xs">
-                                +{resident.user_interests.length - 3}
-                              </Badge>
-                            )}
-                          </div>
-                        )}
-
-                      {/* Skills */}
-                      {privacySettings?.show_skills !== false &&
-                        resident.user_skills &&
-                        resident.user_skills.length > 0 && (
-                          <div className="flex flex-wrap gap-1 justify-center">
-                            <Wrench className="h-3 w-3 text-muted-foreground" />
-                            {resident.user_skills.slice(0, 2).map((skill: any, index: number) => (
-                              <Badge key={index} variant="secondary" className="text-xs">
-                                {skill.skills.name}
-                              </Badge>
-                            ))}
-                            {resident.user_skills.length > 2 && (
-                              <Badge variant="secondary" className="text-xs">
-                                +{resident.user_skills.length - 2}
-                              </Badge>
-                            )}
-                          </div>
-                        )}
-
-                      <Button asChild variant="outline" size="sm" className="w-full bg-transparent">
+                    </TableCell>
+                    <TableCell>{resident.lots?.neighborhoods?.name || "Not assigned"}</TableCell>
+                    <TableCell>{resident.lots?.lot_number || "Not assigned"}</TableCell>
+                    <TableCell>
+                      {filteredData.user_interests && filteredData.user_interests.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {filteredData.user_interests.slice(0, 2).map((ui: any) => (
+                            <Badge key={ui.interests.id} variant="secondary" className="text-xs">
+                              {ui.interests.name}
+                            </Badge>
+                          ))}
+                          {filteredData.user_interests.length > 2 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{filteredData.user_interests.length - 2}
+                            </Badge>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">None</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {filteredData.user_skills && filteredData.user_skills.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {filteredData.user_skills.slice(0, 2).map((us: any) => (
+                            <Badge key={us.skills.id} variant="secondary" className="text-xs">
+                              {us.skills.name}
+                            </Badge>
+                          ))}
+                          {filteredData.user_skills.length > 2 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{filteredData.user_skills.length - 2}
+                            </Badge>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">None</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="sm" asChild>
                         <Link href={`/t/${tenantSlug}/dashboard/neighbours/${resident.id}`}>View Profile</Link>
                       </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+                    </TableCell>
+                  </TableRow>
+                )
+              })
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      <div className="text-sm text-muted-foreground">
+        Showing {filteredResidents.length} of {residents.length} residents
+      </div>
+    </div>
   )
 }

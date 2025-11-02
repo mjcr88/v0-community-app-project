@@ -27,6 +27,12 @@ export default async function NeighboursPage({ params }: { params: Promise<{ slu
 
   console.log("[v0] Current resident:", currentResident)
 
+  const { data: currentResidentFull } = await supabase
+    .from("users")
+    .select("id, tenant_id, role, family_unit_id")
+    .eq("id", user.id)
+    .single()
+
   // Get all residents in the same tenant with their privacy settings
   const { data: residents, error: residentsError } = await supabase
     .from("users")
@@ -45,6 +51,7 @@ export default async function NeighboursPage({ params }: { params: Promise<{ slu
       languages,
       preferred_language,
       birthday,
+      family_unit_id,
       lots (
         lot_number,
         neighborhoods (
@@ -84,7 +91,18 @@ export default async function NeighboursPage({ params }: { params: Promise<{ slu
     .neq("id", currentResident.id)
     .order("first_name")
 
-  console.log("[v0] Residents query result:", { count: residents?.length, error: residentsError })
+  console.log("[v0] Residents query result:", {
+    count: residents?.length || 0,
+    error: residentsError,
+    sampleResident: residents?.[0]
+      ? {
+          id: residents[0].id,
+          name: `${residents[0].first_name} ${residents[0].last_name}`,
+          lot: residents[0].lots,
+          neighborhood: residents[0].lots?.neighborhoods,
+        }
+      : null,
+  })
 
   // Get all interests for filtering
   const { data: allInterests } = await supabase
@@ -112,6 +130,7 @@ export default async function NeighboursPage({ params }: { params: Promise<{ slu
         allInterests={allInterests || []}
         neighborhoods={neighborhoods || []}
         tenantSlug={slug}
+        currentUserFamilyId={currentResidentFull?.family_unit_id || null}
       />
     </div>
   )

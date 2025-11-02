@@ -117,6 +117,10 @@ export default async function PublicProfilePage({
     phone: resident.phone,
   })
 
+  console.log("[v0] Raw privacy settings from query:", resident.user_privacy_settings)
+  console.log("[v0] Privacy settings array length:", resident.user_privacy_settings?.length)
+  console.log("[v0] Privacy settings first item:", resident.user_privacy_settings?.[0])
+
   const isFamily = resident.family_unit_id === currentResident.family_unit_id
   const privacySettings = resident.user_privacy_settings?.[0] || {}
 

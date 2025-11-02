@@ -39,9 +39,13 @@ export default async function TenantAdminLayout({
     redirect(`/t/${slug}/login`)
   }
 
-  const { data: superAdminData } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle()
+  const { data: userData } = await supabase
+    .from("users")
+    .select("role, tenant_id, first_name, last_name, email, profile_picture_url")
+    .eq("id", user.id)
+    .maybeSingle()
 
-  const isSuperAdmin = superAdminData?.role === "super_admin"
+  const isSuperAdmin = userData?.role === "super_admin"
 
   // Get tenant info
   const { data: tenant } = await supabase.from("tenants").select("*").eq("slug", slug).single()
@@ -50,9 +54,48 @@ export default async function TenantAdminLayout({
     redirect("/backoffice/login")
   }
 
+  const isTenantAdminRole = userData?.role === "tenant_admin" && userData?.tenant_id === tenant.id
+
   let isTenantAdmin = false
   let residentData = null
-  if (!isSuperAdmin) {
+
+  if (isSuperAdmin) {
+    // Super admin can access any tenant
+    const { data } = await supabase
+      .from("users")
+      .select(`
+        id,
+        first_name,
+        last_name,
+        email,
+        profile_picture_url,
+        is_tenant_admin,
+        lot_id,
+        lots (
+          neighborhood_id,
+          neighborhoods (
+            tenant_id
+          )
+        )
+      `)
+      .eq("id", user.id)
+      .eq("role", "resident")
+      .eq("lots.neighborhoods.tenant_id", tenant.id)
+      .maybeSingle()
+
+    residentData = data
+    isTenantAdmin = true
+  } else if (isTenantAdminRole) {
+    isTenantAdmin = true
+    residentData = {
+      id: user.id,
+      first_name: userData.first_name,
+      last_name: userData.last_name,
+      email: userData.email,
+      profile_picture_url: userData.profile_picture_url,
+    }
+  } else {
+    // Check if they're a resident with is_tenant_admin flag
     const { data } = await supabase
       .from("users")
       .select(`
@@ -82,30 +125,6 @@ export default async function TenantAdminLayout({
     if (!isTenantAdmin) {
       redirect(`/t/${slug}/login`)
     }
-  } else {
-    const { data } = await supabase
-      .from("users")
-      .select(`
-        id,
-        first_name,
-        last_name,
-        email,
-        profile_picture_url,
-        is_tenant_admin,
-        lot_id,
-        lots (
-          neighborhood_id,
-          neighborhoods (
-            tenant_id
-          )
-        )
-      `)
-      .eq("id", user.id)
-      .eq("role", "resident")
-      .eq("lots.neighborhoods.tenant_id", tenant.id)
-      .maybeSingle()
-
-    residentData = data
   }
 
   const features = (tenant?.features as Record<string, boolean>) || {
@@ -121,7 +140,9 @@ export default async function TenantAdminLayout({
         <SidebarHeader className="border-b border-sidebar-border">
           <div className="px-2 py-2">
             <h2 className="text-lg font-semibold text-forest-900">{tenant.name}</h2>
-            <p className="text-xs text-forest-600">{isSuperAdmin ? "Super Admin Access" : "Community Admin"}</p>
+            <p className="text-xs text-forest-600">
+              {isSuperAdmin ? "Super Admin Access" : isTenantAdminRole ? "Tenant Admin" : "Community Admin"}
+            </p>
           </div>
         </SidebarHeader>
         <SidebarContent>

@@ -50,6 +50,8 @@ export function FamilyManagementForm({
   const [pets, setPets] = useState(initialPets)
   const [newPet, setNewPet] = useState({ name: "", species: "", breed: "" })
   const [showAddPet, setShowAddPet] = useState(false)
+  const [showAddFamily, setShowAddFamily] = useState(false)
+  const [selectedResident, setSelectedResident] = useState<string>("")
 
   const handleRelationshipChange = async (relatedUserId: string, relationshipType: string) => {
     setRelationships({ ...relationships, [relatedUserId]: relationshipType })
@@ -136,6 +138,33 @@ export function FamilyManagementForm({
     }
   }
 
+  const handleAddFamilyMember = async () => {
+    if (!selectedResident) return
+
+    setIsLoading(true)
+    const supabase = createClient()
+
+    try {
+      // Update the selected resident's family_unit_id
+      const { error } = await supabase
+        .from("users")
+        .update({ family_unit_id: resident.family_unit_id })
+        .eq("id", selectedResident)
+
+      if (error) throw error
+
+      setShowAddFamily(false)
+      setSelectedResident("")
+      router.refresh()
+    } catch (error) {
+      console.error("[v0] Error adding family member:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const availableLotResidents = lotResidents.filter((r) => !familyMembers.some((fm) => fm.id === r.id))
+
   return (
     <div className="space-y-6">
       {/* Family Members Section */}
@@ -153,24 +182,59 @@ export function FamilyManagementForm({
                   : "No family unit assigned yet. Contact your administrator to set up your family."}
               </CardDescription>
             </div>
-            {familyMembers.length === 0 && lotResidents.length > 0 && (
-              <Button variant="default" size="sm">
+            {familyUnit && availableLotResidents.length > 0 && !showAddFamily && (
+              <Button variant="default" size="sm" onClick={() => setShowAddFamily(true)}>
                 <Plus className="mr-2 h-4 w-4" />
-                Add Family
+                Add Family Member
               </Button>
             )}
           </div>
         </CardHeader>
         <CardContent>
+          {showAddFamily && (
+            <div className="mb-4 space-y-3 rounded-lg border p-4">
+              <div className="space-y-2">
+                <Label htmlFor="resident-select">Select Resident</Label>
+                <Select value={selectedResident} onValueChange={setSelectedResident}>
+                  <SelectTrigger id="resident-select">
+                    <SelectValue placeholder="Choose a resident from your lot" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableLotResidents.map((r) => (
+                      <SelectItem key={r.id} value={r.id}>
+                        {r.first_name} {r.last_name} ({r.email})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={handleAddFamilyMember} disabled={isLoading || !selectedResident}>
+                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Add to Family
+                </Button>
+                <Button variant="outline" onClick={() => setShowAddFamily(false)}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+
           {familyMembers.length === 0 ? (
             <div className="rounded-lg border border-dashed p-8 text-center">
               <Users className="mx-auto h-12 w-12 text-muted-foreground" />
               <h3 className="mt-4 text-lg font-semibold">No family members yet</h3>
               <p className="mt-2 text-sm text-muted-foreground">
-                {lotResidents.length > 0
+                {availableLotResidents.length > 0
                   ? "Add family members from your household to define relationships"
                   : "No other residents found in your lot"}
               </p>
+              {familyUnit && availableLotResidents.length > 0 && (
+                <Button variant="default" size="sm" className="mt-4" onClick={() => setShowAddFamily(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Family Member
+                </Button>
+              )}
             </div>
           ) : (
             <div className="space-y-4">

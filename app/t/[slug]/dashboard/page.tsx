@@ -64,18 +64,19 @@ export default async function ResidentDashboardPage({ params }: { params: Promis
   let totalResidents = 0
 
   if (neighborhoodId) {
-    const { count } = await supabase
+    // Query users who have lots in this neighborhood
+    const { data: residentsInNeighborhood } = await supabase
       .from("users")
-      .select("*, lots!inner(neighborhoods!inner(id))", { count: "only", head: true })
+      .select("id, lot_id, lots!inner(neighborhood_id)")
       .eq("tenant_id", resident.tenant_id)
       .eq("role", "resident")
-      .eq("lots.neighborhoods.id", neighborhoodId)
+      .eq("lots.neighborhood_id", neighborhoodId)
 
-    totalResidents = count || 0
+    totalResidents = residentsInNeighborhood?.length || 0
   } else {
     const { count } = await supabase
       .from("users")
-      .select("*", { count: "only", head: true })
+      .select("*", { count: "exact", head: true })
       .eq("tenant_id", resident.tenant_id)
       .eq("role", "resident")
 
@@ -105,6 +106,8 @@ export default async function ResidentDashboardPage({ params }: { params: Promis
 
   const uniqueCountries = new Set(countriesData?.map((u) => u.birth_country).filter(Boolean))
 
+  console.log("[v0] Dashboard countries data:", { countriesData, uniqueCountries: Array.from(uniqueCountries) })
+
   // Get pets count if enabled
   let petsCount = 0
   if (petsEnabled && neighborhoodId) {
@@ -118,18 +121,25 @@ export default async function ResidentDashboardPage({ params }: { params: Promis
 
   const familyUnitId = resident.family_unit_id && resident.family_unit_id !== "" ? resident.family_unit_id : null
 
-  console.log("[v0] Dashboard family_unit_id:", { raw: resident.family_unit_id, processed: familyUnitId })
-
   let familyMembersCount = 0
+  let familyName = "Family"
+
   if (familyUnitId) {
     const { count } = await supabase
       .from("users")
-      .select("*", { count: "only", head: true })
+      .select("*", { count: "exact", head: true })
       .eq("family_unit_id", familyUnitId)
       .eq("role", "resident")
 
     familyMembersCount = count || 0
+
+    // Get family unit name
+    if (resident.family_units?.name) {
+      familyName = resident.family_units.name
+    }
   }
+
+  console.log("[v0] Dashboard family data:", { familyUnitId, familyMembersCount, familyName })
 
   return (
     <div className="space-y-6">
@@ -166,12 +176,12 @@ export default async function ResidentDashboardPage({ params }: { params: Promis
         {familyUnitId && (
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Your Family</CardTitle>
+              <CardTitle className="text-sm font-medium">{familyName}</CardTitle>
               <Home className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{familyMembersCount}</div>
-              <p className="text-xs text-muted-foreground">{resident.family_units?.name || "Family members"}</p>
+              <p className="text-xs text-muted-foreground">Family members</p>
             </CardContent>
           </Card>
         )}

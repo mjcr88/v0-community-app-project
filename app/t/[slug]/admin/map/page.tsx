@@ -40,13 +40,35 @@ export default async function MapManagementPage({ params }: { params: Promise<{ 
           <h1 className="text-2xl font-bold">Community Map</h1>
           <p className="text-muted-foreground">Manage locations, boundaries, and walking paths</p>
         </div>
-        <Button asChild>
-          <Link href={`/t/${slug}/admin/map/locations/create`}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Location
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button asChild variant="outline">
+            <Link href={`/t/${slug}/admin/map/viewer`}>View Map</Link>
+          </Button>
+          <Button asChild>
+            <Link href={`/t/${slug}/admin/map/locations/create`}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Location
+            </Link>
+          </Button>
+        </div>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Map Preview</CardTitle>
+          <CardDescription>Quick view of your community map</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[400px] rounded-lg overflow-hidden border">
+            <iframe src={`/t/${slug}/admin/map/viewer`} className="w-full h-full" title="Map Preview" />
+          </div>
+          <div className="mt-4">
+            <Button asChild variant="outline" className="w-full bg-transparent">
+              <Link href={`/t/${slug}/admin/map/viewer`}>Open Full Map</Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 md:grid-cols-3">
         <Card>

@@ -117,17 +117,24 @@ export default async function PublicProfilePage({
     phone: resident.phone,
   })
 
+  const privacySettingsData = Array.isArray(resident.user_privacy_settings)
+    ? resident.user_privacy_settings[0]
+    : resident.user_privacy_settings
+
   console.log("[v0] Raw privacy settings from query:", resident.user_privacy_settings)
-  console.log("[v0] Privacy settings array length:", resident.user_privacy_settings?.length)
-  console.log("[v0] Privacy settings first item:", resident.user_privacy_settings?.[0])
+  console.log(
+    "[v0] Privacy settings type:",
+    Array.isArray(resident.user_privacy_settings) ? "array" : typeof resident.user_privacy_settings,
+  )
+  console.log("[v0] Extracted privacy settings:", privacySettingsData)
 
   const isFamily = resident.family_unit_id === currentResident.family_unit_id
-  const privacySettings = resident.user_privacy_settings?.[0] || {}
+  const privacySettings = privacySettingsData || {}
 
   console.log("[v0] Privacy check:", {
     isFamily,
     privacySettings,
-    hasPrivacySettings: !!resident.user_privacy_settings?.[0],
+    hasPrivacySettings: !!privacySettingsData,
   })
 
   const filteredResident = filterPrivateData(resident, privacySettings, isFamily)

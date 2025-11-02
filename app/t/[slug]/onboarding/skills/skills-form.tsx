@@ -4,7 +4,7 @@ import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Loader2, Plus, Check, Search } from "lucide-react"
@@ -153,10 +153,6 @@ export function SkillsForm({ tenant, resident, skills, residentSkills, isSuperAd
   return (
     <form onSubmit={handleSubmit}>
       <Card>
-        <CardHeader>
-          <CardTitle>Your Skills</CardTitle>
-          <CardDescription>Share your skills and let neighbors know how you can help</CardDescription>
-        </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-3">
             <Label className="text-base">Search or Add Skills</Label>

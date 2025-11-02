@@ -155,18 +155,6 @@ export function FamilyForm({
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2 text-center">
-        <div className="flex items-center justify-center gap-2">
-          <Users className="h-5 w-5 text-primary" />
-          <h2 className="text-2xl font-bold">Map Your Family</h2>
-        </div>
-        <p className="text-muted-foreground">
-          {familyUnit
-            ? "Define your relationships with family members"
-            : "No family unit has been created yet. Your administrator can set this up for you."}
-        </p>
-      </div>
-
       <div className="space-y-4">
         {!familyUnit && lotResidents.length === 0 && (
           <Card>

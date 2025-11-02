@@ -72,16 +72,22 @@ export default async function NeighboursPage({ params }: { params: Promise<{ slu
         open_to_requests
       ),
       user_privacy_settings (
+        show_email,
         show_phone,
         show_birthday,
         show_birth_country,
         show_current_country,
         show_languages,
+        show_preferred_language,
         show_journey_stage,
         show_estimated_move_in_date,
         show_profile_picture,
+        show_neighborhood,
+        show_family,
+        show_family_relationships,
         show_interests,
-        show_skills
+        show_skills,
+        show_open_to_requests
       )
     `,
     )

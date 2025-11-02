@@ -88,7 +88,6 @@ export default async function NeighboursPage({ params }: { params: Promise<{ slu
     .eq("tenant_id", currentResident.tenant_id)
     .eq("role", "resident")
     .eq("onboarding_completed", true)
-    .neq("id", currentResident.id)
     .order("first_name")
 
   console.log("[v0] Residents query result:", {

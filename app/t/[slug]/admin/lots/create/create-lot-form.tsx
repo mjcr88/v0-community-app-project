@@ -66,7 +66,8 @@ export default function CreateLotForm({ slug, neighborhoods }: { slug: string; n
 
         const lotsToInsert = []
         for (let i = 0; i < count; i++) {
-          const lotNumber = `${prefix}${String(i + 1).padStart(3, "0")}`
+          const lotNum = i + 1
+          const lotNumber = lotNum < 100 ? `${prefix}${String(lotNum).padStart(2, "0")}` : `${prefix}${lotNum}`
           lotsToInsert.push({
             neighborhood_id: formData.neighborhood_id,
             tenant_id: tenantId,
@@ -181,14 +182,14 @@ export default function CreateLotForm({ slug, neighborhoods }: { slug: string; n
               required
             />
             <p className="text-sm text-muted-foreground">
-              Lots will be created as {formData.bulk_prefix || "A"}001, {formData.bulk_prefix || "A"}002, etc.
+              Lots will be created as {formData.bulk_prefix || "A"}01, {formData.bulk_prefix || "A"}02, etc.
             </p>
           </div>
 
           <div className="p-3 bg-muted/50 rounded-lg">
             <p className="text-sm text-muted-foreground">
-              Preview: {formData.bulk_prefix || "A"}001, {formData.bulk_prefix || "A"}002, {formData.bulk_prefix || "A"}
-              003...
+              Preview: {formData.bulk_prefix || "A"}01, {formData.bulk_prefix || "A"}02, {formData.bulk_prefix || "A"}
+              03...
             </p>
           </div>
         </>
@@ -200,8 +201,7 @@ export default function CreateLotForm({ slug, neighborhoods }: { slug: string; n
               id="lot_number"
               value={formData.lot_number}
               onChange={(e) => setFormData({ ...formData, lot_number: e.target.value })}
-              placeholder="e.g., A001"
-              required
+              placeholder="e.g., A01"
             />
           </div>
 

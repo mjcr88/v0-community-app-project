@@ -93,7 +93,7 @@ export function FamilyForm({
 
   const handleContinue = async () => {
     if (isSuperAdmin) {
-      router.push(`/t/${tenant.slug}/onboarding/complete`)
+      router.push(`/t/${tenant.slug}/onboarding/journey`)
       return
     }
 
@@ -141,7 +141,7 @@ export function FamilyForm({
       }
 
       console.log("[v0] Family data saved successfully")
-      router.push(`/t/${tenant.slug}/onboarding/complete`)
+      router.push(`/t/${tenant.slug}/onboarding/journey`)
     } catch (error) {
       console.error("[v0] Error saving family data:", error)
     } finally {
@@ -150,7 +150,7 @@ export function FamilyForm({
   }
 
   const handleBack = () => {
-    router.push(`/t/${tenant.slug}/onboarding/skills`)
+    router.push(`/t/${tenant.slug}/onboarding/welcome`)
   }
 
   return (
@@ -174,7 +174,8 @@ export function FamilyForm({
               <Users className="mx-auto h-12 w-12 text-muted-foreground" />
               <h3 className="mt-4 text-lg font-semibold">No family members yet</h3>
               <p className="mt-2 text-sm text-muted-foreground">
-                No other residents found in your lot. Your administrator can add family members.
+                No other residents found in your lot. Your administrator can add family members, or you can continue to
+                the next step.
               </p>
             </CardContent>
           </Card>

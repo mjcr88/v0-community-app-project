@@ -245,7 +245,7 @@ export function ProfileForm({ tenant, resident, isSuperAdmin }: ProfileFormProps
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="birthCountry">Country of Origin</Label>
+              <Label htmlFor="birthCountry">Country of Birth</Label>
               <Combobox
                 options={countryOptions}
                 value={formData.birthCountry}

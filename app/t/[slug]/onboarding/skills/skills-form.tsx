@@ -107,7 +107,7 @@ export function SkillsForm({ tenant, resident, skills, residentSkills, isSuperAd
     try {
       if (isSuperAdmin) {
         console.log("[v0] Super admin test mode - skipping skills save")
-        router.push(`/t/${tenant.slug}/onboarding/family`)
+        router.push(`/t/${tenant.slug}/onboarding/complete`)
         return
       }
 
@@ -129,7 +129,7 @@ export function SkillsForm({ tenant, resident, skills, residentSkills, isSuperAd
       }
 
       console.log("[v0] Skills saved successfully")
-      router.push(`/t/${tenant.slug}/onboarding/family`)
+      router.push(`/t/${tenant.slug}/onboarding/complete`)
     } catch (error) {
       console.error("[v0] Error updating skills:", error)
     } finally {
@@ -138,7 +138,7 @@ export function SkillsForm({ tenant, resident, skills, residentSkills, isSuperAd
   }
 
   const handleSkip = () => {
-    router.push(`/t/${tenant.slug}/onboarding/family`)
+    router.push(`/t/${tenant.slug}/onboarding/complete`)
   }
 
   const isSkillSelected = (skillId: string) => selectedSkills.some((s) => s.id === skillId)

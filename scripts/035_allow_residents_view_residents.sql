@@ -23,14 +23,15 @@ CREATE POLICY "residents_can_view_residents_in_scope"
         AND u.tenant_id = users.tenant_id
     )
     OR
+    -- Fixed alias name from current_user to viewer_user to avoid reserved keyword conflict
     -- Allow if user is resident viewing other residents based on tenant scope
     EXISTS (
-      SELECT 1 FROM public.users current_user
-      INNER JOIN public.tenants t ON t.id = current_user.tenant_id
-      WHERE current_user.id = auth.uid()
-        AND current_user.role = 'resident'
+      SELECT 1 FROM public.users viewer_user
+      INNER JOIN public.tenants t ON t.id = viewer_user.tenant_id
+      WHERE viewer_user.id = auth.uid()
+        AND viewer_user.role = 'resident'
         AND users.role = 'resident'
-        AND current_user.tenant_id = users.tenant_id
+        AND viewer_user.tenant_id = users.tenant_id
         AND (
           -- If scope is 'tenant', allow viewing all residents in tenant
           t.resident_visibility_scope = 'tenant'
@@ -43,7 +44,7 @@ CREATE POLICY "residents_can_view_residents_in_scope"
               INNER JOIN public.lots l1 ON l1.id = u1.lot_id
               INNER JOIN public.users u2 ON u2.id = users.id
               INNER JOIN public.lots l2 ON l2.id = u2.lot_id
-              WHERE u1.id = current_user.id
+              WHERE u1.id = viewer_user.id
                 AND l1.neighborhood_id = l2.neighborhood_id
             )
           )

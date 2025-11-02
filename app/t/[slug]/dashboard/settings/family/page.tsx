@@ -46,10 +46,12 @@ export default async function FamilySettingsPage({ params }: { params: Promise<{
 
     familyUnit = familyUnitData
 
-    // Get family members (other users in the same family unit)
     const { data: familyMembersData } = await supabase
       .from("users")
-      .select("*")
+      .select(`
+        *,
+        user_privacy_settings (*)
+      `)
       .eq("family_unit_id", validFamilyUnitId)
       .neq("id", resident.id)
       .order("first_name")
@@ -75,32 +77,20 @@ export default async function FamilySettingsPage({ params }: { params: Promise<{
     }
   }
 
-  // Get all residents in the same lot for adding family members
   const validLotId = resident.lot_id && resident.lot_id !== "" ? resident.lot_id : null
   let lotResidents: any[] = []
 
   if (validLotId) {
-    console.log(
-      "[v0] Family settings - Querying for lot residents with lot_id:",
-      validLotId,
-      "excluding user:",
-      resident.id,
-    )
-
-    const { data: lotResidentsData, error: lotResidentsError } = await supabase
+    const { data: lotResidentsData } = await supabase
       .from("users")
-      .select("*")
+      .select(`
+        *,
+        user_privacy_settings (*)
+      `)
       .eq("lot_id", validLotId)
       .eq("role", "resident")
       .neq("id", resident.id)
       .order("first_name")
-
-    console.log("[v0] Family settings - Lot residents query result:", {
-      lotResidentsData,
-      lotResidentsError,
-      lot_id: validLotId,
-      count: lotResidentsData?.length || 0,
-    })
 
     lotResidents = lotResidentsData || []
   }

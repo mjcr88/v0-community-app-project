@@ -62,10 +62,16 @@ export default async function FamilyPage({ params }: { params: Promise<{ slug: s
 
       familyUnit = familyUnitData
 
-      // Fetch other family members
       const { data: membersData } = await supabase
         .from("users")
-        .select("id, first_name, last_name, email, profile_picture_url")
+        .select(`
+          id,
+          first_name,
+          last_name,
+          email,
+          profile_picture_url,
+          user_privacy_settings (*)
+        `)
         .eq("family_unit_id", resident.family_unit_id)
         .neq("id", resident.id)
 
@@ -96,14 +102,21 @@ export default async function FamilyPage({ params }: { params: Promise<{ slug: s
 
   console.log("[v0] Resident lot_id:", resident.lot_id)
 
-  // Fetch all residents in the same lot (for adding family members)
+  // Fetch all residents in the same lot (for adding family members) with privacy settings
   let lotResidents: any[] = []
   if (resident.lot_id) {
     console.log("[v0] Querying for lot residents with lot_id:", resident.lot_id, "excluding user:", resident.id)
 
     const { data: lotResidentsData, error: lotResidentsError } = await supabase
       .from("users")
-      .select("id, first_name, last_name, email, family_unit_id")
+      .select(`
+        id,
+        first_name,
+        last_name,
+        email,
+        family_unit_id,
+        user_privacy_settings (*)
+      `)
       .eq("lot_id", resident.lot_id)
       .eq("role", "resident")
       .neq("id", resident.id)

@@ -10,6 +10,8 @@ import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Loader2, Lock } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useToast } from "@/hooks/use-toast"
+import { updatePrivacySettings } from "./update-privacy-settings-action"
 
 interface PrivacySettingsFormProps {
   privacySettings: any
@@ -18,6 +20,7 @@ interface PrivacySettingsFormProps {
 
 export function PrivacySettingsForm({ privacySettings, tenantSlug }: PrivacySettingsFormProps) {
   const router = useRouter()
+  const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
   const [settings, setSettings] = useState({
     showEmail: privacySettings?.show_email ?? true,
@@ -43,11 +46,28 @@ export function PrivacySettingsForm({ privacySettings, tenantSlug }: PrivacySett
     setIsLoading(true)
 
     try {
-      // TODO: Implement privacy settings update with server action
-      console.log("[v0] Updating privacy settings:", settings)
-      router.refresh()
+      const result = await updatePrivacySettings(tenantSlug, settings)
+
+      if (result.success) {
+        toast({
+          title: "Privacy settings updated",
+          description: "Your privacy preferences have been saved successfully.",
+        })
+        router.refresh()
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to update privacy settings",
+          variant: "destructive",
+        })
+      }
     } catch (error) {
       console.error("[v0] Error updating privacy settings:", error)
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      })
     } finally {
       setIsLoading(false)
     }

@@ -10,6 +10,8 @@ export default async function FamilyPage({ params }: { params: Promise<{ slug: s
     data: { user },
   } = await supabase.auth.getUser()
 
+  console.log("[v0] Family page - Auth user:", user?.id)
+
   if (!user) {
     redirect(`/t/${slug}/login`)
   }
@@ -36,13 +38,15 @@ export default async function FamilyPage({ params }: { params: Promise<{ slug: s
   if (isSuperAdmin) {
     resident = { id: "test-resident-id", family_unit_id: null }
   } else {
-    const { data: residentData } = await supabase
+    const { data: residentData, error: residentError } = await supabase
       .from("users")
-      .select("id, family_unit_id, lot_id")
+      .select("id, family_unit_id, lot_id, first_name, last_name, email")
       .eq("id", user.id)
       .eq("tenant_id", tenant.id)
       .eq("role", "resident")
       .single()
+
+    console.log("[v0] Resident query result:", { residentData, residentError })
 
     resident = residentData
 
@@ -86,21 +90,36 @@ export default async function FamilyPage({ params }: { params: Promise<{ slug: s
   }
 
   if (!resident) {
+    console.log("[v0] No resident found, redirecting to welcome")
     redirect(`/t/${slug}/onboarding/welcome`)
   }
+
+  console.log("[v0] Resident lot_id:", resident.lot_id)
 
   // Fetch all residents in the same lot (for adding family members)
   let lotResidents: any[] = []
   if (resident.lot_id) {
-    const { data: lotResidentsData } = await supabase
+    const { data: lotResidentsData, error: lotResidentsError } = await supabase
       .from("users")
       .select("id, first_name, last_name, email, family_unit_id")
       .eq("lot_id", resident.lot_id)
       .eq("role", "resident")
       .neq("id", resident.id)
 
+    console.log("[v0] Lot residents query result:", { lotResidentsData, lotResidentsError, lot_id: resident.lot_id })
+
     lotResidents = lotResidentsData || []
+  } else {
+    console.log("[v0] No lot_id on resident, skipping lot residents query")
   }
+
+  console.log("[v0] Final data:", {
+    residentId: resident.id,
+    lotId: resident.lot_id,
+    familyUnitId: resident.family_unit_id,
+    lotResidentsCount: lotResidents.length,
+    familyMembersCount: familyMembers.length,
+  })
 
   return (
     <FamilyForm

@@ -12,11 +12,13 @@ export default async function ResidentDashboardPage({ params }: { params: Promis
     data: { user },
   } = await supabase.auth.getUser()
 
+  console.log("[v0] Dashboard - Auth user:", user?.id)
+
   if (!user) {
     return null
   }
 
-  const { data: resident } = await supabase
+  const { data: resident, error: residentError } = await supabase
     .from("users")
     .select(
       `
@@ -37,6 +39,8 @@ export default async function ResidentDashboardPage({ params }: { params: Promis
     .eq("id", user.id)
     .eq("role", "resident")
     .single()
+
+  console.log("[v0] Dashboard resident query:", { resident, residentError })
 
   if (!resident) {
     return null
@@ -105,6 +109,8 @@ export default async function ResidentDashboardPage({ params }: { params: Promis
   }
 
   const familyUnitId = resident.family_unit_id && resident.family_unit_id !== "" ? resident.family_unit_id : null
+
+  console.log("[v0] Dashboard family_unit_id:", { raw: resident.family_unit_id, processed: familyUnitId })
 
   let familyMembersCount = 0
   if (familyUnitId) {

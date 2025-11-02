@@ -17,22 +17,24 @@ CREATE POLICY "residents_can_view_privacy_settings_in_scope"
     OR
     -- Allow if user is tenant admin viewing settings in their tenant
     EXISTS (
-      SELECT 1 FROM public.users current_user
+      -- Renamed current_user to viewer_user to avoid PostgreSQL reserved keyword
+      SELECT 1 FROM public.users viewer_user
       INNER JOIN public.users target_user ON target_user.id = user_privacy_settings.user_id
-      WHERE current_user.id = auth.uid()
-        AND current_user.role = 'tenant_admin'
-        AND current_user.tenant_id = target_user.tenant_id
+      WHERE viewer_user.id = auth.uid()
+        AND viewer_user.role = 'tenant_admin'
+        AND viewer_user.tenant_id = target_user.tenant_id
     )
     OR
     -- Allow if user is resident viewing privacy settings of other residents in scope
     EXISTS (
-      SELECT 1 FROM public.users current_user
-      INNER JOIN public.tenants t ON t.id = current_user.tenant_id
+      -- Renamed current_user to viewer_user to avoid PostgreSQL reserved keyword
+      SELECT 1 FROM public.users viewer_user
+      INNER JOIN public.tenants t ON t.id = viewer_user.tenant_id
       INNER JOIN public.users target_user ON target_user.id = user_privacy_settings.user_id
-      WHERE current_user.id = auth.uid()
-        AND current_user.role = 'resident'
+      WHERE viewer_user.id = auth.uid()
+        AND viewer_user.role = 'resident'
         AND target_user.role = 'resident'
-        AND current_user.tenant_id = target_user.tenant_id
+        AND viewer_user.tenant_id = target_user.tenant_id
         AND (
           -- If scope is 'tenant', allow viewing all privacy settings in tenant
           t.resident_visibility_scope = 'tenant'
@@ -45,7 +47,7 @@ CREATE POLICY "residents_can_view_privacy_settings_in_scope"
               INNER JOIN public.lots l1 ON l1.id = u1.lot_id
               INNER JOIN public.users u2 ON u2.id = target_user.id
               INNER JOIN public.lots l2 ON l2.id = u2.lot_id
-              WHERE u1.id = current_user.id
+              WHERE u1.id = viewer_user.id
                 AND l1.neighborhood_id = l2.neighborhood_id
             )
           )

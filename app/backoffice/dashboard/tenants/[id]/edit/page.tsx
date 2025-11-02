@@ -6,7 +6,6 @@ export default async function EditTenantPage({ params }: { params: Promise<{ id:
   const { id } = await params
   const supabase = await createClient()
 
-  // Fetch tenant data
   const { data: tenant, error } = await supabase
     .from("tenants")
     .select(
@@ -16,7 +15,7 @@ export default async function EditTenantPage({ params }: { params: Promise<{ id:
     `,
     )
     .eq("id", id)
-    .single()
+    .maybeSingle()
 
   if (error || !tenant) {
     redirect("/backoffice/dashboard")

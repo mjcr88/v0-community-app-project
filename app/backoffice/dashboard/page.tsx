@@ -33,94 +33,73 @@ export default async function BackofficeDashboardPage() {
     .order("created_at", { ascending: false })
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 to-secondary/5">
-      <div className="container mx-auto p-6 max-w-6xl">
-        <div className="flex items-center justify-between mb-8">
+    <>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Super Admin Dashboard</h1>
-            <p className="text-muted-foreground mt-1">Manage tenants and system settings</p>
+            <CardTitle>Tenants</CardTitle>
+            <CardDescription>Manage community tenants</CardDescription>
           </div>
-          <form
-            action={async () => {
-              "use server"
-              const supabase = await createClient()
-              await supabase.auth.signOut()
-              redirect("/backoffice/login")
-            }}
-          >
-            <Button variant="outline" type="submit">
-              Sign out
-            </Button>
-          </form>
-        </div>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-            <div>
-              <CardTitle>Tenants</CardTitle>
-              <CardDescription>Manage community tenants</CardDescription>
+          <Link href="/backoffice/dashboard/create-tenant">
+            <Button>Create Tenant</Button>
+          </Link>
+        </CardHeader>
+        <CardContent>
+          {tenantsError ? (
+            <div className="text-sm text-destructive bg-destructive/10 p-4 rounded-md">
+              Error loading tenants: {tenantsError.message}
             </div>
-            <Link href="/backoffice/dashboard/create-tenant">
-              <Button>Create Tenant</Button>
-            </Link>
-          </CardHeader>
-          <CardContent>
-            {tenantsError ? (
-              <div className="text-sm text-destructive bg-destructive/10 p-4 rounded-md">
-                Error loading tenants: {tenantsError.message}
-              </div>
-            ) : tenants && tenants.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Slug</TableHead>
-                    <TableHead>Max Neighborhoods</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+          ) : tenants && tenants.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Slug</TableHead>
+                  <TableHead>Max Neighborhoods</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {tenants.map((tenant) => (
+                  <TableRow key={tenant.id}>
+                    <TableCell className="font-medium">{tenant.name}</TableCell>
+                    <TableCell className="font-mono text-sm">{tenant.slug}</TableCell>
+                    <TableCell>{tenant.max_neighborhoods}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {new Date(tenant.created_at).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Link href={`/t/${tenant.slug}/login`}>
+                          <Button variant="ghost" size="sm" title="Go to tenant login">
+                            <LogIn className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                        <Link href={`/backoffice/dashboard/tenants/${tenant.id}`}>
+                          <Button variant="ghost" size="sm">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                        <Link href={`/backoffice/dashboard/tenants/${tenant.id}/edit`}>
+                          <Button variant="ghost" size="sm">
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                      </div>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {tenants.map((tenant) => (
-                    <TableRow key={tenant.id}>
-                      <TableCell className="font-medium">{tenant.name}</TableCell>
-                      <TableCell className="font-mono text-sm">{tenant.slug}</TableCell>
-                      <TableCell>{tenant.max_neighborhoods}</TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {new Date(tenant.created_at).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Link href={`/t/${tenant.slug}/login`}>
-                            <Button variant="ghost" size="sm" title="Go to tenant login">
-                              <LogIn className="h-4 w-4" />
-                            </Button>
-                          </Link>
-                          <Link href={`/backoffice/dashboard/tenants/${tenant.id}`}>
-                            <Button variant="ghost" size="sm">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </Link>
-                          <Link href={`/backoffice/dashboard/tenants/${tenant.id}/edit`}>
-                            <Button variant="ghost" size="sm">
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                          </Link>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <div className="text-center py-12 text-muted-foreground">
-                <p className="text-lg mb-2">No tenants yet</p>
-                <p className="text-sm">Create your first tenant to get started</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-center py-12 text-muted-foreground">
+              <p className="text-lg mb-2">No tenants yet</p>
+              <p className="text-sm">Create your first tenant to get started</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </>
   )
 }

@@ -48,17 +48,23 @@ export function TenantLoginForm({ tenant }: TenantLoginFormProps) {
       console.log("[v0] Auth user:", authData.user.id)
       console.log("[v0] Auth user email:", authData.user.email)
 
-      const { data: superAdminData } = await supabase
+      const { data: userData } = await supabase
         .from("users")
         .select("role, tenant_id")
         .eq("id", authData.user.id)
         .maybeSingle()
 
-      console.log("[v0] Super admin check:", superAdminData)
+      console.log("[v0] User data:", userData)
 
       // Super admins can access any tenant
-      if (superAdminData?.role === "super_admin") {
+      if (userData?.role === "super_admin") {
         console.log("[v0] Super admin access granted")
+        router.push(`/t/${tenant.slug}/admin/dashboard`)
+        return
+      }
+
+      if (userData?.role === "tenant_admin" && userData?.tenant_id === tenant.id) {
+        console.log("[v0] Tenant admin access granted")
         router.push(`/t/${tenant.slug}/admin/dashboard`)
         return
       }

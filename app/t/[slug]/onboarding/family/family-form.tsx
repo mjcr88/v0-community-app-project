@@ -93,7 +93,7 @@ export function FamilyForm({
 
   const handleContinue = async () => {
     if (isSuperAdmin) {
-      router.push(`/t/${tenant.slug}/onboarding/complete`)
+      router.push(`/t/${tenant.slug}/onboarding/journey`)
       return
     }
 
@@ -141,7 +141,7 @@ export function FamilyForm({
       }
 
       console.log("[v0] Family data saved successfully")
-      router.push(`/t/${tenant.slug}/onboarding/complete`)
+      router.push(`/t/${tenant.slug}/onboarding/journey`)
     } catch (error) {
       console.error("[v0] Error saving family data:", error)
     } finally {
@@ -150,23 +150,11 @@ export function FamilyForm({
   }
 
   const handleBack = () => {
-    router.push(`/t/${tenant.slug}/onboarding/skills`)
+    router.push(`/t/${tenant.slug}/onboarding/welcome`)
   }
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2 text-center">
-        <div className="flex items-center justify-center gap-2">
-          <Users className="h-5 w-5 text-primary" />
-          <h2 className="text-2xl font-bold">Map Your Family</h2>
-        </div>
-        <p className="text-muted-foreground">
-          {familyUnit
-            ? "Define your relationships with family members"
-            : "No family unit has been created yet. Your administrator can set this up for you."}
-        </p>
-      </div>
-
       <div className="space-y-4">
         {!familyUnit && lotResidents.length === 0 && (
           <Card>
@@ -174,7 +162,8 @@ export function FamilyForm({
               <Users className="mx-auto h-12 w-12 text-muted-foreground" />
               <h3 className="mt-4 text-lg font-semibold">No family members yet</h3>
               <p className="mt-2 text-sm text-muted-foreground">
-                No other residents found in your lot. Your administrator can add family members.
+                No other residents found in your lot. Your administrator can add family members, or you can continue to
+                the next step.
               </p>
             </CardContent>
           </Card>

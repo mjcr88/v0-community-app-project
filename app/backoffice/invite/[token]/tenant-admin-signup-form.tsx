@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Loader2 } from "lucide-react"
+import { createAuthUserAction } from "./create-auth-user-action"
 
 type UserInvite = {
   id: string
@@ -24,13 +25,7 @@ type UserInvite = {
   }
 }
 
-export function TenantAdminSignupForm({
-  userInvite,
-  token,
-}: {
-  userInvite: UserInvite
-  token: string
-}) {
+export function TenantAdminSignupForm({ userInvite, token }: { userInvite: UserInvite; token: string }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -53,36 +48,30 @@ export function TenantAdminSignupForm({
 
     setLoading(true)
 
-    const supabase = createBrowserClient()
+    const result = await createAuthUserAction(userInvite.email, password, userInvite.id)
 
-    // Create auth user
-    const { data: authData, error: signUpError } = await supabase.auth.signUp({
-      email: userInvite.email,
-      password: password,
-    })
-
-    if (signUpError) {
-      setError(signUpError.message)
+    if (result.error) {
+      setError(result.error)
       setLoading(false)
       return
     }
 
-    if (!authData.user) {
+    if (!result.user) {
       setError("Failed to create account")
       setLoading(false)
       return
     }
 
-    // Update user record with auth_user_id and clear invite token
-    const { error: updateError } = await supabase
-      .from("users")
-      .update({
-        invite_token: null,
-      })
-      .eq("id", userInvite.id)
+    const supabase = createBrowserClient()
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: userInvite.email,
+      password: password,
+    })
 
-    if (updateError) {
-      console.error("Error updating user:", updateError)
+    if (signInError) {
+      setError(signInError.message)
+      setLoading(false)
+      return
     }
 
     // Redirect to backoffice dashboard

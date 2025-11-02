@@ -81,7 +81,9 @@ export function NeighboursTable({
   // Filter and sort residents
   const filteredAndSortedResidents = useMemo(() => {
     const filtered = residents.filter((resident) => {
-      const privacySettings = resident.user_privacy_settings?.[0]
+      const privacySettings = Array.isArray(resident.user_privacy_settings)
+        ? resident.user_privacy_settings[0]
+        : resident.user_privacy_settings
       const isFamily = resident.family_unit_id === currentUserFamilyId
 
       if (globalSearch) {
@@ -288,7 +290,9 @@ export function NeighboursTable({
               </TableRow>
             ) : (
               filteredAndSortedResidents.map((resident) => {
-                const privacySettings = resident.user_privacy_settings?.[0]
+                const privacySettings = Array.isArray(resident.user_privacy_settings)
+                  ? resident.user_privacy_settings[0]
+                  : resident.user_privacy_settings
                 const isFamily = resident.family_unit_id === currentUserFamilyId
                 const filteredData = filterPrivateData(resident, privacySettings, isFamily)
 

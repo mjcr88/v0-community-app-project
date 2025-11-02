@@ -121,15 +121,51 @@ export function filterPrivateData(
   user: UserWithPrivacy,
   privacySettings: PrivacySettings | null | undefined,
   isFamilyMember = false,
-): UserWithPrivacy {
+): UserWithPrivacy & PrivacySettings {
   // Family members see everything
   if (isFamilyMember) {
-    return user
+    return {
+      ...user,
+      show_email: true,
+      show_phone: true,
+      show_birthday: true,
+      show_birth_country: true,
+      show_current_country: true,
+      show_languages: true,
+      show_preferred_language: true,
+      show_journey_stage: true,
+      show_estimated_move_in_date: true,
+      show_profile_picture: true,
+      show_neighborhood: true,
+      show_family: true,
+      show_family_relationships: true,
+      show_interests: true,
+      show_skills: true,
+      show_open_to_requests: true,
+    }
   }
 
   // If no privacy settings, default to showing everything
   if (!privacySettings) {
-    return user
+    return {
+      ...user,
+      show_email: true,
+      show_phone: true,
+      show_birthday: true,
+      show_birth_country: true,
+      show_current_country: true,
+      show_languages: true,
+      show_preferred_language: true,
+      show_journey_stage: true,
+      show_estimated_move_in_date: true,
+      show_profile_picture: true,
+      show_neighborhood: true,
+      show_family: true,
+      show_family_relationships: true,
+      show_interests: true,
+      show_skills: true,
+      show_open_to_requests: true,
+    }
   }
 
   // Create filtered user object
@@ -173,7 +209,25 @@ export function filterPrivateData(
     filteredUser.user_skills = []
   }
 
-  return filteredUser
+  return {
+    ...filteredUser,
+    show_email: privacySettings.show_email !== false,
+    show_phone: privacySettings.show_phone !== false,
+    show_birthday: privacySettings.show_birthday !== false,
+    show_birth_country: privacySettings.show_birth_country !== false,
+    show_current_country: privacySettings.show_current_country !== false,
+    show_languages: privacySettings.show_languages !== false,
+    show_preferred_language: privacySettings.show_preferred_language !== false,
+    show_journey_stage: privacySettings.show_journey_stage !== false,
+    show_estimated_move_in_date: privacySettings.show_estimated_move_in_date !== false,
+    show_profile_picture: privacySettings.show_profile_picture !== false,
+    show_neighborhood: privacySettings.show_neighborhood !== false,
+    show_family: privacySettings.show_family !== false,
+    show_family_relationships: privacySettings.show_family_relationships !== false,
+    show_interests: privacySettings.show_interests !== false,
+    show_skills: privacySettings.show_skills !== false,
+    show_open_to_requests: privacySettings.show_open_to_requests !== false,
+  }
 }
 
 /**

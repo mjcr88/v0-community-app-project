@@ -97,6 +97,7 @@ export function ResidentsTable({
   const [selectedEntities, setSelectedEntities] = useState<string[]>([])
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteDialogEntity, setDeleteDialogEntity] = useState<CombinedEntity | null>(null)
 
   const getResidentStatus = (resident: Resident): "created" | "invited" | "active" => {
     if (resident.onboarding_completed) return "active"
@@ -182,16 +183,49 @@ export function ResidentsTable({
     const petsToDelete = selectedEntities.filter((id) => sortedEntities.find((e) => e.id === id && e.type === "pet"))
 
     if (residentsToDelete.length > 0) {
-      await supabase.from("users").delete().in("id", residentsToDelete)
+      const { error } = await supabase.from("users").delete().in("id", residentsToDelete)
+      if (error) {
+        console.error("[v0] Error deleting residents:", error)
+        alert(`Failed to delete residents: ${error.message}`)
+        setIsDeleting(false)
+        return
+      }
     }
 
     if (petsToDelete.length > 0) {
-      await supabase.from("pets").delete().in("id", petsToDelete)
+      const { error } = await supabase.from("pets").delete().in("id", petsToDelete)
+      if (error) {
+        console.error("[v0] Error deleting pets:", error)
+        alert(`Failed to delete pets: ${error.message}`)
+        setIsDeleting(false)
+        return
+      }
     }
 
     setShowDeleteDialog(false)
     setIsDeleting(false)
     setSelectedEntities([])
+    window.location.reload()
+  }
+
+  const handleIndividualDelete = async () => {
+    if (!deleteDialogEntity) return
+
+    setIsDeleting(true)
+    const supabase = createBrowserClient()
+
+    const tableName = deleteDialogEntity.type === "resident" ? "users" : "pets"
+    const { error } = await supabase.from(tableName).delete().eq("id", deleteDialogEntity.id)
+
+    if (error) {
+      console.error(`[v0] Error deleting ${deleteDialogEntity.type}:`, error)
+      alert(`Failed to delete ${deleteDialogEntity.type}: ${error.message}`)
+      setIsDeleting(false)
+      return
+    }
+
+    setDeleteDialogEntity(null)
+    setIsDeleting(false)
     window.location.reload()
   }
 
@@ -323,6 +357,9 @@ export function ResidentsTable({
                             <Pencil className="h-4 w-4" />
                           </Link>
                         </Button>
+                        <Button variant="ghost" size="icon" onClick={() => setDeleteDialogEntity(entity)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -346,6 +383,27 @@ export function ResidentsTable({
             <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleBulkDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!deleteDialogEntity} onOpenChange={(open) => !open && setDeleteDialogEntity(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {deleteDialogEntity?.type}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete {deleteDialogEntity?.name}. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleIndividualDelete}
               disabled={isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >

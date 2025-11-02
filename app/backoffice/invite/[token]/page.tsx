@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation"
 import { createServerClient } from "@/lib/supabase/server"
 import { TenantAdminSignupForm } from "./tenant-admin-signup-form"
+import { createClient } from "@supabase/supabase-js"
 
 export default async function BackofficeInvitePage({
   params,
@@ -19,12 +20,35 @@ export default async function BackofficeInvitePage({
     redirect("/backoffice/dashboard")
   }
 
-  // Validate invite token
-  const { data: userInvite, error: userError } = await supabase
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary/5 to-secondary/5 p-4">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-red-600">Server Error</h1>
+          <p className="mt-2 text-muted-foreground">Server configuration error. Please contact support.</p>
+        </div>
+      </div>
+    )
+  }
+
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  })
+
+  const { data: userInvite, error: userError } = await supabaseAdmin
     .from("users")
-    .select("id, email, name, role, tenant_id, invite_token, tenants(id, name, slug)")
+    .select("id, email, name, role, tenant_id, invite_token")
     .eq("invite_token", token)
+    .eq("role", "tenant_admin")
     .maybeSingle()
+
+  console.log("[v0] Tenant admin invite validation:", { userInvite, userError, token })
 
   if (userError || !userInvite || !userInvite.invite_token) {
     return (
@@ -37,9 +61,20 @@ export default async function BackofficeInvitePage({
     )
   }
 
+  const { data: tenant } = await supabaseAdmin
+    .from("tenants")
+    .select("id, name, slug")
+    .eq("id", userInvite.tenant_id)
+    .single()
+
+  const userInviteWithTenant = {
+    ...userInvite,
+    tenants: tenant,
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary/5 to-secondary/5 p-4">
-      <TenantAdminSignupForm userInvite={userInvite} token={token} />
+      <TenantAdminSignupForm userInvite={userInviteWithTenant} token={token} />
     </div>
   )
 }

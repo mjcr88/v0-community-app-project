@@ -36,7 +36,7 @@ export default async function CreateFamilyPage({
     .order("lot_number")
 
   const { data: existingResidents } = await supabase
-    .from("residents")
+    .from("users")
     .select(`
       id,
       first_name,
@@ -44,9 +44,14 @@ export default async function CreateFamilyPage({
       email,
       phone,
       lots:lot_id (
-        lot_number
+        lot_number,
+        neighborhoods:neighborhood_id (
+          name
+        )
       )
     `)
+    .eq("role", "resident")
+    .eq("tenant_id", tenant.id)
     .order("first_name")
 
   return (

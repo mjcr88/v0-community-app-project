@@ -26,7 +26,7 @@ export default async function EditResidentPage({
     redirect("/backoffice/login")
   }
 
-  // Get resident
+  // Get resident - allow residents without lots
   const { data: resident } = await supabase
     .from("users")
     .select(`
@@ -45,7 +45,7 @@ export default async function EditResidentPage({
     .eq("role", "resident")
     .single()
 
-  if (!resident || resident.lots?.neighborhoods?.tenant_id !== tenant.id) {
+  if (!resident || resident.tenant_id !== tenant.id) {
     redirect(`/t/${slug}/admin/residents`)
   }
 

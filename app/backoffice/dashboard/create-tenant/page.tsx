@@ -15,6 +15,7 @@ import { Loader2 } from "lucide-react"
 export default function CreateTenantPage() {
   const [name, setName] = useState("")
   const [maxNeighborhoods, setMaxNeighborhoods] = useState("1")
+  const [address, setAddress] = useState("")
   const [adminName, setAdminName] = useState("")
   const [adminEmail, setAdminEmail] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -48,6 +49,7 @@ export default function CreateTenantPage() {
           name,
           slug,
           max_neighborhoods: Number.parseInt(maxNeighborhoods),
+          address: address || null,
         })
         .select()
         .single()
@@ -62,11 +64,9 @@ export default function CreateTenantPage() {
       if (adminEmail && adminName) {
         console.log("[v0] Creating admin user for tenant")
 
-        // Generate invite token if inviting
         const inviteToken = shouldInvite ? crypto.randomUUID() : null
         const invitedAt = shouldInvite ? new Date().toISOString() : null
 
-        // Create user in users table
         const { data: newUser, error: userError } = await supabase
           .from("users")
           .insert({
@@ -87,7 +87,6 @@ export default function CreateTenantPage() {
 
         console.log("[v0] Admin user created:", newUser)
 
-        // Update tenant with admin ID
         const { error: updateError } = await supabase
           .from("tenants")
           .update({ tenant_admin_id: newUser.id })
@@ -98,7 +97,6 @@ export default function CreateTenantPage() {
           throw updateError
         }
 
-        // If inviting, show the invite link
         if (shouldInvite && inviteToken) {
           const inviteUrl = `${window.location.origin}/t/${slug}/invite/${inviteToken}`
           alert(`Tenant admin created and invited!\n\nInvite link:\n${inviteUrl}`)
@@ -161,6 +159,19 @@ export default function CreateTenantPage() {
                   <p className="text-xs text-muted-foreground">
                     Maximum number of neighborhoods this tenant can create
                   </p>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="address">Address</Label>
+                  <Input
+                    id="address"
+                    type="text"
+                    placeholder="123 Main St, City, State, ZIP"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    disabled={isLoading}
+                  />
+                  <p className="text-xs text-muted-foreground">Optional default address for this community</p>
                 </div>
 
                 <div className="border-t pt-6">

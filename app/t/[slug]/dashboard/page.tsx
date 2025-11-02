@@ -148,6 +148,26 @@ export default async function ResidentDashboardPage({ params }: { params: Promis
         <p className="text-muted-foreground">Here's what's happening in your community</p>
       </div>
 
+      <Card>
+        <CardHeader>
+          <CardTitle>Quick Actions</CardTitle>
+          <CardDescription>Get started with your community dashboard</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-2">
+          {!resident.onboarding_completed && (
+            <Button asChild>
+              <Link href={`/t/${slug}/onboarding/welcome`}>Complete Onboarding</Link>
+            </Button>
+          )}
+          <Button asChild variant="outline">
+            <Link href={`/t/${slug}/dashboard/settings/profile`}>Edit Profile</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href={`/t/${slug}/dashboard/neighbours`}>Browse Neighbours</Link>
+          </Button>
+        </CardContent>
+      </Card>
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -232,26 +252,6 @@ export default async function ResidentDashboardPage({ params }: { params: Promis
           </CardContent>
         </Card>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-          <CardDescription>Get started with your community dashboard</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
-          {!resident.onboarding_completed && (
-            <Button asChild>
-              <Link href={`/t/${slug}/onboarding`}>Complete Onboarding</Link>
-            </Button>
-          )}
-          <Button asChild variant="outline">
-            <Link href={`/t/${slug}/dashboard/settings/profile`}>Edit Profile</Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link href={`/t/${slug}/dashboard/neighbours`}>Browse Neighbours</Link>
-          </Button>
-        </CardContent>
-      </Card>
     </div>
   )
 }

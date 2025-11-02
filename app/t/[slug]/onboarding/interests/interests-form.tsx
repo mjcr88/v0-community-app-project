@@ -5,7 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Loader2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
@@ -93,10 +93,6 @@ export function InterestsForm({ tenant, resident, interests, residentInterests, 
   return (
     <form onSubmit={handleSubmit}>
       <Card>
-        <CardHeader>
-          <CardTitle>Your Interests</CardTitle>
-          <CardDescription>Share your interests to connect with like-minded neighbors</CardDescription>
-        </CardHeader>
         <CardContent className="space-y-6">
           {interests.length > 0 && (
             <div className="space-y-3">

@@ -8,10 +8,12 @@ import { Switch } from "@/components/ui/switch"
 import { Button } from "@/components/ui/button"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { Loader2 } from "lucide-react"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 
 type Tenant = {
   id: string
   name: string
+  resident_visibility_scope?: "neighborhood" | "tenant"
   features?: {
     neighborhoods?: boolean
     interests?: boolean
@@ -91,16 +93,17 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
       onboarding: true,
     },
   )
+  const [visibilityScope, setVisibilityScope] = useState<"neighborhood" | "tenant">(
+    tenant.resident_visibility_scope || "tenant",
+  )
 
   const handleToggle = async (featureKey: string, enabled: boolean) => {
     console.log("[v0] Toggling feature:", featureKey, "to", enabled)
 
-    // If disabling, check if data exists
     if (!enabled) {
       const feature = FEATURES.find((f) => f.key === featureKey)
       if (feature) {
         if (feature.table) {
-          // Check table-based features
           const { count } = await supabase
             .from(feature.table)
             .select("*", { count: "exact", head: true })
@@ -115,7 +118,6 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
             return
           }
         } else if (feature.checkField) {
-          // Check field-based features (like journey_stages)
           const { count } = await supabase
             .from("residents")
             .select("*", { count: "exact", head: true })
@@ -130,7 +132,6 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
             return
           }
         }
-        // Features with checkField: null (like onboarding) can always be toggled
       }
     }
 
@@ -140,9 +141,13 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
   const handleSave = async () => {
     setLoading(true)
     console.log("[v0] Saving features:", features)
+    console.log("[v0] Saving visibility scope:", visibilityScope)
 
     try {
-      const { error } = await supabase.from("tenants").update({ features }).eq("id", tenant.id)
+      const { error } = await supabase
+        .from("tenants")
+        .update({ features, resident_visibility_scope: visibilityScope })
+        .eq("id", tenant.id)
 
       if (error) {
         console.error("[v0] Error saving features:", error)
@@ -224,6 +229,41 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
               />
             </div>
           ))}
+        </div>
+
+        <div className="space-y-4 pt-4 border-t">
+          <h3 className="text-sm font-semibold text-muted-foreground">Privacy & Visibility</h3>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label className="text-base font-medium">Resident Directory Scope</Label>
+              <p className="text-sm text-muted-foreground">
+                Control which residents can see each other in the community directory
+              </p>
+            </div>
+            <RadioGroup
+              value={visibilityScope}
+              onValueChange={(value) => setVisibilityScope(value as "neighborhood" | "tenant")}
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="tenant" id="tenant" />
+                <Label htmlFor="tenant" className="font-normal cursor-pointer">
+                  <span className="font-medium">Entire Community</span>
+                  <span className="text-sm text-muted-foreground block">
+                    Residents can see all other residents across all neighborhoods
+                  </span>
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="neighborhood" id="neighborhood" />
+                <Label htmlFor="neighborhood" className="font-normal cursor-pointer">
+                  <span className="font-medium">Neighborhood Only</span>
+                  <span className="text-sm text-muted-foreground block">
+                    Residents can only see other residents in their own neighborhood
+                  </span>
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
         </div>
 
         <div className="flex justify-end gap-3 pt-4 border-t">

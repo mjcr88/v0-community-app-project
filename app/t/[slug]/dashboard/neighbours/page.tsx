@@ -14,20 +14,9 @@ export default async function NeighboursPage({ params }: { params: Promise<{ slu
     redirect(`/t/${slug}/login`)
   }
 
-  // Get current resident's tenant
   const { data: currentResident } = await supabase
     .from("users")
-    .select(
-      `
-      id,
-      tenant_id,
-      lots!inner (
-        neighborhoods!inner (
-          tenant_id
-        )
-      )
-    `,
-    )
+    .select("id, tenant_id, role")
     .eq("id", user.id)
     .eq("role", "resident")
     .single()
@@ -36,8 +25,10 @@ export default async function NeighboursPage({ params }: { params: Promise<{ slu
     redirect(`/t/${slug}/login`)
   }
 
+  console.log("[v0] Current resident:", currentResident)
+
   // Get all residents in the same tenant with their privacy settings
-  const { data: residents } = await supabase
+  const { data: residents, error: residentsError } = await supabase
     .from("users")
     .select(
       `
@@ -97,6 +88,8 @@ export default async function NeighboursPage({ params }: { params: Promise<{ slu
     .eq("onboarding_completed", true)
     .neq("id", currentResident.id)
     .order("first_name")
+
+  console.log("[v0] Residents query result:", { count: residents?.length, error: residentsError })
 
   // Get all interests for filtering
   const { data: allInterests } = await supabase

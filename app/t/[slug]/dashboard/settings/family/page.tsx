@@ -29,43 +29,67 @@ export default async function FamilySettingsPage({ params }: { params: Promise<{
   // Get tenant to check if pets feature is enabled
   const { data: tenant } = await supabase.from("tenants").select("*").eq("id", resident.tenant_id).single()
 
+  const validFamilyUnitId = resident.family_unit_id && resident.family_unit_id !== "" ? resident.family_unit_id : null
+
   // Get family unit if exists
-  const { data: familyUnit } = await supabase
-    .from("family_units")
-    .select("*")
-    .eq("id", resident.family_unit_id || "")
-    .maybeSingle()
+  let familyUnit = null
+  let familyMembers: any[] = []
+  let relationships: any[] = []
+  let pets: any[] = []
 
-  // Get family members (other users in the same family unit)
-  const { data: familyMembers } = await supabase
-    .from("users")
-    .select("*")
-    .eq("family_unit_id", resident.family_unit_id || "")
-    .neq("id", resident.id)
-    .order("first_name")
-
-  // Get existing relationships
-  const { data: relationships } = await supabase.from("family_relationships").select("*").eq("user_id", resident.id)
-
-  // Get pets if feature is enabled
-  let pets = []
-  if (tenant?.features?.pets && resident.family_unit_id) {
-    const { data: petsData } = await supabase
-      .from("pets")
+  if (validFamilyUnitId) {
+    const { data: familyUnitData } = await supabase
+      .from("family_units")
       .select("*")
-      .eq("family_unit_id", resident.family_unit_id)
-      .order("name")
-    pets = petsData || []
+      .eq("id", validFamilyUnitId)
+      .maybeSingle()
+
+    familyUnit = familyUnitData
+
+    // Get family members (other users in the same family unit)
+    const { data: familyMembersData } = await supabase
+      .from("users")
+      .select("*")
+      .eq("family_unit_id", validFamilyUnitId)
+      .neq("id", resident.id)
+      .order("first_name")
+
+    familyMembers = familyMembersData || []
+
+    // Get existing relationships
+    const { data: relationshipsData } = await supabase
+      .from("family_relationships")
+      .select("*")
+      .eq("user_id", resident.id)
+
+    relationships = relationshipsData || []
+
+    // Get pets if feature is enabled
+    if (tenant?.features?.pets) {
+      const { data: petsData } = await supabase
+        .from("pets")
+        .select("*")
+        .eq("family_unit_id", validFamilyUnitId)
+        .order("name")
+      pets = petsData || []
+    }
   }
 
   // Get all residents in the same lot for adding family members
-  const { data: lotResidents } = await supabase
-    .from("users")
-    .select("*")
-    .eq("lot_id", resident.lot_id || "")
-    .eq("role", "resident")
-    .neq("id", resident.id)
-    .order("first_name")
+  const validLotId = resident.lot_id && resident.lot_id !== "" ? resident.lot_id : null
+  let lotResidents: any[] = []
+
+  if (validLotId) {
+    const { data: lotResidentsData } = await supabase
+      .from("users")
+      .select("*")
+      .eq("lot_id", validLotId)
+      .eq("role", "resident")
+      .neq("id", resident.id)
+      .order("first_name")
+
+    lotResidents = lotResidentsData || []
+  }
 
   return (
     <>
@@ -73,10 +97,10 @@ export default async function FamilySettingsPage({ params }: { params: Promise<{
       <FamilyManagementForm
         resident={resident}
         familyUnit={familyUnit}
-        familyMembers={familyMembers || []}
-        relationships={relationships || []}
+        familyMembers={familyMembers}
+        relationships={relationships}
         pets={pets}
-        lotResidents={lotResidents || []}
+        lotResidents={lotResidents}
         petsEnabled={tenant?.features?.pets || false}
         tenantSlug={slug}
       />

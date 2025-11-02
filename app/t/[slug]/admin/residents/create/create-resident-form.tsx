@@ -81,10 +81,13 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
       if (data && data.length > 0) {
         setExistingResidents(data)
 
-        const existingFamilyUnit = data.find((r: any) => r.family_unit_id && r.family_units)
+        const existingFamilyUnit = data.find((r: any) => r.family_unit_id && r.family_unit_id !== "" && r.family_units)
         if (existingFamilyUnit?.family_units) {
           setNewFamilyUnitName(existingFamilyUnit.family_units.name)
           setNeedsNewFamilyUnit(false)
+        } else {
+          // No valid family unit exists, will need to create one
+          setNeedsNewFamilyUnit(true)
         }
       } else {
         setExistingResidents([])
@@ -108,7 +111,9 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
     if (!assignmentChoice) return
 
     if (assignmentChoice === "add_to_family") {
-      const hasExistingFamilyUnit = existingResidents.some((r: any) => r.family_unit_id && r.family_units)
+      const hasExistingFamilyUnit = existingResidents.some(
+        (r: any) => r.family_unit_id && r.family_unit_id !== "" && r.family_units,
+      )
       if (!hasExistingFamilyUnit) {
         setNeedsNewFamilyUnit(true)
         setStep(2.5) // New intermediate step
@@ -266,7 +271,9 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
         }
       } else {
         const family_unit_id =
-          assignmentChoice === "add_to_family" && existingResidents[0]?.family_unit_id
+          assignmentChoice === "add_to_family" &&
+          existingResidents[0]?.family_unit_id &&
+          existingResidents[0].family_unit_id !== ""
             ? existingResidents[0].family_unit_id
             : null
 

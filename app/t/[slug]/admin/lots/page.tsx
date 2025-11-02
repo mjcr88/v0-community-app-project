@@ -31,6 +31,11 @@ export default async function LotsPage({ params }: { params: { slug: string } })
         id,
         name,
         tenant_id
+      ),
+      users!users_lot_id_fkey (
+        id,
+        first_name,
+        last_name
       )
     `)
     .eq("neighborhoods.tenant_id", tenant.id)

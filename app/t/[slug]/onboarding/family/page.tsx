@@ -46,11 +46,9 @@ export default async function FamilyPage({ params }: { params: Promise<{ slug: s
 
     resident = residentData
 
-    if (resident && resident.family_unit_id === "") {
+    if (resident && (resident.family_unit_id === "" || resident.family_unit_id === null)) {
       resident.family_unit_id = null
-    }
-
-    if (resident?.family_unit_id) {
+    } else if (resident?.family_unit_id) {
       // Fetch family unit info
       const { data: familyUnitData } = await supabase
         .from("family_units")
@@ -96,8 +94,9 @@ export default async function FamilyPage({ params }: { params: Promise<{ slug: s
   if (resident.lot_id) {
     const { data: lotResidentsData } = await supabase
       .from("users")
-      .select("id, first_name, last_name, email")
+      .select("id, first_name, last_name, email, family_unit_id")
       .eq("lot_id", resident.lot_id)
+      .eq("role", "resident")
       .neq("id", resident.id)
 
     lotResidents = lotResidentsData || []

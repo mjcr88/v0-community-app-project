@@ -32,8 +32,6 @@ export function PrivacySettingsForm({ privacySettings, tenantSlug }: PrivacySett
     showPreferredLanguage: privacySettings?.show_preferred_language ?? true,
     showJourneyStage: privacySettings?.show_journey_stage ?? true,
     showEstimatedMoveInDate: privacySettings?.show_estimated_move_in_date ?? true,
-    showProfilePicture: privacySettings?.show_profile_picture ?? true,
-    showNeighborhood: privacySettings?.show_neighborhood ?? true,
     showFamily: privacySettings?.show_family ?? true,
     showFamilyRelationships: privacySettings?.show_family_relationships ?? true,
     showInterests: privacySettings?.show_interests ?? true,
@@ -46,7 +44,9 @@ export function PrivacySettingsForm({ privacySettings, tenantSlug }: PrivacySett
     setIsLoading(true)
 
     try {
+      console.log("[v0] Submitting privacy settings:", settings)
       const result = await updatePrivacySettings(tenantSlug, settings)
+      console.log("[v0] Privacy settings update result:", result)
 
       if (result.success) {
         toast({
@@ -87,11 +87,10 @@ export function PrivacySettingsForm({ privacySettings, tenantSlug }: PrivacySett
       description: "Manage visibility of your personal details",
       settings: [
         { key: "showBirthday", label: "Birthday", value: settings.showBirthday },
-        { key: "showBirthCountry", label: "Country of Origin", value: settings.showBirthCountry },
+        { key: "showBirthCountry", label: "Country of Birth", value: settings.showBirthCountry },
         { key: "showCurrentCountry", label: "Current Country", value: settings.showCurrentCountry },
         { key: "showLanguages", label: "Languages", value: settings.showLanguages },
         { key: "showPreferredLanguage", label: "Preferred Language", value: settings.showPreferredLanguage },
-        { key: "showProfilePicture", label: "Profile Picture", value: settings.showProfilePicture },
       ],
     },
     {
@@ -106,7 +105,6 @@ export function PrivacySettingsForm({ privacySettings, tenantSlug }: PrivacySett
       title: "Community Information",
       description: "Manage what community details are visible",
       settings: [
-        { key: "showNeighborhood", label: "Neighborhood", value: settings.showNeighborhood },
         { key: "showFamily", label: "Family Members", value: settings.showFamily },
         { key: "showFamilyRelationships", label: "Family Relationship Types", value: settings.showFamilyRelationships },
         { key: "showInterests", label: "Interests", value: settings.showInterests },
@@ -121,7 +119,8 @@ export function PrivacySettingsForm({ privacySettings, tenantSlug }: PrivacySett
       <Alert>
         <Lock className="h-4 w-4" />
         <AlertDescription>
-          Your name and lot assignment are always visible to other residents. All other fields can be hidden below.
+          Your name, profile picture, lot assignment, and neighborhood are always visible to other residents. All other
+          fields can be hidden below.
         </AlertDescription>
       </Alert>
 

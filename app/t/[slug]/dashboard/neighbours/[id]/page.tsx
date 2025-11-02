@@ -48,6 +48,11 @@ export default async function PublicProfilePage({
     redirect(`/t/${slug}/login`)
   }
 
+  console.log("[v0] Viewing profile - Current resident:", {
+    id: currentResident.id,
+    family_unit_id: currentResident.family_unit_id,
+  })
+
   const { data: resident } = await supabase
     .from("users")
     .select(
@@ -104,9 +109,31 @@ export default async function PublicProfilePage({
     notFound()
   }
 
+  console.log("[v0] Profile being viewed:", {
+    id: resident.id,
+    name: `${resident.first_name} ${resident.last_name}`,
+    family_unit_id: resident.family_unit_id,
+    email: resident.email,
+    phone: resident.phone,
+  })
+
   const isFamily = resident.family_unit_id === currentResident.family_unit_id
   const privacySettings = resident.user_privacy_settings?.[0] || {}
+
+  console.log("[v0] Privacy check:", {
+    isFamily,
+    privacySettings,
+    hasPrivacySettings: !!resident.user_privacy_settings?.[0],
+  })
+
   const filteredResident = filterPrivateData(resident, privacySettings, isFamily)
+
+  console.log("[v0] Filtered resident:", {
+    email: filteredResident.email,
+    phone: filteredResident.phone,
+    show_email: filteredResident.show_email,
+    show_phone: filteredResident.show_phone,
+  })
 
   const initials = [filteredResident.first_name, filteredResident.last_name]
     .filter(Boolean)

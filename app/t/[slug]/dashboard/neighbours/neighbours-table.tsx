@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Search } from "lucide-react"
+import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
 import Link from "next/link"
 import { filterPrivateData } from "@/lib/privacy-utils"
 
@@ -19,6 +19,9 @@ interface NeighboursTableProps {
   currentUserFamilyId: string | null
 }
 
+type SortField = "name" | "neighborhood" | "lot" | null
+type SortDirection = "asc" | "desc"
+
 export function NeighboursTable({
   residents,
   allInterests,
@@ -26,10 +29,13 @@ export function NeighboursTable({
   tenantSlug,
   currentUserFamilyId,
 }: NeighboursTableProps) {
-  const [searchQuery, setSearchQuery] = useState("")
+  const [nameFilter, setNameFilter] = useState("")
   const [neighborhoodFilter, setNeighborhoodFilter] = useState<string>("all")
+  const [lotFilter, setLotFilter] = useState("")
   const [interestFilter, setInterestFilter] = useState<string>("all")
   const [skillFilter, setSkillFilter] = useState<string>("all")
+  const [sortField, setSortField] = useState<SortField>(null)
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc")
 
   // Extract unique values for filters
   const uniqueSkills = useMemo(() => {
@@ -44,7 +50,6 @@ export function NeighboursTable({
     return Array.from(skills).sort()
   }, [residents])
 
-  // Extract unique lots
   const uniqueLots = useMemo(() => {
     const lots = new Set<string>()
     residents.forEach((resident) => {
@@ -55,21 +60,42 @@ export function NeighboursTable({
     return Array.from(lots).sort()
   }, [residents])
 
-  // Filter residents
-  const filteredResidents = useMemo(() => {
-    return residents.filter((resident) => {
+  // Handle sorting
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc")
+    } else {
+      setSortField(field)
+      setSortDirection("asc")
+    }
+  }
+
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="ml-2 h-4 w-4" />
+    }
+    return sortDirection === "asc" ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
+  }
+
+  // Filter and sort residents
+  const filteredAndSortedResidents = useMemo(() => {
+    const filtered = residents.filter((resident) => {
       const privacySettings = resident.user_privacy_settings?.[0]
       const isFamily = resident.family_unit_id === currentUserFamilyId
 
-      // Search filter (name)
+      // Name filter
       const fullName = `${resident.first_name || ""} ${resident.last_name || ""}`.toLowerCase()
-      const matchesSearch = fullName.includes(searchQuery.toLowerCase())
+      const matchesName = fullName.includes(nameFilter.toLowerCase())
 
       // Neighborhood filter
       const neighborhoodName = resident.lots?.neighborhoods?.name
       const matchesNeighborhood =
         neighborhoodFilter === "all" ||
         ((isFamily || privacySettings?.show_neighborhood !== false) && neighborhoodName === neighborhoodFilter)
+
+      // Lot filter
+      const lotNumber = resident.lots?.lot_number || ""
+      const matchesLot = lotNumber.toLowerCase().includes(lotFilter.toLowerCase())
 
       // Interest filter
       const residentInterestNames = resident.user_interests?.map((ui: any) => ui.interests?.name).filter(Boolean) || []
@@ -83,92 +109,153 @@ export function NeighboursTable({
         skillFilter === "all" ||
         ((isFamily || privacySettings?.show_skills !== false) && residentSkillNames.includes(skillFilter))
 
-      return matchesSearch && matchesNeighborhood && matchesInterest && matchesSkill
+      return matchesName && matchesNeighborhood && matchesLot && matchesInterest && matchesSkill
     })
-  }, [residents, searchQuery, neighborhoodFilter, interestFilter, skillFilter, currentUserFamilyId])
+
+    // Sort
+    if (sortField) {
+      filtered.sort((a, b) => {
+        let aValue = ""
+        let bValue = ""
+
+        switch (sortField) {
+          case "name":
+            aValue = `${a.first_name || ""} ${a.last_name || ""}`.toLowerCase()
+            bValue = `${b.first_name || ""} ${b.last_name || ""}`.toLowerCase()
+            break
+          case "neighborhood":
+            aValue = a.lots?.neighborhoods?.name || ""
+            bValue = b.lots?.neighborhoods?.name || ""
+            break
+          case "lot":
+            aValue = a.lots?.lot_number || ""
+            bValue = b.lots?.lot_number || ""
+            break
+        }
+
+        if (sortDirection === "asc") {
+          return aValue.localeCompare(bValue)
+        } else {
+          return bValue.localeCompare(aValue)
+        }
+      })
+    }
+
+    return filtered
+  }, [
+    residents,
+    nameFilter,
+    neighborhoodFilter,
+    lotFilter,
+    interestFilter,
+    skillFilter,
+    currentUserFamilyId,
+    sortField,
+    sortDirection,
+  ])
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search by name..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Neighborhood Filter */}
-          <Select value={neighborhoodFilter} onValueChange={setNeighborhoodFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="All Neighborhoods" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Neighborhoods</SelectItem>
-              {neighborhoods.map((neighborhood) => (
-                <SelectItem key={neighborhood.id} value={neighborhood.name}>
-                  {neighborhood.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {/* Interest Filter */}
-          <Select value={interestFilter} onValueChange={setInterestFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="All Interests" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Interests</SelectItem>
-              {allInterests.map((interest) => (
-                <SelectItem key={interest.id} value={interest.name}>
-                  {interest.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {/* Skill Filter */}
-          <Select value={skillFilter} onValueChange={setSkillFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="All Skills" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Skills</SelectItem>
-              {uniqueSkills.map((skill) => (
-                <SelectItem key={skill} value={skill}>
-                  {skill}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Neighborhood</TableHead>
-              <TableHead>Lot</TableHead>
-              <TableHead>Interests</TableHead>
-              <TableHead>Skills</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>
+                <Button variant="ghost" onClick={() => handleSort("name")} className="h-8 px-2 font-semibold">
+                  Name
+                  {getSortIcon("name")}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button variant="ghost" onClick={() => handleSort("neighborhood")} className="h-8 px-2 font-semibold">
+                  Neighborhood
+                  {getSortIcon("neighborhood")}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button variant="ghost" onClick={() => handleSort("lot")} className="h-8 px-2 font-semibold">
+                  Lot
+                  {getSortIcon("lot")}
+                </Button>
+              </TableHead>
+              <TableHead className="font-semibold">Interests</TableHead>
+              <TableHead className="font-semibold">Skills</TableHead>
+              <TableHead className="text-right font-semibold">Actions</TableHead>
+            </TableRow>
+            <TableRow className="bg-muted/50">
+              <TableCell>
+                <Input
+                  placeholder="Filter name..."
+                  value={nameFilter}
+                  onChange={(e) => setNameFilter(e.target.value)}
+                  className="h-8"
+                />
+              </TableCell>
+              <TableCell>
+                <Select value={neighborhoodFilter} onValueChange={setNeighborhoodFilter}>
+                  <SelectTrigger className="h-8">
+                    <SelectValue placeholder="All" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    {neighborhoods.map((neighborhood) => (
+                      <SelectItem key={neighborhood.id} value={neighborhood.name}>
+                        {neighborhood.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </TableCell>
+              <TableCell>
+                <Input
+                  placeholder="Filter lot..."
+                  value={lotFilter}
+                  onChange={(e) => setLotFilter(e.target.value)}
+                  className="h-8"
+                />
+              </TableCell>
+              <TableCell>
+                <Select value={interestFilter} onValueChange={setInterestFilter}>
+                  <SelectTrigger className="h-8">
+                    <SelectValue placeholder="All" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    {allInterests.map((interest) => (
+                      <SelectItem key={interest.id} value={interest.name}>
+                        {interest.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </TableCell>
+              <TableCell>
+                <Select value={skillFilter} onValueChange={setSkillFilter}>
+                  <SelectTrigger className="h-8">
+                    <SelectValue placeholder="All" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    {uniqueSkills.map((skill) => (
+                      <SelectItem key={skill} value={skill}>
+                        {skill}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </TableCell>
+              <TableCell />
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredResidents.length === 0 ? (
+            {filteredAndSortedResidents.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                   No residents found matching your filters
                 </TableCell>
               </TableRow>
             ) : (
-              filteredResidents.map((resident) => {
+              filteredAndSortedResidents.map((resident) => {
                 const privacySettings = resident.user_privacy_settings?.[0]
                 const isFamily = resident.family_unit_id === currentUserFamilyId
                 const filteredData = filterPrivateData(resident, privacySettings, isFamily)
@@ -247,7 +334,7 @@ export function NeighboursTable({
       </div>
 
       <div className="text-sm text-muted-foreground">
-        Showing {filteredResidents.length} of {residents.length} residents
+        Showing {filteredAndSortedResidents.length} of {residents.length} residents
       </div>
     </div>
   )

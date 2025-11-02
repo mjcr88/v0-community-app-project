@@ -39,41 +39,32 @@ export async function createAuthUserAction(email: string, password: string, resi
 
   console.log("[v0] Auth user created successfully:", data.user?.id)
 
-  // This links the auth user to the existing resident record with lot_id and family_unit_id
-  const { error: updateError } = await supabase
-    .from("users")
-    .update({
-      id: data.user!.id, // Update the ID to match the auth user ID
-    })
-    .eq("id", residentId)
+  console.log("[v0] Deleting old placeholder record and creating new one with auth user ID")
 
-  if (updateError) {
-    console.error("[v0] Error updating resident record:", updateError)
-    // Try alternative approach: delete old record and create new one with auth user ID
-    console.log("[v0] Attempting alternative approach: recreate record with auth user ID")
+  // Delete the old placeholder record
+  const { error: deleteError } = await supabase.from("users").delete().eq("id", residentId)
 
-    // Delete the old placeholder record
-    await supabase.from("users").delete().eq("id", residentId)
-
-    // Create new record with auth user ID
-    const { error: insertError } = await supabase.from("users").insert({
-      id: data.user!.id,
-      email: email,
-      tenant_id: existingResident.tenant_id,
-      role: existingResident.role,
-      lot_id: existingResident.lot_id,
-      family_unit_id: existingResident.family_unit_id,
-    })
-
-    if (insertError) {
-      console.error("[v0] Error creating new user record:", insertError)
-      return { error: "Failed to link auth user to resident record" }
-    }
-
-    console.log("[v0] Successfully recreated user record with auth user ID")
-  } else {
-    console.log("[v0] Successfully updated resident record with auth user ID")
+  if (deleteError) {
+    console.error("[v0] Error deleting old record:", deleteError)
+    return { error: "Failed to delete old resident record" }
   }
+
+  // Create new record with auth user ID and ALL preserved fields
+  const { error: insertError } = await supabase.from("users").insert({
+    id: data.user!.id,
+    email: email,
+    tenant_id: existingResident.tenant_id,
+    role: existingResident.role,
+    lot_id: existingResident.lot_id,
+    family_unit_id: existingResident.family_unit_id, // Now preserving family_unit_id
+  })
+
+  if (insertError) {
+    console.error("[v0] Error creating new user record:", insertError)
+    return { error: "Failed to link auth user to resident record" }
+  }
+
+  console.log("[v0] Successfully created user record with auth user ID and preserved lot_id and family_unit_id")
 
   return { user: data.user }
 }

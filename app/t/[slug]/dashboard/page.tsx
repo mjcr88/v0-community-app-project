@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Users, Calendar, MapPin, Globe, Languages, PawPrint, Home } from "lucide-react"
+import { Users, MapPin, Globe, Languages, PawPrint, Home } from "lucide-react"
 import Link from "next/link"
 
 export default async function ResidentDashboardPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -41,6 +41,14 @@ export default async function ResidentDashboardPage({ params }: { params: Promis
     .single()
 
   console.log("[v0] Dashboard resident query:", { resident, residentError })
+
+  if (resident) {
+    console.log("[v0] Dashboard lot data:", {
+      lot_id: resident.lot_id,
+      lots: resident.lots,
+      neighborhood: resident.lots?.neighborhoods,
+    })
+  }
 
   if (!resident) {
     return null
@@ -204,9 +212,9 @@ export default async function ResidentDashboardPage({ params }: { params: Promis
         )}
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Journey Stage</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+          <CardHeader>
+            <CardTitle>Journey Stage</CardTitle>
+            <CardDescription>Your current stage</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold capitalize">{resident.journey_stage || "Not set"}</div>

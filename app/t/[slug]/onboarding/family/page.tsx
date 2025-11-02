@@ -99,6 +99,8 @@ export default async function FamilyPage({ params }: { params: Promise<{ slug: s
   // Fetch all residents in the same lot (for adding family members)
   let lotResidents: any[] = []
   if (resident.lot_id) {
+    console.log("[v0] Querying for lot residents with lot_id:", resident.lot_id, "excluding user:", resident.id)
+
     const { data: lotResidentsData, error: lotResidentsError } = await supabase
       .from("users")
       .select("id, first_name, last_name, email, family_unit_id")
@@ -106,7 +108,33 @@ export default async function FamilyPage({ params }: { params: Promise<{ slug: s
       .eq("role", "resident")
       .neq("id", resident.id)
 
-    console.log("[v0] Lot residents query result:", { lotResidentsData, lotResidentsError, lot_id: resident.lot_id })
+    console.log("[v0] Lot residents query result:", {
+      lotResidentsData,
+      lotResidentsError,
+      lot_id: resident.lot_id,
+      count: lotResidentsData?.length || 0,
+    })
+
+    if (lotResidentsData && lotResidentsData.length > 0) {
+      console.log(
+        "[v0] Found lot residents:",
+        lotResidentsData.map((r) => ({ id: r.id, name: `${r.first_name} ${r.last_name}`, email: r.email })),
+      )
+    } else {
+      console.log("[v0] No lot residents found - checking if there are ANY residents with this lot_id")
+
+      // Debug query to see if ANY users have this lot_id
+      const { data: debugData, error: debugError } = await supabase
+        .from("users")
+        .select("id, first_name, last_name, email, lot_id, role")
+        .eq("lot_id", resident.lot_id)
+
+      console.log("[v0] Debug query - ALL users with this lot_id:", {
+        debugData,
+        debugError,
+        count: debugData?.length || 0,
+      })
+    }
 
     lotResidents = lotResidentsData || []
   } else {

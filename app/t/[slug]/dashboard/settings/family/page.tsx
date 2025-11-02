@@ -80,13 +80,27 @@ export default async function FamilySettingsPage({ params }: { params: Promise<{
   let lotResidents: any[] = []
 
   if (validLotId) {
-    const { data: lotResidentsData } = await supabase
+    console.log(
+      "[v0] Family settings - Querying for lot residents with lot_id:",
+      validLotId,
+      "excluding user:",
+      resident.id,
+    )
+
+    const { data: lotResidentsData, error: lotResidentsError } = await supabase
       .from("users")
       .select("*")
       .eq("lot_id", validLotId)
       .eq("role", "resident")
       .neq("id", resident.id)
       .order("first_name")
+
+    console.log("[v0] Family settings - Lot residents query result:", {
+      lotResidentsData,
+      lotResidentsError,
+      lot_id: validLotId,
+      count: lotResidentsData?.length || 0,
+    })
 
     lotResidents = lotResidentsData || []
   }

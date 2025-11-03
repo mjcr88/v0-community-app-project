@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { createLocation } from "@/app/actions/locations"
 import { useRouter } from "next/navigation"
@@ -263,18 +263,7 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_400px]">
       <Card>
-        <CardHeader>
-          <CardTitle>Map</CardTitle>
-          <CardDescription>
-            {drawingMode === "marker" && "Click on the map to place a marker"}
-            {drawingMode === "polygon" &&
-              `Click to add points to the polygon (${polygonPoints.length} points). Click "Finish" when done.`}
-            {drawingMode === "polyline" &&
-              `Click to add points to the line (${polylinePoints.length} points). Click "Finish" when done.`}
-            {!drawingMode && "Select a drawing tool to start"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="p-6">
           <div className="relative h-[600px] w-full overflow-hidden rounded-lg border">
             <APIProvider apiKey={apiKey}>
               <Map
@@ -523,10 +512,6 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Location Details</CardTitle>
-          <CardDescription>Enter information about this location</CardDescription>
-        </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="type">Location Type</Label>

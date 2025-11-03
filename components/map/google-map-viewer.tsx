@@ -76,14 +76,14 @@ export function GoogleMapViewer({
 
   if (!apiKey) {
     return (
-      <div className="flex items-center justify-center h-[600px] bg-muted rounded-lg">
+      <div className="flex items-center justify-center h-full bg-muted rounded-lg">
         <p className="text-muted-foreground">Google Maps API key is missing</p>
       </div>
     )
   }
 
   return (
-    <div className="h-[600px] w-full rounded-lg overflow-hidden border relative">
+    <div className="h-full w-full relative">
       <APIProvider apiKey={apiKey}>
         <Map
           center={center}
@@ -194,9 +194,10 @@ export function GoogleMapViewer({
         </div>
       )}
 
+      {/* Top right: Layer selector */}
       <div className="absolute right-3 top-3 z-10">
         <Select value={mapType} onValueChange={(v) => setMapType(v as any)}>
-          <SelectTrigger className="w-10 h-10 p-0 flex items-center justify-center shadow-lg bg-secondary hover:bg-secondary/80">
+          <SelectTrigger className="w-10 h-10 p-0 flex items-center justify-center shadow-lg bg-secondary hover:bg-secondary/80 [&>svg]:hidden">
             <Layers className="h-4 w-4 text-black" />
           </SelectTrigger>
           <SelectContent>

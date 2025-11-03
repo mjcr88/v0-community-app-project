@@ -7,7 +7,7 @@ import { Plus, Locate, Layers } from "lucide-react"
 import Link from "next/link"
 import { Polygon } from "./polygon"
 import { Polyline } from "./polyline"
-import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 interface Location {
   id: string
@@ -196,18 +196,18 @@ export function GoogleMapViewer({
 
       {/* Top right: Layer selector */}
       <div className="absolute right-3 top-3 z-10">
-        <Select value={mapType} onValueChange={(v) => setMapType(v as any)}>
-          <SelectTrigger className="w-10 h-10 p-0 shadow-lg bg-secondary hover:bg-secondary/80 border-0">
-            <div className="flex items-center justify-center w-full h-full">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="secondary" size="icon" className="h-10 w-10 shadow-lg" title="Map Type">
               <Layers className="h-4 w-4 text-black" />
-            </div>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="satellite">Satellite</SelectItem>
-            <SelectItem value="terrain">Terrain</SelectItem>
-            <SelectItem value="roadmap">Street</SelectItem>
-          </SelectContent>
-        </Select>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => setMapType("satellite")}>Satellite</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setMapType("terrain")}>Terrain</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setMapType("roadmap")}>Street</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Bottom right: Locate me */}

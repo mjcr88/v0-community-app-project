@@ -53,18 +53,6 @@ export default async function MapManagementPage({ params }: { params: Promise<{ 
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Map Preview</CardTitle>
-          <CardDescription>Quick view of your community map</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[400px] rounded-lg overflow-hidden border">
-            <iframe src={`/t/${slug}/admin/map/viewer`} className="w-full h-full" title="Map Preview" />
-          </div>
-        </CardContent>
-      </Card>
-
       <div className="grid gap-6 md:grid-cols-3">
         <Card>
           <CardHeader>

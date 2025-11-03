@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Card, CardContent } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { createLocation } from "@/app/actions/locations"
@@ -16,7 +17,7 @@ import { Polygon } from "./polygon"
 import { Polyline } from "./polyline"
 import { useToast } from "@/hooks/use-toast"
 import { createBrowserClient } from "@/lib/supabase/client"
-import { geolocate } from "@/lib/geolocate" // Import geolocate function
+import { geolocate } from "@/lib/geolocate"
 
 type DrawingMode = "marker" | "polygon" | "polyline" | null
 type LatLng = { lat: number; lng: number }
@@ -262,9 +263,9 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_400px]">
-      <Card>
-        <CardContent className="p-0">
-          <div className="relative h-[600px] w-full overflow-hidden rounded-lg border">
+      <Card className="h-[calc(100vh-250px)]">
+        <CardContent className="p-0 h-full">
+          <div className="relative h-full w-full overflow-hidden rounded-lg border">
             <APIProvider apiKey={apiKey}>
               <Map
                 center={mapCenter}
@@ -484,18 +485,18 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
             </div>
 
             <div className="absolute right-3 top-3">
-              <Select value={mapType} onValueChange={(v) => setMapType(v as any)}>
-                <SelectTrigger className="w-10 h-10 p-0 flex items-center justify-center shadow-lg bg-secondary hover:bg-secondary/80 border-0">
-                  <div className="flex items-center justify-center w-full h-full">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="secondary" size="icon" className="h-10 w-10 shadow-lg" title="Map Type">
                     <Layers className="h-4 w-4 text-black" />
-                  </div>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="satellite">Satellite</SelectItem>
-                  <SelectItem value="terrain">Terrain</SelectItem>
-                  <SelectItem value="roadmap">Street</SelectItem>
-                </SelectContent>
-              </Select>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setMapType("satellite")}>Satellite</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setMapType("terrain")}>Terrain</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setMapType("roadmap")}>Street</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
             <div className="absolute bottom-3 right-3">

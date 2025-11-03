@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation"
 import { createServerClient } from "@/lib/supabase/server"
-import { MapEditor } from "@/components/map/map-editor"
+import { GoogleMapEditor } from "@/components/map/google-map-editor"
 
 export default async function CreateLocationPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
@@ -43,7 +43,7 @@ export default async function CreateLocationPage({ params }: { params: Promise<{
     redirect(`/t/${slug}`)
   }
 
-  console.log("[v0] All checks passed, rendering MapEditor")
+  console.log("[v0] All checks passed, rendering GoogleMapEditor")
 
   return (
     <div className="container mx-auto p-6">
@@ -51,7 +51,7 @@ export default async function CreateLocationPage({ params }: { params: Promise<{
         <h1 className="text-3xl font-bold">Add Location</h1>
         <p className="text-muted-foreground">Draw a facility, lot boundary, or walking path on the map</p>
       </div>
-      <MapEditor tenantSlug={slug} tenantId={tenant.id} />
+      <GoogleMapEditor tenantSlug={slug} tenantId={tenant.id} />
     </div>
   )
 }

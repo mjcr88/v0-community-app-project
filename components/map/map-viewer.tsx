@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Map, Marker, Overlay } from "pigeon-maps"
 import { Button } from "@/components/ui/button"
-import { Plus, Locate } from "lucide-react"
+import { Plus, Locate, Layers } from "lucide-react"
 import Link from "next/link"
 
 interface Location {
@@ -30,10 +30,16 @@ function esriSatelliteProvider(x: number, y: number, z: number) {
   return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`
 }
 
+function openTopoMapProvider(x: number, y: number, z: number) {
+  // OpenTopoMap - free topographic/terrain tiles
+  return `https://tile.opentopomap.org/${z}/${x}/${y}.png`
+}
+
 export function MapViewer({ tenantSlug, initialLocations, mapCenter, mapZoom = 15, isAdmin = false }: MapViewerProps) {
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null)
   const [center, setCenter] = useState<[number, number]>([mapCenter?.lat || 9.7489, mapCenter?.lng || -84.0907])
   const [zoom, setZoom] = useState(mapZoom)
+  const [tileLayer, setTileLayer] = useState<"satellite" | "terrain">("satellite")
 
   const handleLocate = () => {
     if (navigator.geolocation) {
@@ -49,12 +55,16 @@ export function MapViewer({ tenantSlug, initialLocations, mapCenter, mapZoom = 1
     }
   }
 
+  const toggleTileLayer = () => {
+    setTileLayer((prev) => (prev === "satellite" ? "terrain" : "satellite"))
+  }
+
   const facilityMarkers = initialLocations.filter((loc) => loc.type === "facility" && loc.coordinates)
 
   return (
     <div className="relative w-full h-full">
       <Map
-        provider={esriSatelliteProvider}
+        provider={tileLayer === "satellite" ? esriSatelliteProvider : openTopoMapProvider}
         center={center}
         zoom={zoom}
         onBoundsChanged={({ center: newCenter, zoom: newZoom }) => {
@@ -92,12 +102,20 @@ export function MapViewer({ tenantSlug, initialLocations, mapCenter, mapZoom = 1
         )}
       </Map>
 
-      {/* Location Button */}
+      <Button
+        onClick={toggleTileLayer}
+        size="icon"
+        variant="secondary"
+        className="absolute top-4 right-16 z-[1000] shadow-lg"
+        title={`Switch to ${tileLayer === "satellite" ? "terrain" : "satellite"} view`}
+      >
+        <Layers className="h-4 w-4" />
+      </Button>
+
       <Button onClick={handleLocate} size="icon" className="absolute top-4 right-4 z-[1000] shadow-lg">
         <Locate className="h-4 w-4" />
       </Button>
 
-      {/* Add Location Button (Admin only) */}
       {isAdmin && (
         <div className="absolute top-4 left-4 z-[1000]">
           <Button asChild size="icon" className="shadow-lg">
@@ -108,7 +126,6 @@ export function MapViewer({ tenantSlug, initialLocations, mapCenter, mapZoom = 1
         </div>
       )}
 
-      {/* Legend */}
       <div className="absolute bottom-4 right-4 bg-white p-4 rounded-lg shadow-lg z-[1000]">
         <h3 className="font-semibold text-sm mb-2">Legend</h3>
         <div className="space-y-1 text-xs">

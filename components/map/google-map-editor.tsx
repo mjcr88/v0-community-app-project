@@ -250,6 +250,24 @@ export function GoogleMapEditor({ tenantSlug, tenantId, communityBoundary }: Goo
     }
   }
 
+  const getCommunityBoundaryPaths = () => {
+    if (!communityBoundary || communityBoundary.length < 3) return null
+
+    // Outer bounds (covers entire world)
+    const worldBounds = [
+      { lat: 85, lng: -180 },
+      { lat: 85, lng: 180 },
+      { lat: -85, lng: 180 },
+      { lat: -85, lng: -180 },
+      { lat: 85, lng: -180 },
+    ]
+
+    // Inner bounds (community boundary - reversed to create a hole)
+    const communityPath = communityBoundary.map((coord) => ({ lat: coord[0], lng: coord[1] })).reverse()
+
+    return [worldBounds, communityPath]
+  }
+
   if (!apiKey) {
     return (
       <Alert variant="destructive">
@@ -280,14 +298,14 @@ export function GoogleMapEditor({ tenantSlug, tenantId, communityBoundary }: Goo
               >
                 <MapClickHandler drawingMode={drawingMode} onMapClick={handleMapClick} />
 
-                {communityBoundary && communityBoundary.length >= 3 && (
+                {getCommunityBoundaryPaths() && (
                   <Polygon
-                    paths={communityBoundary.map((coord) => ({ lat: coord[0], lng: coord[1] }))}
-                    strokeColor="#000000"
-                    strokeOpacity={0.1}
-                    strokeWeight={1}
+                    paths={getCommunityBoundaryPaths()!}
+                    strokeColor="#ff6b35"
+                    strokeOpacity={0.4}
+                    strokeWeight={2}
                     fillColor="#000000"
-                    fillOpacity={0}
+                    fillOpacity={0.25}
                     clickable={false}
                   />
                 )}

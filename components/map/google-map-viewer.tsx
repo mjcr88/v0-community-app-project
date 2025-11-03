@@ -1,12 +1,13 @@
 "use client"
 
 import { useState } from "react"
-import { APIProvider, Map, AdvancedMarker, InfoWindow } from "@vis.gl/react-google-maps"
+import { APIProvider, Map, Marker, InfoWindow } from "@vis.gl/react-google-maps"
 import { Button } from "@/components/ui/button"
-import { Plus, Locate, Layers } from "lucide-react"
+import { Plus, Locate, Layers, ZoomIn, ZoomOut } from "lucide-react"
 import Link from "next/link"
 import { Polygon } from "./polygon"
 import { Polyline } from "./polyline"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface Location {
   id: string
@@ -91,20 +92,20 @@ export function GoogleMapViewer({
 
   return (
     <div className="relative w-full h-full">
-      <div className="h-[600px] w-full">
+      <div className="h-[600px] w-full rounded-lg overflow-hidden border">
         <APIProvider apiKey={apiKey}>
           <Map
             center={center}
             zoom={zoom}
             mapTypeId={mapType}
             gestureHandling="greedy"
-            disableDefaultUI={false}
+            disableDefaultUI={true}
             onCenterChanged={(e) => setCenter(e.detail.center)}
             onZoomChanged={(e) => setZoom(e.detail.zoom)}
           >
             {/* Facility Markers */}
             {facilityMarkers.map((location) => (
-              <AdvancedMarker
+              <Marker
                 key={location.id}
                 position={location.coordinates!}
                 onClick={() => setSelectedLocation(location)}
@@ -178,31 +179,55 @@ export function GoogleMapViewer({
         </APIProvider>
       </div>
 
-      <Button
-        onClick={toggleMapType}
-        size="icon"
-        variant="secondary"
-        className="absolute top-4 right-16 z-[1000] shadow-lg"
-        title={`Current: ${mapType}. Click to switch.`}
-      >
-        <Layers className="h-4 w-4" />
-      </Button>
-
-      <Button onClick={handleLocate} size="icon" className="absolute top-4 right-4 z-[1000] shadow-lg">
-        <Locate className="h-4 w-4" />
-      </Button>
-
       {isAdmin && (
-        <div className="absolute top-4 left-4 z-[1000]">
-          <Button asChild size="icon" className="shadow-lg">
+        <div className="absolute top-3 left-3 z-[1000]">
+          <Button asChild size="icon" className="shadow-lg h-10 w-10">
             <Link href={`/t/${tenantSlug}/admin/map/locations/create`}>
-              <Plus className="h-4 w-4" />
+              <Plus className="h-5 w-5" />
             </Link>
           </Button>
         </div>
       )}
 
-      <div className="absolute bottom-4 right-4 bg-white p-4 rounded-lg shadow-lg z-[1000]">
+      <div className="absolute top-3 right-3 z-[1000] flex flex-col gap-2">
+        <Button
+          variant="secondary"
+          size="icon"
+          onClick={() => setZoom(zoom + 1)}
+          className="h-10 w-10 shadow-lg"
+          title="Zoom In"
+        >
+          <ZoomIn className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="secondary"
+          size="icon"
+          onClick={() => setZoom(zoom - 1)}
+          className="h-10 w-10 shadow-lg"
+          title="Zoom Out"
+        >
+          <ZoomOut className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <div className="absolute bottom-3 left-3 z-[1000] flex gap-2">
+        <Select value={mapType} onValueChange={(v) => setMapType(v as any)}>
+          <SelectTrigger className="w-32 shadow-lg bg-background">
+            <Layers className="mr-2 h-4 w-4" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="satellite">Satellite</SelectItem>
+            <SelectItem value="terrain">Terrain</SelectItem>
+            <SelectItem value="roadmap">Street</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button variant="secondary" size="icon" onClick={handleLocate} className="shadow-lg" title="Locate Me">
+          <Locate className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <div className="absolute bottom-3 right-3 bg-background p-3 rounded-lg shadow-lg z-[1000] border">
         <h3 className="font-semibold text-sm mb-2">Legend</h3>
         <div className="space-y-1 text-xs">
           <div className="flex items-center gap-2">
@@ -214,7 +239,7 @@ export function GoogleMapViewer({
             <span>Lot Boundaries</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-0.5 bg-amber-500 border-dashed" />
+            <div className="w-8 h-0.5 bg-amber-500" />
             <span>Walking Paths</span>
           </div>
         </div>

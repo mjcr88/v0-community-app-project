@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { APIProvider, Map, AdvancedMarker, useMap } from "@vis.gl/react-google-maps"
+import { APIProvider, Map, Marker, useMap } from "@vis.gl/react-google-maps"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -222,7 +222,7 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
                 <MapClickHandler drawingMode={drawingMode} onMapClick={handleMapClick} />
 
                 {markerPosition && (
-                  <AdvancedMarker
+                  <Marker
                     position={markerPosition}
                     draggable
                     onDragEnd={(e) => {
@@ -235,7 +235,7 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
                 )}
 
                 {polygonPoints.map((point, index) => (
-                  <AdvancedMarker key={`polygon-${index}`} position={point} />
+                  <Marker key={`polygon-${index}`} position={point} />
                 ))}
 
                 {polygonPoints.length > 2 && (
@@ -250,7 +250,7 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
                 )}
 
                 {polylinePoints.map((point, index) => (
-                  <AdvancedMarker key={`polyline-${index}`} position={point} />
+                  <Marker key={`polyline-${index}`} position={point} />
                 ))}
 
                 {polylinePoints.length > 1 && (

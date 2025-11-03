@@ -35,11 +35,16 @@ function openTopoMapProvider(x: number, y: number, z: number) {
   return `https://tile.opentopomap.org/${z}/${x}/${y}.png`
 }
 
+function openStreetMapProvider(x: number, y: number, z: number) {
+  // OpenStreetMap - free street maps similar to Google Maps
+  return `https://tile.openstreetmap.org/${z}/${x}/${y}.png`
+}
+
 export function MapViewer({ tenantSlug, initialLocations, mapCenter, mapZoom = 15, isAdmin = false }: MapViewerProps) {
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null)
   const [center, setCenter] = useState<[number, number]>([mapCenter?.lat || 9.7489, mapCenter?.lng || -84.0907])
   const [zoom, setZoom] = useState(mapZoom)
-  const [tileLayer, setTileLayer] = useState<"satellite" | "terrain">("satellite")
+  const [tileLayer, setTileLayer] = useState<"satellite" | "terrain" | "street">("satellite")
 
   const handleLocate = () => {
     if (navigator.geolocation) {
@@ -56,7 +61,11 @@ export function MapViewer({ tenantSlug, initialLocations, mapCenter, mapZoom = 1
   }
 
   const toggleTileLayer = () => {
-    setTileLayer((prev) => (prev === "satellite" ? "terrain" : "satellite"))
+    setTileLayer((prev) => {
+      if (prev === "satellite") return "terrain"
+      if (prev === "terrain") return "street"
+      return "satellite"
+    })
   }
 
   const facilityMarkers = initialLocations.filter((loc) => loc.type === "facility" && loc.coordinates)
@@ -82,10 +91,16 @@ export function MapViewer({ tenantSlug, initialLocations, mapCenter, mapZoom = 1
     return [sum[0] / coordinates.length, sum[1] / coordinates.length]
   }
 
+  const getTileProvider = () => {
+    if (tileLayer === "satellite") return esriSatelliteProvider
+    if (tileLayer === "terrain") return openTopoMapProvider
+    return openStreetMapProvider
+  }
+
   return (
     <div className="relative w-full h-full">
       <Map
-        provider={tileLayer === "satellite" ? esriSatelliteProvider : openTopoMapProvider}
+        provider={getTileProvider()}
         center={center}
         zoom={zoom}
         onBoundsChanged={({ center: newCenter, zoom: newZoom }) => {
@@ -243,7 +258,7 @@ export function MapViewer({ tenantSlug, initialLocations, mapCenter, mapZoom = 1
         size="icon"
         variant="secondary"
         className="absolute top-4 right-16 z-[1000] shadow-lg"
-        title={`Switch to ${tileLayer === "satellite" ? "terrain" : "satellite"} view`}
+        title={`Current: ${tileLayer}. Click to switch.`}
       >
         <Layers className="h-4 w-4" />
       </Button>

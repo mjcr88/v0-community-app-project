@@ -1,18 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import dynamic from "next/dynamic"
+import { Map, Marker, Overlay } from "pigeon-maps"
 import { Button } from "@/components/ui/button"
 import { Plus, Locate } from "lucide-react"
 import Link from "next/link"
-
-const MapContainer = dynamic(() => import("react-leaflet").then((mod) => mod.MapContainer), { ssr: false })
-const TileLayer = dynamic(() => import("react-leaflet").then((mod) => mod.TileLayer), { ssr: false })
-const Marker = dynamic(() => import("react-leaflet").then((mod) => mod.Marker), { ssr: false })
-const Popup = dynamic(() => import("react-leaflet").then((mod) => mod.Popup), { ssr: false })
-const Polygon = dynamic(() => import("react-leaflet").then((mod) => mod.Polygon), { ssr: false })
-const Polyline = dynamic(() => import("react-leaflet").then((mod) => mod.Polyline), { ssr: false })
-const useMap = dynamic(() => import("react-leaflet").then((mod) => mod.useMap), { ssr: false })
 
 interface Location {
   id: string
@@ -33,25 +25,40 @@ interface MapViewerProps {
   isAdmin?: boolean
 }
 
-function LocationButton() {
-  const map = useMap()
+function mapboxProvider(x: number, y: number, z: number, dpr?: number) {
+  const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+  return `https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/tiles/${z}/${x}/${y}${dpr && dpr >= 2 ? "@2x" : ""}?access_token=${token}`
+}
 
-  const handleLocate = () => {
-    map.locate({ setView: true, maxZoom: 16 })
-  }
+function latLngToPixel(
+  lat: number,
+  lng: number,
+  center: [number, number],
+  zoom: number,
+  mapWidth: number,
+  mapHeight: number,
+): [number, number] {
+  const scale = (256 * Math.pow(2, zoom)) / (2 * Math.PI)
 
-  return (
-    <Button onClick={handleLocate} size="icon" className="absolute top-4 right-4 z-[1000] shadow-lg">
-      <Locate className="h-4 w-4" />
-    </Button>
-  )
+  const centerX = (center[1] + 180) * (scale / 180)
+  const centerY = (Math.log(Math.tan(Math.PI / 4 + (center[0] * Math.PI) / 360)) * scale) / Math.PI
+
+  const pointX = (lng + 180) * (scale / 180)
+  const pointY = (Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360)) * scale) / Math.PI
+
+  const x = mapWidth / 2 + (pointX - centerX)
+  const y = mapHeight / 2 + (centerY - pointY)
+
+  return [x, y]
 }
 
 export function MapViewer({ tenantSlug, initialLocations, mapCenter, mapZoom = 15, isAdmin = false }: MapViewerProps) {
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null)
+  const [center, setCenter] = useState<[number, number]>([mapCenter?.lat || 9.7489, mapCenter?.lng || -84.0907])
+  const [zoom, setZoom] = useState(mapZoom)
+  const [mapDimensions, setMapDimensions] = useState({ width: 800, height: 600 })
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
-  const center: [number, number] = [mapCenter?.lat || 9.7489, mapCenter?.lng || -84.0907]
 
   if (!token) {
     return (
@@ -61,86 +68,128 @@ export function MapViewer({ tenantSlug, initialLocations, mapCenter, mapZoom = 1
     )
   }
 
+  const handleLocate = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setCenter([position.coords.latitude, position.coords.longitude])
+          setZoom(16)
+        },
+        (error) => {
+          console.error("Error getting location:", error)
+        },
+      )
+    }
+  }
+
   return (
     <div className="relative w-full h-full">
-      <MapContainer center={center} zoom={mapZoom} style={{ width: "100%", height: "100%" }} className="z-0">
-        <TileLayer
-          attribution='&copy; <a href="https://www.mapbox.com/">Mapbox</a>'
-          url={`https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/tiles/{z}/{x}/{y}?access_token=${token}`}
-          tileSize={512}
-          zoomOffset={-1}
-        />
+      <Map
+        provider={mapboxProvider}
+        center={center}
+        zoom={zoom}
+        onBoundsChanged={({ center: newCenter, zoom: newZoom, bounds, initial }) => {
+          if (!initial) {
+            setCenter(newCenter)
+            setZoom(newZoom)
+            // Update map dimensions from bounds
+            const width = bounds.ne[1] - bounds.sw[1]
+            const height = bounds.ne[0] - bounds.sw[0]
+            setMapDimensions({ width: Math.abs(width * 1000), height: Math.abs(height * 1000) })
+          }
+        }}
+        height={typeof window !== "undefined" ? window.innerHeight : 600}
+        defaultWidth={typeof window !== "undefined" ? window.innerWidth : 800}
+      >
+        {initialLocations
+          .filter((loc) => loc.type === "lot" && loc.boundary_coordinates && loc.boundary_coordinates.length > 0)
+          .map((location) => {
+            const coords = location.boundary_coordinates!
+            const points = coords.map(([lat, lng]) =>
+              latLngToPixel(lat, lng, center, zoom, mapDimensions.width, mapDimensions.height),
+            )
 
-        {/* Facility Markers */}
+            return (
+              <Overlay key={`lot-${location.id}`} anchor={coords[0]} offset={[0, 0]}>
+                <svg
+                  width={mapDimensions.width}
+                  height={mapDimensions.height}
+                  style={{ position: "absolute", pointerEvents: "none" }}
+                >
+                  <polygon
+                    points={points.map(([x, y]) => `${x},${y}`).join(" ")}
+                    fill="#3b82f6"
+                    fillOpacity="0.2"
+                    stroke="#3b82f6"
+                    strokeWidth="2"
+                  />
+                </svg>
+              </Overlay>
+            )
+          })}
+
+        {initialLocations
+          .filter((loc) => loc.type === "walking_path" && loc.path_coordinates && loc.path_coordinates.length > 0)
+          .map((location) => {
+            const coords = location.path_coordinates!
+            const points = coords.map(([lat, lng]) =>
+              latLngToPixel(lat, lng, center, zoom, mapDimensions.width, mapDimensions.height),
+            )
+
+            return (
+              <Overlay key={`path-${location.id}`} anchor={coords[0]} offset={[0, 0]}>
+                <svg
+                  width={mapDimensions.width}
+                  height={mapDimensions.height}
+                  style={{ position: "absolute", pointerEvents: "none" }}
+                >
+                  <polyline
+                    points={points.map(([x, y]) => `${x},${y}`).join(" ")}
+                    fill="none"
+                    stroke="#f59e0b"
+                    strokeWidth="3"
+                    strokeDasharray="10, 10"
+                  />
+                </svg>
+              </Overlay>
+            )
+          })}
+
         {initialLocations
           .filter((loc) => loc.type === "facility" && loc.coordinates)
           .map((location) => (
             <Marker
               key={location.id}
-              position={[location.coordinates!.lat, location.coordinates!.lng]}
-              eventHandlers={{
-                click: () => setSelectedLocation(location),
-              }}
-            >
-              <Popup>
-                <div className="text-sm">
-                  <h3 className="font-semibold">
-                    {location.icon} {location.name}
-                  </h3>
-                  {location.description && <p className="text-gray-600 mt-1">{location.description}</p>}
-                </div>
-              </Popup>
-            </Marker>
+              anchor={[location.coordinates!.lat, location.coordinates!.lng]}
+              color="#22c55e"
+              onClick={() => setSelectedLocation(location)}
+            />
           ))}
 
-        {/* Lot Boundaries */}
-        {initialLocations
-          .filter((loc) => loc.type === "lot" && loc.boundary_coordinates)
-          .map((location) => (
-            <Polygon
-              key={`lot-${location.id}`}
-              positions={location.boundary_coordinates!}
-              pathOptions={{
-                color: "#3b82f6",
-                fillColor: "#3b82f6",
-                fillOpacity: 0.2,
-                weight: 2,
-              }}
-            >
-              <Popup>
-                <div className="text-sm">
-                  <h3 className="font-semibold">{location.name}</h3>
-                  {location.description && <p className="text-gray-600 mt-1">{location.description}</p>}
-                </div>
-              </Popup>
-            </Polygon>
-          ))}
+        {selectedLocation && selectedLocation.coordinates && (
+          <Overlay anchor={[selectedLocation.coordinates.lat, selectedLocation.coordinates.lng]} offset={[0, -30]}>
+            <div className="bg-white p-3 rounded-lg shadow-lg max-w-xs relative">
+              <button
+                onClick={() => setSelectedLocation(null)}
+                className="absolute top-1 right-1 text-gray-500 hover:text-gray-700"
+              >
+                ×
+              </button>
+              <h3 className="font-semibold text-sm">
+                {selectedLocation.icon} {selectedLocation.name}
+              </h3>
+              {selectedLocation.description && (
+                <p className="text-gray-600 text-xs mt-1">{selectedLocation.description}</p>
+              )}
+            </div>
+          </Overlay>
+        )}
+      </Map>
 
-        {/* Walking Paths */}
-        {initialLocations
-          .filter((loc) => loc.type === "walking_path" && loc.path_coordinates)
-          .map((location) => (
-            <Polyline
-              key={`path-${location.id}`}
-              positions={location.path_coordinates!}
-              pathOptions={{
-                color: "#f59e0b",
-                weight: 3,
-                dashArray: "10, 10",
-              }}
-            >
-              <Popup>
-                <div className="text-sm">
-                  <h3 className="font-semibold">{location.name}</h3>
-                  {location.description && <p className="text-gray-600 mt-1">{location.description}</p>}
-                </div>
-              </Popup>
-            </Polyline>
-          ))}
-
-        {/* Location Button */}
-        <LocationButton />
-      </MapContainer>
+      {/* Location Button */}
+      <Button onClick={handleLocate} size="icon" className="absolute top-4 right-4 z-[1000] shadow-lg">
+        <Locate className="h-4 w-4" />
+      </Button>
 
       {/* Add Location Button (Admin only) */}
       {isAdmin && (

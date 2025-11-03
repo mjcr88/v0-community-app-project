@@ -1,11 +1,18 @@
 "use client"
 
-import { useState, useRef } from "react"
-import Map, { Marker, Source, Layer, NavigationControl, ScaleControl, GeolocateControl } from "react-map-gl/maplibre"
-import type { MapRef } from "react-map-gl/maplibre"
+import { useState } from "react"
+import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
-import { Plus } from "lucide-react"
+import { Plus, Locate } from "lucide-react"
 import Link from "next/link"
+
+const MapContainer = dynamic(() => import("react-leaflet").then((mod) => mod.MapContainer), { ssr: false })
+const TileLayer = dynamic(() => import("react-leaflet").then((mod) => mod.TileLayer), { ssr: false })
+const Marker = dynamic(() => import("react-leaflet").then((mod) => mod.Marker), { ssr: false })
+const Popup = dynamic(() => import("react-leaflet").then((mod) => mod.Popup), { ssr: false })
+const Polygon = dynamic(() => import("react-leaflet").then((mod) => mod.Polygon), { ssr: false })
+const Polyline = dynamic(() => import("react-leaflet").then((mod) => mod.Polyline), { ssr: false })
+const useMap = dynamic(() => import("react-leaflet").then((mod) => mod.useMap), { ssr: false })
 
 interface Location {
   id: string
@@ -26,18 +33,25 @@ interface MapViewerProps {
   isAdmin?: boolean
 }
 
+function LocationButton() {
+  const map = useMap()
+
+  const handleLocate = () => {
+    map.locate({ setView: true, maxZoom: 16 })
+  }
+
+  return (
+    <Button onClick={handleLocate} size="icon" className="absolute top-4 right-4 z-[1000] shadow-lg">
+      <Locate className="h-4 w-4" />
+    </Button>
+  )
+}
+
 export function MapViewer({ tenantSlug, initialLocations, mapCenter, mapZoom = 15, isAdmin = false }: MapViewerProps) {
-  const mapRef = useRef<MapRef>(null)
-
-  const [viewState, setViewState] = useState({
-    longitude: mapCenter?.lng || -84.0907, // Default to Costa Rica
-    latitude: mapCenter?.lat || 9.7489,
-    zoom: mapZoom,
-  })
-
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null)
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+  const center: [number, number] = [mapCenter?.lat || 9.7489, mapCenter?.lng || -84.0907]
 
   if (!token) {
     return (
@@ -49,18 +63,13 @@ export function MapViewer({ tenantSlug, initialLocations, mapCenter, mapZoom = 1
 
   return (
     <div className="relative w-full h-full">
-      <Map
-        {...viewState}
-        onMove={(evt) => setViewState(evt.viewState)}
-        mapboxAccessToken={token}
-        style={{ width: "100%", height: "100%" }}
-        mapStyle="mapbox://styles/mapbox/satellite-streets-v12"
-        ref={mapRef}
-      >
-        {/* Navigation Controls */}
-        <NavigationControl position="top-right" />
-        <ScaleControl position="bottom-left" />
-        <GeolocateControl position="top-right" trackUserLocation showUserHeading />
+      <MapContainer center={center} zoom={mapZoom} style={{ width: "100%", height: "100%" }} className="z-0">
+        <TileLayer
+          attribution='&copy; <a href="https://www.mapbox.com/">Mapbox</a>'
+          url={`https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/tiles/{z}/{x}/{y}?access_token=${token}`}
+          tileSize={512}
+          zoomOffset={-1}
+        />
 
         {/* Facility Markers */}
         {initialLocations
@@ -68,19 +77,19 @@ export function MapViewer({ tenantSlug, initialLocations, mapCenter, mapZoom = 1
           .map((location) => (
             <Marker
               key={location.id}
-              longitude={location.coordinates!.lng}
-              latitude={location.coordinates!.lat}
-              anchor="bottom"
-              onClick={(e) => {
-                e.originalEvent.stopPropagation()
-                setSelectedLocation(location)
+              position={[location.coordinates!.lat, location.coordinates!.lng]}
+              eventHandlers={{
+                click: () => setSelectedLocation(location),
               }}
             >
-              <div className="cursor-pointer transform hover:scale-110 transition-transform">
-                <div className="bg-green-500 rounded-full p-2 shadow-lg">
-                  <span className="text-white text-xl">{location.icon || "📍"}</span>
+              <Popup>
+                <div className="text-sm">
+                  <h3 className="font-semibold">
+                    {location.icon} {location.name}
+                  </h3>
+                  {location.description && <p className="text-gray-600 mt-1">{location.description}</p>}
                 </div>
-              </div>
+              </Popup>
             </Marker>
           ))}
 
@@ -88,69 +97,54 @@ export function MapViewer({ tenantSlug, initialLocations, mapCenter, mapZoom = 1
         {initialLocations
           .filter((loc) => loc.type === "lot" && loc.boundary_coordinates)
           .map((location) => (
-            <Source
+            <Polygon
               key={`lot-${location.id}`}
-              type="geojson"
-              data={{
-                type: "Feature",
-                properties: { name: location.name },
-                geometry: {
-                  type: "Polygon",
-                  coordinates: [location.boundary_coordinates!.map((coord) => [coord[1], coord[0]])],
-                },
+              positions={location.boundary_coordinates!}
+              pathOptions={{
+                color: "#3b82f6",
+                fillColor: "#3b82f6",
+                fillOpacity: 0.2,
+                weight: 2,
               }}
             >
-              <Layer
-                id={`lot-${location.id}-fill`}
-                type="fill"
-                paint={{
-                  "fill-color": "#3b82f6",
-                  "fill-opacity": 0.2,
-                }}
-              />
-              <Layer
-                id={`lot-${location.id}-outline`}
-                type="line"
-                paint={{
-                  "line-color": "#3b82f6",
-                  "line-width": 2,
-                }}
-              />
-            </Source>
+              <Popup>
+                <div className="text-sm">
+                  <h3 className="font-semibold">{location.name}</h3>
+                  {location.description && <p className="text-gray-600 mt-1">{location.description}</p>}
+                </div>
+              </Popup>
+            </Polygon>
           ))}
 
         {/* Walking Paths */}
         {initialLocations
           .filter((loc) => loc.type === "walking_path" && loc.path_coordinates)
           .map((location) => (
-            <Source
+            <Polyline
               key={`path-${location.id}`}
-              type="geojson"
-              data={{
-                type: "Feature",
-                properties: { name: location.name },
-                geometry: {
-                  type: "LineString",
-                  coordinates: location.path_coordinates!.map((coord) => [coord[1], coord[0]]),
-                },
+              positions={location.path_coordinates!}
+              pathOptions={{
+                color: "#f59e0b",
+                weight: 3,
+                dashArray: "10, 10",
               }}
             >
-              <Layer
-                id={`path-${location.id}`}
-                type="line"
-                paint={{
-                  "line-color": "#f59e0b",
-                  "line-width": 3,
-                  "line-dasharray": [2, 2],
-                }}
-              />
-            </Source>
+              <Popup>
+                <div className="text-sm">
+                  <h3 className="font-semibold">{location.name}</h3>
+                  {location.description && <p className="text-gray-600 mt-1">{location.description}</p>}
+                </div>
+              </Popup>
+            </Polyline>
           ))}
-      </Map>
+
+        {/* Location Button */}
+        <LocationButton />
+      </MapContainer>
 
       {/* Add Location Button (Admin only) */}
       {isAdmin && (
-        <div className="absolute top-4 left-4">
+        <div className="absolute top-4 left-4 z-[1000]">
           <Button asChild size="icon" className="shadow-lg">
             <Link href={`/t/${tenantSlug}/admin/map/locations/create`}>
               <Plus className="h-4 w-4" />
@@ -160,7 +154,7 @@ export function MapViewer({ tenantSlug, initialLocations, mapCenter, mapZoom = 1
       )}
 
       {/* Legend */}
-      <div className="absolute bottom-4 right-4 bg-white p-4 rounded-lg shadow-lg">
+      <div className="absolute bottom-4 right-4 bg-white p-4 rounded-lg shadow-lg z-[1000]">
         <h3 className="font-semibold text-sm mb-2">Legend</h3>
         <div className="space-y-1 text-xs">
           <div className="flex items-center gap-2">
@@ -177,22 +171,6 @@ export function MapViewer({ tenantSlug, initialLocations, mapCenter, mapZoom = 1
           </div>
         </div>
       </div>
-
-      {/* Location Popup */}
-      {selectedLocation && (
-        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-white p-4 rounded-lg shadow-xl max-w-sm">
-          <button
-            onClick={() => setSelectedLocation(null)}
-            className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
-          >
-            ✕
-          </button>
-          <h3 className="font-semibold text-lg mb-1">
-            {selectedLocation.icon} {selectedLocation.name}
-          </h3>
-          {selectedLocation.description && <p className="text-sm text-gray-600">{selectedLocation.description}</p>}
-        </div>
-      )}
     </div>
   )
 }

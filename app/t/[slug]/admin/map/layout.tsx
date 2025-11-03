@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import "maplibre-gl/dist/maplibre-gl.css"
+import "leaflet/dist/leaflet.css"
 
 export default function MapLayout({ children }: { children: ReactNode }) {
   return <>{children}</>

@@ -106,7 +106,7 @@ importers:
         version: 2.0.0
       '@vis.gl/react-google-maps':
         specifier: latest
-        version: 1.7.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+        version: 1.7.1(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       autoprefixer:
         specifier: ^10.4.20
         version: 10.4.20(postcss@8.5.0)
@@ -129,10 +129,10 @@ importers:
         specifier: latest
         version: 0.5.0
       google-maps:
-        specifier: latest
+        specifier: 4.3.3
         version: 4.3.3
       googlemaps:
-        specifier: latest
+        specifier: 1.12.0
         version: 1.12.0
       input-otp:
         specifier: 1.4.1
@@ -1597,8 +1597,8 @@ packages:
     resolution: {integrity: sha512-oAj7Pdy83YKSwIaMFoM7zFeLYWRc+qUpW3PiDSblxQMnGFb43qs4bmfq7dr/+JIfwhs6PTwe1o2YBwKhyjWxXw==}
     engines: {node: '>=20.0.0'}
 
-  '@vis.gl/react-google-maps@1.7.0':
-    resolution: {integrity: sha512-8lUmsQp++iGYkEitWXIz/Ds/dPB+/NcssyNjhIqWtZpNL1WUiaJMWGmBktoKT2vyxT0ZXFzE/Rg/xPLklJGYHw==}
+  '@vis.gl/react-google-maps@1.7.1':
+    resolution: {integrity: sha512-F/GJzJyri7Jqf+bkLNxoi2RcH2hCIo1I3//PyiILqQzdzglMoqZVO1DLXlHPifNdebk1/zib6dMJA3i73nwmuQ==}
     peerDependencies:
       react: '>=16.8.0 || ^19.0 || ^19.0.0-rc'
       react-dom: '>=16.8.0 || ^19.0 || ^19.0.0-rc'
@@ -3745,7 +3745,7 @@ snapshots:
       throttleit: 2.1.0
       undici: 5.29.0
 
-  '@vis.gl/react-google-maps@1.7.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0)':
+  '@vis.gl/react-google-maps@1.7.1(react-dom@19.2.0(react@19.2.0))(react@19.2.0)':
     dependencies:
       '@types/google.maps': 3.58.1
       fast-deep-equal: 3.1.3

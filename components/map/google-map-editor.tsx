@@ -262,8 +262,7 @@ export function GoogleMapEditor({ tenantSlug, tenantId, communityBoundary }: Goo
       { lat: 85, lng: -180 },
     ]
 
-    // Inner bounds (community boundary) - keep original order for proper hole
-    const communityPath = communityBoundary.map((coord) => ({ lat: coord[0], lng: coord[1] }))
+    const communityPath = communityBoundary.map((coord) => ({ lat: coord[0], lng: coord[1] })).reverse()
 
     return [worldBounds, communityPath]
   }
@@ -305,7 +304,7 @@ export function GoogleMapEditor({ tenantSlug, tenantId, communityBoundary }: Goo
                     strokeOpacity={0.05}
                     strokeWeight={1}
                     fillColor="#000000"
-                    fillOpacity={0.25}
+                    fillOpacity={0.4}
                     clickable={false}
                   />
                 )}

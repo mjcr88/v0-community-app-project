@@ -262,10 +262,10 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_400px] h-[calc(100vh-220px)]">
-      <Card className="h-full flex flex-col min-h-0">
-        <CardContent className="p-0 h-full flex-1 min-h-0">
-          <div className="relative h-full w-full overflow-hidden rounded-lg border">
+    <div className="grid gap-6 lg:grid-cols-[1fr_400px]">
+      <Card className="min-h-[600px]">
+        <CardContent className="p-1.5 h-full">
+          <div className="relative h-full w-full overflow-hidden rounded-lg">
             <APIProvider apiKey={apiKey}>
               <Map
                 center={mapCenter}

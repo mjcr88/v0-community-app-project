@@ -28,7 +28,13 @@ interface MapViewerProps {
 function mapboxProvider(x: number, y: number, z: number, dpr?: number) {
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
   const retina = dpr && dpr >= 2 ? "@2x" : ""
-  return `https://api.mapbox.com/v4/mapbox.satellite/${z}/${x}/${y}${retina}.png?access_token=${token}`
+  const url = `https://api.mapbox.com/v4/mapbox.satellite/${z}/${x}/${y}${retina}.png?access_token=${token}`
+
+  console.log("[v0] Mapbox tile URL:", url)
+  console.log("[v0] Token available:", !!token)
+  console.log("[v0] Tile coords:", { x, y, z, dpr })
+
+  return url
 }
 
 export function MapViewer({ tenantSlug, initialLocations, mapCenter, mapZoom = 15, isAdmin = false }: MapViewerProps) {
@@ -37,6 +43,9 @@ export function MapViewer({ tenantSlug, initialLocations, mapCenter, mapZoom = 1
   const [zoom, setZoom] = useState(mapZoom)
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+
+  console.log("[v0] MapViewer token check:", !!token)
+  console.log("[v0] Token value:", token?.substring(0, 10) + "...")
 
   if (!token) {
     return (

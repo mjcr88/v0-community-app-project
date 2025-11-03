@@ -8,10 +8,10 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { createLocation } from "@/app/actions/locations"
 import { useRouter } from "next/navigation"
-import { Loader2, MapPin, Pentagon, Route } from "lucide-react"
-import type { google } from "google-maps"
+import { Loader2, MapPin, Pentagon, Route, Locate, AlertCircle } from "lucide-react"
 
 type DrawingMode = "marker" | "polygon" | "polyline" | null
 type LatLng = { lat: number; lng: number }
@@ -26,13 +26,13 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
   const [drawingMode, setDrawingMode] = useState<DrawingMode>(null)
   const [mapType, setMapType] = useState<"roadmap" | "satellite" | "terrain">("satellite")
   const [saving, setSaving] = useState(false)
+  const [mapCenter, setMapCenter] = useState<LatLng>({ lat: 9.9281, lng: -84.0907 })
+  const [mapZoom, setMapZoom] = useState(15)
 
-  // Drawing state
   const [markerPosition, setMarkerPosition] = useState<LatLng | null>(null)
   const [polygonPoints, setPolygonPoints] = useState<LatLng[]>([])
   const [polylinePoints, setPolylinePoints] = useState<LatLng[]>([])
 
-  // Form state
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [locationType, setLocationType] = useState<"facility" | "lot" | "walking_path">("facility")
@@ -41,7 +41,29 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""
 
-  const handleMapClick = (e: google.maps.MapMouseEvent) => {
+  const locateUser = () => {
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const newCenter = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          }
+          setMapCenter(newCenter)
+          setMapZoom(18)
+          console.log("[v0] User located at:", newCenter)
+        },
+        (error) => {
+          console.error("[v0] Geolocation error:", error)
+          alert("Could not get your location. Please enable location services.")
+        },
+      )
+    } else {
+      alert("Geolocation is not supported by your browser")
+    }
+  }
+
+  const handleMapClick = (e: any) => {
     if (!e.latLng) return
 
     const lat = e.latLng.lat()
@@ -84,7 +106,6 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
       return
     }
 
-    // Validate that we have the right data for the location type
     if (locationType === "facility" && !markerPosition && polygonPoints.length === 0) {
       alert("Please place a marker or draw a boundary for the facility")
       return
@@ -108,7 +129,6 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
         description: description.trim() || null,
       }
 
-      // Add coordinates based on location type
       if (locationType === "facility") {
         if (markerPosition) {
           locationData.coordinates = markerPosition
@@ -138,9 +158,20 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
     }
   }
 
+  if (!apiKey) {
+    return (
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Configuration Error</AlertTitle>
+        <AlertDescription>
+          Google Maps API key is missing. Please add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to your environment variables.
+        </AlertDescription>
+      </Alert>
+    )
+  }
+
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_400px]">
-      {/* Map */}
       <Card>
         <CardHeader>
           <CardTitle>Map</CardTitle>
@@ -155,7 +186,14 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {/* Drawing Controls */}
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Important</AlertTitle>
+              <AlertDescription>
+                If the map doesn't load or drawing doesn't work, enable "Maps JavaScript API" in Google Cloud Console.
+              </AlertDescription>
+            </Alert>
+
             <div className="flex flex-wrap gap-2">
               <Button
                 variant={drawingMode === "marker" ? "default" : "outline"}
@@ -194,9 +232,12 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
               <Button variant="destructive" size="sm" onClick={clearDrawing}>
                 Clear
               </Button>
+              <Button variant="outline" size="sm" onClick={locateUser}>
+                <Locate className="mr-2 h-4 w-4" />
+                Locate Me
+              </Button>
             </div>
 
-            {/* Map Type Controls */}
             <div className="flex gap-2">
               <Button
                 variant={mapType === "satellite" ? "default" : "outline"}
@@ -221,27 +262,23 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
               </Button>
             </div>
 
-            {/* Map Container */}
             <div className="h-[600px] w-full overflow-hidden rounded-lg border">
               <APIProvider apiKey={apiKey}>
                 <Map
-                  defaultCenter={{ lat: 9.9281, lng: -84.0907 }}
-                  defaultZoom={15}
+                  center={mapCenter}
+                  zoom={mapZoom}
                   mapTypeId={mapType}
                   onClick={handleMapClick}
                   gestureHandling="greedy"
                   disableDefaultUI={false}
                   clickableIcons={false}
+                  onCenterChanged={(e) => setMapCenter(e.detail.center)}
+                  onZoomChanged={(e) => setMapZoom(e.detail.zoom)}
                 >
-                  {/* Render marker */}
                   {markerPosition && <AdvancedMarker position={markerPosition} />}
-
-                  {/* Render polygon points as markers */}
                   {polygonPoints.map((point, index) => (
                     <AdvancedMarker key={`polygon-${index}`} position={point} />
                   ))}
-
-                  {/* Render polyline points as markers */}
                   {polylinePoints.map((point, index) => (
                     <AdvancedMarker key={`polyline-${index}`} position={point} />
                   ))}
@@ -252,7 +289,6 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
         </CardContent>
       </Card>
 
-      {/* Form */}
       <Card>
         <CardHeader>
           <CardTitle>Location Details</CardTitle>

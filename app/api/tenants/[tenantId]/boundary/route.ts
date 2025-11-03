@@ -23,21 +23,40 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       .eq("id", user.id)
       .single()
 
-    if (
-      !userData ||
-      (userData.role !== "super_admin" && (!userData.is_tenant_admin || userData.tenant_id !== tenantId))
-    ) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    console.log("[v0] API - User data:", userData)
+    console.log("[v0] API - Checking access for tenantId:", tenantId)
+
+    if (!userData) {
+      return NextResponse.json({ error: "Forbidden - User not found" }, { status: 403 })
     }
+
+    // Allow access if:
+    // 1. User is super_admin, OR
+    // 2. User has role tenant_admin and matches the tenant, OR
+    // 3. User is a resident with is_tenant_admin flag and matches the tenant
+    const isSuperAdmin = userData.role === "super_admin"
+    const isTenantAdmin = userData.role === "tenant_admin" && userData.tenant_id === tenantId
+    const isResidentAdmin = userData.role === "resident" && userData.is_tenant_admin && userData.tenant_id === tenantId
+
+    if (!isSuperAdmin && !isTenantAdmin && !isResidentAdmin) {
+      console.log("[v0] API - Access denied:", { isSuperAdmin, isTenantAdmin, isResidentAdmin })
+      return NextResponse.json({ error: "Forbidden - Insufficient permissions" }, { status: 403 })
+    }
+
+    console.log("[v0] API - Access granted, updating boundary")
 
     // Update tenant boundary
     const { error } = await supabase.from("tenants").update({ map_boundary_coordinates: boundary }).eq("id", tenantId)
 
-    if (error) throw error
+    if (error) {
+      console.error("[v0] API - Database error:", error)
+      throw error
+    }
 
+    console.log("[v0] API - Boundary updated successfully")
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Error updating community boundary:", error)
+    console.error("[v0] API - Error updating community boundary:", error)
     return NextResponse.json({ error: "Failed to update boundary" }, { status: 500 })
   }
 }

@@ -182,8 +182,8 @@ export function CommunityBoundaryEditor({
         )}
       </div>
 
-      <Card className="flex flex-col min-h-[600px]">
-        <CardContent className="p-1.5 flex-1">
+      <Card className="h-[600px]">
+        <CardContent className="p-1.5 h-full">
           <div className="relative h-full w-full overflow-hidden rounded-lg">
             <APIProvider apiKey={apiKey}>
               <Map
@@ -195,6 +195,7 @@ export function CommunityBoundaryEditor({
                 clickableIcons={false}
                 onCenterChanged={(e) => setCenter(e.detail.center)}
                 onZoomChanged={(e) => setZoom(e.detail.zoom)}
+                style={{ width: "100%", height: "100%" }}
               >
                 <MapClickHandler isDrawing={isDrawing} onMapClick={handleMapClick} />
 

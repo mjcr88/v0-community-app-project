@@ -6,15 +6,15 @@ import { revalidatePath } from "next/cache"
 export async function createLocation(data: {
   tenant_id: string
   name: string
-  type: "facility" | "lot" | "walking_path"
+  type: "facility" | "lot" | "walking_path" | "neighborhood"
   description?: string | null
   coordinates?: { lat: number; lng: number } | null
   boundary_coordinates?: Array<[number, number]> | null
   path_coordinates?: Array<[number, number]> | null
   facility_type?: string | null
   icon?: string | null
-  lot_id?: string | null // Add lot_id support
-  neighborhood_id?: string | null // Add neighborhood_id support
+  lot_id?: string | null
+  neighborhood_id?: string | null
 }) {
   const supabase = await createServerClient()
 
@@ -49,7 +49,6 @@ export async function createLocation(data: {
       .single()
 
     if (existingLocation) {
-      // Update existing location
       const { error } = await supabase.from("locations").update(data).eq("id", existingLocation.id)
 
       if (error) {
@@ -62,15 +61,15 @@ export async function createLocation(data: {
     }
   }
 
-  if (data.neighborhood_id) {
+  if (data.neighborhood_id && data.type === "neighborhood") {
     const { data: existingLocation } = await supabase
       .from("locations")
       .select("id")
       .eq("neighborhood_id", data.neighborhood_id)
+      .eq("type", "neighborhood")
       .single()
 
     if (existingLocation) {
-      // Update existing location
       const { error } = await supabase.from("locations").update(data).eq("id", existingLocation.id)
 
       if (error) {

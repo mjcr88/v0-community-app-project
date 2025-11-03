@@ -107,7 +107,7 @@ export function GoogleMapEditor({
   const [savedLocations, setSavedLocations] = useState<any[]>([])
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
-  const [locationType, setLocationType] = useState<"facility" | "lot" | "walking_path">("facility")
+  const [locationType, setLocationType] = useState<"facility" | "lot" | "walking_path" | "neighborhood">("facility")
   const [facilityType, setFacilityType] = useState("")
   const [icon, setIcon] = useState("")
   const [selectedLotId, setSelectedLotId] = useState<string>("")
@@ -122,32 +122,21 @@ export function GoogleMapEditor({
   useEffect(() => {
     if (preselectedNeighborhoodId) {
       setSelectedNeighborhoodId(preselectedNeighborhoodId)
-      // If coming from neighborhood edit, default to facility type
-      setLocationType("facility")
+      setLocationType("neighborhood")
+      const selectedNeighborhood = neighborhoods.find((n) => n.id === preselectedNeighborhoodId)
+      if (selectedNeighborhood) {
+        setName(selectedNeighborhood.name)
+      }
     }
     if (preselectedLotId) {
       setSelectedLotId(preselectedLotId)
       setLocationType("lot")
-      // Pre-fill the lot name
       const selectedLot = lots.find((lot) => lot.id === preselectedLotId)
       if (selectedLot) {
         setName(selectedLot.lot_number)
       }
     }
-  }, [preselectedNeighborhoodId, preselectedLotId, lots])
-
-  useEffect(() => {
-    const fetchLocations = async () => {
-      const supabase = createBrowserClient()
-      const { data, error } = await supabase.from("locations").select("*").eq("tenant_id", tenantId)
-
-      if (!error && data) {
-        setSavedLocations(data)
-      }
-    }
-
-    fetchLocations()
-  }, [tenantId])
+  }, [preselectedNeighborhoodId, preselectedLotId, lots, neighborhoods])
 
   useEffect(() => {
     if (locationType === "lot" && selectedLotId) {
@@ -156,7 +145,13 @@ export function GoogleMapEditor({
         setName(selectedLot.lot_number)
       }
     }
-  }, [locationType, selectedLotId, lots])
+    if (locationType === "neighborhood" && selectedNeighborhoodId) {
+      const selectedNeighborhood = neighborhoods.find((n) => n.id === selectedNeighborhoodId)
+      if (selectedNeighborhood) {
+        setName(selectedNeighborhood.name)
+      }
+    }
+  }, [locationType, selectedLotId, selectedNeighborhoodId, lots, neighborhoods])
 
   const handleMapClick = (lat: number, lng: number) => {
     if (drawingMode === "marker") {
@@ -212,7 +207,7 @@ export function GoogleMapEditor({
   }
 
   const handleSave = async () => {
-    if (locationType !== "lot" && !name.trim()) {
+    if (locationType !== "lot" && locationType !== "neighborhood" && !name.trim()) {
       toast({
         title: "Validation Error",
         description: "Please enter a location name",
@@ -241,6 +236,22 @@ export function GoogleMapEditor({
       toast({
         title: "Validation Error",
         description: "Please select a lot from the dropdown",
+        variant: "destructive",
+      })
+      return
+    }
+    if (locationType === "neighborhood" && polygonPoints.length < 3) {
+      toast({
+        title: "Validation Error",
+        description: "Please draw a boundary for the neighborhood (at least 3 points)",
+        variant: "destructive",
+      })
+      return
+    }
+    if (locationType === "neighborhood" && !selectedNeighborhoodId) {
+      toast({
+        title: "Validation Error",
+        description: "Please select a neighborhood from the dropdown",
         variant: "destructive",
       })
       return
@@ -279,6 +290,9 @@ export function GoogleMapEditor({
       } else if (locationType === "lot") {
         locationData.boundary_coordinates = polygonPoints.map((p) => [p.lat, p.lng])
         locationData.lot_id = selectedLotId
+      } else if (locationType === "neighborhood") {
+        locationData.boundary_coordinates = polygonPoints.map((p) => [p.lat, p.lng])
+        locationData.neighborhood_id = selectedNeighborhoodId
       } else if (locationType === "walking_path") {
         locationData.path_coordinates = polylinePoints.map((p) => [p.lat, p.lng])
         if (selectedNeighborhoodId && selectedNeighborhoodId !== "none") {
@@ -670,6 +684,7 @@ export function GoogleMapEditor({
               <SelectContent>
                 <SelectItem value="facility">Facility</SelectItem>
                 <SelectItem value="lot">Lot</SelectItem>
+                <SelectItem value="neighborhood">Neighborhood</SelectItem>
                 <SelectItem value="walking_path">Walking Path</SelectItem>
               </SelectContent>
             </Select>
@@ -687,6 +702,24 @@ export function GoogleMapEditor({
                     <SelectItem key={lot.id} value={lot.id}>
                       {lot.lot_number} {lot.neighborhoods?.name && `(${lot.neighborhoods.name})`}
                       {lot.address && ` - ${lot.address}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {locationType === "neighborhood" && (
+            <div className="space-y-2">
+              <Label htmlFor="neighborhood-select">Select Neighborhood *</Label>
+              <Select value={selectedNeighborhoodId} onValueChange={setSelectedNeighborhoodId}>
+                <SelectTrigger id="neighborhood-select">
+                  <SelectValue placeholder="Choose a neighborhood..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {neighborhoods.map((neighborhood) => (
+                    <SelectItem key={neighborhood.id} value={neighborhood.id}>
+                      {neighborhood.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -714,13 +747,21 @@ export function GoogleMapEditor({
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="name">{locationType === "lot" ? "Lot Number" : "Name *"}</Label>
+            <Label htmlFor="name">
+              {locationType === "lot" ? "Lot Number" : locationType === "neighborhood" ? "Neighborhood Name" : "Name *"}
+            </Label>
             <Input
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder={locationType === "lot" ? "Select a lot first" : "e.g., Community Pool"}
-              disabled={locationType === "lot"}
+              placeholder={
+                locationType === "lot"
+                  ? "Select a lot first"
+                  : locationType === "neighborhood"
+                    ? "Select a neighborhood first"
+                    : "e.g., Community Pool"
+              }
+              disabled={locationType === "lot" || locationType === "neighborhood"}
             />
           </div>
 

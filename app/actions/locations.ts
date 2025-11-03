@@ -144,3 +144,38 @@ export async function updateLocation(
 
   revalidatePath(`/t/[slug]/admin/map`, "page")
 }
+
+export async function deleteLocation(locationId: string, tenantId: string) {
+  const supabase = await createServerClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error("Unauthorized")
+  }
+
+  const { data: userData } = await supabase
+    .from("users")
+    .select("role, tenant_id, is_tenant_admin")
+    .eq("id", user.id)
+    .single()
+
+  if (
+    !userData ||
+    (!userData.is_tenant_admin && userData.role !== "super_admin" && userData.role !== "tenant_admin") ||
+    (userData.tenant_id !== tenantId && userData.role !== "super_admin")
+  ) {
+    throw new Error("Unauthorized")
+  }
+
+  const { error } = await supabase.from("locations").delete().eq("id", locationId)
+
+  if (error) {
+    console.error("Error deleting location:", error)
+    throw new Error("Failed to delete location")
+  }
+
+  revalidatePath(`/t/[slug]/admin/map`, "page")
+}

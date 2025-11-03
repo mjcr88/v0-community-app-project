@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Card, CardContent } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { createLocation, updateLocation } from "@/app/actions/locations"
+import { createLocation, updateLocation, deleteLocation } from "@/app/actions/locations"
 import { useRouter, useSearchParams } from "next/navigation"
 import {
   Loader2,
@@ -103,6 +103,9 @@ export function GoogleMapEditor({
   const prefilledName = searchParams.get("name")
   const prefilledDescription = searchParams.get("description")
 
+  const isEditingLot = !!preselectedLotId
+  const isEditingNeighborhood = !!preselectedNeighborhoodId
+
   const [drawingMode, setDrawingMode] = useState<DrawingMode>(null)
   const [mapType, setMapType] = useState<"roadmap" | "satellite" | "terrain">("satellite")
   const [saving, setSaving] = useState(false)
@@ -130,6 +133,7 @@ export function GoogleMapEditor({
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
 
   const [editingLocationId, setEditingLocationId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""
 
@@ -195,7 +199,39 @@ export function GoogleMapEditor({
     }
   }, [locationType, selectedLotId, selectedNeighborhoodId, lots, neighborhoods])
 
+  useEffect(() => {
+    if (isEditingLot) {
+      setShowFacilities(false)
+      setShowWalkingPaths(false)
+      setShowNeighborhoods(false)
+      setShowLots(true)
+    } else if (isEditingNeighborhood) {
+      setShowFacilities(false)
+      setShowWalkingPaths(false)
+      setShowLots(false)
+      setShowNeighborhoods(true)
+    }
+  }, [isEditingLot, isEditingNeighborhood])
+
   const handleLocationClick = (location: any) => {
+    if (isEditingLot && location.type !== "lot") {
+      toast({
+        title: "Wrong Object Type",
+        description: "You're editing a lot. Please select a lot object (blue polygon) on the map.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (isEditingNeighborhood && location.type !== "neighborhood") {
+      toast({
+        title: "Wrong Object Type",
+        description: "You're editing a neighborhood. Please select a neighborhood object (purple polygon) on the map.",
+        variant: "destructive",
+      })
+      return
+    }
+
     setEditingLocationId(location.id)
     setName(location.name || "")
     setDescription(location.description || "")
@@ -497,6 +533,42 @@ export function GoogleMapEditor({
     })
   }
 
+  const handleDelete = async () => {
+    if (!editingLocationId) return
+
+    const confirmed = window.confirm("Are you sure you want to delete this location? This action cannot be undone.")
+    if (!confirmed) return
+
+    setDeleting(true)
+
+    try {
+      await deleteLocation(editingLocationId, tenantId)
+
+      toast({
+        title: "Success",
+        description: "Location deleted successfully!",
+      })
+
+      const supabase = createBrowserClient()
+      const { data } = await supabase.from("locations").select("*").eq("tenant_id", tenantId)
+
+      if (data) {
+        setSavedLocations(data)
+      }
+
+      handleNewLocation()
+    } catch (error) {
+      console.error("[v0] Error deleting location:", error)
+      toast({
+        title: "Error",
+        description: "Error deleting location: " + (error instanceof Error ? error.message : "Unknown error"),
+        variant: "destructive",
+      })
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   const handleNewLocation = () => {
     setEditingLocationId(null)
     setMarkerPosition(null)
@@ -570,7 +642,7 @@ export function GoogleMapEditor({
 
                 {communityBoundary && communityBoundary.length >= 3 && (
                   <Polygon
-                    paths={communityBoundary.map((coord) => ({ lat: coord[0], lng: coord[1] }))}
+                    paths={communityBoundary.map((coord: [number, number]) => ({ lat: coord[0], lng: coord[1] }))}
                     strokeColor="#fbbf24"
                     strokeOpacity={0.5}
                     strokeWeight={0.5}
@@ -895,6 +967,27 @@ export function GoogleMapEditor({
             <Badge className="w-full justify-center bg-green-600 text-white">Editing Existing Location</Badge>
           )}
 
+          {isEditingLot && !editingLocationId && (
+            <Alert className="bg-blue-50 border-blue-200">
+              <AlertCircle className="h-4 w-4 text-blue-600" />
+              <AlertTitle className="text-blue-900">Editing Lot</AlertTitle>
+              <AlertDescription className="text-blue-700">
+                Click on a <strong>blue lot polygon</strong> on the map to edit it. Other object types are filtered out.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {isEditingNeighborhood && !editingLocationId && (
+            <Alert className="bg-purple-50 border-purple-200">
+              <AlertCircle className="h-4 w-4 text-purple-600" />
+              <AlertTitle className="text-purple-900">Editing Neighborhood</AlertTitle>
+              <AlertDescription className="text-purple-700">
+                Click on a <strong>purple neighborhood polygon</strong> on the map to edit it. Other object types are
+                filtered out.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {locationType === "neighborhood" && prefilledName && !editingLocationId && (
             <Alert className="bg-purple-50 border-purple-200">
               <AlertCircle className="h-4 w-4 text-purple-600" />
@@ -905,7 +998,7 @@ export function GoogleMapEditor({
             </Alert>
           )}
 
-          {locationType === "lot" && selectedLotId && !editingLocationId && (
+          {locationType === "lot" && selectedLotId && !editingLocationId && !isEditingLot && (
             <Alert className="bg-blue-50 border-blue-200">
               <AlertCircle className="h-4 w-4 text-blue-600" />
               <AlertTitle className="text-blue-900">Linking to Lot</AlertTitle>
@@ -915,16 +1008,20 @@ export function GoogleMapEditor({
             </Alert>
           )}
 
-          {locationType === "neighborhood" && selectedNeighborhoodId && !prefilledName && !editingLocationId && (
-            <Alert className="bg-purple-50 border-purple-200">
-              <AlertCircle className="h-4 w-4 text-purple-600" />
-              <AlertTitle className="text-purple-900">Linking to Neighborhood</AlertTitle>
-              <AlertDescription className="text-purple-700">
-                This location will be linked to{" "}
-                <strong>{neighborhoods.find((n) => n.id === selectedNeighborhoodId)?.name}</strong>
-              </AlertDescription>
-            </Alert>
-          )}
+          {locationType === "neighborhood" &&
+            selectedNeighborhoodId &&
+            !prefilledName &&
+            !editingLocationId &&
+            !isEditingNeighborhood && (
+              <Alert className="bg-purple-50 border-purple-200">
+                <AlertCircle className="h-4 w-4 text-purple-600" />
+                <AlertTitle className="text-purple-900">Linking to Neighborhood</AlertTitle>
+                <AlertDescription className="text-purple-700">
+                  This location will be linked to{" "}
+                  <strong>{neighborhoods.find((n) => n.id === selectedNeighborhoodId)?.name}</strong>
+                </AlertDescription>
+              </Alert>
+            )}
 
           <div className="space-y-2">
             <Label htmlFor="type">Location Type</Label>
@@ -1125,9 +1222,16 @@ export function GoogleMapEditor({
               {editingLocationId ? "Update Location" : "Save Location"}
             </Button>
             {editingLocationId && (
-              <Button variant="outline" onClick={handleCancelEdit} className="w-full bg-transparent">
-                Cancel Edit
-              </Button>
+              <>
+                <Button variant="destructive" onClick={handleDelete} disabled={deleting} className="w-full">
+                  {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Location
+                </Button>
+                <Button variant="outline" onClick={handleCancelEdit} className="w-full bg-transparent">
+                  Cancel Edit
+                </Button>
+              </>
             )}
             <Button variant="outline" onClick={() => router.push(`/t/${tenantSlug}/admin/map`)} className="w-full">
               {editingLocationId ? "Back" : "Cancel"}

@@ -121,7 +121,7 @@ export default function EditNeighborhoodForm({ slug, neighborhood }: { slug: str
         </Button>
         <div className="flex gap-2">
           <Button type="button" variant="outline" asChild>
-            <Link href={`/t/${slug}/admin/map/locations/create`}>
+            <Link href={`/t/${slug}/admin/map/locations/create?neighborhoodId=${neighborhood.id}`}>
               <Map className="mr-2 h-4 w-4" />
               Add Location on Map
             </Link>

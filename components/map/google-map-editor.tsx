@@ -19,7 +19,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { createLocation } from "@/app/actions/locations"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import {
   Loader2,
   MapPin,
@@ -90,6 +90,11 @@ export function GoogleMapEditor({
 }: GoogleMapEditorProps) {
   const router = useRouter()
   const { toast } = useToast()
+  const searchParams = useSearchParams()
+
+  const preselectedNeighborhoodId = searchParams.get("neighborhoodId")
+  const preselectedLotId = searchParams.get("lotId")
+
   const [drawingMode, setDrawingMode] = useState<DrawingMode>(null)
   const [mapType, setMapType] = useState<"roadmap" | "satellite" | "terrain">("satellite")
   const [saving, setSaving] = useState(false)
@@ -113,6 +118,23 @@ export function GoogleMapEditor({
   const [showWalkingPaths, setShowWalkingPaths] = useState(true)
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""
+
+  useEffect(() => {
+    if (preselectedNeighborhoodId) {
+      setSelectedNeighborhoodId(preselectedNeighborhoodId)
+      // If coming from neighborhood edit, default to facility type
+      setLocationType("facility")
+    }
+    if (preselectedLotId) {
+      setSelectedLotId(preselectedLotId)
+      setLocationType("lot")
+      // Pre-fill the lot name
+      const selectedLot = lots.find((lot) => lot.id === preselectedLotId)
+      if (selectedLot) {
+        setName(selectedLot.lot_number)
+      }
+    }
+  }, [preselectedNeighborhoodId, preselectedLotId, lots])
 
   useEffect(() => {
     const fetchLocations = async () => {

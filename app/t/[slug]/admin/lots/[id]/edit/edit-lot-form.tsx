@@ -8,7 +8,6 @@ import { createBrowserClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, Trash2, Map } from "lucide-react"
@@ -143,24 +142,13 @@ export default function EditLotForm({
         </Select>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="address">Address</Label>
-        <Textarea
-          id="address"
-          value={formData.address}
-          onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-          placeholder="Optional physical address"
-          rows={3}
-        />
-      </div>
-
       <div className="flex gap-2 justify-between">
         <Button type="button" variant="outline" onClick={() => router.back()} disabled={loading || deleteLoading}>
           Cancel
         </Button>
         <div className="flex gap-2">
           <Button type="button" variant="outline" asChild>
-            <Link href={`/t/${slug}/admin/map/locations/create`}>
+            <Link href={`/t/${slug}/admin/map/locations/create?lotId=${lot.id}`}>
               <Map className="mr-2 h-4 w-4" />
               Add Location on Map
             </Link>

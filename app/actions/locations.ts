@@ -47,7 +47,7 @@ export async function createLocation(data: {
       .select("id")
       .eq("lot_id", data.lot_id)
       .eq("type", "lot")
-      .single()
+      .maybeSingle()
 
     if (existingLocation) {
       const { error } = await supabase.from("locations").update(data).eq("id", existingLocation.id)
@@ -68,7 +68,7 @@ export async function createLocation(data: {
       .select("id")
       .eq("neighborhood_id", data.neighborhood_id)
       .eq("type", "neighborhood")
-      .single()
+      .maybeSingle()
 
     if (existingLocation) {
       const { error } = await supabase.from("locations").update(data).eq("id", existingLocation.id)

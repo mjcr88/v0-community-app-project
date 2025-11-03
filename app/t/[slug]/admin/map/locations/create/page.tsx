@@ -47,13 +47,31 @@ export default async function CreateLocationPage({ params }: { params: Promise<{
 
   const communityBoundary = tenant.map_boundary_coordinates || null
 
+  const { data: lots } = await supabase
+    .from("lots")
+    .select("id, lot_number, address, neighborhood_id, neighborhoods(name)")
+    .eq("neighborhoods.tenant_id", tenant.id)
+    .order("lot_number")
+
+  const { data: neighborhoods } = await supabase
+    .from("neighborhoods")
+    .select("id, name")
+    .eq("tenant_id", tenant.id)
+    .order("name")
+
   return (
     <div className="container mx-auto p-6">
       <div className="mb-6">
         <h1 className="text-3xl font-bold">Add Location</h1>
         <p className="text-muted-foreground">Draw a facility, lot boundary, or walking path on the map</p>
       </div>
-      <GoogleMapEditor tenantSlug={slug} tenantId={tenant.id} communityBoundary={communityBoundary} />
+      <GoogleMapEditor
+        tenantSlug={slug}
+        tenantId={tenant.id}
+        communityBoundary={communityBoundary}
+        lots={lots || []}
+        neighborhoods={neighborhoods || []}
+      />
     </div>
   )
 }

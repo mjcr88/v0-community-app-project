@@ -13,6 +13,8 @@ export async function createLocation(data: {
   path_coordinates?: Array<[number, number]> | null
   facility_type?: string | null
   icon?: string | null
+  lot_id?: string | null // Add lot_id support
+  neighborhood_id?: string | null // Add neighborhood_id support
 }) {
   const supabase = await createServerClient()
 
@@ -38,6 +40,50 @@ export async function createLocation(data: {
     throw new Error("Unauthorized")
   }
 
+  if (data.lot_id) {
+    const { data: existingLocation } = await supabase
+      .from("locations")
+      .select("id")
+      .eq("lot_id", data.lot_id)
+      .eq("type", "lot")
+      .single()
+
+    if (existingLocation) {
+      // Update existing location
+      const { error } = await supabase.from("locations").update(data).eq("id", existingLocation.id)
+
+      if (error) {
+        console.error("Error updating location:", error)
+        throw new Error("Failed to update location")
+      }
+
+      revalidatePath(`/t/[slug]/admin/map`, "page")
+      return
+    }
+  }
+
+  if (data.neighborhood_id) {
+    const { data: existingLocation } = await supabase
+      .from("locations")
+      .select("id")
+      .eq("neighborhood_id", data.neighborhood_id)
+      .single()
+
+    if (existingLocation) {
+      // Update existing location
+      const { error } = await supabase.from("locations").update(data).eq("id", existingLocation.id)
+
+      if (error) {
+        console.error("Error updating location:", error)
+        throw new Error("Failed to update location")
+      }
+
+      revalidatePath(`/t/[slug]/admin/map`, "page")
+      return
+    }
+  }
+
+  // Insert new location
   const { error } = await supabase.from("locations").insert(data)
 
   if (error) {

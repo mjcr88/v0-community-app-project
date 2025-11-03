@@ -3,11 +3,19 @@
 import { useState } from "react"
 import { APIProvider, Map, Marker, InfoWindow } from "@vis.gl/react-google-maps"
 import { Button } from "@/components/ui/button"
-import { Plus, Locate, Layers } from "lucide-react"
+import { Plus, Locate, Layers, Filter } from "lucide-react"
 import Link from "next/link"
 import { Polygon } from "./polygon"
 import { Polyline } from "./polyline"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu"
 
 interface Location {
   id: string
@@ -42,6 +50,10 @@ export function GoogleMapViewer({
   const [zoom, setZoom] = useState(mapZoom)
   const [mapType, setMapType] = useState<"roadmap" | "satellite" | "terrain">("satellite")
 
+  const [showFacilities, setShowFacilities] = useState(true)
+  const [showLots, setShowLots] = useState(true)
+  const [showWalkingPaths, setShowWalkingPaths] = useState(true)
+
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""
 
   const handleLocate = () => {
@@ -61,10 +73,14 @@ export function GoogleMapViewer({
     }
   }
 
-  const facilityMarkers = initialLocations.filter((loc) => loc.type === "facility" && loc.coordinates)
-  const facilityPolygons = initialLocations.filter((loc) => loc.type === "facility" && loc.boundary_coordinates)
-  const lotPolygons = initialLocations.filter((loc) => loc.type === "lot" && loc.boundary_coordinates)
-  const walkingPaths = initialLocations.filter((loc) => loc.type === "walking_path" && loc.path_coordinates)
+  const facilityMarkers = initialLocations.filter((loc) => showFacilities && loc.type === "facility" && loc.coordinates)
+  const facilityPolygons = initialLocations.filter(
+    (loc) => showFacilities && loc.type === "facility" && loc.boundary_coordinates,
+  )
+  const lotPolygons = initialLocations.filter((loc) => showLots && loc.type === "lot" && loc.boundary_coordinates)
+  const walkingPaths = initialLocations.filter(
+    (loc) => showWalkingPaths && loc.type === "walking_path" && loc.path_coordinates,
+  )
 
   const getPolygonCenter = (coordinates: Array<[number, number]>): { lat: number; lng: number } => {
     const sum = coordinates.reduce(
@@ -74,24 +90,6 @@ export function GoogleMapViewer({
       { lat: 0, lng: 0 },
     )
     return { lat: sum.lat / coordinates.length, lng: sum.lng / coordinates.length }
-  }
-
-  const getCommunityBoundaryPaths = () => {
-    if (!communityBoundary || communityBoundary.length < 3) return null
-
-    // Outer bounds (covers entire world) - clockwise
-    const worldBounds = [
-      { lat: 85, lng: -180 },
-      { lat: 85, lng: 180 },
-      { lat: -85, lng: 180 },
-      { lat: -85, lng: -180 },
-      { lat: 85, lng: -180 },
-    ]
-
-    // Inner bounds (community boundary) - keep original order for proper hole
-    const communityPath = communityBoundary.map((coord) => ({ lat: coord[0], lng: coord[1] })).reverse()
-
-    return [worldBounds, communityPath]
   }
 
   if (!apiKey) {
@@ -114,14 +112,14 @@ export function GoogleMapViewer({
           onCenterChanged={(e) => setCenter(e.detail.center)}
           onZoomChanged={(e) => setZoom(e.detail.zoom)}
         >
-          {getCommunityBoundaryPaths() && (
+          {communityBoundary && communityBoundary.length >= 3 && (
             <Polygon
-              paths={getCommunityBoundaryPaths()!}
-              strokeColor="#000000"
-              strokeOpacity={0.05}
-              strokeWeight={1}
-              fillColor="#000000"
-              fillOpacity={0.4}
+              paths={communityBoundary.map((coord) => ({ lat: coord[0], lng: coord[1] }))}
+              strokeColor="#10b981"
+              strokeOpacity={0.6}
+              strokeWeight={2}
+              fillColor="#10b981"
+              fillOpacity={0.08}
               clickable={false}
             />
           )}
@@ -228,8 +226,30 @@ export function GoogleMapViewer({
         </div>
       )}
 
-      {/* Top right: Layer selector */}
-      <div className="absolute right-3 top-3 z-10">
+      {/* Top right: Controls */}
+      <div className="absolute right-3 top-3 z-10 flex gap-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="secondary" size="icon" className="h-10 w-10 shadow-lg" title="Filter Locations">
+              <Filter className="h-4 w-4 text-black" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Show on Map</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuCheckboxItem checked={showFacilities} onCheckedChange={setShowFacilities}>
+              Facilities
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem checked={showLots} onCheckedChange={setShowLots}>
+              Lots
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem checked={showWalkingPaths} onCheckedChange={setShowWalkingPaths}>
+              Walking Paths
+            </DropdownMenuCheckboxItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* Layer selector */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="secondary" size="icon" className="h-10 w-10 shadow-lg" title="Map Type">

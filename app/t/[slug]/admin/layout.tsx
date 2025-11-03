@@ -106,7 +106,6 @@ export default async function TenantAdminLayout({
         )
       `)
       .eq("id", user.id)
-      .eq("role", "resident")
       .maybeSingle()
 
     residentData = data

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import "mapbox-gl/dist/mapbox-gl.css"
+import "maplibre-gl/dist/maplibre-gl.css"
 
 export default function MapLayout({ children }: { children: ReactNode }) {
   return <>{children}</>

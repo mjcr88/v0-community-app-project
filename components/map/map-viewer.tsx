@@ -1,12 +1,11 @@
 "use client"
 
 import { useState, useRef } from "react"
-import Map, { Marker, Source, Layer, NavigationControl, ScaleControl, GeolocateControl } from "react-map-gl"
-import type { MapRef } from "react-map-gl"
+import Map, { Marker, Source, Layer, NavigationControl, ScaleControl, GeolocateControl } from "react-map-gl/maplibre"
+import type { MapRef } from "react-map-gl/maplibre"
 import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
 import Link from "next/link"
-import "mapbox-gl/dist/mapbox-gl.css"
 
 interface Location {
   id: string

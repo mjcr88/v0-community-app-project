@@ -186,9 +186,6 @@ importers:
       '@tailwindcss/postcss':
         specifier: ^4.1.9
         version: 4.1.9
-      '@types/mapbox-gl':
-        specifier: ^3.4.0
-        version: 3.4.0
       '@types/node':
         specifier: ^22
         version: 22.0.0
@@ -1531,9 +1528,6 @@ packages:
 
   '@types/geojson@7946.0.16':
     resolution: {integrity: sha512-6C8nqWur3j98U6+lXDfTUWIfgvZU+EumvpHKcYjujKH7woYyLj2sUmff0tRhrqM7BohUw7Pz3ZB1jj2gW9Fvmg==}
-
-  '@types/mapbox-gl@3.4.0':
-    resolution: {integrity: sha512-tbn++Mm94H1kE7W6FF0oVC9rMXHVzDDNUbS7KfBMRF8NV/8csFi+67ytKcZJ4LsrpsJ+8MC6Os6ZinEDCsrunw==}
 
   '@types/mapbox__point-geometry@0.1.4':
     resolution: {integrity: sha512-mUWlSxAmYLfwnRBmgYV86tgYmMIICX4kza8YnE/eIlywGe2XoOxlpVnXWwir92xRLjwyarqwpu2EJKD2pk0IUA==}
@@ -3641,10 +3635,6 @@ snapshots:
       '@types/geojson': 7946.0.16
 
   '@types/geojson@7946.0.16': {}
-
-  '@types/mapbox-gl@3.4.0':
-    dependencies:
-      '@types/geojson': 7946.0.16
 
   '@types/mapbox__point-geometry@0.1.4': {}
 

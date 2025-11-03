@@ -25,6 +25,7 @@ type LatLng = { lat: number; lng: number }
 interface GoogleMapEditorProps {
   tenantSlug: string
   tenantId: string
+  communityBoundary?: Array<[number, number]> | null
 }
 
 function MapClickHandler({
@@ -58,7 +59,7 @@ function MapClickHandler({
   return null
 }
 
-export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) {
+export function GoogleMapEditor({ tenantSlug, tenantId, communityBoundary }: GoogleMapEditorProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [drawingMode, setDrawingMode] = useState<DrawingMode>(null)
@@ -279,6 +280,18 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
               >
                 <MapClickHandler drawingMode={drawingMode} onMapClick={handleMapClick} />
 
+                {communityBoundary && communityBoundary.length >= 3 && (
+                  <Polygon
+                    paths={communityBoundary.map((coord) => ({ lat: coord[0], lng: coord[1] }))}
+                    strokeColor="#000000"
+                    strokeOpacity={0.1}
+                    strokeWeight={1}
+                    fillColor="#000000"
+                    fillOpacity={0}
+                    clickable={false}
+                  />
+                )}
+
                 {savedLocations.map((location) => {
                   if (location.type === "facility" && location.coordinates) {
                     return <Marker key={`saved-${location.id}`} position={location.coordinates} />
@@ -292,11 +305,11 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
                       <Polygon
                         key={`saved-${location.id}`}
                         paths={paths}
-                        strokeColor="#22c55e"
-                        strokeOpacity={0.8}
-                        strokeWeight={2}
-                        fillColor="#22c55e"
-                        fillOpacity={0.2}
+                        strokeColor="#86efac"
+                        strokeOpacity={0.6}
+                        strokeWeight={1.5}
+                        fillColor="#86efac"
+                        fillOpacity={0.15}
                         clickable={false}
                       />
                     )
@@ -310,11 +323,11 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
                       <Polygon
                         key={`saved-${location.id}`}
                         paths={paths}
-                        strokeColor="#3b82f6"
-                        strokeOpacity={0.8}
-                        strokeWeight={2}
-                        fillColor="#3b82f6"
-                        fillOpacity={0.2}
+                        strokeColor="#93c5fd"
+                        strokeOpacity={0.6}
+                        strokeWeight={1.5}
+                        fillColor="#93c5fd"
+                        fillOpacity={0.15}
                         clickable={false}
                       />
                     )
@@ -328,9 +341,9 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
                       <Polyline
                         key={`saved-${location.id}`}
                         path={path}
-                        strokeColor="#f59e0b"
-                        strokeOpacity={0.8}
-                        strokeWeight={3}
+                        strokeColor="#fcd34d"
+                        strokeOpacity={0.7}
+                        strokeWeight={2.5}
                         clickable={false}
                       />
                     )

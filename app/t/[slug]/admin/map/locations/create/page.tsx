@@ -45,13 +45,15 @@ export default async function CreateLocationPage({ params }: { params: Promise<{
 
   console.log("[v0] All checks passed, rendering GoogleMapEditor")
 
+  const communityBoundary = tenant.map_boundary_coordinates || null
+
   return (
     <div className="container mx-auto p-6">
       <div className="mb-6">
         <h1 className="text-3xl font-bold">Add Location</h1>
         <p className="text-muted-foreground">Draw a facility, lot boundary, or walking path on the map</p>
       </div>
-      <GoogleMapEditor tenantSlug={slug} tenantId={tenant.id} />
+      <GoogleMapEditor tenantSlug={slug} tenantId={tenant.id} communityBoundary={communityBoundary} />
     </div>
   )
 }

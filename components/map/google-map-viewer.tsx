@@ -26,6 +26,7 @@ interface GoogleMapViewerProps {
   mapCenter?: { lat: number; lng: number } | null
   mapZoom?: number
   isAdmin?: boolean
+  communityBoundary?: Array<[number, number]> | null
 }
 
 export function GoogleMapViewer({
@@ -34,6 +35,7 @@ export function GoogleMapViewer({
   mapCenter,
   mapZoom = 15,
   isAdmin = false,
+  communityBoundary,
 }: GoogleMapViewerProps) {
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null)
   const [center, setCenter] = useState<{ lat: number; lng: number }>(mapCenter || { lat: 9.9567, lng: -84.5333 })
@@ -94,6 +96,18 @@ export function GoogleMapViewer({
           onCenterChanged={(e) => setCenter(e.detail.center)}
           onZoomChanged={(e) => setZoom(e.detail.zoom)}
         >
+          {communityBoundary && communityBoundary.length >= 3 && (
+            <Polygon
+              paths={communityBoundary.map((coord) => ({ lat: coord[0], lng: coord[1] }))}
+              strokeColor="#000000"
+              strokeOpacity={0.1}
+              strokeWeight={1}
+              fillColor="#000000"
+              fillOpacity={0}
+              clickable={false}
+            />
+          )}
+
           {/* Facility Markers */}
           {facilityMarkers.map((location) => (
             <Marker key={location.id} position={location.coordinates!} onClick={() => setSelectedLocation(location)} />
@@ -106,11 +120,11 @@ export function GoogleMapViewer({
               <Polygon
                 key={location.id}
                 paths={paths}
-                strokeColor="#22c55e"
-                strokeOpacity={0.8}
-                strokeWeight={2}
-                fillColor="#22c55e"
-                fillOpacity={0.2}
+                strokeColor="#86efac"
+                strokeOpacity={0.6}
+                strokeWeight={1.5}
+                fillColor="#86efac"
+                fillOpacity={0.15}
                 onClick={() => setSelectedLocation(location)}
               />
             )
@@ -123,11 +137,11 @@ export function GoogleMapViewer({
               <Polygon
                 key={location.id}
                 paths={paths}
-                strokeColor="#3b82f6"
-                strokeOpacity={0.8}
-                strokeWeight={2}
-                fillColor="#3b82f6"
-                fillOpacity={0.2}
+                strokeColor="#93c5fd"
+                strokeOpacity={0.6}
+                strokeWeight={1.5}
+                fillColor="#93c5fd"
+                fillOpacity={0.15}
                 onClick={() => setSelectedLocation(location)}
               />
             )
@@ -136,7 +150,9 @@ export function GoogleMapViewer({
           {/* Walking Paths */}
           {walkingPaths.map((location) => {
             const path = location.path_coordinates!.map((coord) => ({ lat: coord[0], lng: coord[1] }))
-            return <Polyline key={location.id} path={path} strokeColor="#f59e0b" strokeOpacity={0.8} strokeWeight={3} />
+            return (
+              <Polyline key={location.id} path={path} strokeColor="#fcd34d" strokeOpacity={0.7} strokeWeight={2.5} />
+            )
           })}
 
           {/* Info Window */}

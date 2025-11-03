@@ -18,6 +18,8 @@ export default async function MapViewerPage({ params }: { params: Promise<{ slug
     .eq("tenant_id", tenant.id)
     .order("created_at", { ascending: false })
 
+  const communityBoundary = tenant.map_boundary_coordinates || null
+
   return (
     <div className="h-[100vh] w-full">
       <GoogleMapViewer
@@ -26,6 +28,7 @@ export default async function MapViewerPage({ params }: { params: Promise<{ slug
         mapCenter={tenant.map_center_coordinates as { lat: number; lng: number } | null}
         mapZoom={tenant.map_default_zoom || 15}
         isAdmin={true}
+        communityBoundary={communityBoundary}
       />
     </div>
   )

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Map, Marker, Overlay } from "pigeon-maps"
+import { Map, Marker } from "pigeon-maps"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -76,8 +76,8 @@ export function MapEditor({ tenantSlug, tenantId }: MapEditorProps) {
 
   const handleMapClick = ({ latLng }: { latLng: [number, number] }) => {
     if (drawMode === "marker") {
+      // Replace the marker position instead of adding to array
       setPoints([latLng])
-      setDrawMode(null)
     } else if (drawMode === "polygon" || drawMode === "polyline") {
       setPoints([...points, latLng])
     }
@@ -183,52 +183,19 @@ export function MapEditor({ tenantSlug, tenantId }: MapEditorProps) {
                 onClick={handleMapClick}
                 height={600}
               >
-                {points.length > 0 && points.length === 1 && <Marker anchor={points[0]} color="#22c55e" />}
+                {points.length > 0 && drawMode === "marker" && <Marker anchor={points[0]} color="#22c55e" />}
 
-                {points.length > 1 && (
-                  <Overlay anchor={getPolygonCenter(points)}>
-                    <svg
-                      style={{
-                        position: "absolute",
-                        pointerEvents: "none",
-                        width: "100%",
-                        height: "100%",
-                        left: -latLngToPixel(getPolygonCenter(points)[0], getPolygonCenter(points)[1], zoom)[0],
-                        top: -latLngToPixel(getPolygonCenter(points)[0], getPolygonCenter(points)[1], zoom)[1],
-                      }}
-                    >
-                      {drawMode === "polygon" || (drawMode === null && points.length >= 3) ? (
-                        <polygon
-                          points={points
-                            .map((coord) => {
-                              const [x, y] = latLngToPixel(coord[0], coord[1], zoom)
-                              return `${x},${y}`
-                            })
-                            .join(" ")}
-                          fill="rgba(34, 197, 94, 0.2)"
-                          stroke="#22c55e"
-                          strokeWidth="2"
-                        />
-                      ) : (
-                        <polyline
-                          points={points
-                            .map((coord) => {
-                              const [x, y] = latLngToPixel(coord[0], coord[1], zoom)
-                              return `${x},${y}`
-                            })
-                            .join(" ")}
-                          fill="none"
-                          stroke="#f59e0b"
-                          strokeWidth="3"
-                        />
-                      )}
-                      {points.map((point, index) => {
-                        const [x, y] = latLngToPixel(point[0], point[1], zoom)
-                        return <circle key={index} cx={x} cy={y} r="5" fill="white" stroke="#22c55e" strokeWidth="2" />
-                      })}
-                    </svg>
-                  </Overlay>
-                )}
+                {points.length > 0 &&
+                  (drawMode === "polygon" || drawMode === "polyline") &&
+                  points.map((point, index) => (
+                    <Marker
+                      key={index}
+                      anchor={point}
+                      color={drawMode === "polygon" ? "#22c55e" : "#f59e0b"}
+                      width={30}
+                      height={30}
+                    />
+                  ))}
               </Map>
 
               <Button
@@ -246,11 +213,13 @@ export function MapEditor({ tenantSlug, tenantId }: MapEditorProps) {
               </Button>
 
               {drawMode && (
-                <div className="absolute top-4 left-4 z-[1000] bg-white p-3 rounded-lg shadow-lg">
+                <div className="absolute top-4 left-4 z-[1000] bg-white p-3 rounded-lg shadow-lg max-w-xs">
                   <p className="text-sm font-medium mb-2">
-                    {drawMode === "marker" && "Click on the map to place a marker"}
-                    {drawMode === "polygon" && "Click to add points. Click Finish when done (min 3 points)"}
-                    {drawMode === "polyline" && "Click to add points. Click Finish when done (min 2 points)"}
+                    {drawMode === "marker" && "Click on the map to place a marker. Click again to reposition."}
+                    {drawMode === "polygon" &&
+                      `Click to add points (${points.length}/3+ added). Click Finish when done.`}
+                    {drawMode === "polyline" &&
+                      `Click to add points (${points.length}/2+ added). Click Finish when done.`}
                   </p>
                   <div className="flex gap-2">
                     {(drawMode === "polygon" || drawMode === "polyline") && (

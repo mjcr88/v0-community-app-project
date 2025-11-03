@@ -24,9 +24,17 @@ export async function createLocation(data: {
     throw new Error("Unauthorized")
   }
 
-  const { data: profile } = await supabase.from("profiles").select("role, tenant_id").eq("id", user.id).single()
+  const { data: userData } = await supabase
+    .from("users")
+    .select("role, tenant_id, is_tenant_admin")
+    .eq("id", user.id)
+    .single()
 
-  if (!profile || profile.role !== "tenant_admin" || profile.tenant_id !== data.tenant_id) {
+  if (
+    !userData ||
+    (!userData.is_tenant_admin && userData.role !== "super_admin" && userData.role !== "tenant_admin") ||
+    (userData.tenant_id !== data.tenant_id && userData.role !== "super_admin")
+  ) {
     throw new Error("Unauthorized")
   }
 

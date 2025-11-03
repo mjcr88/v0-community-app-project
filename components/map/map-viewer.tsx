@@ -27,7 +27,8 @@ interface MapViewerProps {
 
 function mapboxProvider(x: number, y: number, z: number, dpr?: number) {
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
-  return `https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/tiles/${z}/${x}/${y}${dpr && dpr >= 2 ? "@2x" : ""}?access_token=${token}`
+  const retina = dpr && dpr >= 2 ? "@2x" : ""
+  return `https://api.mapbox.com/v4/mapbox.satellite/${z}/${x}/${y}${retina}.png?access_token=${token}`
 }
 
 export function MapViewer({ tenantSlug, initialLocations, mapCenter, mapZoom = 15, isAdmin = false }: MapViewerProps) {

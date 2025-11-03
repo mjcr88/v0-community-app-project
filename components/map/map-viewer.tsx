@@ -1,9 +1,12 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useState, useRef } from "react"
+import Map, { Marker, Source, Layer, NavigationControl, ScaleControl, GeolocateControl } from "react-map-gl"
+import type { MapRef } from "react-map-gl"
 import { Button } from "@/components/ui/button"
-import { Locate, Plus } from "lucide-react"
+import { Plus } from "lucide-react"
 import Link from "next/link"
+import "mapbox-gl/dist/mapbox-gl.css"
 
 interface Location {
   id: string
@@ -25,203 +28,137 @@ interface MapViewerProps {
 }
 
 export function MapViewer({ tenantSlug, initialLocations, mapCenter, mapZoom = 15, isAdmin = false }: MapViewerProps) {
-  const mapContainer = useRef<HTMLDivElement>(null)
-  const map = useRef<mapboxgl.Map | null>(null)
-  const [isLoaded, setIsLoaded] = useState(false)
-  const [mapboxgl, setMapboxgl] = useState<typeof import("mapbox-gl") | null>(null)
+  const mapRef = useRef<MapRef>(null)
 
-  useEffect(() => {
-    import("mapbox-gl").then((mapboxModule) => {
-      setMapboxgl(mapboxModule.default)
-    })
-  }, [])
+  const [viewState, setViewState] = useState({
+    longitude: mapCenter?.lng || -84.0907, // Default to Costa Rica
+    latitude: mapCenter?.lat || 9.7489,
+    zoom: mapZoom,
+  })
 
-  // Initialize map
-  useEffect(() => {
-    if (!mapContainer.current || map.current || !mapboxgl) return
+  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null)
 
-    const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
-    if (!token) {
-      console.error("[v0] Mapbox token not found")
-      return
-    }
+  const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
 
-    mapboxgl.accessToken = token
-
-    // Default to Costa Rica if no center provided
-    const defaultCenter: [number, number] = mapCenter ? [mapCenter.lng, mapCenter.lat] : [-84.0907, 9.7489]
-
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: "mapbox://styles/mapbox/satellite-streets-v12",
-      center: defaultCenter,
-      zoom: mapZoom,
-      pitch: 0,
-      bearing: 0,
-    })
-
-    // Add navigation controls
-    map.current.addControl(new mapboxgl.NavigationControl(), "top-right")
-    map.current.addControl(new mapboxgl.ScaleControl(), "bottom-left")
-
-    map.current.on("load", () => {
-      setIsLoaded(true)
-    })
-
-    return () => {
-      map.current?.remove()
-    }
-  }, [mapCenter, mapZoom, mapboxgl])
-
-  // Add locations to map
-  useEffect(() => {
-    if (!map.current || !isLoaded || !mapboxgl) return
-
-    // Add facility markers
-    initialLocations.forEach((location) => {
-      if (location.type === "facility" && location.coordinates) {
-        const marker = new mapboxgl.Marker({ color: "#22c55e" })
-          .setLngLat([location.coordinates.lng, location.coordinates.lat])
-          .setPopup(
-            new mapboxgl.Popup({ offset: 25 }).setHTML(
-              `<div class="p-2">
-                <h3 class="font-semibold">${location.icon || "📍"} ${location.name}</h3>
-                ${location.description ? `<p class="text-sm text-gray-600">${location.description}</p>` : ""}
-              </div>`,
-            ),
-          )
-          .addTo(map.current!)
-      }
-
-      // Add lot boundaries
-      if (location.type === "lot" && location.boundary_coordinates) {
-        const sourceId = `lot-${location.id}`
-
-        if (!map.current!.getSource(sourceId)) {
-          map.current!.addSource(sourceId, {
-            type: "geojson",
-            data: {
-              type: "Feature",
-              properties: { name: location.name },
-              geometry: {
-                type: "Polygon",
-                coordinates: [location.boundary_coordinates.map((coord) => [coord[1], coord[0]])],
-              },
-            },
-          })
-
-          map.current!.addLayer({
-            id: `${sourceId}-fill`,
-            type: "fill",
-            source: sourceId,
-            paint: {
-              "fill-color": "#3b82f6",
-              "fill-opacity": 0.2,
-            },
-          })
-
-          map.current!.addLayer({
-            id: `${sourceId}-outline`,
-            type: "line",
-            source: sourceId,
-            paint: {
-              "line-color": "#3b82f6",
-              "line-width": 2,
-            },
-          })
-        }
-      }
-
-      // Add walking paths
-      if (location.type === "walking_path" && location.path_coordinates) {
-        const sourceId = `path-${location.id}`
-
-        if (!map.current!.getSource(sourceId)) {
-          map.current!.addSource(sourceId, {
-            type: "geojson",
-            data: {
-              type: "Feature",
-              properties: { name: location.name },
-              geometry: {
-                type: "LineString",
-                coordinates: location.path_coordinates.map((coord) => [coord[1], coord[0]]),
-              },
-            },
-          })
-
-          map.current!.addLayer({
-            id: sourceId,
-            type: "line",
-            source: sourceId,
-            paint: {
-              "line-color": "#f59e0b",
-              "line-width": 3,
-              "line-dasharray": [2, 2],
-            },
-          })
-        }
-      }
-    })
-  }, [initialLocations, isLoaded, mapboxgl])
-
-  // Find user location
-  const handleFindLocation = () => {
-    if (!navigator.geolocation || !mapboxgl) {
-      alert("Geolocation is not supported by your browser")
-      return
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords
-
-        if (map.current) {
-          map.current.flyTo({
-            center: [longitude, latitude],
-            zoom: 17,
-            duration: 2000,
-          })
-
-          // Add user location marker
-          new mapboxgl.Marker({ color: "#ef4444" })
-            .setLngLat([longitude, latitude])
-            .setPopup(new mapboxgl.Popup().setHTML("<p>You are here</p>"))
-            .addTo(map.current)
-        }
-      },
-      (error) => {
-        console.error("[v0] Geolocation error:", error)
-        alert("Unable to retrieve your location")
-      },
-    )
-  }
-
-  if (!mapboxgl) {
+  if (!token) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-gray-100">
-        <p className="text-gray-600">Loading map...</p>
+        <p className="text-red-600">Mapbox token not configured</p>
       </div>
     )
   }
 
   return (
     <div className="relative w-full h-full">
-      <div ref={mapContainer} className="w-full h-full" />
+      <Map
+        {...viewState}
+        onMove={(evt) => setViewState(evt.viewState)}
+        mapboxAccessToken={token}
+        style={{ width: "100%", height: "100%" }}
+        mapStyle="mapbox://styles/mapbox/satellite-streets-v12"
+        ref={mapRef}
+      >
+        {/* Navigation Controls */}
+        <NavigationControl position="top-right" />
+        <ScaleControl position="bottom-left" />
+        <GeolocateControl position="top-right" trackUserLocation showUserHeading />
 
-      {/* Map controls overlay */}
-      <div className="absolute top-4 left-4 flex flex-col gap-2">
-        <Button onClick={handleFindLocation} size="icon" variant="secondary" className="shadow-lg">
-          <Locate className="h-4 w-4" />
-        </Button>
+        {/* Facility Markers */}
+        {initialLocations
+          .filter((loc) => loc.type === "facility" && loc.coordinates)
+          .map((location) => (
+            <Marker
+              key={location.id}
+              longitude={location.coordinates!.lng}
+              latitude={location.coordinates!.lat}
+              anchor="bottom"
+              onClick={(e) => {
+                e.originalEvent.stopPropagation()
+                setSelectedLocation(location)
+              }}
+            >
+              <div className="cursor-pointer transform hover:scale-110 transition-transform">
+                <div className="bg-green-500 rounded-full p-2 shadow-lg">
+                  <span className="text-white text-xl">{location.icon || "📍"}</span>
+                </div>
+              </div>
+            </Marker>
+          ))}
 
-        {isAdmin && (
+        {/* Lot Boundaries */}
+        {initialLocations
+          .filter((loc) => loc.type === "lot" && loc.boundary_coordinates)
+          .map((location) => (
+            <Source
+              key={`lot-${location.id}`}
+              type="geojson"
+              data={{
+                type: "Feature",
+                properties: { name: location.name },
+                geometry: {
+                  type: "Polygon",
+                  coordinates: [location.boundary_coordinates!.map((coord) => [coord[1], coord[0]])],
+                },
+              }}
+            >
+              <Layer
+                id={`lot-${location.id}-fill`}
+                type="fill"
+                paint={{
+                  "fill-color": "#3b82f6",
+                  "fill-opacity": 0.2,
+                }}
+              />
+              <Layer
+                id={`lot-${location.id}-outline`}
+                type="line"
+                paint={{
+                  "line-color": "#3b82f6",
+                  "line-width": 2,
+                }}
+              />
+            </Source>
+          ))}
+
+        {/* Walking Paths */}
+        {initialLocations
+          .filter((loc) => loc.type === "walking_path" && loc.path_coordinates)
+          .map((location) => (
+            <Source
+              key={`path-${location.id}`}
+              type="geojson"
+              data={{
+                type: "Feature",
+                properties: { name: location.name },
+                geometry: {
+                  type: "LineString",
+                  coordinates: location.path_coordinates!.map((coord) => [coord[1], coord[0]]),
+                },
+              }}
+            >
+              <Layer
+                id={`path-${location.id}`}
+                type="line"
+                paint={{
+                  "line-color": "#f59e0b",
+                  "line-width": 3,
+                  "line-dasharray": [2, 2],
+                }}
+              />
+            </Source>
+          ))}
+      </Map>
+
+      {/* Add Location Button (Admin only) */}
+      {isAdmin && (
+        <div className="absolute top-4 left-4">
           <Button asChild size="icon" className="shadow-lg">
             <Link href={`/t/${tenantSlug}/admin/map/locations/create`}>
               <Plus className="h-4 w-4" />
             </Link>
           </Button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Legend */}
       <div className="absolute bottom-4 right-4 bg-white p-4 rounded-lg shadow-lg">
@@ -239,12 +176,24 @@ export function MapViewer({ tenantSlug, initialLocations, mapCenter, mapZoom = 1
             <div className="w-8 h-0.5 bg-amber-500 border-dashed" />
             <span>Walking Paths</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-red-500" />
-            <span>Your Location</span>
-          </div>
         </div>
       </div>
+
+      {/* Location Popup */}
+      {selectedLocation && (
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-white p-4 rounded-lg shadow-xl max-w-sm">
+          <button
+            onClick={() => setSelectedLocation(null)}
+            className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
+          >
+            ✕
+          </button>
+          <h3 className="font-semibold text-lg mb-1">
+            {selectedLocation.icon} {selectedLocation.name}
+          </h3>
+          {selectedLocation.description && <p className="text-sm text-gray-600">{selectedLocation.description}</p>}
+        </div>
+      )}
     </div>
   )
 }

@@ -1,8 +1,6 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import mapboxgl from "mapbox-gl"
-import "mapbox-gl/dist/mapbox-gl.css"
 import { Button } from "@/components/ui/button"
 import { Locate, Plus } from "lucide-react"
 import Link from "next/link"
@@ -30,11 +28,17 @@ export function MapViewer({ tenantSlug, initialLocations, mapCenter, mapZoom = 1
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const [isLoaded, setIsLoaded] = useState(false)
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null)
+  const [mapboxgl, setMapboxgl] = useState<typeof import("mapbox-gl") | null>(null)
+
+  useEffect(() => {
+    import("mapbox-gl").then((mapboxModule) => {
+      setMapboxgl(mapboxModule.default)
+    })
+  }, [])
 
   // Initialize map
   useEffect(() => {
-    if (!mapContainer.current || map.current) return
+    if (!mapContainer.current || map.current || !mapboxgl) return
 
     const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
     if (!token) {
@@ -45,7 +49,7 @@ export function MapViewer({ tenantSlug, initialLocations, mapCenter, mapZoom = 1
     mapboxgl.accessToken = token
 
     // Default to Costa Rica if no center provided
-    const defaultCenter: [number, number] = mapCenter ? [mapCenter.lng, mapCenter.lat] : [-84.0907, 9.7489] // Costa Rica center
+    const defaultCenter: [number, number] = mapCenter ? [mapCenter.lng, mapCenter.lat] : [-84.0907, 9.7489]
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
@@ -61,20 +65,17 @@ export function MapViewer({ tenantSlug, initialLocations, mapCenter, mapZoom = 1
     map.current.addControl(new mapboxgl.ScaleControl(), "bottom-left")
 
     map.current.on("load", () => {
-      console.log("[v0] Map loaded successfully")
       setIsLoaded(true)
     })
 
     return () => {
       map.current?.remove()
     }
-  }, [mapCenter, mapZoom])
+  }, [mapCenter, mapZoom, mapboxgl])
 
   // Add locations to map
   useEffect(() => {
-    if (!map.current || !isLoaded) return
-
-    console.log("[v0] Adding locations to map:", initialLocations.length)
+    if (!map.current || !isLoaded || !mapboxgl) return
 
     // Add facility markers
     initialLocations.forEach((location) => {
@@ -161,11 +162,11 @@ export function MapViewer({ tenantSlug, initialLocations, mapCenter, mapZoom = 1
         }
       }
     })
-  }, [initialLocations, isLoaded])
+  }, [initialLocations, isLoaded, mapboxgl])
 
   // Find user location
   const handleFindLocation = () => {
-    if (!navigator.geolocation) {
+    if (!navigator.geolocation || !mapboxgl) {
       alert("Geolocation is not supported by your browser")
       return
     }
@@ -173,7 +174,6 @@ export function MapViewer({ tenantSlug, initialLocations, mapCenter, mapZoom = 1
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords
-        setUserLocation({ lat: latitude, lng: longitude })
 
         if (map.current) {
           map.current.flyTo({
@@ -193,6 +193,14 @@ export function MapViewer({ tenantSlug, initialLocations, mapCenter, mapZoom = 1
         console.error("[v0] Geolocation error:", error)
         alert("Unable to retrieve your location")
       },
+    )
+  }
+
+  if (!mapboxgl) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-gray-100">
+        <p className="text-gray-600">Loading map...</p>
+      </div>
     )
   }
 

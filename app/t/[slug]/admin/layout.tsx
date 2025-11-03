@@ -70,17 +70,9 @@ export default async function TenantAdminLayout({
         email,
         profile_picture_url,
         is_tenant_admin,
-        lot_id,
-        lots (
-          neighborhood_id,
-          neighborhoods (
-            tenant_id
-          )
-        )
+        lot_id
       `)
       .eq("id", user.id)
-      .eq("role", "resident")
-      .eq("lots.neighborhoods.tenant_id", tenant.id)
       .maybeSingle()
 
     residentData = data

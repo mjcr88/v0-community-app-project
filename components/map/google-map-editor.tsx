@@ -37,7 +37,7 @@ import {
   Upload,
   X,
   ImageIcon,
-  Edit,
+  Plus,
 } from "lucide-react"
 import { Polygon } from "./polygon"
 import { Polyline } from "./polyline"
@@ -73,7 +73,6 @@ function MapClickHandler({
       if (e.latLng) {
         const lat = e.latLng.lat()
         const lng = e.latLng.lng()
-        console.log("[v0] Map clicked:", { lat, lng, drawingMode })
         onMapClick(lat, lng)
       }
     })
@@ -125,11 +124,11 @@ export function GoogleMapEditor({
   const [showFacilities, setShowFacilities] = useState(true)
   const [showLots, setShowLots] = useState(true)
   const [showWalkingPaths, setShowWalkingPaths] = useState(true)
+  const [showNeighborhoods, setShowNeighborhoods] = useState(true)
 
   const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([])
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
 
-  const [editMode, setEditMode] = useState(false)
   const [editingLocationId, setEditingLocationId] = useState<string | null>(null)
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""
@@ -197,8 +196,6 @@ export function GoogleMapEditor({
   }, [locationType, selectedLotId, selectedNeighborhoodId, lots, neighborhoods])
 
   const handleLocationClick = (location: any) => {
-    if (!editMode) return
-
     setEditingLocationId(location.id)
     setName(location.name || "")
     setDescription(location.description || "")
@@ -232,11 +229,9 @@ export function GoogleMapEditor({
       setDrawingMode(null)
     } else if (drawingMode === "polygon") {
       const newPoints = [...polygonPoints, { lat, lng }]
-      console.log("[v0] Polygon points updated:", newPoints.length, newPoints)
       setPolygonPoints(newPoints)
     } else if (drawingMode === "polyline") {
       const newPoints = [...polylinePoints, { lat, lng }]
-      console.log("[v0] Polyline points updated:", newPoints.length, newPoints)
       setPolylinePoints(newPoints)
     }
   }
@@ -502,6 +497,24 @@ export function GoogleMapEditor({
     })
   }
 
+  const handleNewLocation = () => {
+    setEditingLocationId(null)
+    setMarkerPosition(null)
+    setPolygonPoints([])
+    setPolylinePoints([])
+    setName("")
+    setDescription("")
+    setFacilityType("")
+    setIcon("")
+    setSelectedLotId("")
+    setSelectedNeighborhoodId("")
+    setUploadedPhotos([])
+    setDrawingMode(null)
+    toast({
+      description: "Ready to create new location",
+    })
+  }
+
   const locateUser = async () => {
     try {
       const { lat, lng } = await geolocate()
@@ -533,6 +546,7 @@ export function GoogleMapEditor({
     if (location.type === "facility") return showFacilities
     if (location.type === "lot") return showLots
     if (location.type === "walking_path") return showWalkingPaths
+    if (location.type === "neighborhood") return showNeighborhoods
     return true
   })
 
@@ -612,6 +626,7 @@ export function GoogleMapEditor({
 
                 {filteredLocations.map((location) => {
                   const isEditing = editingLocationId === location.id
+
                   if (location.type === "facility" && location.coordinates) {
                     return (
                       <Marker
@@ -621,7 +636,10 @@ export function GoogleMapEditor({
                       />
                     )
                   }
-                  if (location.type === "facility" && location.boundary_coordinates) {
+                  if (
+                    (location.type === "facility" || location.type === "neighborhood") &&
+                    location.boundary_coordinates
+                  ) {
                     const paths = location.boundary_coordinates.map((coord: [number, number]) => ({
                       lat: coord[0],
                       lng: coord[1],
@@ -630,10 +648,10 @@ export function GoogleMapEditor({
                       <Polygon
                         key={`saved-${location.id}`}
                         paths={paths}
-                        strokeColor={isEditing ? "#10b981" : "#fb923c"}
+                        strokeColor={isEditing ? "#10b981" : location.type === "neighborhood" ? "#a855f7" : "#fb923c"}
                         strokeOpacity={0.7}
                         strokeWeight={isEditing ? 3 : 2}
-                        fillColor={isEditing ? "#6ee7b7" : "#fdba74"}
+                        fillColor={isEditing ? "#6ee7b7" : location.type === "neighborhood" ? "#d8b4fe" : "#fdba74"}
                         fillOpacity={0.25}
                         onClick={() => handleLocationClick(location)}
                       />
@@ -701,21 +719,13 @@ export function GoogleMapEditor({
 
             <div className="absolute left-3 bottom-3 flex flex-col gap-2">
               <Button
-                variant={editMode ? "default" : "secondary"}
+                variant="default"
                 size="icon"
-                onClick={() => {
-                  setEditMode(!editMode)
-                  if (editMode) {
-                    handleCancelEdit()
-                  }
-                  toast({
-                    description: editMode ? "Edit mode disabled" : "Edit mode enabled - Click locations to edit",
-                  })
-                }}
-                className="h-10 w-10 shadow-lg"
-                title={editMode ? "Disable Edit Mode" : "Enable Edit Mode"}
+                onClick={handleNewLocation}
+                className="h-10 w-10 shadow-lg bg-blue-600 hover:bg-blue-700"
+                title="New Location"
               >
-                <Edit className="h-5 w-5" />
+                <Plus className="h-5 w-5" />
               </Button>
               <div className="h-px bg-border" />
               <Button
@@ -724,7 +734,6 @@ export function GoogleMapEditor({
                 onClick={() => setDrawingMode(drawingMode === "marker" ? null : "marker")}
                 className="h-10 w-10 shadow-lg"
                 title="Place Marker"
-                disabled={editMode && !editingLocationId}
               >
                 <MapPin className="h-5 w-5" />
               </Button>
@@ -734,7 +743,6 @@ export function GoogleMapEditor({
                 onClick={() => setDrawingMode(drawingMode === "polygon" ? null : "polygon")}
                 className="h-10 w-10 shadow-lg"
                 title="Draw Polygon"
-                disabled={editMode && !editingLocationId}
               >
                 <Pentagon className="h-5 w-5" />
               </Button>
@@ -744,7 +752,6 @@ export function GoogleMapEditor({
                 onClick={() => setDrawingMode(drawingMode === "polyline" ? null : "polyline")}
                 className="h-10 w-10 shadow-lg"
                 title="Draw Path"
-                disabled={editMode && !editingLocationId}
               >
                 <Route className="h-5 w-5" />
               </Button>
@@ -804,6 +811,9 @@ export function GoogleMapEditor({
                   <DropdownMenuCheckboxItem checked={showWalkingPaths} onCheckedChange={setShowWalkingPaths}>
                     Walking Paths
                   </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem checked={showNeighborhoods} onCheckedChange={setShowNeighborhoods}>
+                    Neighborhoods
+                  </DropdownMenuCheckboxItem>
                 </DropdownMenuContent>
               </DropdownMenu>
 
@@ -833,9 +843,9 @@ export function GoogleMapEditor({
               </Button>
             </div>
 
-            {editMode && !editingLocationId && (
+            {!editingLocationId && !prefilledName && (
               <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg border">
-                <p className="text-sm font-medium">Edit Mode: Click a location to edit it</p>
+                <p className="text-sm font-medium">Click any location on the map to edit it</p>
               </div>
             )}
 
@@ -881,10 +891,39 @@ export function GoogleMapEditor({
 
       <Card>
         <CardContent className="space-y-4">
-          {editingLocationId && <Badge className="w-full justify-center bg-green-600">Editing Existing Location</Badge>}
+          {editingLocationId && (
+            <Badge className="w-full justify-center bg-green-600 text-white">Editing Existing Location</Badge>
+          )}
 
           {locationType === "neighborhood" && prefilledName && !editingLocationId && (
-            <Badge className="w-full justify-center bg-purple-600">New Neighborhood: Draw Boundary</Badge>
+            <Alert className="bg-purple-50 border-purple-200">
+              <AlertCircle className="h-4 w-4 text-purple-600" />
+              <AlertTitle className="text-purple-900">Creating Neighborhood Boundary</AlertTitle>
+              <AlertDescription className="text-purple-700">
+                You're adding a boundary for <strong>{prefilledName}</strong>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {locationType === "lot" && selectedLotId && !editingLocationId && (
+            <Alert className="bg-blue-50 border-blue-200">
+              <AlertCircle className="h-4 w-4 text-blue-600" />
+              <AlertTitle className="text-blue-900">Linking to Lot</AlertTitle>
+              <AlertDescription className="text-blue-700">
+                This location will be linked to <strong>{lots.find((l) => l.id === selectedLotId)?.lot_number}</strong>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {locationType === "neighborhood" && selectedNeighborhoodId && !prefilledName && !editingLocationId && (
+            <Alert className="bg-purple-50 border-purple-200">
+              <AlertCircle className="h-4 w-4 text-purple-600" />
+              <AlertTitle className="text-purple-900">Linking to Neighborhood</AlertTitle>
+              <AlertDescription className="text-purple-700">
+                This location will be linked to{" "}
+                <strong>{neighborhoods.find((n) => n.id === selectedNeighborhoodId)?.name}</strong>
+              </AlertDescription>
+            </Alert>
           )}
 
           <div className="space-y-2">

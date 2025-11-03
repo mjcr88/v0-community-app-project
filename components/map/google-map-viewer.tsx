@@ -115,11 +115,11 @@ export function GoogleMapViewer({
           {communityBoundary && communityBoundary.length >= 3 && (
             <Polygon
               paths={communityBoundary.map((coord) => ({ lat: coord[0], lng: coord[1] }))}
-              strokeColor="#10b981"
-              strokeOpacity={0.6}
+              strokeColor="#fbbf24"
+              strokeOpacity={0.5}
               strokeWeight={2}
-              fillColor="#10b981"
-              fillOpacity={0.18}
+              fillColor="#fef3c7"
+              fillOpacity={0.25}
               clickable={false}
             />
           )}
@@ -136,11 +136,11 @@ export function GoogleMapViewer({
               <Polygon
                 key={location.id}
                 paths={paths}
-                strokeColor="#86efac"
-                strokeOpacity={0.6}
-                strokeWeight={1.5}
-                fillColor="#86efac"
-                fillOpacity={0.15}
+                strokeColor="#fb923c"
+                strokeOpacity={0.7}
+                strokeWeight={2}
+                fillColor="#fdba74"
+                fillOpacity={0.25}
                 onClick={() => setSelectedLocation(location)}
               />
             )
@@ -153,11 +153,11 @@ export function GoogleMapViewer({
               <Polygon
                 key={location.id}
                 paths={paths}
-                strokeColor="#93c5fd"
-                strokeOpacity={0.6}
-                strokeWeight={1.5}
+                strokeColor="#60a5fa"
+                strokeOpacity={0.7}
+                strokeWeight={2}
                 fillColor="#93c5fd"
-                fillOpacity={0.15}
+                fillOpacity={0.25}
                 onClick={() => setSelectedLocation(location)}
               />
             )
@@ -166,9 +166,7 @@ export function GoogleMapViewer({
           {/* Walking Paths */}
           {walkingPaths.map((location) => {
             const path = location.path_coordinates!.map((coord) => ({ lat: coord[0], lng: coord[1] }))
-            return (
-              <Polyline key={location.id} path={path} strokeColor="#fcd34d" strokeOpacity={0.7} strokeWeight={2.5} />
-            )
+            return <Polyline key={location.id} path={path} strokeColor="#3b82f6" strokeOpacity={0.8} strokeWeight={3} />
           })}
 
           {/* Info Window */}

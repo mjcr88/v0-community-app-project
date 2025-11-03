@@ -127,6 +127,15 @@ export function GoogleMapEditor({
     fetchLocations()
   }, [tenantId])
 
+  useEffect(() => {
+    if (locationType === "lot" && selectedLotId) {
+      const selectedLot = lots.find((lot) => lot.id === selectedLotId)
+      if (selectedLot) {
+        setName(selectedLot.lot_number)
+      }
+    }
+  }, [locationType, selectedLotId, lots])
+
   const handleMapClick = (lat: number, lng: number) => {
     if (drawingMode === "marker") {
       setMarkerPosition({ lat, lng })
@@ -181,7 +190,7 @@ export function GoogleMapEditor({
   }
 
   const handleSave = async () => {
-    if (!name.trim()) {
+    if (locationType !== "lot" && !name.trim()) {
       toast({
         title: "Validation Error",
         description: "Please enter a location name",
@@ -271,7 +280,20 @@ export function GoogleMapEditor({
         setSavedLocations(data)
       }
 
-      router.push(`/t/${tenantSlug}/admin/map`)
+      setMarkerPosition(null)
+      setPolygonPoints([])
+      setPolylinePoints([])
+      setName("")
+      setDescription("")
+      setFacilityType("")
+      setIcon("")
+      setSelectedLotId("")
+      setSelectedNeighborhoodId("")
+      setDrawingMode(null)
+
+      toast({
+        description: "Form cleared. You can add another location.",
+      })
     } catch (error) {
       console.error("[v0] Error saving location:", error)
       toast({
@@ -339,60 +361,57 @@ export function GoogleMapEditor({
                 {communityBoundary && communityBoundary.length >= 3 && (
                   <Polygon
                     paths={communityBoundary.map((coord) => ({ lat: coord[0], lng: coord[1] }))}
-                    strokeColor="#10b981"
-                    strokeOpacity={0.6}
+                    strokeColor="#fbbf24"
+                    strokeOpacity={0.5}
                     strokeWeight={2}
-                    fillColor="#10b981"
-                    fillOpacity={0.18}
+                    fillColor="#fef3c7"
+                    fillOpacity={0.25}
                     clickable={false}
                   />
                 )}
 
                 {markerPosition && <Marker position={markerPosition} />}
 
-                {polygonPoints.length > 0 && (
+                {polygonPoints.length === 1 && <Marker position={polygonPoints[0]} />}
+
+                {polygonPoints.length === 2 && (
                   <>
-                    {polygonPoints.map((point, index) => (
-                      <Marker key={`polygon-point-${index}`} position={point} />
-                    ))}
-                    {polygonPoints.length >= 2 && (
-                      <Polyline
-                        path={polygonPoints}
-                        strokeColor="#ef4444"
-                        strokeOpacity={0.8}
-                        strokeWeight={2}
-                        clickable={false}
-                      />
-                    )}
-                    {polygonPoints.length >= 3 && (
-                      <Polygon
-                        paths={polygonPoints}
-                        strokeColor="#ef4444"
-                        strokeOpacity={0.8}
-                        strokeWeight={2}
-                        fillColor="#ef4444"
-                        fillOpacity={0.2}
-                        clickable={false}
-                      />
-                    )}
+                    <Marker position={polygonPoints[0]} />
+                    <Marker position={polygonPoints[1]} />
+                    <Polyline
+                      path={polygonPoints}
+                      strokeColor="#ef4444"
+                      strokeOpacity={0.8}
+                      strokeWeight={2}
+                      clickable={false}
+                    />
                   </>
                 )}
 
-                {polylinePoints.length > 0 && (
-                  <>
-                    {polylinePoints.map((point, index) => (
-                      <Marker key={`polyline-point-${index}`} position={point} />
-                    ))}
-                    {polylinePoints.length >= 2 && (
-                      <Polyline
-                        path={polylinePoints}
-                        strokeColor="#f59e0b"
-                        strokeOpacity={0.8}
-                        strokeWeight={3}
-                        clickable={false}
-                      />
-                    )}
-                  </>
+                {polygonPoints.length >= 3 && (
+                  <Polygon
+                    key={`drawing-polygon-${polygonPoints.length}`}
+                    paths={polygonPoints}
+                    strokeColor="#ef4444"
+                    strokeOpacity={0.8}
+                    strokeWeight={2}
+                    fillColor="#ef4444"
+                    fillOpacity={0.2}
+                    clickable={false}
+                  />
+                )}
+
+                {polylinePoints.length === 1 && <Marker position={polylinePoints[0]} />}
+
+                {polylinePoints.length >= 2 && (
+                  <Polyline
+                    key={`drawing-polyline-${polylinePoints.length}`}
+                    path={polylinePoints}
+                    strokeColor="#f59e0b"
+                    strokeOpacity={0.8}
+                    strokeWeight={3}
+                    clickable={false}
+                  />
                 )}
 
                 {filteredLocations.map((location) => {
@@ -408,11 +427,11 @@ export function GoogleMapEditor({
                       <Polygon
                         key={`saved-${location.id}`}
                         paths={paths}
-                        strokeColor="#86efac"
-                        strokeOpacity={0.6}
-                        strokeWeight={1.5}
-                        fillColor="#86efac"
-                        fillOpacity={0.15}
+                        strokeColor="#fb923c"
+                        strokeOpacity={0.7}
+                        strokeWeight={2}
+                        fillColor="#fdba74"
+                        fillOpacity={0.25}
                         clickable={false}
                       />
                     )
@@ -426,11 +445,11 @@ export function GoogleMapEditor({
                       <Polygon
                         key={`saved-${location.id}`}
                         paths={paths}
-                        strokeColor="#93c5fd"
-                        strokeOpacity={0.6}
-                        strokeWeight={1.5}
+                        strokeColor="#60a5fa"
+                        strokeOpacity={0.7}
+                        strokeWeight={2}
                         fillColor="#93c5fd"
-                        fillOpacity={0.15}
+                        fillOpacity={0.25}
                         clickable={false}
                       />
                     )
@@ -444,9 +463,9 @@ export function GoogleMapEditor({
                       <Polyline
                         key={`saved-${location.id}`}
                         path={path}
-                        strokeColor="#fcd34d"
-                        strokeOpacity={0.7}
-                        strokeWeight={2.5}
+                        strokeColor="#3b82f6"
+                        strokeOpacity={0.8}
+                        strokeWeight={3}
                         clickable={false}
                       />
                     )
@@ -589,6 +608,31 @@ export function GoogleMapEditor({
                 <Locate className="h-5 w-5" />
               </Button>
             </div>
+
+            {(drawingMode === "polygon" || drawingMode === "polyline") && (
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-background/95 backdrop-blur-sm px-4 py-2 rounded-lg shadow-lg border">
+                <p className="text-sm font-medium">
+                  {drawingMode === "polygon" && (
+                    <>
+                      {polygonPoints.length === 0
+                        ? "Click on the map to start drawing"
+                        : polygonPoints.length < 3
+                          ? `${polygonPoints.length} point${polygonPoints.length === 1 ? "" : "s"} placed (need ${3 - polygonPoints.length} more)`
+                          : `${polygonPoints.length} points placed - Ready to save!`}
+                    </>
+                  )}
+                  {drawingMode === "polyline" && (
+                    <>
+                      {polylinePoints.length === 0
+                        ? "Click on the map to start drawing"
+                        : polylinePoints.length < 2
+                          ? `${polylinePoints.length} point placed (need ${2 - polylinePoints.length} more)`
+                          : `${polylinePoints.length} points placed - Ready to save!`}
+                    </>
+                  )}
+                </p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -648,12 +692,13 @@ export function GoogleMapEditor({
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="name">Name *</Label>
+            <Label htmlFor="name">{locationType === "lot" ? "Lot Number" : "Name *"}</Label>
             <Input
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g., Community Pool"
+              placeholder={locationType === "lot" ? "Select a lot first" : "e.g., Community Pool"}
+              disabled={locationType === "lot"}
             />
           </div>
 

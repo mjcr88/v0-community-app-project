@@ -1,11 +1,12 @@
 "use client"
 
-import { useState, useRef } from "react"
-import Map, { Marker, Source, Layer, NavigationControl, ScaleControl, GeolocateControl } from "react-map-gl/maplibre"
-import type { MapRef } from "react-map-gl/maplibre"
+import { useState, useRef, useEffect } from "react"
+import Map, { Marker, Source, Layer, NavigationControl, ScaleControl, GeolocateControl } from "react-map-gl"
+import type { MapRef } from "react-map-gl"
 import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
 import Link from "next/link"
+import mapboxgl from "mapbox-gl"
 
 interface Location {
   id: string
@@ -38,6 +39,13 @@ export function MapViewer({ tenantSlug, initialLocations, mapCenter, mapZoom = 1
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null)
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+
+  useEffect(() => {
+    if (token) {
+      mapboxgl.accessToken = token
+      mapboxgl.workerUrl = `https://unpkg.com/mapbox-gl@${mapboxgl.version}/dist/mapbox-gl-csp-worker.js`
+    }
+  }, [token])
 
   if (!token) {
     return (

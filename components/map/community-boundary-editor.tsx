@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useCallback, useEffect } from "react"
-import { APIProvider, Map, useMap } from "@vis.gl/react-google-maps"
+import { APIProvider, Map, useMap, Marker, Polyline } from "@vis.gl/react-google-maps"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { MapPin, Trash2, Save, Info } from "lucide-react"
@@ -57,7 +57,7 @@ export function CommunityBoundaryEditor({
   const { toast } = useToast()
   const [boundary, setBoundary] = useState<{ lat: number; lng: number }[]>([])
   const [isDrawing, setIsDrawing] = useState(false)
-  const [center, setCenter] = useState(initialMapCenter || { lat: 40.7128, lng: -74.006 })
+  const [center, setCenter] = useState(initialMapCenter || { lat: 9.9567, lng: -84.5333 })
   const [zoom, setZoom] = useState(initialMapZoom || 15)
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""
@@ -199,7 +199,25 @@ export function CommunityBoundaryEditor({
               >
                 <MapClickHandler isDrawing={isDrawing} onMapClick={handleMapClick} />
 
-                {boundary.length > 0 && (
+                {boundary.length > 0 && boundary.length < 3 && (
+                  <>
+                    {boundary.map((point, index) => (
+                      <Marker key={`boundary-marker-${index}`} position={point} />
+                    ))}
+                  </>
+                )}
+
+                {boundary.length === 2 && (
+                  <Polyline
+                    path={boundary}
+                    strokeColor="#FF6B35"
+                    strokeOpacity={0.8}
+                    strokeWeight={3}
+                    clickable={false}
+                  />
+                )}
+
+                {boundary.length >= 3 && (
                   <Polygon
                     paths={boundary}
                     strokeColor="#FF6B35"
@@ -211,7 +229,6 @@ export function CommunityBoundaryEditor({
                   />
                 )}
 
-                {/* Show existing boundary if not currently drawing */}
                 {!isDrawing && hasExistingBoundary && boundary.length === 0 && (
                   <Polygon
                     paths={initialBoundary}

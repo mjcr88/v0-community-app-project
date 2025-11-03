@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { APIProvider, Map, Marker, InfoWindow } from "@vis.gl/react-google-maps"
 import { Button } from "@/components/ui/button"
-import { Plus, Locate, Layers, ZoomIn, ZoomOut } from "lucide-react"
+import { Plus, Locate, Layers } from "lucide-react"
 import Link from "next/link"
 import { Polygon } from "./polygon"
 import { Polyline } from "./polyline"
@@ -57,14 +57,6 @@ export function GoogleMapViewer({
         },
       )
     }
-  }
-
-  const toggleMapType = () => {
-    setMapType((prev) => {
-      if (prev === "satellite") return "terrain"
-      if (prev === "terrain") return "roadmap"
-      return "satellite"
-    })
   }
 
   const facilityMarkers = initialLocations.filter((loc) => loc.type === "facility" && loc.coordinates)
@@ -179,17 +171,7 @@ export function GoogleMapViewer({
         </APIProvider>
       </div>
 
-      {isAdmin && (
-        <div className="absolute top-3 left-3 z-[1000]">
-          <Button asChild size="icon" className="shadow-lg h-10 w-10">
-            <Link href={`/t/${tenantSlug}/admin/map/locations/create`}>
-              <Plus className="h-5 w-5" />
-            </Link>
-          </Button>
-        </div>
-      )}
-
-      <div className="absolute top-3 right-3 z-[1000] flex flex-col gap-2">
+      <div className="absolute left-3 top-3 flex flex-col gap-2">
         <Button
           variant="secondary"
           size="icon"
@@ -197,7 +179,7 @@ export function GoogleMapViewer({
           className="h-10 w-10 shadow-lg"
           title="Zoom In"
         >
-          <ZoomIn className="h-4 w-4" />
+          +
         </Button>
         <Button
           variant="secondary"
@@ -206,13 +188,23 @@ export function GoogleMapViewer({
           className="h-10 w-10 shadow-lg"
           title="Zoom Out"
         >
-          <ZoomOut className="h-4 w-4" />
+          −
         </Button>
       </div>
 
-      <div className="absolute bottom-3 left-3 z-[1000] flex gap-2">
+      {isAdmin && (
+        <div className="absolute bottom-3 left-3">
+          <Button asChild size="icon" className="shadow-lg h-10 w-10">
+            <Link href={`/t/${tenantSlug}/admin/map/locations/create`}>
+              <Plus className="h-5 w-5" />
+            </Link>
+          </Button>
+        </div>
+      )}
+
+      <div className="absolute right-3 top-3">
         <Select value={mapType} onValueChange={(v) => setMapType(v as any)}>
-          <SelectTrigger className="w-32 shadow-lg bg-background">
+          <SelectTrigger className="w-[140px] shadow-lg">
             <Layers className="mr-2 h-4 w-4" />
             <SelectValue />
           </SelectTrigger>
@@ -222,27 +214,18 @@ export function GoogleMapViewer({
             <SelectItem value="roadmap">Street</SelectItem>
           </SelectContent>
         </Select>
-        <Button variant="secondary" size="icon" onClick={handleLocate} className="shadow-lg" title="Locate Me">
-          <Locate className="h-4 w-4" />
-        </Button>
       </div>
 
-      <div className="absolute bottom-3 right-3 bg-background p-3 rounded-lg shadow-lg z-[1000] border">
-        <h3 className="font-semibold text-sm mb-2">Legend</h3>
-        <div className="space-y-1 text-xs">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-green-500" />
-            <span>Facilities</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-blue-500 opacity-50" />
-            <span>Lot Boundaries</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-0.5 bg-amber-500" />
-            <span>Walking Paths</span>
-          </div>
-        </div>
+      <div className="absolute bottom-3 right-3">
+        <Button
+          variant="secondary"
+          size="icon"
+          onClick={handleLocate}
+          className="h-10 w-10 shadow-lg"
+          title="Locate Me"
+        >
+          <Locate className="h-5 w-5" />
+        </Button>
       </div>
     </div>
   )

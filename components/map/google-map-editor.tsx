@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { createLocation } from "@/app/actions/locations"
 import { useRouter } from "next/navigation"
-import { Loader2, MapPin, Pentagon, Route, Locate, AlertCircle, Trash2, Undo, Layers } from "lucide-react"
+import { Loader2, MapPin, Pentagon, Route, Locate, AlertCircle, Trash2, Undo, Layers, Check } from "lucide-react"
 import { Polygon } from "./polygon"
 import { Polyline } from "./polyline"
 
@@ -107,6 +107,18 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
     }
   }
 
+  const finishDrawing = () => {
+    if (drawingMode === "polygon" && polygonPoints.length < 3) {
+      alert("A polygon needs at least 3 points")
+      return
+    }
+    if (drawingMode === "polyline" && polylinePoints.length < 2) {
+      alert("A line needs at least 2 points")
+      return
+    }
+    setDrawingMode(null)
+  }
+
   const clearDrawing = () => {
     setMarkerPosition(null)
     setPolygonPoints([])
@@ -200,9 +212,9 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
           <CardDescription>
             {drawingMode === "marker" && "Click on the map to place a marker"}
             {drawingMode === "polygon" &&
-              `Click to add points (${polygonPoints.length} points). Click to finish or undo.`}
+              `Click to add points to the polygon (${polygonPoints.length} points). Click "Finish" when done.`}
             {drawingMode === "polyline" &&
-              `Click to add points (${polylinePoints.length} points). Click to finish or undo.`}
+              `Click to add points to the line (${polylinePoints.length} points). Click "Finish" when done.`}
             {!drawingMode && "Select a drawing tool to start"}
           </CardDescription>
         </CardHeader>
@@ -246,6 +258,7 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
                     strokeWeight={2}
                     fillColor="#3b82f6"
                     fillOpacity={0.2}
+                    clickable={false}
                   />
                 )}
 
@@ -254,12 +267,39 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
                 ))}
 
                 {polylinePoints.length > 1 && (
-                  <Polyline path={polylinePoints} strokeColor="#f59e0b" strokeOpacity={0.8} strokeWeight={3} />
+                  <Polyline
+                    path={polylinePoints}
+                    strokeColor="#f59e0b"
+                    strokeOpacity={0.8}
+                    strokeWeight={3}
+                    clickable={false}
+                  />
                 )}
               </Map>
             </APIProvider>
 
             <div className="absolute left-3 top-3 flex flex-col gap-2">
+              <Button
+                variant="secondary"
+                size="icon"
+                onClick={() => setMapZoom(mapZoom + 1)}
+                className="h-10 w-10 shadow-lg"
+                title="Zoom In"
+              >
+                +
+              </Button>
+              <Button
+                variant="secondary"
+                size="icon"
+                onClick={() => setMapZoom(mapZoom - 1)}
+                className="h-10 w-10 shadow-lg"
+                title="Zoom Out"
+              >
+                −
+              </Button>
+            </div>
+
+            <div className="absolute bottom-3 left-3 flex flex-col gap-2">
               <Button
                 variant={drawingMode === "marker" ? "default" : "secondary"}
                 size="icon"
@@ -288,6 +328,17 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
                 <Route className="h-5 w-5" />
               </Button>
               <div className="h-px bg-border" />
+              {(drawingMode === "polygon" || drawingMode === "polyline") && (
+                <Button
+                  variant="default"
+                  size="icon"
+                  onClick={finishDrawing}
+                  className="h-10 w-10 shadow-lg bg-green-600 hover:bg-green-700"
+                  title="Finish Drawing"
+                >
+                  <Check className="h-5 w-5" />
+                </Button>
+              )}
               <Button
                 variant="secondary"
                 size="icon"
@@ -295,7 +346,7 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
                 disabled={
                   (drawingMode === "polygon" && polygonPoints.length === 0) ||
                   (drawingMode === "polyline" && polylinePoints.length === 0) ||
-                  !drawingMode
+                  (!drawingMode && polygonPoints.length === 0 && polylinePoints.length === 0)
                 }
                 className="h-10 w-10 shadow-lg"
                 title="Undo Last Point"
@@ -313,30 +364,9 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
               </Button>
             </div>
 
-            <div className="absolute right-3 top-3 flex flex-col gap-2">
-              <Button
-                variant="secondary"
-                size="icon"
-                onClick={() => setMapZoom(mapZoom + 1)}
-                className="h-10 w-10 shadow-lg"
-                title="Zoom In"
-              >
-                +
-              </Button>
-              <Button
-                variant="secondary"
-                size="icon"
-                onClick={() => setMapZoom(mapZoom - 1)}
-                className="h-10 w-10 shadow-lg"
-                title="Zoom Out"
-              >
-                −
-              </Button>
-            </div>
-
-            <div className="absolute bottom-3 left-3 flex gap-2">
+            <div className="absolute right-3 top-3">
               <Select value={mapType} onValueChange={(v) => setMapType(v as any)}>
-                <SelectTrigger className="w-32 shadow-lg">
+                <SelectTrigger className="w-[140px] shadow-lg">
                   <Layers className="mr-2 h-4 w-4" />
                   <SelectValue />
                 </SelectTrigger>
@@ -346,8 +376,17 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
                   <SelectItem value="roadmap">Street</SelectItem>
                 </SelectContent>
               </Select>
-              <Button variant="secondary" size="icon" onClick={locateUser} className="shadow-lg" title="Locate Me">
-                <Locate className="h-4 w-4" />
+            </div>
+
+            <div className="absolute bottom-3 right-3">
+              <Button
+                variant="secondary"
+                size="icon"
+                onClick={locateUser}
+                className="h-10 w-10 shadow-lg"
+                title="Locate Me"
+              >
+                <Locate className="h-5 w-5" />
               </Button>
             </div>
           </div>

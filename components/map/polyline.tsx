@@ -3,7 +3,7 @@
 import { forwardRef, useContext, useEffect, useImperativeHandle, useMemo, useRef } from "react"
 import { GoogleMapsContext } from "@vis.gl/react-google-maps"
 import type { Ref } from "react"
-import { google } from "google.maps" // Declare the google variable
+import * as google from "google.maps" // Import google maps library
 
 type PolylineEventProps = {
   onClick?: (e: google.maps.MapMouseEvent) => void

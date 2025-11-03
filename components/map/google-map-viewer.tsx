@@ -79,7 +79,7 @@ export function GoogleMapViewer({
   const getCommunityBoundaryPaths = () => {
     if (!communityBoundary || communityBoundary.length < 3) return null
 
-    // Outer bounds (covers entire world)
+    // Outer bounds (covers entire world) - clockwise
     const worldBounds = [
       { lat: 85, lng: -180 },
       { lat: 85, lng: 180 },
@@ -88,8 +88,8 @@ export function GoogleMapViewer({
       { lat: 85, lng: -180 },
     ]
 
-    // Inner bounds (community boundary - reversed to create a hole)
-    const communityPath = communityBoundary.map((coord) => ({ lat: coord[0], lng: coord[1] })).reverse()
+    // Inner bounds (community boundary) - keep original order for proper hole
+    const communityPath = communityBoundary.map((coord) => ({ lat: coord[0], lng: coord[1] }))
 
     return [worldBounds, communityPath]
   }
@@ -117,9 +117,9 @@ export function GoogleMapViewer({
           {getCommunityBoundaryPaths() && (
             <Polygon
               paths={getCommunityBoundaryPaths()!}
-              strokeColor="#ff6b35"
-              strokeOpacity={0.4}
-              strokeWeight={2}
+              strokeColor="#000000"
+              strokeOpacity={0.05}
+              strokeWeight={1}
               fillColor="#000000"
               fillOpacity={0.25}
               clickable={false}

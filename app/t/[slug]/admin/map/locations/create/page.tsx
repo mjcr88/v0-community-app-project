@@ -14,15 +14,19 @@ export default async function CreateLocationPage({ params }: { params: Promise<{
     redirect(`/t/${slug}/login`)
   }
 
-  const { data: profile } = await supabase.from("profiles").select("role, tenant_id").eq("id", user.id).single()
+  const { data: userData } = await supabase
+    .from("users")
+    .select("role, tenant_id, is_tenant_admin")
+    .eq("id", user.id)
+    .single()
 
-  if (!profile || profile.role !== "tenant_admin") {
+  if (!userData || (!userData.is_tenant_admin && userData.role !== "super_admin")) {
     redirect(`/t/${slug}`)
   }
 
   const { data: tenant } = await supabase.from("tenants").select("*").eq("slug", slug).single()
 
-  if (!tenant || tenant.id !== profile.tenant_id) {
+  if (!tenant || (userData.role !== "super_admin" && tenant.id !== userData.tenant_id)) {
     redirect(`/t/${slug}`)
   }
 

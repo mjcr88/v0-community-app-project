@@ -3,7 +3,7 @@
 import { forwardRef, useContext, useEffect, useImperativeHandle, useRef } from "react"
 import { GoogleMapsContext } from "@vis.gl/react-google-maps"
 import type { Ref } from "react"
-import * as google from "google.maps" // Import google maps library
+import * as google from "google.maps"
 
 type PolygonEventProps = {
   onClick?: (e: google.maps.MapMouseEvent) => void

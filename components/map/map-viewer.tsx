@@ -71,8 +71,7 @@ export function MapViewer({ tenantSlug, initialLocations, mapCenter, mapZoom = 1
           setCenter(newCenter)
           setZoom(newZoom)
         }}
-        height={typeof window !== "undefined" ? window.innerHeight : 600}
-        defaultWidth={typeof window !== "undefined" ? window.innerWidth : 800}
+        height={600}
       >
         {facilityMarkers.map((location) => (
           <Marker

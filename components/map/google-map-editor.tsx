@@ -263,7 +263,7 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_400px]">
       <Card>
-        <CardContent className="p-6">
+        <CardContent className="p-0">
           <div className="relative h-[600px] w-full overflow-hidden rounded-lg border">
             <APIProvider apiKey={apiKey}>
               <Map
@@ -485,8 +485,10 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
 
             <div className="absolute right-3 top-3">
               <Select value={mapType} onValueChange={(v) => setMapType(v as any)}>
-                <SelectTrigger className="w-10 h-10 p-0 flex items-center justify-center shadow-lg bg-secondary hover:bg-secondary/80">
-                  <Layers className="h-4 w-4 text-black" />
+                <SelectTrigger className="w-10 h-10 p-0 flex items-center justify-center shadow-lg bg-secondary hover:bg-secondary/80 border-0">
+                  <div className="flex items-center justify-center w-full h-full">
+                    <Layers className="h-4 w-4 text-black" />
+                  </div>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="satellite">Satellite</SelectItem>

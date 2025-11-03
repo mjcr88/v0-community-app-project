@@ -19,7 +19,7 @@ export default async function MapViewerPage({ params }: { params: Promise<{ slug
     .order("created_at", { ascending: false })
 
   return (
-    <div className="h-screen w-full">
+    <div className="h-[100vh] w-full">
       <GoogleMapViewer
         tenantSlug={slug}
         initialLocations={locations || []}

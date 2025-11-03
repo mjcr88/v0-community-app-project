@@ -3,7 +3,7 @@
 import { forwardRef, useContext, useEffect, useImperativeHandle, useMemo, useRef } from "react"
 import { GoogleMapsContext } from "@vis.gl/react-google-maps"
 import type { Ref } from "react"
-import * as google from "google.maps"
+import { google } from "google-maps"
 
 type PolylineEventProps = {
   onClick?: (e: google.maps.MapMouseEvent) => void
@@ -35,7 +35,7 @@ function usePolyline(props: PolylineProps) {
 
   useMemo(() => {
     polyline.setOptions(polylineOptions)
-  }, [polyline]) // Removed polylineOptions from dependency array
+  }, [polyline])
 
   const map = useContext(GoogleMapsContext)?.map
 

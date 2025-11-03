@@ -1,5 +1,5 @@
 import { createServerClient } from "@/lib/supabase/server"
-import { MapViewer } from "@/components/map/map-viewer"
+import { GoogleMapViewer } from "@/components/map/google-map-viewer"
 
 export default async function MapViewerPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
@@ -20,7 +20,7 @@ export default async function MapViewerPage({ params }: { params: Promise<{ slug
 
   return (
     <div className="h-[calc(100vh-4rem)]">
-      <MapViewer
+      <GoogleMapViewer
         tenantSlug={slug}
         initialLocations={locations || []}
         mapCenter={tenant.map_center_coordinates as { lat: number; lng: number } | null}

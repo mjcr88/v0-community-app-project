@@ -14,7 +14,6 @@ import { useRouter } from "next/navigation"
 import { Loader2, MapPin, Pentagon, Route, Locate, AlertCircle } from "lucide-react"
 import { Polygon } from "./polygon"
 import { Polyline } from "./polyline"
-import { google } from "googlemaps"
 
 type DrawingMode = "marker" | "polygon" | "polyline" | null
 type LatLng = { lat: number; lng: number }
@@ -36,7 +35,7 @@ function MapClickHandler({
   useEffect(() => {
     if (!map) return
 
-    const clickListener = map.addListener("click", (e: google.maps.MapMouseEvent) => {
+    const clickListener = map.addListener("click", (e: any) => {
       if (e.latLng) {
         const lat = e.latLng.lat()
         const lng = e.latLng.lng()
@@ -46,7 +45,9 @@ function MapClickHandler({
     })
 
     return () => {
-      google.maps.event.removeListener(clickListener)
+      if (clickListener) {
+        map.removeListener("click", clickListener)
+      }
     }
   }, [map, drawingMode, onMapClick])
 
@@ -296,9 +297,11 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
                   {markerPosition && (
                     <AdvancedMarker
                       position={markerPosition}
+                      draggable
                       onDragEnd={(e) => {
-                        if (e.latLng) {
-                          setMarkerPosition({ lat: e.latLng.lat(), lng: e.latLng.lng() })
+                        const latLng = e.latLng
+                        if (latLng) {
+                          setMarkerPosition({ lat: latLng.lat(), lng: latLng.lng() })
                         }
                       }}
                     />

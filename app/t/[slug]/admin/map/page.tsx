@@ -62,11 +62,6 @@ export default async function MapManagementPage({ params }: { params: Promise<{ 
           <div className="h-[400px] rounded-lg overflow-hidden border">
             <iframe src={`/t/${slug}/admin/map/viewer`} className="w-full h-full" title="Map Preview" />
           </div>
-          <div className="mt-4">
-            <Button asChild variant="outline" className="w-full bg-transparent">
-              <Link href={`/t/${slug}/admin/map/viewer`}>Open Full Map</Link>
-            </Button>
-          </div>
         </CardContent>
       </Card>
 

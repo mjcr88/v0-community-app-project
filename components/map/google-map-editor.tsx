@@ -18,7 +18,7 @@ import { useToast } from "@/hooks/use-toast"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { geolocate } from "@/lib/geolocate" // Import geolocate function
 
-type DrawingMode = "marker" | "polygon" | "polyline" | "select" | null
+type DrawingMode = "marker" | "polygon" | "polyline" | null
 type LatLng = { lat: number; lng: number }
 
 interface GoogleMapEditorProps {
@@ -70,8 +70,6 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
   const [polygonPoints, setPolygonPoints] = useState<LatLng[]>([])
   const [polylinePoints, setPolylinePoints] = useState<LatLng[]>([])
   const [savedLocations, setSavedLocations] = useState<any[]>([])
-  const [selectedMarkers, setSelectedMarkers] = useState<Set<number>>(new Set())
-
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [locationType, setLocationType] = useState<"facility" | "lot" | "walking_path">("facility")
@@ -105,17 +103,6 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
       const newPoints = [...polylinePoints, { lat, lng }]
       console.log("[v0] Polyline points updated:", newPoints.length, newPoints)
       setPolylinePoints(newPoints)
-    } else if (drawingMode === "select") {
-      if (
-        markerPosition &&
-        Math.abs(markerPosition.lat - lat) < 0.0001 &&
-        Math.abs(markerPosition.lng - lng) < 0.0001
-      ) {
-        setMarkerPosition(null)
-        toast({
-          description: "Marker removed",
-        })
-      }
     }
   }
 
@@ -140,20 +127,13 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
   }
 
   const clearDrawing = () => {
-    if (drawingMode === "select" && selectedMarkers.size > 0) {
-      setSelectedMarkers(new Set())
-      toast({
-        description: "Selection cleared",
-      })
-    } else {
-      setMarkerPosition(null)
-      setPolygonPoints([])
-      setPolylinePoints([])
-      setDrawingMode(null)
-      toast({
-        description: "All drawings cleared",
-      })
-    }
+    setMarkerPosition(null)
+    setPolygonPoints([])
+    setPolylinePoints([])
+    setDrawingMode(null)
+    toast({
+      description: "All drawings cleared",
+    })
   }
 
   const undoLastPoint = () => {
@@ -291,7 +271,6 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
               `Click to add points to the polygon (${polygonPoints.length} points). Click "Finish" when done.`}
             {drawingMode === "polyline" &&
               `Click to add points to the line (${polylinePoints.length} points). Click "Finish" when done.`}
-            {drawingMode === "select" && "Click on markers to select them for deletion"}
             {!drawingMode && "Select a drawing tool to start"}
           </CardDescription>
         </CardHeader>
@@ -382,7 +361,26 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
                   />
                 )}
 
-                {polygonPoints.length > 2 && (
+                {polygonPoints.length > 0 && polygonPoints.length < 3 && (
+                  <>
+                    {polygonPoints.map((point, index) => (
+                      <Marker key={`polygon-marker-${index}`} position={point} />
+                    ))}
+                  </>
+                )}
+
+                {polygonPoints.length === 2 && (
+                  <Polyline
+                    key={`polygon-line-${JSON.stringify(polygonPoints)}`}
+                    path={polygonPoints}
+                    strokeColor="#3b82f6"
+                    strokeOpacity={0.8}
+                    strokeWeight={2}
+                    clickable={false}
+                  />
+                )}
+
+                {polygonPoints.length >= 3 && (
                   <Polygon
                     key={`polygon-${polygonPoints.length}-${JSON.stringify(polygonPoints)}`}
                     paths={polygonPoints}
@@ -395,7 +393,9 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
                   />
                 )}
 
-                {polylinePoints.length > 1 && (
+                {polylinePoints.length === 1 && <Marker key={`polyline-marker-0`} position={polylinePoints[0]} />}
+
+                {polylinePoints.length >= 2 && (
                   <Polyline
                     key={`polyline-${polylinePoints.length}-${JSON.stringify(polylinePoints)}`}
                     path={polylinePoints}
@@ -409,6 +409,27 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
             </APIProvider>
 
             <div className="absolute left-3 top-3 flex flex-col gap-2">
+              <Button
+                variant="secondary"
+                size="icon"
+                onClick={() => setMapZoom(mapZoom + 1)}
+                className="h-10 w-10 shadow-lg"
+                title="Zoom In"
+              >
+                +
+              </Button>
+              <Button
+                variant="secondary"
+                size="icon"
+                onClick={() => setMapZoom(mapZoom - 1)}
+                className="h-10 w-10 shadow-lg"
+                title="Zoom Out"
+              >
+                −
+              </Button>
+            </div>
+
+            <div className="absolute left-3 bottom-3 flex flex-col gap-2">
               <Button
                 variant={drawingMode === "marker" ? "default" : "secondary"}
                 size="icon"
@@ -435,22 +456,6 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
                 title="Draw Path"
               >
                 <Route className="h-5 w-5" />
-              </Button>
-              <Button
-                variant={drawingMode === "select" ? "default" : "secondary"}
-                size="icon"
-                onClick={() => setDrawingMode(drawingMode === "select" ? null : "select")}
-                className="h-10 w-10 shadow-lg"
-                title="Select Items"
-              >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"
-                  />
-                </svg>
               </Button>
               <div className="h-px bg-border" />
               {(drawingMode === "polygon" || drawingMode === "polyline") && (
@@ -492,7 +497,7 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
             <div className="absolute right-3 top-3">
               <Select value={mapType} onValueChange={(v) => setMapType(v as any)}>
                 <SelectTrigger className="w-10 h-10 p-0 flex items-center justify-center shadow-lg bg-secondary hover:bg-secondary/80">
-                  <Layers className="h-4 w-4" />
+                  <Layers className="h-4 w-4 text-black" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="satellite">Satellite</SelectItem>

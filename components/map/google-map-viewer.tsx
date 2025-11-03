@@ -161,6 +161,7 @@ export function GoogleMapViewer({
         </Map>
       </APIProvider>
 
+      {/* Top left: Zoom controls */}
       <div className="absolute left-3 top-3 flex flex-col gap-2 z-10">
         <Button
           variant="secondary"
@@ -182,6 +183,7 @@ export function GoogleMapViewer({
         </Button>
       </div>
 
+      {/* Bottom left: Add location button (admin only) */}
       {isAdmin && (
         <div className="absolute bottom-3 left-3 z-10">
           <Button asChild size="icon" className="shadow-lg h-10 w-10">
@@ -195,7 +197,7 @@ export function GoogleMapViewer({
       <div className="absolute right-3 top-3 z-10">
         <Select value={mapType} onValueChange={(v) => setMapType(v as any)}>
           <SelectTrigger className="w-10 h-10 p-0 flex items-center justify-center shadow-lg bg-secondary hover:bg-secondary/80">
-            <Layers className="h-4 w-4" />
+            <Layers className="h-4 w-4 text-black" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="satellite">Satellite</SelectItem>
@@ -205,6 +207,7 @@ export function GoogleMapViewer({
         </Select>
       </div>
 
+      {/* Bottom right: Locate me */}
       <div className="absolute bottom-3 right-3 z-10">
         <Button
           variant="secondary"

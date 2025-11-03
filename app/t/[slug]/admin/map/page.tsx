@@ -53,6 +53,27 @@ export default async function MapManagementPage({ params }: { params: Promise<{ 
         </div>
       </div>
 
+      <Card>
+        <CardHeader>
+          <CardTitle>Community Boundary</CardTitle>
+          <CardDescription>Define the boundary of your community to focus the map view</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              {tenant.map_boundary_coordinates
+                ? "Boundary is set. Click below to edit."
+                : "No boundary set yet. Click below to create one."}
+            </p>
+            <Button asChild variant="outline">
+              <Link href={`/t/${slug}/admin/map/boundary`}>
+                {tenant.map_boundary_coordinates ? "Edit Boundary" : "Create Boundary"}
+              </Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid gap-6 md:grid-cols-3">
         <Card>
           <CardHeader>

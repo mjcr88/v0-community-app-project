@@ -11,7 +11,8 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, Trash2 } from "lucide-react"
+import { Loader2, Trash2, Map } from "lucide-react"
+import Link from "next/link"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -158,6 +159,12 @@ export default function EditLotForm({
           Cancel
         </Button>
         <div className="flex gap-2">
+          <Button type="button" variant="outline" asChild>
+            <Link href={`/t/${slug}/admin/map/locations/create`}>
+              <Map className="mr-2 h-4 w-4" />
+              Add Location on Map
+            </Link>
+          </Button>
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button type="button" variant="destructive" disabled={loading || deleteLoading}>

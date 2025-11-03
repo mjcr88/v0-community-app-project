@@ -11,7 +11,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2 } from "lucide-react"
+import { Loader2, Map } from "lucide-react"
+import Link from "next/link"
 
 export default function CreateNeighborhoodForm({ slug, tenantId }: { slug: string; tenantId: string }) {
   const router = useRouter()
@@ -103,6 +104,12 @@ export default function CreateNeighborhoodForm({ slug, tenantId }: { slug: strin
       <div className="flex gap-2 justify-end">
         <Button type="button" variant="outline" onClick={() => router.back()} disabled={loading}>
           Cancel
+        </Button>
+        <Button type="button" variant="outline" asChild>
+          <Link href={`/t/${slug}/admin/map/locations/create`}>
+            <Map className="mr-2 h-4 w-4" />
+            Add Location on Map
+          </Link>
         </Button>
         <Button type="submit" disabled={loading}>
           {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

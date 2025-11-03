@@ -13,7 +13,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Switch } from "@/components/ui/switch"
-import { Loader2 } from "lucide-react"
+import { Loader2, Map } from "lucide-react"
+import Link from "next/link"
 
 interface Neighborhood {
   id: string
@@ -230,6 +231,12 @@ export default function CreateLotForm({ slug, neighborhoods }: { slug: string; n
       <div className="flex gap-2 justify-end">
         <Button type="button" variant="outline" onClick={() => router.back()} disabled={loading}>
           Cancel
+        </Button>
+        <Button type="button" variant="outline" asChild>
+          <Link href={`/t/${slug}/admin/map/locations/create`}>
+            <Map className="mr-2 h-4 w-4" />
+            Add Location on Map
+          </Link>
         </Button>
         <Button type="submit" disabled={loading}>
           {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

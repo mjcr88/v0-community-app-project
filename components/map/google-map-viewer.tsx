@@ -117,7 +117,7 @@ export function GoogleMapViewer({
               paths={communityBoundary.map((coord) => ({ lat: coord[0], lng: coord[1] }))}
               strokeColor="#fbbf24"
               strokeOpacity={0.5}
-              strokeWeight={2}
+              strokeWeight={0.5}
               fillColor="#fef3c7"
               fillOpacity={0.25}
               clickable={false}

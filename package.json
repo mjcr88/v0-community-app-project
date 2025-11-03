@@ -50,6 +50,8 @@
     "embla-carousel-react": "8.5.1",
     "geojson": "latest",
     "google-maps": "4.3.3",
+    "google.maps": "latest",
+    "googlemaps": "latest",
     "input-otp": "1.4.1",
     "leaflet": "latest",
     "leaflet-draw": "latest",

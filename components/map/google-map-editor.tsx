@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { APIProvider, Map, AdvancedMarker } from "@vis.gl/react-google-maps"
+import { useState, useEffect } from "react"
+import { APIProvider, Map, AdvancedMarker, useMap } from "@vis.gl/react-google-maps"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -12,6 +12,9 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { createLocation } from "@/app/actions/locations"
 import { useRouter } from "next/navigation"
 import { Loader2, MapPin, Pentagon, Route, Locate, AlertCircle } from "lucide-react"
+import { Polygon } from "./polygon"
+import { Polyline } from "./polyline"
+import { google } from "googlemaps"
 
 type DrawingMode = "marker" | "polygon" | "polyline" | null
 type LatLng = { lat: number; lng: number }
@@ -19,6 +22,35 @@ type LatLng = { lat: number; lng: number }
 interface GoogleMapEditorProps {
   tenantSlug: string
   tenantId: string
+}
+
+function MapClickHandler({
+  drawingMode,
+  onMapClick,
+}: {
+  drawingMode: DrawingMode
+  onMapClick: (lat: number, lng: number) => void
+}) {
+  const map = useMap()
+
+  useEffect(() => {
+    if (!map) return
+
+    const clickListener = map.addListener("click", (e: google.maps.MapMouseEvent) => {
+      if (e.latLng) {
+        const lat = e.latLng.lat()
+        const lng = e.latLng.lng()
+        console.log("[v0] Map clicked:", { lat, lng, drawingMode })
+        onMapClick(lat, lng)
+      }
+    })
+
+    return () => {
+      google.maps.event.removeListener(clickListener)
+    }
+  }, [map, drawingMode, onMapClick])
+
+  return null
 }
 
 export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) {
@@ -63,14 +95,7 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
     }
   }
 
-  const handleMapClick = (e: any) => {
-    if (!e.latLng) return
-
-    const lat = e.latLng.lat()
-    const lng = e.latLng.lng()
-
-    console.log("[v0] Map clicked:", { lat, lng, drawingMode })
-
+  const handleMapClick = (lat: number, lng: number) => {
     if (drawingMode === "marker") {
       setMarkerPosition({ lat, lng })
       setDrawingMode(null)
@@ -186,14 +211,6 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Important</AlertTitle>
-              <AlertDescription>
-                If the map doesn't load or drawing doesn't work, enable "Maps JavaScript API" in Google Cloud Console.
-              </AlertDescription>
-            </Alert>
-
             <div className="flex flex-wrap gap-2">
               <Button
                 variant={drawingMode === "marker" ? "default" : "outline"}
@@ -268,20 +285,47 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
                   center={mapCenter}
                   zoom={mapZoom}
                   mapTypeId={mapType}
-                  onClick={handleMapClick}
                   gestureHandling="greedy"
                   disableDefaultUI={false}
                   clickableIcons={false}
                   onCenterChanged={(e) => setMapCenter(e.detail.center)}
                   onZoomChanged={(e) => setMapZoom(e.detail.zoom)}
                 >
-                  {markerPosition && <AdvancedMarker position={markerPosition} />}
+                  <MapClickHandler drawingMode={drawingMode} onMapClick={handleMapClick} />
+
+                  {markerPosition && (
+                    <AdvancedMarker
+                      position={markerPosition}
+                      onDragEnd={(e) => {
+                        if (e.latLng) {
+                          setMarkerPosition({ lat: e.latLng.lat(), lng: e.latLng.lng() })
+                        }
+                      }}
+                    />
+                  )}
+
                   {polygonPoints.map((point, index) => (
                     <AdvancedMarker key={`polygon-${index}`} position={point} />
                   ))}
+
+                  {polygonPoints.length > 2 && (
+                    <Polygon
+                      paths={polygonPoints}
+                      strokeColor="#3b82f6"
+                      strokeOpacity={0.8}
+                      strokeWeight={2}
+                      fillColor="#3b82f6"
+                      fillOpacity={0.2}
+                    />
+                  )}
+
                   {polylinePoints.map((point, index) => (
                     <AdvancedMarker key={`polyline-${index}`} position={point} />
                   ))}
+
+                  {polylinePoints.length > 1 && (
+                    <Polyline path={polylinePoints} strokeColor="#f59e0b" strokeOpacity={0.8} strokeWeight={3} />
+                  )}
                 </Map>
               </APIProvider>
             </div>

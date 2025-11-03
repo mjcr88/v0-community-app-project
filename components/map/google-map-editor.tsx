@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect } from "react"
 import { APIProvider, Map, Marker, useMap } from "@vis.gl/react-google-maps"
 import { Button } from "@/components/ui/button"
@@ -18,7 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Card, CardContent } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { createLocation } from "@/app/actions/locations"
+import { createLocation, updateLocation } from "@/app/actions/locations"
 import { useRouter, useSearchParams } from "next/navigation"
 import {
   Loader2,
@@ -32,12 +34,17 @@ import {
   Layers,
   Check,
   Filter,
+  Upload,
+  X,
+  ImageIcon,
+  Edit,
 } from "lucide-react"
 import { Polygon } from "./polygon"
 import { Polyline } from "./polyline"
 import { useToast } from "@/hooks/use-toast"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { geolocate } from "@/lib/geolocate"
+import { Badge } from "@/components/ui/badge"
 
 type DrawingMode = "marker" | "polygon" | "polyline" | null
 type LatLng = { lat: number; lng: number }
@@ -94,6 +101,8 @@ export function GoogleMapEditor({
 
   const preselectedNeighborhoodId = searchParams.get("neighborhoodId")
   const preselectedLotId = searchParams.get("lotId")
+  const prefilledName = searchParams.get("name")
+  const prefilledDescription = searchParams.get("description")
 
   const [drawingMode, setDrawingMode] = useState<DrawingMode>(null)
   const [mapType, setMapType] = useState<"roadmap" | "satellite" | "terrain">("satellite")
@@ -117,15 +126,49 @@ export function GoogleMapEditor({
   const [showLots, setShowLots] = useState(true)
   const [showWalkingPaths, setShowWalkingPaths] = useState(true)
 
+  const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([])
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+
+  const [editMode, setEditMode] = useState(false)
+  const [editingLocationId, setEditingLocationId] = useState<string | null>(null)
+
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""
+
+  useEffect(() => {
+    const loadLocations = async () => {
+      const supabase = createBrowserClient()
+      const { data } = await supabase.from("locations").select("*").eq("tenant_id", tenantId)
+      if (data) {
+        setSavedLocations(data)
+      }
+    }
+    loadLocations()
+  }, [tenantId])
 
   useEffect(() => {
     if (preselectedNeighborhoodId) {
       setSelectedNeighborhoodId(preselectedNeighborhoodId)
       setLocationType("neighborhood")
-      const selectedNeighborhood = neighborhoods.find((n) => n.id === preselectedNeighborhoodId)
-      if (selectedNeighborhood) {
-        setName(selectedNeighborhood.name)
+
+      if (prefilledName) {
+        setName(prefilledName)
+      } else {
+        const selectedNeighborhood = neighborhoods.find((n) => n.id === preselectedNeighborhoodId)
+        if (selectedNeighborhood) {
+          setName(selectedNeighborhood.name)
+        }
+      }
+
+      if (prefilledDescription) {
+        setDescription(prefilledDescription)
+      }
+
+      if (prefilledName) {
+        toast({
+          title: "Draw Neighborhood Boundary",
+          description: `Click the polygon tool and draw the boundary for "${prefilledName}"`,
+          duration: 5000,
+        })
       }
     }
     if (preselectedLotId) {
@@ -136,7 +179,7 @@ export function GoogleMapEditor({
         setName(selectedLot.lot_number)
       }
     }
-  }, [preselectedNeighborhoodId, preselectedLotId, lots, neighborhoods])
+  }, [preselectedNeighborhoodId, preselectedLotId, prefilledName, prefilledDescription, lots, neighborhoods, toast])
 
   useEffect(() => {
     if (locationType === "lot" && selectedLotId) {
@@ -152,6 +195,36 @@ export function GoogleMapEditor({
       }
     }
   }, [locationType, selectedLotId, selectedNeighborhoodId, lots, neighborhoods])
+
+  const handleLocationClick = (location: any) => {
+    if (!editMode) return
+
+    setEditingLocationId(location.id)
+    setName(location.name || "")
+    setDescription(location.description || "")
+    setLocationType(location.type)
+    setFacilityType(location.facility_type || "")
+    setIcon(location.icon || "")
+    setSelectedLotId(location.lot_id || "")
+    setSelectedNeighborhoodId(location.neighborhood_id || "")
+    setUploadedPhotos(location.photos || [])
+
+    if (location.coordinates) {
+      setMarkerPosition(location.coordinates)
+    }
+    if (location.boundary_coordinates) {
+      setPolygonPoints(
+        location.boundary_coordinates.map((coord: [number, number]) => ({ lat: coord[0], lng: coord[1] })),
+      )
+    }
+    if (location.path_coordinates) {
+      setPolylinePoints(location.path_coordinates.map((coord: [number, number]) => ({ lat: coord[0], lng: coord[1] })))
+    }
+
+    toast({
+      description: `Editing: ${location.name}`,
+    })
+  }
 
   const handleMapClick = (lat: number, lng: number) => {
     if (drawingMode === "marker") {
@@ -204,6 +277,57 @@ export function GoogleMapEditor({
     } else if (drawingMode === "polyline" && polylinePoints.length > 0) {
       setPolylinePoints(polylinePoints.slice(0, -1))
     }
+  }
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    setUploadingPhoto(true)
+
+    try {
+      const uploadPromises = Array.from(files).map(async (file) => {
+        const formData = new FormData()
+        formData.append("file", file)
+
+        const response = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        })
+
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(error.error || "Upload failed")
+        }
+
+        const data = await response.json()
+        return data.url
+      })
+
+      const urls = await Promise.all(uploadPromises)
+      setUploadedPhotos([...uploadedPhotos, ...urls])
+
+      toast({
+        description: `${urls.length} photo${urls.length > 1 ? "s" : ""} uploaded successfully`,
+      })
+    } catch (error) {
+      console.error("[v0] Photo upload error:", error)
+      toast({
+        title: "Upload Error",
+        description: error instanceof Error ? error.message : "Failed to upload photos",
+        variant: "destructive",
+      })
+    } finally {
+      setUploadingPhoto(false)
+      e.target.value = ""
+    }
+  }
+
+  const removePhoto = (urlToRemove: string) => {
+    setUploadedPhotos(uploadedPhotos.filter((url) => url !== urlToRemove))
+    toast({
+      description: "Photo removed",
+    })
   }
 
   const handleSave = async () => {
@@ -273,6 +397,7 @@ export function GoogleMapEditor({
         name: name.trim(),
         type: locationType,
         description: description.trim() || null,
+        photos: uploadedPhotos.length > 0 ? uploadedPhotos : null,
       }
 
       if (locationType === "facility") {
@@ -302,12 +427,19 @@ export function GoogleMapEditor({
 
       console.log("[v0] Saving location:", locationData)
 
-      await createLocation(locationData)
-
-      toast({
-        title: "Success",
-        description: "Location saved successfully!",
-      })
+      if (editingLocationId) {
+        await updateLocation(editingLocationId, locationData)
+        toast({
+          title: "Success",
+          description: "Location updated successfully!",
+        })
+      } else {
+        await createLocation(locationData)
+        toast({
+          title: "Success",
+          description: "Location saved successfully!",
+        })
+      }
 
       const supabase = createBrowserClient()
       const { data } = await supabase.from("locations").select("*").eq("tenant_id", tenantId)
@@ -326,10 +458,21 @@ export function GoogleMapEditor({
       setSelectedLotId("")
       setSelectedNeighborhoodId("")
       setDrawingMode(null)
+      setUploadedPhotos([])
+      setEditingLocationId(null)
 
-      toast({
-        description: "Form cleared. You can add another location.",
-      })
+      if (locationType === "neighborhood" && prefilledName) {
+        toast({
+          description: "Redirecting to neighborhoods list...",
+        })
+        setTimeout(() => {
+          router.push(`/t/${tenantSlug}/admin/neighborhoods`)
+        }, 1000)
+      } else {
+        toast({
+          description: "Form cleared. You can add another location.",
+        })
+      }
     } catch (error) {
       console.error("[v0] Error saving location:", error)
       toast({
@@ -340,6 +483,23 @@ export function GoogleMapEditor({
     } finally {
       setSaving(false)
     }
+  }
+
+  const handleCancelEdit = () => {
+    setEditingLocationId(null)
+    setMarkerPosition(null)
+    setPolygonPoints([])
+    setPolylinePoints([])
+    setName("")
+    setDescription("")
+    setFacilityType("")
+    setIcon("")
+    setSelectedLotId("")
+    setSelectedNeighborhoodId("")
+    setUploadedPhotos([])
+    toast({
+      description: "Edit cancelled",
+    })
   }
 
   const locateUser = async () => {
@@ -451,8 +611,15 @@ export function GoogleMapEditor({
                 )}
 
                 {filteredLocations.map((location) => {
+                  const isEditing = editingLocationId === location.id
                   if (location.type === "facility" && location.coordinates) {
-                    return <Marker key={`saved-${location.id}`} position={location.coordinates} />
+                    return (
+                      <Marker
+                        key={`saved-${location.id}`}
+                        position={location.coordinates}
+                        onClick={() => handleLocationClick(location)}
+                      />
+                    )
                   }
                   if (location.type === "facility" && location.boundary_coordinates) {
                     const paths = location.boundary_coordinates.map((coord: [number, number]) => ({
@@ -463,12 +630,12 @@ export function GoogleMapEditor({
                       <Polygon
                         key={`saved-${location.id}`}
                         paths={paths}
-                        strokeColor="#fb923c"
+                        strokeColor={isEditing ? "#10b981" : "#fb923c"}
                         strokeOpacity={0.7}
-                        strokeWeight={2}
-                        fillColor="#fdba74"
+                        strokeWeight={isEditing ? 3 : 2}
+                        fillColor={isEditing ? "#6ee7b7" : "#fdba74"}
                         fillOpacity={0.25}
-                        clickable={false}
+                        onClick={() => handleLocationClick(location)}
                       />
                     )
                   }
@@ -481,12 +648,12 @@ export function GoogleMapEditor({
                       <Polygon
                         key={`saved-${location.id}`}
                         paths={paths}
-                        strokeColor="#60a5fa"
+                        strokeColor={isEditing ? "#10b981" : "#60a5fa"}
                         strokeOpacity={0.7}
-                        strokeWeight={2}
-                        fillColor="#93c5fd"
+                        strokeWeight={isEditing ? 3 : 2}
+                        fillColor={isEditing ? "#6ee7b7" : "#93c5fd"}
                         fillOpacity={0.25}
-                        clickable={false}
+                        onClick={() => handleLocationClick(location)}
                       />
                     )
                   }
@@ -499,10 +666,10 @@ export function GoogleMapEditor({
                       <Polyline
                         key={`saved-${location.id}`}
                         path={path}
-                        strokeColor="#3b82f6"
+                        strokeColor={isEditing ? "#10b981" : "#3b82f6"}
                         strokeOpacity={0.8}
-                        strokeWeight={3}
-                        clickable={false}
+                        strokeWeight={isEditing ? 4 : 3}
+                        onClick={() => handleLocationClick(location)}
                       />
                     )
                   }
@@ -534,11 +701,30 @@ export function GoogleMapEditor({
 
             <div className="absolute left-3 bottom-3 flex flex-col gap-2">
               <Button
+                variant={editMode ? "default" : "secondary"}
+                size="icon"
+                onClick={() => {
+                  setEditMode(!editMode)
+                  if (editMode) {
+                    handleCancelEdit()
+                  }
+                  toast({
+                    description: editMode ? "Edit mode disabled" : "Edit mode enabled - Click locations to edit",
+                  })
+                }}
+                className="h-10 w-10 shadow-lg"
+                title={editMode ? "Disable Edit Mode" : "Enable Edit Mode"}
+              >
+                <Edit className="h-5 w-5" />
+              </Button>
+              <div className="h-px bg-border" />
+              <Button
                 variant={drawingMode === "marker" ? "default" : "secondary"}
                 size="icon"
                 onClick={() => setDrawingMode(drawingMode === "marker" ? null : "marker")}
                 className="h-10 w-10 shadow-lg"
                 title="Place Marker"
+                disabled={editMode && !editingLocationId}
               >
                 <MapPin className="h-5 w-5" />
               </Button>
@@ -548,6 +734,7 @@ export function GoogleMapEditor({
                 onClick={() => setDrawingMode(drawingMode === "polygon" ? null : "polygon")}
                 className="h-10 w-10 shadow-lg"
                 title="Draw Polygon"
+                disabled={editMode && !editingLocationId}
               >
                 <Pentagon className="h-5 w-5" />
               </Button>
@@ -557,6 +744,7 @@ export function GoogleMapEditor({
                 onClick={() => setDrawingMode(drawingMode === "polyline" ? null : "polyline")}
                 className="h-10 w-10 shadow-lg"
                 title="Draw Path"
+                disabled={editMode && !editingLocationId}
               >
                 <Route className="h-5 w-5" />
               </Button>
@@ -645,6 +833,24 @@ export function GoogleMapEditor({
               </Button>
             </div>
 
+            {editMode && !editingLocationId && (
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg border">
+                <p className="text-sm font-medium">Edit Mode: Click a location to edit it</p>
+              </div>
+            )}
+
+            {editingLocationId && (
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg border">
+                <p className="text-sm font-medium">Editing: {name || "Location"}</p>
+              </div>
+            )}
+
+            {locationType === "neighborhood" && prefilledName && !editingLocationId && (
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-purple-600 text-white px-4 py-2 rounded-lg shadow-lg border">
+                <p className="text-sm font-medium">Creating boundary for: {prefilledName}</p>
+              </div>
+            )}
+
             {(drawingMode === "polygon" || drawingMode === "polyline") && (
               <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-background/95 backdrop-blur-sm px-4 py-2 rounded-lg shadow-lg border">
                 <p className="text-sm font-medium">
@@ -675,6 +881,12 @@ export function GoogleMapEditor({
 
       <Card>
         <CardContent className="space-y-4">
+          {editingLocationId && <Badge className="w-full justify-center bg-green-600">Editing Existing Location</Badge>}
+
+          {locationType === "neighborhood" && prefilledName && !editingLocationId && (
+            <Badge className="w-full justify-center bg-purple-600">New Neighborhood: Draw Boundary</Badge>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="type">Location Type</Label>
             <Select value={locationType} onValueChange={(v) => setLocationType(v as any)}>
@@ -800,13 +1012,86 @@ export function GoogleMapEditor({
             </>
           )}
 
+          <div className="space-y-2">
+            <Label htmlFor="photos">Photos</Label>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Input
+                  id="photos"
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/webp"
+                  multiple
+                  onChange={handlePhotoUpload}
+                  disabled={uploadingPhoto}
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => document.getElementById("photos")?.click()}
+                  disabled={uploadingPhoto}
+                  className="w-full"
+                >
+                  {uploadingPhoto ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Upload Photos
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {uploadedPhotos.length > 0 && (
+                <div className="grid grid-cols-2 gap-2">
+                  {uploadedPhotos.map((url, index) => (
+                    <div key={url} className="relative group aspect-square rounded-lg overflow-hidden border">
+                      <img
+                        src={url || "/placeholder.svg"}
+                        alt={`Upload ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        onClick={() => removePhoto(url)}
+                        className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {uploadedPhotos.length === 0 && (
+                <div className="flex items-center justify-center h-24 border-2 border-dashed rounded-lg text-muted-foreground">
+                  <div className="text-center">
+                    <ImageIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No photos uploaded</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="pt-4 space-y-2">
             <Button onClick={handleSave} disabled={saving} className="w-full">
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Location
+              {editingLocationId ? "Update Location" : "Save Location"}
             </Button>
+            {editingLocationId && (
+              <Button variant="outline" onClick={handleCancelEdit} className="w-full bg-transparent">
+                Cancel Edit
+              </Button>
+            )}
             <Button variant="outline" onClick={() => router.push(`/t/${tenantSlug}/admin/map`)} className="w-full">
-              Cancel
+              {editingLocationId ? "Back" : "Cancel"}
             </Button>
           </div>
         </CardContent>

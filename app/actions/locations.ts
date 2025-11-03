@@ -15,6 +15,7 @@ export async function createLocation(data: {
   icon?: string | null
   lot_id?: string | null
   neighborhood_id?: string | null
+  photos?: string[] | null
 }) {
   const supabase = await createServerClient()
 
@@ -88,6 +89,57 @@ export async function createLocation(data: {
   if (error) {
     console.error("Error creating location:", error)
     throw new Error("Failed to create location")
+  }
+
+  revalidatePath(`/t/[slug]/admin/map`, "page")
+}
+
+export async function updateLocation(
+  locationId: string,
+  data: {
+    tenant_id: string
+    name: string
+    type: "facility" | "lot" | "walking_path" | "neighborhood"
+    description?: string | null
+    coordinates?: { lat: number; lng: number } | null
+    boundary_coordinates?: Array<[number, number]> | null
+    path_coordinates?: Array<[number, number]> | null
+    facility_type?: string | null
+    icon?: string | null
+    lot_id?: string | null
+    neighborhood_id?: string | null
+    photos?: string[] | null
+  },
+) {
+  const supabase = await createServerClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error("Unauthorized")
+  }
+
+  const { data: userData } = await supabase
+    .from("users")
+    .select("role, tenant_id, is_tenant_admin")
+    .eq("id", user.id)
+    .single()
+
+  if (
+    !userData ||
+    (!userData.is_tenant_admin && userData.role !== "super_admin" && userData.role !== "tenant_admin") ||
+    (userData.tenant_id !== data.tenant_id && userData.role !== "super_admin")
+  ) {
+    throw new Error("Unauthorized")
+  }
+
+  const { error } = await supabase.from("locations").update(data).eq("id", locationId)
+
+  if (error) {
+    console.error("Error updating location:", error)
+    throw new Error("Failed to update location")
   }
 
   revalidatePath(`/t/[slug]/admin/map`, "page")

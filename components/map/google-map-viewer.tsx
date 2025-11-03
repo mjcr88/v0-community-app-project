@@ -1,12 +1,13 @@
 "use client"
 
 import { useState } from "react"
-import { APIProvider, Map, Marker, InfoWindow } from "@vis.gl/react-google-maps"
+import { APIProvider, Map, Marker } from "@vis.gl/react-google-maps"
 import { Button } from "@/components/ui/button"
 import { Plus, Locate, Layers, Filter } from "lucide-react"
 import Link from "next/link"
 import { Polygon } from "./polygon"
 import { Polyline } from "./polyline"
+import { LocationInfoCard } from "./location-info-card"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,12 +21,14 @@ import {
 interface Location {
   id: string
   name: string
-  type: "facility" | "lot" | "walking_path"
+  type: "facility" | "lot" | "walking_path" | "neighborhood"
   coordinates?: { lat: number; lng: number }
   boundary_coordinates?: Array<[number, number]>
   path_coordinates?: Array<[number, number]>
-  description?: string
-  icon?: string
+  description?: string | null
+  icon?: string | null
+  facility_type?: string | null
+  photos?: string[] | null
 }
 
 interface GoogleMapViewerProps {
@@ -81,16 +84,6 @@ export function GoogleMapViewer({
   const walkingPaths = initialLocations.filter(
     (loc) => showWalkingPaths && loc.type === "walking_path" && loc.path_coordinates,
   )
-
-  const getPolygonCenter = (coordinates: Array<[number, number]>): { lat: number; lng: number } => {
-    const sum = coordinates.reduce(
-      (acc, coord) => {
-        return { lat: acc.lat + coord[0], lng: acc.lng + coord[1] }
-      },
-      { lat: 0, lng: 0 },
-    )
-    return { lat: sum.lat / coordinates.length, lng: sum.lng / coordinates.length }
-  }
 
   if (!apiKey) {
     return (
@@ -166,30 +159,25 @@ export function GoogleMapViewer({
           {/* Walking Paths */}
           {walkingPaths.map((location) => {
             const path = location.path_coordinates!.map((coord) => ({ lat: coord[0], lng: coord[1] }))
-            return <Polyline key={location.id} path={path} strokeColor="#3b82f6" strokeOpacity={0.8} strokeWeight={3} />
+            return (
+              <Polyline
+                key={location.id}
+                path={path}
+                strokeColor="#3b82f6"
+                strokeOpacity={0.8}
+                strokeWeight={3}
+                onClick={() => setSelectedLocation(location)}
+              />
+            )
           })}
-
-          {/* Info Window */}
-          {selectedLocation && (
-            <InfoWindow
-              position={
-                selectedLocation.coordinates ||
-                getPolygonCenter(selectedLocation.boundary_coordinates || selectedLocation.path_coordinates || [[0, 0]])
-              }
-              onCloseClick={() => setSelectedLocation(null)}
-            >
-              <div className="p-2">
-                <h3 className="font-semibold text-sm">
-                  {selectedLocation.icon} {selectedLocation.name}
-                </h3>
-                {selectedLocation.description && (
-                  <p className="text-gray-600 text-xs mt-1">{selectedLocation.description}</p>
-                )}
-              </div>
-            </InfoWindow>
-          )}
         </Map>
       </APIProvider>
+
+      {selectedLocation && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
+          <LocationInfoCard location={selectedLocation} onClose={() => setSelectedLocation(null)} />
+        </div>
+      )}
 
       {/* Top left: Zoom controls */}
       <div className="absolute left-3 top-3 flex flex-col gap-2 z-10">

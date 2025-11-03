@@ -12,7 +12,6 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, Map } from "lucide-react"
-import Link from "next/link"
 
 export default function CreateNeighborhoodForm({ slug, tenantId }: { slug: string; tenantId: string }) {
   const router = useRouter()
@@ -36,34 +35,38 @@ export default function CreateNeighborhoodForm({ slug, tenantId }: { slug: strin
 
       console.log("[v0] Inserting neighborhood:", formData)
 
-      const { error: insertError } = await supabase.from("neighborhoods").insert({
-        tenant_id: tenantId,
-        name: formData.name,
-        description: formData.description,
-      })
+      const { data: newNeighborhood, error: insertError } = await supabase
+        .from("neighborhoods")
+        .insert({
+          tenant_id: tenantId,
+          name: formData.name,
+          description: formData.description,
+        })
+        .select()
+        .single()
 
       if (insertError) {
         console.log("[v0] Insert error:", insertError)
         throw insertError
       }
 
-      console.log("[v0] Neighborhood created successfully")
+      console.log("[v0] Neighborhood created successfully:", newNeighborhood)
 
       setLoading(false)
 
       toast({
         title: "Success",
-        description: "Neighborhood created successfully",
+        description: "Neighborhood created! Now draw its boundary on the map.",
       })
 
-      setFormData({
-        name: "",
-        description: "",
+      const params = new URLSearchParams({
+        neighborhoodId: newNeighborhood.id,
+        name: formData.name,
+        description: formData.description || "",
       })
 
-      console.log("[v0] Redirecting to neighborhoods list...")
-      router.push(`/t/${slug}/admin/neighborhoods`)
-      router.refresh()
+      console.log("[v0] Redirecting to map editor with params:", params.toString())
+      router.push(`/t/${slug}/admin/map/locations/create?${params.toString()}`)
     } catch (err: any) {
       console.log("[v0] Error caught:", err)
       setError(err.message || "Failed to create neighborhood")
@@ -101,19 +104,20 @@ export default function CreateNeighborhoodForm({ slug, tenantId }: { slug: strin
         />
       </div>
 
+      <Alert>
+        <Map className="h-4 w-4" />
+        <AlertDescription>
+          After creating the neighborhood, you'll be taken to the map editor to draw its boundary.
+        </AlertDescription>
+      </Alert>
+
       <div className="flex gap-2 justify-end">
         <Button type="button" variant="outline" onClick={() => router.back()} disabled={loading}>
           Cancel
         </Button>
-        <Button type="button" variant="outline" asChild>
-          <Link href={`/t/${slug}/admin/map/locations/create`}>
-            <Map className="mr-2 h-4 w-4" />
-            Add Location on Map
-          </Link>
-        </Button>
         <Button type="submit" disabled={loading}>
           {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Create Neighborhood
+          Create & Draw Boundary
         </Button>
       </div>
     </form>

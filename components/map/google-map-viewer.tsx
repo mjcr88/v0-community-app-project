@@ -1,232 +1,141 @@
 "use client"
 
-import { useState } from "react"
-import { APIProvider, Map, Marker, InfoWindow } from "@vis.gl/react-google-maps"
+import { useRef, useState } from "react"
+import { APIProvider, Map, Marker } from "@vis.gl/react-google-maps"
 import { Button } from "@/components/ui/button"
-import { Plus, Locate, Layers } from "lucide-react"
-import Link from "next/link"
+import { ZoomIn, ZoomOut, Locate, Layers, Plus } from "lucide-react"
 import { Polygon } from "./polygon"
 import { Polyline } from "./polyline"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import type { google } from "googlemaps"
 
 interface Location {
   id: string
   name: string
-  type: "facility" | "lot" | "walking_path"
-  coordinates?: { lat: number; lng: number }
-  boundary_coordinates?: Array<[number, number]>
-  path_coordinates?: Array<[number, number]>
-  description?: string
-  icon?: string
+  coordinates: { lat: number; lng: number }
+  type: "marker" | "polygon" | "polyline"
+  paths?: Array<{ lat: number; lng: number }>
 }
 
 interface GoogleMapViewerProps {
-  tenantSlug: string
-  initialLocations: Location[]
-  mapCenter?: { lat: number; lng: number } | null
-  mapZoom?: number
-  isAdmin?: boolean
+  center?: { lat: number; lng: number }
+  zoom?: number
+  locations?: Location[]
+  showAddButton?: boolean
+  onAddLocation?: () => void
 }
 
 export function GoogleMapViewer({
-  tenantSlug,
-  initialLocations,
-  mapCenter,
-  mapZoom = 15,
-  isAdmin = false,
+  center = { lat: 9.9281, lng: -84.0907 },
+  zoom = 13,
+  locations = [],
+  showAddButton = false,
+  onAddLocation,
 }: GoogleMapViewerProps) {
-  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null)
-  const [center, setCenter] = useState<{ lat: number; lng: number }>(mapCenter || { lat: 9.7489, lng: -84.0907 })
-  const [zoom, setZoom] = useState(mapZoom)
-  const [mapType, setMapType] = useState<"roadmap" | "satellite" | "terrain">("satellite")
+  const [mapType, setMapType] = useState<"roadmap" | "satellite" | "hybrid" | "terrain">("roadmap")
+  const mapRef = useRef<google.maps.Map | null>(null)
 
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""
+  const handleZoomIn = () => {
+    if (mapRef.current) {
+      const currentZoom = mapRef.current.getZoom() || zoom
+      mapRef.current.setZoom(currentZoom + 1)
+    }
+  }
 
-  const handleLocate = () => {
+  const handleZoomOut = () => {
+    if (mapRef.current) {
+      const currentZoom = mapRef.current.getZoom() || zoom
+      mapRef.current.setZoom(currentZoom - 1)
+    }
+  }
+
+  const handleLocateMe = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          setCenter({
+          const pos = {
             lat: position.coords.latitude,
             lng: position.coords.longitude,
-          })
-          setZoom(16)
+          }
+          mapRef.current?.panTo(pos)
+          mapRef.current?.setZoom(15)
         },
-        (error) => {
-          console.error("Error getting location:", error)
+        () => {
+          console.error("Error: The Geolocation service failed.")
         },
       )
     }
   }
 
-  const facilityMarkers = initialLocations.filter((loc) => loc.type === "facility" && loc.coordinates)
-  const facilityPolygons = initialLocations.filter((loc) => loc.type === "facility" && loc.boundary_coordinates)
-  const lotPolygons = initialLocations.filter((loc) => loc.type === "lot" && loc.boundary_coordinates)
-  const walkingPaths = initialLocations.filter((loc) => loc.type === "walking_path" && loc.path_coordinates)
-
-  const getPolygonCenter = (coordinates: Array<[number, number]>): { lat: number; lng: number } => {
-    const sum = coordinates.reduce(
-      (acc, coord) => {
-        return { lat: acc.lat + coord[0], lng: acc.lng + coord[1] }
-      },
-      { lat: 0, lng: 0 },
-    )
-    return { lat: sum.lat / coordinates.length, lng: sum.lng / coordinates.length }
-  }
-
-  if (!apiKey) {
-    return (
-      <div className="flex items-center justify-center h-[600px] bg-muted rounded-lg">
-        <p className="text-muted-foreground">Google Maps API key is missing</p>
-      </div>
-    )
-  }
-
   return (
-    <div className="relative w-full h-full">
-      <div className="h-[600px] w-full rounded-lg overflow-hidden border">
-        <APIProvider apiKey={apiKey}>
-          <Map
-            center={center}
-            zoom={zoom}
-            mapTypeId={mapType}
-            gestureHandling="greedy"
-            disableDefaultUI={true}
-            onCenterChanged={(e) => setCenter(e.detail.center)}
-            onZoomChanged={(e) => setZoom(e.detail.zoom)}
-          >
-            {/* Facility Markers */}
-            {facilityMarkers.map((location) => (
-              <Marker
-                key={location.id}
-                position={location.coordinates!}
-                onClick={() => setSelectedLocation(location)}
-              />
-            ))}
-
-            {/* Facility Polygons */}
-            {facilityPolygons.map((location) => {
-              const paths = location.boundary_coordinates!.map((coord) => ({ lat: coord[0], lng: coord[1] }))
-              return (
-                <Polygon
-                  key={location.id}
-                  paths={paths}
-                  strokeColor="#22c55e"
-                  strokeOpacity={0.8}
-                  strokeWeight={2}
-                  fillColor="#22c55e"
-                  fillOpacity={0.2}
-                  onClick={() => setSelectedLocation(location)}
-                />
-              )
-            })}
-
-            {/* Lot Polygons */}
-            {lotPolygons.map((location) => {
-              const paths = location.boundary_coordinates!.map((coord) => ({ lat: coord[0], lng: coord[1] }))
-              return (
-                <Polygon
-                  key={location.id}
-                  paths={paths}
-                  strokeColor="#3b82f6"
-                  strokeOpacity={0.8}
-                  strokeWeight={2}
-                  fillColor="#3b82f6"
-                  fillOpacity={0.2}
-                  onClick={() => setSelectedLocation(location)}
-                />
-              )
-            })}
-
-            {/* Walking Paths */}
-            {walkingPaths.map((location) => {
-              const path = location.path_coordinates!.map((coord) => ({ lat: coord[0], lng: coord[1] }))
-              return (
-                <Polyline key={location.id} path={path} strokeColor="#f59e0b" strokeOpacity={0.8} strokeWeight={3} />
-              )
-            })}
-
-            {/* Info Window */}
-            {selectedLocation && (
-              <InfoWindow
-                position={
-                  selectedLocation.coordinates ||
-                  getPolygonCenter(
-                    selectedLocation.boundary_coordinates || selectedLocation.path_coordinates || [[0, 0]],
-                  )
-                }
-                onCloseClick={() => setSelectedLocation(null)}
-              >
-                <div className="p-2">
-                  <h3 className="font-semibold text-sm">
-                    {selectedLocation.icon} {selectedLocation.name}
-                  </h3>
-                  {selectedLocation.description && (
-                    <p className="text-gray-600 text-xs mt-1">{selectedLocation.description}</p>
-                  )}
-                </div>
-              </InfoWindow>
-            )}
-          </Map>
-        </APIProvider>
-      </div>
-
-      <div className="absolute left-3 top-3 flex flex-col gap-2">
-        <Button
-          variant="secondary"
-          size="icon"
-          onClick={() => setZoom(zoom + 1)}
-          className="h-10 w-10 shadow-lg"
-          title="Zoom In"
+    <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""}>
+      <div className="relative h-full w-full">
+        <Map
+          defaultCenter={center}
+          defaultZoom={zoom}
+          mapTypeId={mapType}
+          disableDefaultUI={true}
+          onLoad={(map) => {
+            mapRef.current = map
+          }}
+          className="h-full w-full"
         >
-          +
-        </Button>
-        <Button
-          variant="secondary"
-          size="icon"
-          onClick={() => setZoom(zoom - 1)}
-          className="h-10 w-10 shadow-lg"
-          title="Zoom Out"
-        >
-          −
-        </Button>
-      </div>
+          {/* Render locations */}
+          {locations.map((location) => {
+            if (location.type === "marker") {
+              return <Marker key={location.id} position={location.coordinates} title={location.name} />
+            } else if (location.type === "polygon" && location.paths) {
+              return <Polygon key={location.id} paths={location.paths} />
+            } else if (location.type === "polyline" && location.paths) {
+              return <Polyline key={location.id} path={location.paths} />
+            }
+            return null
+          })}
+        </Map>
 
-      {isAdmin && (
-        <div className="absolute bottom-3 left-3">
-          <Button asChild size="icon" className="shadow-lg h-10 w-10">
-            <Link href={`/t/${tenantSlug}/admin/map/locations/create`}>
-              <Plus className="h-5 w-5" />
-            </Link>
+        {/* Zoom Controls - Top Left */}
+        <div className="absolute left-4 top-4 z-10 flex flex-col gap-2">
+          <Button size="icon" variant="secondary" onClick={handleZoomIn} className="h-10 w-10 shadow-lg">
+            <ZoomIn className="h-4 w-4" />
+          </Button>
+          <Button size="icon" variant="secondary" onClick={handleZoomOut} className="h-10 w-10 shadow-lg">
+            <ZoomOut className="h-4 w-4" />
           </Button>
         </div>
-      )}
 
-      <div className="absolute right-3 top-3">
-        <Select value={mapType} onValueChange={(v) => setMapType(v as any)}>
-          <SelectTrigger className="w-[140px] shadow-lg">
-            <Layers className="mr-2 h-4 w-4" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="satellite">Satellite</SelectItem>
-            <SelectItem value="terrain">Terrain</SelectItem>
-            <SelectItem value="roadmap">Street</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+        {/* Add Location Button - Bottom Left (if admin) */}
+        {showAddButton && onAddLocation && (
+          <div className="absolute bottom-4 left-4 z-10">
+            <Button size="icon" variant="secondary" onClick={onAddLocation} className="h-10 w-10 shadow-lg">
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
 
-      <div className="absolute bottom-3 right-3">
-        <Button
-          variant="secondary"
-          size="icon"
-          onClick={handleLocate}
-          className="h-10 w-10 shadow-lg"
-          title="Locate Me"
-        >
-          <Locate className="h-5 w-5" />
-        </Button>
+        {/* Layer Selection - Top Right */}
+        <div className="absolute right-4 top-4 z-10">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="icon" variant="secondary" className="h-10 w-10 shadow-lg">
+                <Layers className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setMapType("roadmap")}>Roadmap</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setMapType("satellite")}>Satellite</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setMapType("hybrid")}>Hybrid</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setMapType("terrain")}>Terrain</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {/* Locate Me - Bottom Right */}
+        <div className="absolute bottom-4 right-4 z-10">
+          <Button size="icon" variant="secondary" onClick={handleLocateMe} className="h-10 w-10 shadow-lg">
+            <Locate className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
-    </div>
+    </APIProvider>
   )
 }

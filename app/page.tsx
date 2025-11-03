@@ -1,5 +1,7 @@
-import { redirect } from "next/navigation"
+"use client"
 
-export default function RootPage() {
-  redirect("/backoffice/login")
+import { GoogleMapEditor } from "../components/map/google-map-editor"
+
+export default function SyntheticV0PageForDeployment() {
+  return <GoogleMapEditor />
 }

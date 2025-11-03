@@ -1,474 +1,261 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { APIProvider, Map, Marker, useMap } from "@vis.gl/react-google-maps"
+import { useCallback, useEffect, useRef, useState } from "react"
+import { APIProvider, Map, Marker } from "@vis.gl/react-google-maps"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { createLocation } from "@/app/actions/locations"
-import { useRouter } from "next/navigation"
-import { Loader2, MapPin, Pentagon, Route, Locate, AlertCircle, Trash2, Undo, Layers, Check } from "lucide-react"
+import { MapPin, Pentagon, Minus, Undo2, Trash2, Check, ZoomIn, ZoomOut, Locate, Layers } from "lucide-react"
 import { Polygon } from "./polygon"
 import { Polyline } from "./polyline"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 type DrawingMode = "marker" | "polygon" | "polyline" | null
-type LatLng = { lat: number; lng: number }
 
 interface GoogleMapEditorProps {
-  tenantSlug: string
-  tenantId: string
+  center?: { lat: number; lng: number }
+  zoom?: number
+  onSave?: (data: {
+    markers: Array<{ lat: number; lng: number }>
+    polygons: Array<Array<{ lat: number; lng: number }>>
+    polylines: Array<Array<{ lat: number; lng: number }>>
+  }) => void
 }
 
-function MapClickHandler({
-  drawingMode,
-  onMapClick,
-}: {
-  drawingMode: DrawingMode
-  onMapClick: (lat: number, lng: number) => void
-}) {
-  const map = useMap()
-
-  useEffect(() => {
-    if (!map) return
-
-    const clickListener = map.addListener("click", (e: any) => {
-      if (e.latLng) {
-        const lat = e.latLng.lat()
-        const lng = e.latLng.lng()
-        console.log("[v0] Map clicked:", { lat, lng, drawingMode })
-        onMapClick(lat, lng)
-      }
-    })
-
-    return () => {
-      if (clickListener) {
-        clickListener.remove()
-      }
-    }
-  }, [map, drawingMode, onMapClick])
-
-  return null
-}
-
-export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) {
-  const router = useRouter()
+export function GoogleMapEditor({ center = { lat: 9.9281, lng: -84.0907 }, zoom = 13, onSave }: GoogleMapEditorProps) {
   const [drawingMode, setDrawingMode] = useState<DrawingMode>(null)
-  const [mapType, setMapType] = useState<"roadmap" | "satellite" | "terrain">("satellite")
-  const [saving, setSaving] = useState(false)
-  const [mapCenter, setMapCenter] = useState<LatLng>({ lat: 9.9281, lng: -84.0907 })
-  const [mapZoom, setMapZoom] = useState(15)
+  const [markers, setMarkers] = useState<Array<{ lat: number; lng: number }>>([])
+  const [polygonPoints, setPolygonPoints] = useState<Array<{ lat: number; lng: number }>>([])
+  const [polylinePoints, setPolylinePoints] = useState<Array<{ lat: number; lng: number }>>([])
+  const [completedPolygons, setCompletedPolygons] = useState<Array<Array<{ lat: number; lng: number }>>>([])
+  const [completedPolylines, setCompletedPolylines] = useState<Array<Array<{ lat: number; lng: number }>>>([])
+  const [mapType, setMapType] = useState<"roadmap" | "satellite" | "hybrid" | "terrain">("roadmap")
+  const mapRef = useRef<google.maps.Map | null>(null)
 
-  const [markerPosition, setMarkerPosition] = useState<LatLng | null>(null)
-  const [polygonPoints, setPolygonPoints] = useState<LatLng[]>([])
-  const [polylinePoints, setPolylinePoints] = useState<LatLng[]>([])
+  const handleMapClick = useCallback(
+    (e: google.maps.MapMouseEvent) => {
+      if (!e.latLng) return
 
-  const [name, setName] = useState("")
-  const [description, setDescription] = useState("")
-  const [locationType, setLocationType] = useState<"facility" | "lot" | "walking_path">("facility")
-  const [facilityType, setFacilityType] = useState("")
-  const [icon, setIcon] = useState("")
+      const lat = e.latLng.lat()
+      const lng = e.latLng.lng()
 
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""
+      console.log("[v0] Map clicked:", { lat, lng, drawingMode })
 
-  const locateUser = () => {
-    if ("geolocation" in navigator) {
+      if (drawingMode === "marker") {
+        setMarkers((prev) => [...prev, { lat, lng }])
+        setDrawingMode(null)
+      } else if (drawingMode === "polygon") {
+        setPolygonPoints((prev) => [...prev, { lat, lng }])
+      } else if (drawingMode === "polyline") {
+        setPolylinePoints((prev) => [...prev, { lat, lng }])
+      }
+    },
+    [drawingMode],
+  )
+
+  const handleFinishDrawing = () => {
+    if (drawingMode === "polygon" && polygonPoints.length >= 3) {
+      setCompletedPolygons((prev) => [...prev, polygonPoints])
+      setPolygonPoints([])
+      setDrawingMode(null)
+    } else if (drawingMode === "polyline" && polylinePoints.length >= 2) {
+      setCompletedPolylines((prev) => [...prev, polylinePoints])
+      setPolylinePoints([])
+      setDrawingMode(null)
+    }
+  }
+
+  const handleUndo = () => {
+    if (drawingMode === "polygon" && polygonPoints.length > 0) {
+      setPolygonPoints((prev) => prev.slice(0, -1))
+    } else if (drawingMode === "polyline" && polylinePoints.length > 0) {
+      setPolylinePoints((prev) => prev.slice(0, -1))
+    } else if (markers.length > 0) {
+      setMarkers((prev) => prev.slice(0, -1))
+    } else if (completedPolylines.length > 0) {
+      setCompletedPolylines((prev) => prev.slice(0, -1))
+    } else if (completedPolygons.length > 0) {
+      setCompletedPolygons((prev) => prev.slice(0, -1))
+    }
+  }
+
+  const handleClear = () => {
+    setMarkers([])
+    setPolygonPoints([])
+    setPolylinePoints([])
+    setCompletedPolygons([])
+    setCompletedPolylines([])
+    setDrawingMode(null)
+  }
+
+  const handleZoomIn = () => {
+    if (mapRef.current) {
+      const currentZoom = mapRef.current.getZoom() || zoom
+      mapRef.current.setZoom(currentZoom + 1)
+    }
+  }
+
+  const handleZoomOut = () => {
+    if (mapRef.current) {
+      const currentZoom = mapRef.current.getZoom() || zoom
+      mapRef.current.setZoom(currentZoom - 1)
+    }
+  }
+
+  const handleLocateMe = () => {
+    if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          const newCenter = {
+          const pos = {
             lat: position.coords.latitude,
             lng: position.coords.longitude,
           }
-          setMapCenter(newCenter)
-          setMapZoom(18)
-          console.log("[v0] User located at:", newCenter)
+          mapRef.current?.panTo(pos)
+          mapRef.current?.setZoom(15)
         },
-        (error) => {
-          console.error("[v0] Geolocation error:", error)
-          alert("Could not get your location. Please enable location services.")
+        () => {
+          console.error("Error: The Geolocation service failed.")
         },
       )
-    } else {
-      alert("Geolocation is not supported by your browser")
     }
   }
 
-  const handleMapClick = (lat: number, lng: number) => {
-    if (drawingMode === "marker") {
-      setMarkerPosition({ lat, lng })
-      setDrawingMode(null)
-    } else if (drawingMode === "polygon") {
-      setPolygonPoints([...polygonPoints, { lat, lng }])
-    } else if (drawingMode === "polyline") {
-      setPolylinePoints([...polylinePoints, { lat, lng }])
+  useEffect(() => {
+    if (onSave) {
+      onSave({
+        markers,
+        polygons: completedPolygons,
+        polylines: completedPolylines,
+      })
     }
-  }
-
-  const finishDrawing = () => {
-    if (drawingMode === "polygon" && polygonPoints.length < 3) {
-      alert("A polygon needs at least 3 points")
-      return
-    }
-    if (drawingMode === "polyline" && polylinePoints.length < 2) {
-      alert("A line needs at least 2 points")
-      return
-    }
-    setDrawingMode(null)
-  }
-
-  const clearDrawing = () => {
-    setMarkerPosition(null)
-    setPolygonPoints([])
-    setPolylinePoints([])
-    setDrawingMode(null)
-  }
-
-  const undoLastPoint = () => {
-    if (drawingMode === "polygon" && polygonPoints.length > 0) {
-      setPolygonPoints(polygonPoints.slice(0, -1))
-    } else if (drawingMode === "polyline" && polylinePoints.length > 0) {
-      setPolylinePoints(polylinePoints.slice(0, -1))
-    }
-  }
-
-  const handleSave = async () => {
-    if (!name.trim()) {
-      alert("Please enter a location name")
-      return
-    }
-
-    if (locationType === "facility" && !markerPosition && polygonPoints.length === 0) {
-      alert("Please place a marker or draw a boundary for the facility")
-      return
-    }
-    if (locationType === "lot" && polygonPoints.length < 3) {
-      alert("Please draw a boundary for the lot (at least 3 points)")
-      return
-    }
-    if (locationType === "walking_path" && polylinePoints.length < 2) {
-      alert("Please draw a path (at least 2 points)")
-      return
-    }
-
-    setSaving(true)
-
-    try {
-      const locationData: any = {
-        tenant_id: tenantId,
-        name: name.trim(),
-        type: locationType,
-        description: description.trim() || null,
-      }
-
-      if (locationType === "facility") {
-        if (markerPosition) {
-          locationData.coordinates = markerPosition
-        }
-        if (polygonPoints.length > 0) {
-          locationData.boundary_coordinates = polygonPoints.map((p) => [p.lat, p.lng])
-        }
-        if (facilityType) locationData.facility_type = facilityType
-        if (icon) locationData.icon = icon
-      } else if (locationType === "lot") {
-        locationData.boundary_coordinates = polygonPoints.map((p) => [p.lat, p.lng])
-      } else if (locationType === "walking_path") {
-        locationData.path_coordinates = polylinePoints.map((p) => [p.lat, p.lng])
-      }
-
-      console.log("[v0] Saving location:", locationData)
-
-      await createLocation(locationData)
-
-      alert("Location saved successfully!")
-      router.push(`/t/${tenantSlug}/admin/map`)
-    } catch (error) {
-      console.error("[v0] Error saving location:", error)
-      alert("Error saving location: " + (error instanceof Error ? error.message : "Unknown error"))
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  if (!apiKey) {
-    return (
-      <Alert variant="destructive">
-        <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Configuration Error</AlertTitle>
-        <AlertDescription>
-          Google Maps API key is missing. Please add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to your environment variables.
-        </AlertDescription>
-      </Alert>
-    )
-  }
+  }, [markers, completedPolygons, completedPolylines, onSave])
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_400px]">
-      <Card>
-        <CardHeader>
-          <CardTitle>Map</CardTitle>
-          <CardDescription>
-            {drawingMode === "marker" && "Click on the map to place a marker"}
-            {drawingMode === "polygon" &&
-              `Click to add points to the polygon (${polygonPoints.length} points). Click "Finish" when done.`}
-            {drawingMode === "polyline" &&
-              `Click to add points to the line (${polylinePoints.length} points). Click "Finish" when done.`}
-            {!drawingMode && "Select a drawing tool to start"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="relative h-[600px] w-full overflow-hidden rounded-lg border">
-            <APIProvider apiKey={apiKey}>
-              <Map
-                center={mapCenter}
-                zoom={mapZoom}
-                mapTypeId={mapType}
-                gestureHandling="greedy"
-                disableDefaultUI={true}
-                clickableIcons={false}
-                onCenterChanged={(e) => setMapCenter(e.detail.center)}
-                onZoomChanged={(e) => setMapZoom(e.detail.zoom)}
-              >
-                <MapClickHandler drawingMode={drawingMode} onMapClick={handleMapClick} />
+    <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""}>
+      <div className="relative h-full w-full">
+        <Map
+          defaultCenter={center}
+          defaultZoom={zoom}
+          mapTypeId={mapType}
+          disableDefaultUI={true}
+          onClick={handleMapClick}
+          onLoad={(map) => {
+            mapRef.current = map
+          }}
+          className="h-full w-full"
+        >
+          {/* Render markers */}
+          {markers.map((marker, index) => (
+            <Marker key={`marker-${index}`} position={marker} />
+          ))}
 
-                {markerPosition && (
-                  <Marker
-                    position={markerPosition}
-                    draggable
-                    onDragEnd={(e) => {
-                      const latLng = e.latLng
-                      if (latLng) {
-                        setMarkerPosition({ lat: latLng.lat(), lng: latLng.lng() })
-                      }
-                    }}
-                  />
-                )}
+          {/* Render completed polygons */}
+          {completedPolygons.map((polygon, index) => (
+            <Polygon key={`completed-polygon-${index}`} paths={polygon} clickable={false} />
+          ))}
 
-                {polygonPoints.map((point, index) => (
-                  <Marker key={`polygon-${index}`} position={point} />
-                ))}
-
-                {polygonPoints.length > 2 && (
-                  <Polygon
-                    paths={polygonPoints}
-                    strokeColor="#3b82f6"
-                    strokeOpacity={0.8}
-                    strokeWeight={2}
-                    fillColor="#3b82f6"
-                    fillOpacity={0.2}
-                    clickable={false}
-                  />
-                )}
-
-                {polylinePoints.map((point, index) => (
-                  <Marker key={`polyline-${index}`} position={point} />
-                ))}
-
-                {polylinePoints.length > 1 && (
-                  <Polyline
-                    path={polylinePoints}
-                    strokeColor="#f59e0b"
-                    strokeOpacity={0.8}
-                    strokeWeight={3}
-                    clickable={false}
-                  />
-                )}
-              </Map>
-            </APIProvider>
-
-            <div className="absolute left-3 top-3 flex flex-col gap-2">
-              <Button
-                variant="secondary"
-                size="icon"
-                onClick={() => setMapZoom(mapZoom + 1)}
-                className="h-10 w-10 shadow-lg"
-                title="Zoom In"
-              >
-                +
-              </Button>
-              <Button
-                variant="secondary"
-                size="icon"
-                onClick={() => setMapZoom(mapZoom - 1)}
-                className="h-10 w-10 shadow-lg"
-                title="Zoom Out"
-              >
-                −
-              </Button>
-            </div>
-
-            <div className="absolute bottom-3 left-3 flex flex-col gap-2">
-              <Button
-                variant={drawingMode === "marker" ? "default" : "secondary"}
-                size="icon"
-                onClick={() => setDrawingMode(drawingMode === "marker" ? null : "marker")}
-                className="h-10 w-10 shadow-lg"
-                title="Place Marker"
-              >
-                <MapPin className="h-5 w-5" />
-              </Button>
-              <Button
-                variant={drawingMode === "polygon" ? "default" : "secondary"}
-                size="icon"
-                onClick={() => setDrawingMode(drawingMode === "polygon" ? null : "polygon")}
-                className="h-10 w-10 shadow-lg"
-                title="Draw Polygon"
-              >
-                <Pentagon className="h-5 w-5" />
-              </Button>
-              <Button
-                variant={drawingMode === "polyline" ? "default" : "secondary"}
-                size="icon"
-                onClick={() => setDrawingMode(drawingMode === "polyline" ? null : "polyline")}
-                className="h-10 w-10 shadow-lg"
-                title="Draw Path"
-              >
-                <Route className="h-5 w-5" />
-              </Button>
-              <div className="h-px bg-border" />
-              {(drawingMode === "polygon" || drawingMode === "polyline") && (
-                <Button
-                  variant="default"
-                  size="icon"
-                  onClick={finishDrawing}
-                  className="h-10 w-10 shadow-lg bg-green-600 hover:bg-green-700"
-                  title="Finish Drawing"
-                >
-                  <Check className="h-5 w-5" />
-                </Button>
-              )}
-              <Button
-                variant="secondary"
-                size="icon"
-                onClick={undoLastPoint}
-                disabled={
-                  (drawingMode === "polygon" && polygonPoints.length === 0) ||
-                  (drawingMode === "polyline" && polylinePoints.length === 0) ||
-                  (!drawingMode && polygonPoints.length === 0 && polylinePoints.length === 0)
-                }
-                className="h-10 w-10 shadow-lg"
-                title="Undo Last Point"
-              >
-                <Undo className="h-5 w-5" />
-              </Button>
-              <Button
-                variant="destructive"
-                size="icon"
-                onClick={clearDrawing}
-                className="h-10 w-10 shadow-lg"
-                title="Clear All"
-              >
-                <Trash2 className="h-5 w-5" />
-              </Button>
-            </div>
-
-            <div className="absolute right-3 top-3">
-              <Select value={mapType} onValueChange={(v) => setMapType(v as any)}>
-                <SelectTrigger className="w-[140px] shadow-lg">
-                  <Layers className="mr-2 h-4 w-4" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="satellite">Satellite</SelectItem>
-                  <SelectItem value="terrain">Terrain</SelectItem>
-                  <SelectItem value="roadmap">Street</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="absolute bottom-3 right-3">
-              <Button
-                variant="secondary"
-                size="icon"
-                onClick={locateUser}
-                className="h-10 w-10 shadow-lg"
-                title="Locate Me"
-              >
-                <Locate className="h-5 w-5" />
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Location Details</CardTitle>
-          <CardDescription>Enter information about this location</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="type">Location Type</Label>
-            <Select value={locationType} onValueChange={(v) => setLocationType(v as any)}>
-              <SelectTrigger id="type">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="facility">Facility</SelectItem>
-                <SelectItem value="lot">Lot</SelectItem>
-                <SelectItem value="walking_path">Walking Path</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="name">Name *</Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g., Community Pool"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Optional description"
-              rows={3}
-            />
-          </div>
-
-          {locationType === "facility" && (
+          {/* Render current polygon being drawn */}
+          {polygonPoints.length > 0 && (
             <>
-              <div className="space-y-2">
-                <Label htmlFor="facilityType">Facility Type</Label>
-                <Input
-                  id="facilityType"
-                  value={facilityType}
-                  onChange={(e) => setFacilityType(e.target.value)}
-                  placeholder="e.g., Pool, Gym, Park"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="icon">Icon</Label>
-                <Input
-                  id="icon"
-                  value={icon}
-                  onChange={(e) => setIcon(e.target.value)}
-                  placeholder="e.g., 🏊 or pool"
-                />
-              </div>
+              {polygonPoints.map((point, index) => (
+                <Marker key={`polygon-point-${index}`} position={point} />
+              ))}
+              {polygonPoints.length >= 3 && <Polygon paths={polygonPoints} clickable={false} />}
             </>
           )}
 
-          <div className="pt-4 space-y-2">
-            <Button onClick={handleSave} disabled={saving} className="w-full">
-              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Location
+          {/* Render completed polylines */}
+          {completedPolylines.map((polyline, index) => (
+            <Polyline key={`completed-polyline-${index}`} path={polyline} clickable={false} />
+          ))}
+
+          {/* Render current polyline being drawn */}
+          {polylinePoints.length > 0 && (
+            <>
+              {polylinePoints.map((point, index) => (
+                <Marker key={`polyline-point-${index}`} position={point} />
+              ))}
+              {polylinePoints.length >= 2 && <Polyline path={polylinePoints} clickable={false} />}
+            </>
+          )}
+        </Map>
+
+        {/* Zoom Controls - Top Left */}
+        <div className="absolute left-4 top-4 z-10 flex flex-col gap-2">
+          <Button size="icon" variant="secondary" onClick={handleZoomIn} className="h-10 w-10 shadow-lg">
+            <ZoomIn className="h-4 w-4" />
+          </Button>
+          <Button size="icon" variant="secondary" onClick={handleZoomOut} className="h-10 w-10 shadow-lg">
+            <ZoomOut className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Drawing Tools - Bottom Left */}
+        <div className="absolute bottom-4 left-4 z-10 flex flex-col gap-2">
+          <Button
+            size="icon"
+            variant={drawingMode === "marker" ? "default" : "secondary"}
+            onClick={() => setDrawingMode(drawingMode === "marker" ? null : "marker")}
+            className="h-10 w-10 shadow-lg"
+          >
+            <MapPin className="h-4 w-4" />
+          </Button>
+          <Button
+            size="icon"
+            variant={drawingMode === "polygon" ? "default" : "secondary"}
+            onClick={() => setDrawingMode(drawingMode === "polygon" ? null : "polygon")}
+            className="h-10 w-10 shadow-lg"
+          >
+            <Pentagon className="h-4 w-4" />
+          </Button>
+          <Button
+            size="icon"
+            variant={drawingMode === "polyline" ? "default" : "secondary"}
+            onClick={() => setDrawingMode(drawingMode === "polyline" ? null : "polyline")}
+            className="h-10 w-10 shadow-lg"
+          >
+            <Minus className="h-4 w-4" />
+          </Button>
+          {(drawingMode === "polygon" || drawingMode === "polyline") && (
+            <Button
+              size="icon"
+              variant="default"
+              onClick={handleFinishDrawing}
+              className="h-10 w-10 bg-green-600 shadow-lg hover:bg-green-700"
+            >
+              <Check className="h-4 w-4" />
             </Button>
-            <Button variant="outline" onClick={() => router.push(`/t/${tenantSlug}/admin/map`)} className="w-full">
-              Cancel
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+          )}
+          <Button size="icon" variant="secondary" onClick={handleUndo} className="h-10 w-10 shadow-lg">
+            <Undo2 className="h-4 w-4" />
+          </Button>
+          <Button size="icon" variant="secondary" onClick={handleClear} className="h-10 w-10 shadow-lg">
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Layer Selection - Top Right */}
+        <div className="absolute right-4 top-4 z-10">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="icon" variant="secondary" className="h-10 w-10 shadow-lg">
+                <Layers className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setMapType("roadmap")}>Roadmap</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setMapType("satellite")}>Satellite</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setMapType("hybrid")}>Hybrid</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setMapType("terrain")}>Terrain</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {/* Locate Me - Bottom Right */}
+        <div className="absolute bottom-4 right-4 z-10">
+          <Button size="icon" variant="secondary" onClick={handleLocateMe} className="h-10 w-10 shadow-lg">
+            <Locate className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    </APIProvider>
   )
 }

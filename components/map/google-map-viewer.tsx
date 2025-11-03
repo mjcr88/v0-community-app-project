@@ -7,7 +7,7 @@ import { Plus, Locate, Layers } from "lucide-react"
 import Link from "next/link"
 import { Polygon } from "./polygon"
 import { Polyline } from "./polyline"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select"
 
 interface Location {
   id: string
@@ -36,7 +36,7 @@ export function GoogleMapViewer({
   isAdmin = false,
 }: GoogleMapViewerProps) {
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null)
-  const [center, setCenter] = useState<{ lat: number; lng: number }>(mapCenter || { lat: 9.7489, lng: -84.0907 })
+  const [center, setCenter] = useState<{ lat: number; lng: number }>(mapCenter || { lat: 9.9567, lng: -84.5333 })
   const [zoom, setZoom] = useState(mapZoom)
   const [mapType, setMapType] = useState<"roadmap" | "satellite" | "terrain">("satellite")
 
@@ -194,9 +194,8 @@ export function GoogleMapViewer({
 
       <div className="absolute right-3 top-3 z-10">
         <Select value={mapType} onValueChange={(v) => setMapType(v as any)}>
-          <SelectTrigger className="w-[140px] shadow-lg bg-secondary hover:bg-secondary/80">
-            <Layers className="mr-2 h-4 w-4" />
-            <SelectValue />
+          <SelectTrigger className="w-10 h-10 p-0 flex items-center justify-center shadow-lg bg-secondary hover:bg-secondary/80">
+            <Layers className="h-4 w-4" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="satellite">Satellite</SelectItem>

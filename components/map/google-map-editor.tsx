@@ -14,8 +14,11 @@ import { useRouter } from "next/navigation"
 import { Loader2, MapPin, Pentagon, Route, Locate, AlertCircle, Trash2, Undo, Layers, Check } from "lucide-react"
 import { Polygon } from "./polygon"
 import { Polyline } from "./polyline"
+import { useToast } from "@/hooks/use-toast"
+import { createBrowserClient } from "@/lib/supabase/client"
+import { geolocate } from "@/lib/geolocate" // Import geolocate function
 
-type DrawingMode = "marker" | "polygon" | "polyline" | null
+type DrawingMode = "marker" | "polygon" | "polyline" | "select" | null
 type LatLng = { lat: number; lng: number }
 
 interface GoogleMapEditorProps {
@@ -56,15 +59,18 @@ function MapClickHandler({
 
 export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) {
   const router = useRouter()
+  const { toast } = useToast()
   const [drawingMode, setDrawingMode] = useState<DrawingMode>(null)
   const [mapType, setMapType] = useState<"roadmap" | "satellite" | "terrain">("satellite")
   const [saving, setSaving] = useState(false)
-  const [mapCenter, setMapCenter] = useState<LatLng>({ lat: 9.9281, lng: -84.0907 })
+  const [mapCenter, setMapCenter] = useState<LatLng>({ lat: 9.9567, lng: -84.5333 })
   const [mapZoom, setMapZoom] = useState(15)
 
   const [markerPosition, setMarkerPosition] = useState<LatLng | null>(null)
   const [polygonPoints, setPolygonPoints] = useState<LatLng[]>([])
   const [polylinePoints, setPolylinePoints] = useState<LatLng[]>([])
+  const [savedLocations, setSavedLocations] = useState<any[]>([])
+  const [selectedMarkers, setSelectedMarkers] = useState<Set<number>>(new Set())
 
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
@@ -74,27 +80,18 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""
 
-  const locateUser = () => {
-    if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const newCenter = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          }
-          setMapCenter(newCenter)
-          setMapZoom(18)
-          console.log("[v0] User located at:", newCenter)
-        },
-        (error) => {
-          console.error("[v0] Geolocation error:", error)
-          alert("Could not get your location. Please enable location services.")
-        },
-      )
-    } else {
-      alert("Geolocation is not supported by your browser")
+  useEffect(() => {
+    const fetchLocations = async () => {
+      const supabase = createBrowserClient()
+      const { data, error } = await supabase.from("locations").select("*").eq("tenant_id", tenantId)
+
+      if (!error && data) {
+        setSavedLocations(data)
+      }
     }
-  }
+
+    fetchLocations()
+  }, [tenantId])
 
   const handleMapClick = (lat: number, lng: number) => {
     if (drawingMode === "marker") {
@@ -108,26 +105,55 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
       const newPoints = [...polylinePoints, { lat, lng }]
       console.log("[v0] Polyline points updated:", newPoints.length, newPoints)
       setPolylinePoints(newPoints)
+    } else if (drawingMode === "select") {
+      if (
+        markerPosition &&
+        Math.abs(markerPosition.lat - lat) < 0.0001 &&
+        Math.abs(markerPosition.lng - lng) < 0.0001
+      ) {
+        setMarkerPosition(null)
+        toast({
+          description: "Marker removed",
+        })
+      }
     }
   }
 
   const finishDrawing = () => {
     if (drawingMode === "polygon" && polygonPoints.length < 3) {
-      alert("A polygon needs at least 3 points")
+      toast({
+        title: "Validation Error",
+        description: "A polygon needs at least 3 points",
+        variant: "destructive",
+      })
       return
     }
     if (drawingMode === "polyline" && polylinePoints.length < 2) {
-      alert("A line needs at least 2 points")
+      toast({
+        title: "Validation Error",
+        description: "A line needs at least 2 points",
+        variant: "destructive",
+      })
       return
     }
     setDrawingMode(null)
   }
 
   const clearDrawing = () => {
-    setMarkerPosition(null)
-    setPolygonPoints([])
-    setPolylinePoints([])
-    setDrawingMode(null)
+    if (drawingMode === "select" && selectedMarkers.size > 0) {
+      setSelectedMarkers(new Set())
+      toast({
+        description: "Selection cleared",
+      })
+    } else {
+      setMarkerPosition(null)
+      setPolygonPoints([])
+      setPolylinePoints([])
+      setDrawingMode(null)
+      toast({
+        description: "All drawings cleared",
+      })
+    }
   }
 
   const undoLastPoint = () => {
@@ -140,20 +166,36 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
 
   const handleSave = async () => {
     if (!name.trim()) {
-      alert("Please enter a location name")
+      toast({
+        title: "Validation Error",
+        description: "Please enter a location name",
+        variant: "destructive",
+      })
       return
     }
 
     if (locationType === "facility" && !markerPosition && polygonPoints.length === 0) {
-      alert("Please place a marker or draw a boundary for the facility")
+      toast({
+        title: "Validation Error",
+        description: "Please place a marker or draw a boundary for the facility",
+        variant: "destructive",
+      })
       return
     }
     if (locationType === "lot" && polygonPoints.length < 3) {
-      alert("Please draw a boundary for the lot (at least 3 points)")
+      toast({
+        title: "Validation Error",
+        description: "Please draw a boundary for the lot (at least 3 points)",
+        variant: "destructive",
+      })
       return
     }
     if (locationType === "walking_path" && polylinePoints.length < 2) {
-      alert("Please draw a path (at least 2 points)")
+      toast({
+        title: "Validation Error",
+        description: "Please draw a path (at least 2 points)",
+        variant: "destructive",
+      })
       return
     }
 
@@ -186,13 +228,43 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
 
       await createLocation(locationData)
 
-      alert("Location saved successfully!")
+      toast({
+        title: "Success",
+        description: "Location saved successfully!",
+      })
+
+      const supabase = createBrowserClient()
+      const { data } = await supabase.from("locations").select("*").eq("tenant_id", tenantId)
+
+      if (data) {
+        setSavedLocations(data)
+      }
+
       router.push(`/t/${tenantSlug}/admin/map`)
     } catch (error) {
       console.error("[v0] Error saving location:", error)
-      alert("Error saving location: " + (error instanceof Error ? error.message : "Unknown error"))
+      toast({
+        title: "Error",
+        description: "Error saving location: " + (error instanceof Error ? error.message : "Unknown error"),
+        variant: "destructive",
+      })
     } finally {
       setSaving(false)
+    }
+  }
+
+  const locateUser = async () => {
+    try {
+      const { lat, lng } = await geolocate()
+      setMapCenter({ lat, lng })
+      setMapZoom(15)
+    } catch (error) {
+      console.error("Error locating user:", error)
+      toast({
+        title: "Error",
+        description: "Error locating user: " + (error instanceof Error ? error.message : "Unknown error"),
+        variant: "destructive",
+      })
     }
   }
 
@@ -219,6 +291,7 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
               `Click to add points to the polygon (${polygonPoints.length} points). Click "Finish" when done.`}
             {drawingMode === "polyline" &&
               `Click to add points to the line (${polylinePoints.length} points). Click "Finish" when done.`}
+            {drawingMode === "select" && "Click on markers to select them for deletion"}
             {!drawingMode && "Select a drawing tool to start"}
           </CardDescription>
         </CardHeader>
@@ -237,6 +310,65 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
               >
                 <MapClickHandler drawingMode={drawingMode} onMapClick={handleMapClick} />
 
+                {savedLocations.map((location) => {
+                  if (location.type === "facility" && location.coordinates) {
+                    return <Marker key={`saved-${location.id}`} position={location.coordinates} />
+                  }
+                  if (location.type === "facility" && location.boundary_coordinates) {
+                    const paths = location.boundary_coordinates.map((coord: [number, number]) => ({
+                      lat: coord[0],
+                      lng: coord[1],
+                    }))
+                    return (
+                      <Polygon
+                        key={`saved-${location.id}`}
+                        paths={paths}
+                        strokeColor="#22c55e"
+                        strokeOpacity={0.8}
+                        strokeWeight={2}
+                        fillColor="#22c55e"
+                        fillOpacity={0.2}
+                        clickable={false}
+                      />
+                    )
+                  }
+                  if (location.type === "lot" && location.boundary_coordinates) {
+                    const paths = location.boundary_coordinates.map((coord: [number, number]) => ({
+                      lat: coord[0],
+                      lng: coord[1],
+                    }))
+                    return (
+                      <Polygon
+                        key={`saved-${location.id}`}
+                        paths={paths}
+                        strokeColor="#3b82f6"
+                        strokeOpacity={0.8}
+                        strokeWeight={2}
+                        fillColor="#3b82f6"
+                        fillOpacity={0.2}
+                        clickable={false}
+                      />
+                    )
+                  }
+                  if (location.type === "walking_path" && location.path_coordinates) {
+                    const path = location.path_coordinates.map((coord: [number, number]) => ({
+                      lat: coord[0],
+                      lng: coord[1],
+                    }))
+                    return (
+                      <Polyline
+                        key={`saved-${location.id}`}
+                        path={path}
+                        strokeColor="#f59e0b"
+                        strokeOpacity={0.8}
+                        strokeWeight={3}
+                        clickable={false}
+                      />
+                    )
+                  }
+                  return null
+                })}
+
                 {markerPosition && (
                   <Marker
                     position={markerPosition}
@@ -250,10 +382,6 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
                   />
                 )}
 
-                {polygonPoints.map((point, index) => (
-                  <Marker key={`polygon-marker-${index}-${point.lat}-${point.lng}`} position={point} />
-                ))}
-
                 {polygonPoints.length > 2 && (
                   <Polygon
                     key={`polygon-${polygonPoints.length}-${JSON.stringify(polygonPoints)}`}
@@ -266,10 +394,6 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
                     clickable={false}
                   />
                 )}
-
-                {polylinePoints.map((point, index) => (
-                  <Marker key={`polyline-marker-${index}-${point.lat}-${point.lng}`} position={point} />
-                ))}
 
                 {polylinePoints.length > 1 && (
                   <Polyline
@@ -285,27 +409,6 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
             </APIProvider>
 
             <div className="absolute left-3 top-3 flex flex-col gap-2">
-              <Button
-                variant="secondary"
-                size="icon"
-                onClick={() => setMapZoom(mapZoom + 1)}
-                className="h-10 w-10 shadow-lg"
-                title="Zoom In"
-              >
-                +
-              </Button>
-              <Button
-                variant="secondary"
-                size="icon"
-                onClick={() => setMapZoom(mapZoom - 1)}
-                className="h-10 w-10 shadow-lg"
-                title="Zoom Out"
-              >
-                −
-              </Button>
-            </div>
-
-            <div className="absolute bottom-3 left-3 flex flex-col gap-2">
               <Button
                 variant={drawingMode === "marker" ? "default" : "secondary"}
                 size="icon"
@@ -332,6 +435,22 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
                 title="Draw Path"
               >
                 <Route className="h-5 w-5" />
+              </Button>
+              <Button
+                variant={drawingMode === "select" ? "default" : "secondary"}
+                size="icon"
+                onClick={() => setDrawingMode(drawingMode === "select" ? null : "select")}
+                className="h-10 w-10 shadow-lg"
+                title="Select Items"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"
+                  />
+                </svg>
               </Button>
               <div className="h-px bg-border" />
               {(drawingMode === "polygon" || drawingMode === "polyline") && (
@@ -372,9 +491,8 @@ export function GoogleMapEditor({ tenantSlug, tenantId }: GoogleMapEditorProps) 
 
             <div className="absolute right-3 top-3">
               <Select value={mapType} onValueChange={(v) => setMapType(v as any)}>
-                <SelectTrigger className="w-[140px] shadow-lg bg-secondary hover:bg-secondary/80">
-                  <Layers className="mr-2 h-4 w-4" />
-                  <SelectValue />
+                <SelectTrigger className="w-10 h-10 p-0 flex items-center justify-center shadow-lg bg-secondary hover:bg-secondary/80">
+                  <Layers className="h-4 w-4" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="satellite">Satellite</SelectItem>

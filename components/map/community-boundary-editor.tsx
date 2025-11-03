@@ -1,12 +1,13 @@
 "use client"
 
 import { useState, useCallback, useEffect } from "react"
-import { APIProvider, Map, useMap, Marker, Polyline } from "@vis.gl/react-google-maps"
+import { APIProvider, Map, useMap, Marker } from "@vis.gl/react-google-maps"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { MapPin, Trash2, Save, Info } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Polygon } from "./polygon"
+import { Polyline } from "./polyline"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface CommunityBoundaryEditorProps {

@@ -20,6 +20,8 @@ export default async function MapViewerPage({ params }: { params: Promise<{ slug
 
   const communityBoundary = tenant.map_boundary_coordinates || null
 
+  console.log("[v0] Viewer page - Community boundary from DB:", communityBoundary)
+
   return (
     <div className="h-[100vh] w-full">
       <GoogleMapViewer

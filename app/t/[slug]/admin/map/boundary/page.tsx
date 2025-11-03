@@ -18,6 +18,9 @@ export default async function CommunityBoundaryPage({ params }: { params: Promis
       }))
     : null
 
+  console.log("[v0] Boundary page - Raw boundary from DB:", tenant.map_boundary_coordinates)
+  console.log("[v0] Boundary page - Converted initialBoundary:", initialBoundary)
+
   return (
     <div className="space-y-6">
       <div>

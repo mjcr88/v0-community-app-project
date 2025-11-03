@@ -45,8 +45,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     console.log("[v0] API - Access granted, updating boundary")
 
+    const boundaryTuples = boundary.map((point: { lat: number; lng: number }) => [point.lat, point.lng])
+    console.log("[v0] API - Converted boundary to tuples:", boundaryTuples)
+
     // Update tenant boundary
-    const { error } = await supabase.from("tenants").update({ map_boundary_coordinates: boundary }).eq("id", tenantId)
+    const { error } = await supabase
+      .from("tenants")
+      .update({ map_boundary_coordinates: boundaryTuples })
+      .eq("id", tenantId)
 
     if (error) {
       console.error("[v0] API - Database error:", error)
@@ -73,6 +79,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       .single()
 
     if (error) throw error
+
+    console.log("[v0] API - Fetched boundary from database:", data.map_boundary_coordinates)
 
     return NextResponse.json({ boundary: data.map_boundary_coordinates })
   } catch (error) {

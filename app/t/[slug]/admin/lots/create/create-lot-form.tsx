@@ -9,11 +9,11 @@ import { useToast } from "@/hooks/use-toast"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Switch } from "@/components/ui/switch"
-import { Loader2 } from "lucide-react"
+import { Loader2, Map } from "lucide-react"
+import Link from "next/link"
 
 interface Neighborhood {
   id: string
@@ -26,11 +26,9 @@ export default function CreateLotForm({ slug, neighborhoods }: { slug: string; n
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [bulkCreate, setBulkCreate] = useState(false)
-  const [showAddress, setShowAddress] = useState(false)
   const [formData, setFormData] = useState({
     lot_number: "",
     neighborhood_id: "",
-    address: "",
     bulk_count: "1",
     bulk_prefix: "",
     bulk_start_number: "1",
@@ -89,7 +87,7 @@ export default function CreateLotForm({ slug, neighborhoods }: { slug: string; n
           neighborhood_id: formData.neighborhood_id,
           tenant_id: tenantId,
           lot_number: formData.lot_number,
-          address: showAddress && formData.address ? formData.address : null,
+          address: null,
         })
 
         if (insertError) throw insertError
@@ -105,7 +103,6 @@ export default function CreateLotForm({ slug, neighborhoods }: { slug: string; n
       setFormData({
         lot_number: "",
         neighborhood_id: "",
-        address: "",
         bulk_count: "1",
         bulk_prefix: "",
         bulk_start_number: "1",
@@ -202,34 +199,21 @@ export default function CreateLotForm({ slug, neighborhoods }: { slug: string; n
               value={formData.lot_number}
               onChange={(e) => setFormData({ ...formData, lot_number: e.target.value })}
               placeholder="e.g., A01"
+              required
             />
           </div>
-
-          <div className="flex items-center space-x-2 p-4 bg-muted/50 rounded-lg">
-            <Switch id="show-address" checked={showAddress} onCheckedChange={setShowAddress} />
-            <Label htmlFor="show-address" className="cursor-pointer">
-              Add address for this lot
-            </Label>
-          </div>
-
-          {showAddress && (
-            <div className="space-y-2">
-              <Label htmlFor="address">Address</Label>
-              <Textarea
-                id="address"
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                placeholder="Optional physical address"
-                rows={3}
-              />
-            </div>
-          )}
         </>
       )}
 
       <div className="flex gap-2 justify-end">
         <Button type="button" variant="outline" onClick={() => router.back()} disabled={loading}>
           Cancel
+        </Button>
+        <Button type="button" variant="outline" asChild>
+          <Link href={`/t/${slug}/admin/map/locations/create`}>
+            <Map className="mr-2 h-4 w-4" />
+            Add Location on Map
+          </Link>
         </Button>
         <Button type="submit" disabled={loading}>
           {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

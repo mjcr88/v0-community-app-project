@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation"
 
 export default function RootPage() {
-  redirect("/backoffice/login")
+  redirect("/t/ecovilla-san-mateo/login")
 }

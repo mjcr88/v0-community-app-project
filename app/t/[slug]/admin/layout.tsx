@@ -16,7 +16,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
-import { Home, MapPin, Users, Building2, HeartHandshake, Lightbulb } from "lucide-react"
+import { Home, MapPin, Users, Building2, HeartHandshake, Lightbulb, Map } from "lucide-react"
 import Link from "next/link"
 import { UserAvatarMenu } from "@/components/user-avatar-menu"
 
@@ -39,18 +39,23 @@ export default async function TenantAdminLayout({
     redirect(`/t/${slug}/login`)
   }
 
-  const { data: userData } = await supabase
+  const { data: userData, error: userError } = await supabase
     .from("users")
     .select("role, tenant_id, first_name, last_name, email, profile_picture_url")
     .eq("id", user.id)
     .maybeSingle()
 
+  if (userError) {
+    console.error("[v0] Error fetching user data:", userError)
+    redirect(`/t/${slug}/login`)
+  }
+
   const isSuperAdmin = userData?.role === "super_admin"
 
-  // Get tenant info
-  const { data: tenant } = await supabase.from("tenants").select("*").eq("slug", slug).single()
+  const { data: tenant, error: tenantError } = await supabase.from("tenants").select("*").eq("slug", slug).single()
 
-  if (!tenant) {
+  if (tenantError || !tenant) {
+    console.error("[v0] Error fetching tenant:", tenantError)
     redirect("/backoffice/login")
   }
 
@@ -61,7 +66,7 @@ export default async function TenantAdminLayout({
 
   if (isSuperAdmin) {
     // Super admin can access any tenant
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("users")
       .select(`
         id,
@@ -70,18 +75,15 @@ export default async function TenantAdminLayout({
         email,
         profile_picture_url,
         is_tenant_admin,
-        lot_id,
-        lots (
-          neighborhood_id,
-          neighborhoods (
-            tenant_id
-          )
-        )
+        lot_id
       `)
       .eq("id", user.id)
-      .eq("role", "resident")
-      .eq("lots.neighborhoods.tenant_id", tenant.id)
       .maybeSingle()
+
+    if (error) {
+      console.error("[v0] Error fetching super admin data:", error)
+      redirect(`/t/${slug}/login`)
+    }
 
     residentData = data
     isTenantAdmin = true
@@ -96,7 +98,7 @@ export default async function TenantAdminLayout({
     }
   } else {
     // Check if they're a resident with is_tenant_admin flag
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("users")
       .select(`
         id,
@@ -114,8 +116,12 @@ export default async function TenantAdminLayout({
         )
       `)
       .eq("id", user.id)
-      .eq("role", "resident")
       .maybeSingle()
+
+    if (error) {
+      console.error("[v0] Error fetching resident data:", error)
+      redirect(`/t/${slug}/login`)
+    }
 
     residentData = data
 
@@ -165,6 +171,14 @@ export default async function TenantAdminLayout({
             <SidebarGroupLabel>Administration</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <Link href={`/t/${slug}/admin/map`}>
+                      <Map />
+                      <span>Community Map</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
                 {features.neighborhoods && (
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>

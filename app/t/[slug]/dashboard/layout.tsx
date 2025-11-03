@@ -39,14 +39,20 @@ export default async function ResidentDashboardLayout({
     redirect(`/t/${slug}/login`)
   }
 
-  const { data: superAdminData } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle()
-  const isSuperAdmin = superAdminData?.role === "super_admin"
+  const { data: userData } = await supabase.from("users").select("role, tenant_id").eq("id", user.id).maybeSingle()
 
   // Get tenant info
   const { data: tenant } = await supabase.from("tenants").select("*").eq("slug", slug).single()
 
   if (!tenant) {
     redirect("/backoffice/login")
+  }
+
+  const isSuperAdmin = userData?.role === "super_admin"
+  const isTenantAdmin = userData?.role === "tenant_admin" && userData?.tenant_id === tenant.id
+
+  if (isSuperAdmin || isTenantAdmin) {
+    redirect(`/t/${slug}/admin/dashboard`)
   }
 
   // Get resident info
@@ -69,6 +75,10 @@ export default async function ResidentDashboardLayout({
     .eq("role", "resident")
     .eq("tenant_id", tenant.id)
     .maybeSingle()
+
+  if (!resident) {
+    redirect(`/t/${slug}/login`)
+  }
 
   // They will see "Complete Onboarding" quick action button instead
 

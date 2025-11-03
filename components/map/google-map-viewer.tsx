@@ -83,7 +83,7 @@ export function GoogleMapViewer({
   }
 
   return (
-    <div className="h-full w-full relative">
+    <div className="h-full w-full relative rounded-lg border overflow-hidden">
       <APIProvider apiKey={apiKey}>
         <Map
           center={center}

@@ -25,35 +25,15 @@ interface MapViewerProps {
   isAdmin?: boolean
 }
 
-function mapboxProvider(x: number, y: number, z: number, dpr?: number) {
-  const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
-  const retina = dpr && dpr >= 2 ? "@2x" : ""
-  const url = `https://api.mapbox.com/v4/mapbox.satellite/${z}/${x}/${y}${retina}.png?access_token=${token}`
-
-  console.log("[v0] Mapbox tile URL:", url)
-  console.log("[v0] Token available:", !!token)
-  console.log("[v0] Tile coords:", { x, y, z, dpr })
-
-  return url
+function esriSatelliteProvider(x: number, y: number, z: number) {
+  // ESRI World Imagery - free satellite tiles that work without authentication
+  return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`
 }
 
 export function MapViewer({ tenantSlug, initialLocations, mapCenter, mapZoom = 15, isAdmin = false }: MapViewerProps) {
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null)
   const [center, setCenter] = useState<[number, number]>([mapCenter?.lat || 9.7489, mapCenter?.lng || -84.0907])
   const [zoom, setZoom] = useState(mapZoom)
-
-  const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
-
-  console.log("[v0] MapViewer token check:", !!token)
-  console.log("[v0] Token value:", token?.substring(0, 10) + "...")
-
-  if (!token) {
-    return (
-      <div className="w-full h-full flex items-center justify-center bg-gray-100">
-        <p className="text-red-600">Mapbox token not configured</p>
-      </div>
-    )
-  }
 
   const handleLocate = () => {
     if (navigator.geolocation) {
@@ -74,7 +54,7 @@ export function MapViewer({ tenantSlug, initialLocations, mapCenter, mapZoom = 1
   return (
     <div className="relative w-full h-full">
       <Map
-        provider={mapboxProvider}
+        provider={esriSatelliteProvider}
         center={center}
         zoom={zoom}
         onBoundsChanged={({ center: newCenter, zoom: newZoom }) => {

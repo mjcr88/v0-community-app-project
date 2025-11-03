@@ -28,7 +28,7 @@ export default async function CreateLocationPage({ params }: { params: Promise<{
   console.log("[v0] User data:", userData)
   console.log("[v0] User error:", userError)
 
-  if (!userData || (!userData.is_tenant_admin && userData.role !== "super_admin")) {
+  if (!userData || (!userData.is_tenant_admin && userData.role !== "super_admin" && userData.role !== "tenant_admin")) {
     console.log("[v0] Not admin, redirecting. is_tenant_admin:", userData?.is_tenant_admin, "role:", userData?.role)
     redirect(`/t/${slug}`)
   }

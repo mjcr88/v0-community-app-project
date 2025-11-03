@@ -1,5 +1,6 @@
 import { createServerClient } from "@/lib/supabase/server"
 import { type NextRequest, NextResponse } from "next/server"
+import { createClient } from "@supabase/supabase-js"
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ tenantId: string }> }) {
   try {
@@ -48,8 +49,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const boundaryTuples = boundary.map((point: { lat: number; lng: number }) => [point.lat, point.lng])
     console.log("[v0] API - Converted boundary to tuples:", boundaryTuples)
 
+    const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    })
+
     // Update tenant boundary
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from("tenants")
       .update({ map_boundary_coordinates: boundaryTuples })
       .eq("id", tenantId)
@@ -58,6 +66,17 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       console.error("[v0] API - Database error:", error)
       throw error
     }
+
+    const { data: verifyData, error: verifyError } = await supabaseAdmin
+      .from("tenants")
+      .select("map_boundary_coordinates")
+      .eq("id", tenantId)
+      .single()
+
+    console.log("[v0] API - Verification:", {
+      saved: verifyData?.map_boundary_coordinates?.length,
+      verifyError,
+    })
 
     console.log("[v0] API - Boundary updated successfully")
     return NextResponse.json({ success: true })

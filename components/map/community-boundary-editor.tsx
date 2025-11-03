@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Polygon } from "./polygon"
 import { Polyline } from "./polyline"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useRouter } from "next/navigation"
 
 interface CommunityBoundaryEditorProps {
   tenantId: string
@@ -55,6 +56,7 @@ export function CommunityBoundaryEditor({
   mapZoom: initialMapZoom,
   onSave,
 }: CommunityBoundaryEditorProps) {
+  const router = useRouter()
   const { toast } = useToast()
   const [boundary, setBoundary] = useState<{ lat: number; lng: number }[]>([])
   const [isDrawing, setIsDrawing] = useState(false)
@@ -152,6 +154,9 @@ export function CommunityBoundaryEditor({
 
       onSave?.(boundary)
       setIsDrawing(false)
+
+      console.log("[v0] Refreshing page to reload boundary data")
+      router.refresh()
     } catch (error) {
       console.error("[v0] Error saving boundary:", error)
       toast({

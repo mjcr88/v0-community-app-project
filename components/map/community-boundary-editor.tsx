@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect } from "react"
 import { APIProvider, Map, useMap, Marker } from "@vis.gl/react-google-maps"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { MapPin, Trash2, Save, Info } from "lucide-react"
+import { MapPin, Trash2, Save, Info, Edit } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Polygon } from "./polygon"
 import { Polyline } from "./polyline"
@@ -78,6 +78,7 @@ export function CommunityBoundaryEditor({
     (lat: number, lng: number) => {
       if (!isDrawing) return
       setBoundary((prev) => [...prev, { lat, lng }])
+      console.log("[v0] Point added:", { lat, lng, totalPoints: boundary.length + 1 })
       toast({
         description: `Point ${boundary.length + 1} added`,
       })
@@ -92,6 +93,17 @@ export function CommunityBoundaryEditor({
       title: "Drawing Mode Active",
       description: "Click on the map to draw the community boundary polygon",
     })
+  }
+
+  const editExisting = () => {
+    if (initialBoundary && initialBoundary.length > 0) {
+      setBoundary([...initialBoundary])
+      setIsDrawing(true)
+      toast({
+        title: "Edit Mode Active",
+        description: "Click to add more points or save to update the boundary",
+      })
+    }
   }
 
   const clearBoundary = () => {
@@ -114,13 +126,24 @@ export function CommunityBoundaryEditor({
     }
 
     try {
+      console.log("[v0] Saving boundary:", { tenantId, pointCount: boundary.length, boundary })
+
       const response = await fetch(`/api/tenants/${tenantId}/boundary`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ boundary }),
       })
 
-      if (!response.ok) throw new Error("Failed to save boundary")
+      console.log("[v0] Save response status:", response.status)
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error("[v0] Save failed:", errorData)
+        throw new Error(errorData.error || "Failed to save boundary")
+      }
+
+      const result = await response.json()
+      console.log("[v0] Save successful:", result)
 
       toast({
         title: "Boundary Saved",
@@ -130,9 +153,10 @@ export function CommunityBoundaryEditor({
       onSave?.(boundary)
       setIsDrawing(false)
     } catch (error) {
+      console.error("[v0] Error saving boundary:", error)
       toast({
         title: "Error",
-        description: "Failed to save community boundary",
+        description: error instanceof Error ? error.message : "Failed to save community boundary",
         variant: "destructive",
       })
     }
@@ -156,7 +180,7 @@ export function CommunityBoundaryEditor({
             </ol>
             {hasExistingBoundary && (
               <p className="text-sm text-muted-foreground mt-2">
-                You have an existing boundary. Starting a new drawing will replace it when saved.
+                You have an existing boundary. Use "Edit Existing" to modify it or "Redraw" to start fresh.
               </p>
             )}
           </div>
@@ -165,10 +189,18 @@ export function CommunityBoundaryEditor({
 
       <div className="flex gap-2">
         {!isDrawing ? (
-          <Button onClick={startDrawing} className="gap-2">
-            <MapPin className="h-4 w-4" />
-            {hasExistingBoundary ? "Redraw Boundary" : "Start Drawing"}
-          </Button>
+          <>
+            <Button onClick={startDrawing} className="gap-2">
+              <MapPin className="h-4 w-4" />
+              {hasExistingBoundary ? "Redraw Boundary" : "Start Drawing"}
+            </Button>
+            {hasExistingBoundary && (
+              <Button onClick={editExisting} variant="outline" className="gap-2 bg-transparent">
+                <Edit className="h-4 w-4" />
+                Edit Existing
+              </Button>
+            )}
+          </>
         ) : (
           <>
             <Button onClick={saveBoundary} disabled={!canSave} className="gap-2">
@@ -220,6 +252,7 @@ export function CommunityBoundaryEditor({
 
                 {boundary.length >= 3 && (
                   <Polygon
+                    key={`boundary-polygon-${boundary.length}`}
                     paths={boundary}
                     strokeColor="#FF6B35"
                     strokeOpacity={0.8}
@@ -230,8 +263,9 @@ export function CommunityBoundaryEditor({
                   />
                 )}
 
-                {!isDrawing && hasExistingBoundary && boundary.length === 0 && (
+                {!isDrawing && hasExistingBoundary && (
                   <Polygon
+                    key="existing-boundary"
                     paths={initialBoundary}
                     strokeColor="#10b981"
                     strokeOpacity={0.8}

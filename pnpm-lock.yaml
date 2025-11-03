@@ -93,7 +93,7 @@ importers:
         specifier: latest
         version: 1.2.8(@types/react-dom@19.0.0)(@types/react@19.0.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       '@react-google-maps/api':
-        specifier: latest
+        specifier: 2.20.7
         version: 2.20.7(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       '@supabase/ssr':
         specifier: latest
@@ -132,7 +132,7 @@ importers:
         specifier: latest
         version: 0.5.0
       google-maps:
-        specifier: latest
+        specifier: 4.3.3
         version: 4.3.3
       googlemaps:
         specifier: 1.12.0

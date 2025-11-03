@@ -1,12 +1,12 @@
 "use client"
 
 import { useState, useCallback, useEffect } from "react"
-import { GoogleMap, useJsApiLoader, Polygon } from "@react-google-maps/api"
+import { APIProvider, Map, useMap } from "@vis.gl/react-google-maps"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { MapPin, Trash2, Save } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { google } from "google-maps"
+import { Polygon } from "./polygon"
 
 interface CommunityBoundaryEditorProps {
   tenantId: string
@@ -14,33 +14,49 @@ interface CommunityBoundaryEditorProps {
   onSave?: (boundary: { lat: number; lng: number }[]) => void
 }
 
-const mapContainerStyle = {
-  width: "100%",
-  height: "100%",
-}
+function MapClickHandler({
+  isDrawing,
+  onMapClick,
+}: {
+  isDrawing: boolean
+  onMapClick: (lat: number, lng: number) => void
+}) {
+  const map = useMap()
 
-const defaultCenter = {
-  lat: 40.7128,
-  lng: -74.006,
+  useEffect(() => {
+    if (!map || !isDrawing) return
+
+    const clickListener = map.addListener("click", (e: any) => {
+      if (e.latLng) {
+        const lat = e.latLng.lat()
+        const lng = e.latLng.lng()
+        onMapClick(lat, lng)
+      }
+    })
+
+    return () => {
+      if (clickListener) {
+        clickListener.remove()
+      }
+    }
+  }, [map, isDrawing, onMapClick])
+
+  return null
 }
 
 export function CommunityBoundaryEditor({ tenantId, initialBoundary, onSave }: CommunityBoundaryEditorProps) {
   const { toast } = useToast()
-  const [boundary, setBoundary] = useState<google.maps.LatLng[]>([])
+  const [boundary, setBoundary] = useState<{ lat: number; lng: number }[]>([])
   const [isDrawing, setIsDrawing] = useState(false)
-  const [map, setMap] = useState<google.maps.Map | null>(null)
-  const [center, setCenter] = useState(defaultCenter)
+  const [center, setCenter] = useState({ lat: 40.7128, lng: -74.006 })
+  const [zoom, setZoom] = useState(15)
 
-  const { isLoaded } = useJsApiLoader({
-    id: "google-map-script",
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
-  })
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""
 
   // Load initial boundary
   useEffect(() => {
     if (initialBoundary && initialBoundary.length > 0) {
-      const bounds = initialBoundary.map((coord) => new google.maps.LatLng(coord.lat, coord.lng))
-      setBoundary(bounds)
+      setBoundary(initialBoundary)
 
       // Center map on boundary
       const avgLat = initialBoundary.reduce((sum, c) => sum + c.lat, 0) / initialBoundary.length
@@ -49,19 +65,10 @@ export function CommunityBoundaryEditor({ tenantId, initialBoundary, onSave }: C
     }
   }, [initialBoundary])
 
-  const onLoad = useCallback((map: google.maps.Map) => {
-    setMap(map)
-  }, [])
-
-  const onUnmount = useCallback(() => {
-    setMap(null)
-  }, [])
-
   const handleMapClick = useCallback(
-    (e: google.maps.MapMouseEvent) => {
-      if (!isDrawing || !e.latLng) return
-
-      setBoundary((prev) => [...prev, e.latLng!])
+    (lat: number, lng: number) => {
+      if (!isDrawing) return
+      setBoundary((prev) => [...prev, { lat, lng }])
     },
     [isDrawing],
   )
@@ -95,16 +102,11 @@ export function CommunityBoundaryEditor({ tenantId, initialBoundary, onSave }: C
       return
     }
 
-    const boundaryCoords = boundary.map((point) => ({
-      lat: point.lat(),
-      lng: point.lng(),
-    }))
-
     try {
       const response = await fetch(`/api/tenants/${tenantId}/boundary`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ boundary: boundaryCoords }),
+        body: JSON.stringify({ boundary }),
       })
 
       if (!response.ok) throw new Error("Failed to save boundary")
@@ -114,7 +116,7 @@ export function CommunityBoundaryEditor({ tenantId, initialBoundary, onSave }: C
         description: "Community boundary has been saved successfully",
       })
 
-      onSave?.(boundaryCoords)
+      onSave?.(boundary)
       setIsDrawing(false)
     } catch (error) {
       toast({
@@ -125,44 +127,36 @@ export function CommunityBoundaryEditor({ tenantId, initialBoundary, onSave }: C
     }
   }
 
-  if (!isLoaded) {
-    return <div className="flex items-center justify-center h-full">Loading map...</div>
-  }
-
   return (
     <Card className="flex flex-col min-h-[600px]">
       <CardContent className="p-1.5 flex-1">
         <div className="relative h-full w-full overflow-hidden rounded-lg">
-          <GoogleMap
-            mapContainerStyle={mapContainerStyle}
-            center={center}
-            zoom={15}
-            onLoad={onLoad}
-            onUnmount={onUnmount}
-            onClick={handleMapClick}
-            options={{
-              mapTypeId: "satellite",
-              disableDefaultUI: false,
-              zoomControl: true,
-              mapTypeControl: true,
-              streetViewControl: false,
-              fullscreenControl: true,
-            }}
-          >
-            {boundary.length > 0 && (
-              <Polygon
-                paths={boundary}
-                options={{
-                  fillColor: "#FF6B35",
-                  fillOpacity: 0.1,
-                  strokeColor: "#FF6B35",
-                  strokeOpacity: 0.8,
-                  strokeWeight: 3,
-                  strokeDashArray: [10, 5],
-                }}
-              />
-            )}
-          </GoogleMap>
+          <APIProvider apiKey={apiKey}>
+            <Map
+              center={center}
+              zoom={zoom}
+              mapTypeId="satellite"
+              gestureHandling="greedy"
+              disableDefaultUI={true}
+              clickableIcons={false}
+              onCenterChanged={(e) => setCenter(e.detail.center)}
+              onZoomChanged={(e) => setZoom(e.detail.zoom)}
+            >
+              <MapClickHandler isDrawing={isDrawing} onMapClick={handleMapClick} />
+
+              {boundary.length > 0 && (
+                <Polygon
+                  paths={boundary}
+                  strokeColor="#FF6B35"
+                  strokeOpacity={0.8}
+                  strokeWeight={3}
+                  fillColor="#FF6B35"
+                  fillOpacity={0.1}
+                  clickable={false}
+                />
+              )}
+            </Map>
+          </APIProvider>
 
           {/* Drawing Controls */}
           <div className="absolute bottom-4 left-4 flex flex-col gap-2">

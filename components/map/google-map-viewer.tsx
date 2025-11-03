@@ -119,7 +119,7 @@ export function GoogleMapViewer({
               strokeOpacity={0.6}
               strokeWeight={2}
               fillColor="#10b981"
-              fillOpacity={0.08}
+              fillOpacity={0.18}
               clickable={false}
             />
           )}

@@ -242,13 +242,17 @@ export function GoogleMapEditor({
         }
         if (facilityType) locationData.facility_type = facilityType
         if (icon) locationData.icon = icon
-        if (selectedNeighborhoodId) locationData.neighborhood_id = selectedNeighborhoodId
+        if (selectedNeighborhoodId && selectedNeighborhoodId !== "none") {
+          locationData.neighborhood_id = selectedNeighborhoodId
+        }
       } else if (locationType === "lot") {
         locationData.boundary_coordinates = polygonPoints.map((p) => [p.lat, p.lng])
         locationData.lot_id = selectedLotId
       } else if (locationType === "walking_path") {
         locationData.path_coordinates = polylinePoints.map((p) => [p.lat, p.lng])
-        if (selectedNeighborhoodId) locationData.neighborhood_id = selectedNeighborhoodId
+        if (selectedNeighborhoodId && selectedNeighborhoodId !== "none") {
+          locationData.neighborhood_id = selectedNeighborhoodId
+        }
       }
 
       console.log("[v0] Saving location:", locationData)
@@ -339,9 +343,56 @@ export function GoogleMapEditor({
                     strokeOpacity={0.6}
                     strokeWeight={2}
                     fillColor="#10b981"
-                    fillOpacity={0.08}
+                    fillOpacity={0.18}
                     clickable={false}
                   />
+                )}
+
+                {markerPosition && <Marker position={markerPosition} />}
+
+                {polygonPoints.length > 0 && (
+                  <>
+                    {polygonPoints.map((point, index) => (
+                      <Marker key={`polygon-point-${index}`} position={point} />
+                    ))}
+                    {polygonPoints.length >= 2 && (
+                      <Polyline
+                        path={polygonPoints}
+                        strokeColor="#ef4444"
+                        strokeOpacity={0.8}
+                        strokeWeight={2}
+                        clickable={false}
+                      />
+                    )}
+                    {polygonPoints.length >= 3 && (
+                      <Polygon
+                        paths={polygonPoints}
+                        strokeColor="#ef4444"
+                        strokeOpacity={0.8}
+                        strokeWeight={2}
+                        fillColor="#ef4444"
+                        fillOpacity={0.2}
+                        clickable={false}
+                      />
+                    )}
+                  </>
+                )}
+
+                {polylinePoints.length > 0 && (
+                  <>
+                    {polylinePoints.map((point, index) => (
+                      <Marker key={`polyline-point-${index}`} position={point} />
+                    ))}
+                    {polylinePoints.length >= 2 && (
+                      <Polyline
+                        path={polylinePoints}
+                        strokeColor="#f59e0b"
+                        strokeOpacity={0.8}
+                        strokeWeight={3}
+                        clickable={false}
+                      />
+                    )}
+                  </>
                 )}
 
                 {filteredLocations.map((location) => {

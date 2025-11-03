@@ -11,19 +11,26 @@ export default async function CommunityBoundaryPage({ params }: { params: Promis
     return <div>Tenant not found</div>
   }
 
+  const initialBoundary = tenant.map_boundary_coordinates
+    ? (tenant.map_boundary_coordinates as Array<[number, number]>).map((coord) => ({
+        lat: coord[0],
+        lng: coord[1],
+      }))
+    : null
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Community Boundary</h1>
         <p className="text-muted-foreground">
-          Draw the boundary of your community. This will be displayed on all maps to focus attention on your community
-          area.
+          Define the boundary of your community. This boundary will be displayed on all maps to focus attention on your
+          community area.
         </p>
       </div>
 
       <CommunityBoundaryEditor
         tenantId={tenant.id}
-        initialBoundary={tenant.map_boundary_coordinates as { lat: number; lng: number }[] | null}
+        initialBoundary={initialBoundary}
         mapCenter={tenant.map_center_coordinates as { lat: number; lng: number }}
         mapZoom={tenant.map_default_zoom || 15}
       />

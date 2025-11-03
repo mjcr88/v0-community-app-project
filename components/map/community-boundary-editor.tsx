@@ -4,13 +4,16 @@ import { useState, useCallback, useEffect } from "react"
 import { APIProvider, Map, useMap } from "@vis.gl/react-google-maps"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { MapPin, Trash2, Save } from "lucide-react"
+import { MapPin, Trash2, Save, Info } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Polygon } from "./polygon"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface CommunityBoundaryEditorProps {
   tenantId: string
-  initialBoundary?: { lat: number; lng: number }[]
+  initialBoundary?: { lat: number; lng: number }[] | null
+  mapCenter?: { lat: number; lng: number }
+  mapZoom?: number
   onSave?: (boundary: { lat: number; lng: number }[]) => void
 }
 
@@ -44,16 +47,21 @@ function MapClickHandler({
   return null
 }
 
-export function CommunityBoundaryEditor({ tenantId, initialBoundary, onSave }: CommunityBoundaryEditorProps) {
+export function CommunityBoundaryEditor({
+  tenantId,
+  initialBoundary,
+  mapCenter: initialMapCenter,
+  mapZoom: initialMapZoom,
+  onSave,
+}: CommunityBoundaryEditorProps) {
   const { toast } = useToast()
   const [boundary, setBoundary] = useState<{ lat: number; lng: number }[]>([])
   const [isDrawing, setIsDrawing] = useState(false)
-  const [center, setCenter] = useState({ lat: 40.7128, lng: -74.006 })
-  const [zoom, setZoom] = useState(15)
+  const [center, setCenter] = useState(initialMapCenter || { lat: 40.7128, lng: -74.006 })
+  const [zoom, setZoom] = useState(initialMapZoom || 15)
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""
 
-  // Load initial boundary
   useEffect(() => {
     if (initialBoundary && initialBoundary.length > 0) {
       setBoundary(initialBoundary)
@@ -69,18 +77,20 @@ export function CommunityBoundaryEditor({ tenantId, initialBoundary, onSave }: C
     (lat: number, lng: number) => {
       if (!isDrawing) return
       setBoundary((prev) => [...prev, { lat, lng }])
+      toast({
+        description: `Point ${boundary.length + 1} added`,
+      })
     },
-    [isDrawing],
+    [isDrawing, boundary.length, toast],
   )
 
-  const toggleDrawing = () => {
-    setIsDrawing(!isDrawing)
-    if (!isDrawing) {
-      toast({
-        title: "Drawing Mode Active",
-        description: "Click on the map to draw the community boundary",
-      })
-    }
+  const startDrawing = () => {
+    setIsDrawing(true)
+    setBoundary([])
+    toast({
+      title: "Drawing Mode Active",
+      description: "Click on the map to draw the community boundary polygon",
+    })
   }
 
   const clearBoundary = () => {
@@ -127,74 +137,117 @@ export function CommunityBoundaryEditor({ tenantId, initialBoundary, onSave }: C
     }
   }
 
+  const hasExistingBoundary = initialBoundary && initialBoundary.length >= 3
+  const canSave = boundary.length >= 3
+
   return (
-    <Card className="flex flex-col min-h-[600px]">
-      <CardContent className="p-1.5 flex-1">
-        <div className="relative h-full w-full overflow-hidden rounded-lg">
-          <APIProvider apiKey={apiKey}>
-            <Map
-              center={center}
-              zoom={zoom}
-              mapTypeId="satellite"
-              gestureHandling="greedy"
-              disableDefaultUI={true}
-              clickableIcons={false}
-              onCenterChanged={(e) => setCenter(e.detail.center)}
-              onZoomChanged={(e) => setZoom(e.detail.zoom)}
-            >
-              <MapClickHandler isDrawing={isDrawing} onMapClick={handleMapClick} />
+    <div className="space-y-4">
+      <Alert>
+        <Info className="h-4 w-4" />
+        <AlertDescription>
+          <div className="space-y-2">
+            <p className="font-medium">How to create a community boundary:</p>
+            <ol className="list-decimal list-inside space-y-1 text-sm">
+              <li>Click "Start Drawing" to begin</li>
+              <li>Click on the map to place points around your community perimeter</li>
+              <li>The polygon will automatically close between your points</li>
+              <li>Click "Save Boundary" when finished (minimum 3 points required)</li>
+            </ol>
+            {hasExistingBoundary && (
+              <p className="text-sm text-muted-foreground mt-2">
+                You have an existing boundary. Starting a new drawing will replace it when saved.
+              </p>
+            )}
+          </div>
+        </AlertDescription>
+      </Alert>
 
-              {boundary.length > 0 && (
-                <Polygon
-                  paths={boundary}
-                  strokeColor="#FF6B35"
-                  strokeOpacity={0.8}
-                  strokeWeight={3}
-                  fillColor="#FF6B35"
-                  fillOpacity={0.1}
-                  clickable={false}
-                />
-              )}
-            </Map>
-          </APIProvider>
-
-          {/* Drawing Controls */}
-          <div className="absolute bottom-4 left-4 flex flex-col gap-2">
-            <Button
-              onClick={toggleDrawing}
-              variant={isDrawing ? "default" : "secondary"}
-              size="icon"
-              className="shadow-lg"
-            >
-              <MapPin className="h-4 w-4" />
+      <div className="flex gap-2">
+        {!isDrawing ? (
+          <Button onClick={startDrawing} className="gap-2">
+            <MapPin className="h-4 w-4" />
+            {hasExistingBoundary ? "Redraw Boundary" : "Start Drawing"}
+          </Button>
+        ) : (
+          <>
+            <Button onClick={saveBoundary} disabled={!canSave} className="gap-2">
+              <Save className="h-4 w-4" />
+              Save Boundary ({boundary.length} points)
             </Button>
-            <Button
-              onClick={clearBoundary}
-              variant="secondary"
-              size="icon"
-              className="shadow-lg"
-              disabled={boundary.length === 0}
-            >
+            <Button onClick={clearBoundary} variant="outline" className="gap-2 bg-transparent">
               <Trash2 className="h-4 w-4" />
+              Clear
             </Button>
-          </div>
+          </>
+        )}
+      </div>
 
-          {/* Save Button */}
-          <div className="absolute bottom-4 right-4">
-            <Button onClick={saveBoundary} className="shadow-lg" disabled={boundary.length < 3}>
-              <Save className="h-4 w-4 mr-2" />
-              Save Boundary
-            </Button>
-          </div>
+      <Card className="flex flex-col min-h-[600px]">
+        <CardContent className="p-1.5 flex-1">
+          <div className="relative h-full w-full overflow-hidden rounded-lg">
+            <APIProvider apiKey={apiKey}>
+              <Map
+                center={center}
+                zoom={zoom}
+                mapTypeId="satellite"
+                gestureHandling="greedy"
+                disableDefaultUI={true}
+                clickableIcons={false}
+                onCenterChanged={(e) => setCenter(e.detail.center)}
+                onZoomChanged={(e) => setZoom(e.detail.zoom)}
+              >
+                <MapClickHandler isDrawing={isDrawing} onMapClick={handleMapClick} />
 
-          {/* Instructions */}
-          {isDrawing && (
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-background/95 backdrop-blur-sm px-4 py-2 rounded-lg shadow-lg border">
-              <p className="text-sm font-medium">Click on the map to draw the community boundary</p>
+                {boundary.length > 0 && (
+                  <Polygon
+                    paths={boundary}
+                    strokeColor="#FF6B35"
+                    strokeOpacity={0.8}
+                    strokeWeight={3}
+                    fillColor="#FF6B35"
+                    fillOpacity={0.2}
+                    clickable={false}
+                  />
+                )}
+
+                {/* Show existing boundary if not currently drawing */}
+                {!isDrawing && hasExistingBoundary && boundary.length === 0 && (
+                  <Polygon
+                    paths={initialBoundary}
+                    strokeColor="#10b981"
+                    strokeOpacity={0.8}
+                    strokeWeight={3}
+                    fillColor="#10b981"
+                    fillOpacity={0.2}
+                    clickable={false}
+                  />
+                )}
+              </Map>
+            </APIProvider>
+
+            <div className="absolute left-3 top-3 flex flex-col gap-2">
+              <Button variant="secondary" size="icon" onClick={() => setZoom(zoom + 1)} className="h-10 w-10 shadow-lg">
+                +
+              </Button>
+              <Button variant="secondary" size="icon" onClick={() => setZoom(zoom - 1)} className="h-10 w-10 shadow-lg">
+                −
+              </Button>
             </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+
+            {isDrawing && (
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-background/95 backdrop-blur-sm px-4 py-2 rounded-lg shadow-lg border">
+                <p className="text-sm font-medium">
+                  {boundary.length === 0
+                    ? "Click on the map to start drawing"
+                    : boundary.length < 3
+                      ? `${boundary.length} point${boundary.length === 1 ? "" : "s"} placed (need ${3 - boundary.length} more)`
+                      : `${boundary.length} points placed - Ready to save!`}
+                </p>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   )
 }

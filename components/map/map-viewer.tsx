@@ -60,6 +60,27 @@ export function MapViewer({ tenantSlug, initialLocations, mapCenter, mapZoom = 1
   }
 
   const facilityMarkers = initialLocations.filter((loc) => loc.type === "facility" && loc.coordinates)
+  const facilityPolygons = initialLocations.filter((loc) => loc.type === "facility" && loc.boundary_coordinates)
+  const lotPolygons = initialLocations.filter((loc) => loc.type === "lot" && loc.boundary_coordinates)
+  const walkingPaths = initialLocations.filter((loc) => loc.type === "walking_path" && loc.path_coordinates)
+
+  const latLngToPixel = (lat: number, lng: number, mapZoom: number): [number, number] => {
+    const scale = 256 * Math.pow(2, mapZoom)
+    const worldX = ((lng + 180) / 360) * scale
+    const worldY =
+      ((1 - Math.log(Math.tan((lat * Math.PI) / 180) + 1 / Math.cos((lat * Math.PI) / 180)) / Math.PI) / 2) * scale
+    return [worldX, worldY]
+  }
+
+  const getPolygonCenter = (coordinates: Array<[number, number]>): [number, number] => {
+    const sum = coordinates.reduce(
+      (acc, coord) => {
+        return [acc[0] + coord[0], acc[1] + coord[1]]
+      },
+      [0, 0],
+    )
+    return [sum[0] / coordinates.length, sum[1] / coordinates.length]
+  }
 
   return (
     <div className="relative w-full h-full">
@@ -73,6 +94,112 @@ export function MapViewer({ tenantSlug, initialLocations, mapCenter, mapZoom = 1
         }}
         height={600}
       >
+        {facilityPolygons.map((location) => {
+          const coords = location.boundary_coordinates!
+          const centerPoint = getPolygonCenter(coords)
+          const [centerX, centerY] = latLngToPixel(centerPoint[0], centerPoint[1], zoom)
+
+          return (
+            <Overlay key={`polygon-${location.id}`} anchor={centerPoint}>
+              <svg
+                style={{
+                  position: "absolute",
+                  pointerEvents: "none",
+                  width: "100%",
+                  height: "100%",
+                  left: -centerX,
+                  top: -centerY,
+                }}
+              >
+                <polygon
+                  points={coords
+                    .map((coord) => {
+                      const [x, y] = latLngToPixel(coord[0], coord[1], zoom)
+                      return `${x},${y}`
+                    })
+                    .join(" ")}
+                  fill="rgba(34, 197, 94, 0.2)"
+                  stroke="#22c55e"
+                  strokeWidth="2"
+                  style={{ pointerEvents: "auto", cursor: "pointer" }}
+                  onClick={() => setSelectedLocation(location)}
+                />
+              </svg>
+            </Overlay>
+          )
+        })}
+
+        {lotPolygons.map((location) => {
+          const coords = location.boundary_coordinates!
+          const centerPoint = getPolygonCenter(coords)
+          const [centerX, centerY] = latLngToPixel(centerPoint[0], centerPoint[1], zoom)
+
+          return (
+            <Overlay key={`lot-${location.id}`} anchor={centerPoint}>
+              <svg
+                style={{
+                  position: "absolute",
+                  pointerEvents: "none",
+                  width: "100%",
+                  height: "100%",
+                  left: -centerX,
+                  top: -centerY,
+                }}
+              >
+                <polygon
+                  points={coords
+                    .map((coord) => {
+                      const [x, y] = latLngToPixel(coord[0], coord[1], zoom)
+                      return `${x},${y}`
+                    })
+                    .join(" ")}
+                  fill="rgba(59, 130, 246, 0.2)"
+                  stroke="#3b82f6"
+                  strokeWidth="2"
+                  style={{ pointerEvents: "auto", cursor: "pointer" }}
+                  onClick={() => setSelectedLocation(location)}
+                />
+              </svg>
+            </Overlay>
+          )
+        })}
+
+        {walkingPaths.map((location) => {
+          const coords = location.path_coordinates!
+          const centerPoint = getPolygonCenter(coords)
+          const [centerX, centerY] = latLngToPixel(centerPoint[0], centerPoint[1], zoom)
+
+          return (
+            <Overlay key={`path-${location.id}`} anchor={centerPoint}>
+              <svg
+                style={{
+                  position: "absolute",
+                  pointerEvents: "none",
+                  width: "100%",
+                  height: "100%",
+                  left: -centerX,
+                  top: -centerY,
+                }}
+              >
+                <polyline
+                  points={coords
+                    .map((coord) => {
+                      const [x, y] = latLngToPixel(coord[0], coord[1], zoom)
+                      return `${x},${y}`
+                    })
+                    .join(" ")}
+                  fill="none"
+                  stroke="#f59e0b"
+                  strokeWidth="3"
+                  strokeDasharray="5,5"
+                  style={{ pointerEvents: "auto", cursor: "pointer" }}
+                  onClick={() => setSelectedLocation(location)}
+                />
+              </svg>
+            </Overlay>
+          )
+        })}
+
         {facilityMarkers.map((location) => (
           <Marker
             key={location.id}
@@ -82,8 +209,17 @@ export function MapViewer({ tenantSlug, initialLocations, mapCenter, mapZoom = 1
           />
         ))}
 
-        {selectedLocation && selectedLocation.coordinates && (
-          <Overlay anchor={[selectedLocation.coordinates.lat, selectedLocation.coordinates.lng]} offset={[0, -40]}>
+        {selectedLocation && (
+          <Overlay
+            anchor={
+              selectedLocation.coordinates
+                ? [selectedLocation.coordinates.lat, selectedLocation.coordinates.lng]
+                : getPolygonCenter(
+                    selectedLocation.boundary_coordinates || selectedLocation.path_coordinates || [[0, 0]],
+                  )
+            }
+            offset={[0, -40]}
+          >
             <div className="bg-white p-3 rounded-lg shadow-lg max-w-xs relative">
               <button
                 onClick={() => setSelectedLocation(null)}

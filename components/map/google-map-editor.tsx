@@ -102,6 +102,7 @@ export function GoogleMapEditor({
   const preselectedLotId = searchParams.get("lotId")
   const prefilledName = searchParams.get("name")
   const prefilledDescription = searchParams.get("description")
+  const editLocationIdFromUrl = searchParams.get("editLocationId")
 
   const isEditingLot = !!preselectedLotId
   const isEditingNeighborhood = !!preselectedNeighborhoodId
@@ -145,10 +146,17 @@ export function GoogleMapEditor({
       const { data } = await supabase.from("locations").select("*").eq("tenant_id", tenantId)
       if (data) {
         setSavedLocations(data)
+
+        if (editLocationIdFromUrl) {
+          const locationToEdit = data.find((loc) => loc.id === editLocationIdFromUrl)
+          if (locationToEdit) {
+            handleLocationClick(locationToEdit)
+          }
+        }
       }
     }
     loadLocations()
-  }, [tenantId])
+  }, [tenantId, editLocationIdFromUrl])
 
   useEffect(() => {
     if (preselectedNeighborhoodId) {
@@ -545,7 +553,36 @@ export function GoogleMapEditor({
   const handleDelete = async () => {
     if (!editingLocationId) return
 
-    const confirmed = window.confirm("Are you sure you want to delete this location? This action cannot be undone.")
+    const supabase = createBrowserClient()
+    const locationToDelete = savedLocations.find((loc) => loc.id === editingLocationId)
+
+    let warningMessage = "Are you sure you want to delete this location? This action cannot be undone."
+
+    if (locationToDelete?.lot_id) {
+      const { data: linkedLot } = await supabase
+        .from("lots")
+        .select("lot_number")
+        .eq("location_id", editingLocationId)
+        .maybeSingle()
+
+      if (linkedLot) {
+        warningMessage = `This location is linked to Lot ${linkedLot.lot_number}. Deleting will unlink it. Continue?`
+      }
+    }
+
+    if (locationToDelete?.neighborhood_id && locationToDelete?.type === "neighborhood") {
+      const { data: linkedNeighborhood } = await supabase
+        .from("neighborhoods")
+        .select("name")
+        .eq("location_id", editingLocationId)
+        .maybeSingle()
+
+      if (linkedNeighborhood) {
+        warningMessage = `This location is linked to Neighborhood "${linkedNeighborhood.name}". Deleting will unlink it. Continue?`
+      }
+    }
+
+    const confirmed = window.confirm(warningMessage)
     if (!confirmed) return
 
     setDeleting(true)
@@ -558,7 +595,6 @@ export function GoogleMapEditor({
         description: "Location deleted successfully!",
       })
 
-      const supabase = createBrowserClient()
       const { data } = await supabase.from("locations").select("*").eq("tenant_id", tenantId)
 
       if (data) {
@@ -708,6 +744,7 @@ export function GoogleMapEditor({
                 {filteredLocations.map((location) => {
                   const isEditing = editingLocationId === location.id
                   const isHovered = hoveredLocationId === location.id
+                  const isHighlightedFromUrl = editLocationIdFromUrl === location.id && !editingLocationId
 
                   if (location.type === "facility" && location.coordinates) {
                     return (
@@ -730,10 +767,26 @@ export function GoogleMapEditor({
                       <Polygon
                         key={`saved-${location.id}`}
                         paths={paths}
-                        strokeColor={isEditing ? "#10b981" : location.type === "neighborhood" ? "#a855f7" : "#fb923c"}
+                        strokeColor={
+                          isHighlightedFromUrl
+                            ? "#ef4444"
+                            : isEditing
+                              ? "#10b981"
+                              : location.type === "neighborhood"
+                                ? "#a855f7"
+                                : "#fb923c"
+                        }
                         strokeOpacity={isHovered ? 1 : 0.7}
-                        strokeWeight={isEditing ? 3 : isHovered ? 3 : 2}
-                        fillColor={isEditing ? "#6ee7b7" : location.type === "neighborhood" ? "#d8b4fe" : "#fdba74"}
+                        strokeWeight={isHighlightedFromUrl || isEditing ? 3 : isHovered ? 3 : 2}
+                        fillColor={
+                          isHighlightedFromUrl
+                            ? "#fca5a5"
+                            : isEditing
+                              ? "#6ee7b7"
+                              : location.type === "neighborhood"
+                                ? "#d8b4fe"
+                                : "#fdba74"
+                        }
                         fillOpacity={isHovered ? 0.4 : 0.25}
                         onClick={() => handleLocationClick(location)}
                         onMouseOver={() => setHoveredLocationId(location.id)}
@@ -750,10 +803,10 @@ export function GoogleMapEditor({
                       <Polygon
                         key={`saved-${location.id}`}
                         paths={paths}
-                        strokeColor={isEditing ? "#10b981" : "#60a5fa"}
+                        strokeColor={isHighlightedFromUrl ? "#ef4444" : isEditing ? "#10b981" : "#60a5fa"}
                         strokeOpacity={isHovered ? 1 : 0.7}
-                        strokeWeight={isEditing ? 3 : isHovered ? 3 : 2}
-                        fillColor={isEditing ? "#6ee7b7" : "#93c5fd"}
+                        strokeWeight={isHighlightedFromUrl || isEditing ? 3 : isHovered ? 3 : 2}
+                        fillColor={isHighlightedFromUrl ? "#fca5a5" : isEditing ? "#6ee7b7" : "#93c5fd"}
                         fillOpacity={isHovered ? 0.4 : 0.25}
                         onClick={() => handleLocationClick(location)}
                         onMouseOver={() => setHoveredLocationId(location.id)}
@@ -770,9 +823,9 @@ export function GoogleMapEditor({
                       <Polyline
                         key={`saved-${location.id}`}
                         path={path}
-                        strokeColor={isEditing ? "#10b981" : "#3b82f6"}
+                        strokeColor={isHighlightedFromUrl ? "#ef4444" : isEditing ? "#10b981" : "#3b82f6"}
                         strokeOpacity={isHovered ? 1 : 0.8}
-                        strokeWeight={isEditing ? 4 : isHovered ? 5 : 3}
+                        strokeWeight={isHighlightedFromUrl || isEditing ? 4 : isHovered ? 5 : 3}
                         onClick={() => handleLocationClick(location)}
                         onMouseOver={() => setHoveredLocationId(location.id)}
                         onMouseOut={() => setHoveredLocationId(null)}
@@ -971,6 +1024,11 @@ export function GoogleMapEditor({
                     </>
                   )}
                 </p>
+              </div>
+            )}
+            {editLocationIdFromUrl && !editingLocationId && (
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg border">
+                <p className="text-sm font-medium">Location highlighted in red - Click it to edit</p>
               </div>
             )}
           </div>

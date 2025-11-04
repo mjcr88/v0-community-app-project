@@ -114,7 +114,7 @@ export default async function MapManagementPage({ params }: { params: Promise<{ 
         </Card>
       </div>
 
-      <LocationsTable locations={locations || []} tenantSlug={slug} />
+      <LocationsTable locations={locations || []} tenantSlug={slug} tenantId={tenant.id} />
     </div>
   )
 }

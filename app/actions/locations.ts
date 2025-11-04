@@ -178,6 +178,9 @@ export async function deleteLocation(locationId: string, tenantId: string) {
     throw new Error("Unauthorized")
   }
 
+  await supabase.from("lots").update({ location_id: null }).eq("location_id", locationId)
+  await supabase.from("neighborhoods").update({ location_id: null }).eq("location_id", locationId)
+
   const { error } = await supabase.from("locations").delete().eq("id", locationId)
 
   if (error) {

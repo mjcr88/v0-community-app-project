@@ -135,6 +135,8 @@ export function GoogleMapEditor({
   const [editingLocationId, setEditingLocationId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
 
+  const [hoveredLocationId, setHoveredLocationId] = useState<string | null>(null)
+
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""
 
   useEffect(() => {
@@ -260,6 +262,13 @@ export function GoogleMapEditor({
   }
 
   const handleMapClick = (lat: number, lng: number) => {
+    if (!drawingMode) {
+      if (editingLocationId) {
+        handleCancelEdit()
+      }
+      return
+    }
+
     if (drawingMode === "marker") {
       setMarkerPosition({ lat, lng })
       setDrawingMode(null)
@@ -698,6 +707,7 @@ export function GoogleMapEditor({
 
                 {filteredLocations.map((location) => {
                   const isEditing = editingLocationId === location.id
+                  const isHovered = hoveredLocationId === location.id
 
                   if (location.type === "facility" && location.coordinates) {
                     return (
@@ -721,11 +731,13 @@ export function GoogleMapEditor({
                         key={`saved-${location.id}`}
                         paths={paths}
                         strokeColor={isEditing ? "#10b981" : location.type === "neighborhood" ? "#a855f7" : "#fb923c"}
-                        strokeOpacity={0.7}
-                        strokeWeight={isEditing ? 3 : 2}
+                        strokeOpacity={isHovered ? 1 : 0.7}
+                        strokeWeight={isEditing ? 3 : isHovered ? 3 : 2}
                         fillColor={isEditing ? "#6ee7b7" : location.type === "neighborhood" ? "#d8b4fe" : "#fdba74"}
-                        fillOpacity={0.25}
+                        fillOpacity={isHovered ? 0.4 : 0.25}
                         onClick={() => handleLocationClick(location)}
+                        onMouseOver={() => setHoveredLocationId(location.id)}
+                        onMouseOut={() => setHoveredLocationId(null)}
                       />
                     )
                   }
@@ -739,11 +751,13 @@ export function GoogleMapEditor({
                         key={`saved-${location.id}`}
                         paths={paths}
                         strokeColor={isEditing ? "#10b981" : "#60a5fa"}
-                        strokeOpacity={0.7}
-                        strokeWeight={isEditing ? 3 : 2}
+                        strokeOpacity={isHovered ? 1 : 0.7}
+                        strokeWeight={isEditing ? 3 : isHovered ? 3 : 2}
                         fillColor={isEditing ? "#6ee7b7" : "#93c5fd"}
-                        fillOpacity={0.25}
+                        fillOpacity={isHovered ? 0.4 : 0.25}
                         onClick={() => handleLocationClick(location)}
+                        onMouseOver={() => setHoveredLocationId(location.id)}
+                        onMouseOut={() => setHoveredLocationId(null)}
                       />
                     )
                   }
@@ -757,9 +771,11 @@ export function GoogleMapEditor({
                         key={`saved-${location.id}`}
                         path={path}
                         strokeColor={isEditing ? "#10b981" : "#3b82f6"}
-                        strokeOpacity={0.8}
-                        strokeWeight={isEditing ? 4 : 3}
+                        strokeOpacity={isHovered ? 1 : 0.8}
+                        strokeWeight={isEditing ? 4 : isHovered ? 5 : 3}
                         onClick={() => handleLocationClick(location)}
+                        onMouseOver={() => setHoveredLocationId(location.id)}
+                        onMouseOut={() => setHoveredLocationId(null)}
                       />
                     )
                   }

@@ -83,12 +83,20 @@ export async function createLocation(data: {
     }
   }
 
-  // Insert new location
-  const { error } = await supabase.from("locations").insert(data)
+  const { data: newLocation, error } = await supabase.from("locations").insert(data).select("id").single()
 
   if (error) {
     console.error("Error creating location:", error)
     throw new Error("Failed to create location")
+  }
+
+  // Link the location back to the lot or neighborhood
+  if (newLocation && data.lot_id) {
+    await supabase.from("lots").update({ location_id: newLocation.id }).eq("id", data.lot_id)
+  }
+
+  if (newLocation && data.neighborhood_id && data.type === "neighborhood") {
+    await supabase.from("neighborhoods").update({ location_id: newLocation.id }).eq("id", data.neighborhood_id)
   }
 
   revalidatePath(`/t/[slug]/admin/map`, "page")

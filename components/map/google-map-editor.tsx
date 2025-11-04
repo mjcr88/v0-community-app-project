@@ -746,7 +746,7 @@ export function GoogleMapEditor({
                 {filteredLocations.map((location) => {
                   const isEditing = editingLocationId === location.id
                   const isHovered = hoveredLocationId === location.id
-                  const isHighlightedFromUrl = editLocationIdFromUrl === location.id && !editingLocationId
+                  const isHighlightedFromUrl = editLocationIdFromUrl === location.id
 
                   if (location.type === "facility" && location.coordinates) {
                     return (

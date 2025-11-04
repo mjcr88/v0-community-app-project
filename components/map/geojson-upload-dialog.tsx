@@ -15,7 +15,6 @@ import { Button } from "@/components/ui/button"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { Upload, FileJson, AlertCircle, CheckCircle2, ArrowLeft } from "lucide-react"
 import { parseGeoJSON, validateGeoJSON, type ParsedGeoJSON, type ValidationError } from "@/lib/geojson-parser"
-import { GeoJSONPreviewMap } from "./geojson-preview-map"
 
 interface GeoJSONUploadDialogProps {
   open: boolean
@@ -245,12 +244,30 @@ export function GeoJSONUploadDialog({ open, onOpenChange, tenantId, tenantSlug }
                 <div>
                   <p className="font-medium">Previewing {parsedData.summary.totalFeatures} features</p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Features are shown with dashed lines and will be styled differently once created.
+                    These features will be created as locations on your map.
                   </p>
                 </div>
               </Alert>
 
-              <GeoJSONPreviewMap features={parsedData.features} center={getMapCenter()} zoom={15} />
+              <div className="border rounded-lg p-4 max-h-[400px] overflow-y-auto">
+                <div className="space-y-2">
+                  {parsedData.features.map((feature, index) => (
+                    <div key={index} className="p-3 border rounded bg-muted/50">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">
+                          {feature.properties?.name || feature.properties?.title || `Feature ${index + 1}`}
+                        </span>
+                        <span className="text-xs px-2 py-1 bg-primary/10 text-primary rounded">
+                          {feature.geometry.type}
+                        </span>
+                      </div>
+                      {feature.properties?.description && (
+                        <p className="text-sm text-muted-foreground mt-1">{feature.properties.description}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 

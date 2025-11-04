@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { Plus } from "lucide-react"
 import { LocationsTable } from "@/components/map/locations-table"
+import { GeoJSONUploadButton } from "@/components/map/geojson-upload-button"
 
 export default async function MapManagementPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
@@ -52,6 +53,7 @@ export default async function MapManagementPage({ params }: { params: Promise<{ 
           <Button asChild variant="outline">
             <Link href={`/t/${slug}/admin/map/viewer`}>View Map</Link>
           </Button>
+          <GeoJSONUploadButton tenantId={tenant.id} tenantSlug={slug} />
           <Button asChild>
             <Link href={`/t/${slug}/admin/map/locations/create`}>
               <Plus className="h-4 w-4 mr-2" />

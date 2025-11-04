@@ -55,6 +55,11 @@ interface GoogleMapEditorProps {
   communityBoundary?: Array<[number, number]> | null
   lots?: Array<{ id: string; lot_number: string; address: string | null; neighborhoods: { name: string } | null }>
   neighborhoods?: Array<{ id: string; name: string }>
+  mode?: "view" | "edit"
+  initialLocations?: any[]
+  mapCenter?: { lat: number; lng: number } | null
+  mapZoom?: number
+  highlightLocationId?: string
 }
 
 function MapClickHandler({
@@ -93,6 +98,11 @@ export function GoogleMapEditor({
   communityBoundary,
   lots = [],
   neighborhoods = [],
+  mode = "edit",
+  initialLocations = [],
+  mapCenter: initialMapCenter,
+  mapZoom: initialMapZoom,
+  highlightLocationId,
 }: GoogleMapEditorProps) {
   const router = useRouter()
   const { toast } = useToast()
@@ -110,8 +120,8 @@ export function GoogleMapEditor({
   const [drawingMode, setDrawingMode] = useState<DrawingMode>(null)
   const [mapType, setMapType] = useState<"roadmap" | "satellite" | "terrain">("satellite")
   const [saving, setSaving] = useState(false)
-  const [mapCenter, setMapCenter] = useState<LatLng>({ lat: 9.9567, lng: -84.5333 })
-  const [mapZoom, setMapZoom] = useState(15)
+  const [mapCenter, setMapCenter] = useState<LatLng>(initialMapCenter || { lat: 9.9567, lng: -84.5333 })
+  const [mapZoom, setMapZoom] = useState(initialMapZoom || 15)
 
   const [markerPosition, setMarkerPosition] = useState<LatLng | null>(null)
   const [polygonPoints, setPolygonPoints] = useState<LatLng[]>([])
@@ -137,10 +147,17 @@ export function GoogleMapEditor({
   const [deleting, setDeleting] = useState(false)
 
   const [hoveredLocationId, setHoveredLocationId] = useState<string | null>(null)
+  const [highlightedLocationId, setHighlightedLocationId] = useState<string | undefined>(highlightLocationId)
+  const [selectedLocation, setSelectedLocation] = useState<any>(null)
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""
 
   useEffect(() => {
+    if (mode === "view") {
+      setSavedLocations(initialLocations)
+      return
+    }
+
     const loadLocations = async () => {
       const supabase = createBrowserClient()
       const { data } = await supabase.from("locations").select("*").eq("tenant_id", tenantId)
@@ -158,7 +175,30 @@ export function GoogleMapEditor({
       }
     }
     loadLocations()
-  }, [tenantId, editLocationIdFromUrl])
+  }, [tenantId, editLocationIdFromUrl, mode, initialLocations])
+
+  useEffect(() => {
+    if (mode === "view" && highlightLocationId) {
+      const location = savedLocations.find((loc) => loc.id === highlightLocationId)
+      if (location) {
+        setSelectedLocation(location)
+
+        // Center map on highlighted location
+        if (location.coordinates) {
+          setMapCenter(location.coordinates)
+          setMapZoom(18)
+        } else if (location.boundary_coordinates && location.boundary_coordinates.length > 0) {
+          const firstCoord = location.boundary_coordinates[0]
+          setMapCenter({ lat: firstCoord[0], lng: firstCoord[1] })
+          setMapZoom(17)
+        } else if (location.path_coordinates && location.path_coordinates.length > 0) {
+          const firstCoord = location.path_coordinates[0]
+          setMapCenter({ lat: firstCoord[0], lng: firstCoord[1] })
+          setMapZoom(17)
+        }
+      }
+    }
+  }, [mode, highlightLocationId, savedLocations])
 
   useEffect(() => {
     if (preselectedNeighborhoodId) {
@@ -226,6 +266,13 @@ export function GoogleMapEditor({
   }, [isEditingLot, isEditingNeighborhood])
 
   const handleLocationClick = (location: any) => {
+    if (mode === "view") {
+      setHighlightedLocationId(undefined)
+      setSelectedLocation(location)
+      return
+    }
+
+    // Edit mode logic
     if (isEditingLot && location.type !== "lot") {
       toast({
         title: "Wrong Object Type",
@@ -272,6 +319,13 @@ export function GoogleMapEditor({
   }
 
   const handleMapClick = (lat: number, lng: number) => {
+    if (mode === "view") {
+      setHighlightedLocationId(undefined)
+      setSelectedLocation(null)
+      return
+    }
+
+    // Edit mode logic
     if (!drawingMode) {
       if (editingLocationId) {
         handleCancelEdit()
@@ -670,8 +724,8 @@ export function GoogleMapEditor({
   })
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_400px]">
-      <Card className="min-h-[600px]">
+    <div className={mode === "view" ? "h-full" : "grid gap-6 lg:grid-cols-[1fr_400px]"}>
+      <Card className={mode === "view" ? "h-full" : "min-h-[600px]"}>
         <CardContent className="p-1.5 h-full">
           <div className="relative h-full w-full overflow-hidden rounded-lg">
             <APIProvider apiKey={apiKey}>
@@ -699,11 +753,11 @@ export function GoogleMapEditor({
                   />
                 )}
 
-                {markerPosition && <Marker position={markerPosition} />}
+                {mode === "edit" && markerPosition && <Marker position={markerPosition} />}
 
-                {polygonPoints.length === 1 && <Marker position={polygonPoints[0]} />}
+                {mode === "edit" && polygonPoints.length === 1 && <Marker position={polygonPoints[0]} />}
 
-                {polygonPoints.length === 2 && (
+                {mode === "edit" && polygonPoints.length === 2 && (
                   <>
                     <Marker position={polygonPoints[0]} />
                     <Marker position={polygonPoints[1]} />
@@ -717,7 +771,7 @@ export function GoogleMapEditor({
                   </>
                 )}
 
-                {polygonPoints.length >= 3 && (
+                {mode === "edit" && polygonPoints.length >= 3 && (
                   <Polygon
                     key={`drawing-polygon-${polygonPoints.length}`}
                     paths={polygonPoints}
@@ -730,9 +784,9 @@ export function GoogleMapEditor({
                   />
                 )}
 
-                {polylinePoints.length === 1 && <Marker position={polylinePoints[0]} />}
+                {mode === "edit" && polylinePoints.length === 1 && <Marker position={polylinePoints[0]} />}
 
-                {polylinePoints.length >= 2 && (
+                {mode === "edit" && polylinePoints.length >= 2 && (
                   <Polyline
                     key={`drawing-polyline-${polylinePoints.length}`}
                     path={polylinePoints}
@@ -744,9 +798,10 @@ export function GoogleMapEditor({
                 )}
 
                 {filteredLocations.map((location) => {
-                  const isEditing = editingLocationId === location.id
+                  const isEditing = mode === "edit" && editingLocationId === location.id
                   const isHovered = hoveredLocationId === location.id
-                  const isHighlightedFromUrl = editLocationIdFromUrl === location.id
+                  const isHighlightedFromUrl = mode === "edit" && editLocationIdFromUrl === location.id
+                  const isHighlightedInView = mode === "view" && highlightedLocationId === location.id
 
                   if (location.type === "facility" && location.coordinates) {
                     return (
@@ -770,7 +825,7 @@ export function GoogleMapEditor({
                         key={`saved-${location.id}`}
                         paths={paths}
                         strokeColor={
-                          isHighlightedFromUrl
+                          isHighlightedFromUrl || isHighlightedInView
                             ? "#ef4444"
                             : isEditing
                               ? "#10b981"
@@ -779,9 +834,9 @@ export function GoogleMapEditor({
                                 : "#fb923c"
                         }
                         strokeOpacity={isHovered ? 1 : 0.7}
-                        strokeWeight={isHighlightedFromUrl || isEditing ? 3 : isHovered ? 3 : 2}
+                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 3 : isHovered ? 3 : 2}
                         fillColor={
-                          isHighlightedFromUrl
+                          isHighlightedFromUrl || isHighlightedInView
                             ? "#fca5a5"
                             : isEditing
                               ? "#6ee7b7"
@@ -805,10 +860,14 @@ export function GoogleMapEditor({
                       <Polygon
                         key={`saved-${location.id}`}
                         paths={paths}
-                        strokeColor={isHighlightedFromUrl ? "#ef4444" : isEditing ? "#10b981" : "#60a5fa"}
+                        strokeColor={
+                          isHighlightedFromUrl || isHighlightedInView ? "#ef4444" : isEditing ? "#10b981" : "#60a5fa"
+                        }
                         strokeOpacity={isHovered ? 1 : 0.7}
-                        strokeWeight={isHighlightedFromUrl || isEditing ? 3 : isHovered ? 3 : 2}
-                        fillColor={isHighlightedFromUrl ? "#fca5a5" : isEditing ? "#6ee7b7" : "#93c5fd"}
+                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 3 : isHovered ? 3 : 2}
+                        fillColor={
+                          isHighlightedFromUrl || isHighlightedInView ? "#fca5a5" : isEditing ? "#6ee7b7" : "#93c5fd"
+                        }
                         fillOpacity={isHovered ? 0.4 : 0.25}
                         onClick={() => handleLocationClick(location)}
                         onMouseOver={() => setHoveredLocationId(location.id)}
@@ -825,9 +884,11 @@ export function GoogleMapEditor({
                       <Polyline
                         key={`saved-${location.id}`}
                         path={path}
-                        strokeColor={isHighlightedFromUrl ? "#ef4444" : isEditing ? "#10b981" : "#3b82f6"}
+                        strokeColor={
+                          isHighlightedFromUrl || isHighlightedInView ? "#ef4444" : isEditing ? "#10b981" : "#3b82f6"
+                        }
                         strokeOpacity={isHovered ? 1 : 0.8}
-                        strokeWeight={isHighlightedFromUrl || isEditing ? 4 : isHovered ? 5 : 3}
+                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 4 : isHovered ? 5 : 3}
                         onClick={() => handleLocationClick(location)}
                         onMouseOver={() => setHoveredLocationId(location.id)}
                         onMouseOut={() => setHoveredLocationId(null)}
@@ -839,101 +900,105 @@ export function GoogleMapEditor({
               </Map>
             </APIProvider>
 
-            <div className="absolute left-3 top-3 flex flex-col gap-2">
-              <Button
-                variant="secondary"
-                size="icon"
-                onClick={() => setMapZoom(mapZoom + 1)}
-                className="h-10 w-10 shadow-lg"
-                title="Zoom In"
-              >
-                +
-              </Button>
-              <Button
-                variant="secondary"
-                size="icon"
-                onClick={() => setMapZoom(mapZoom - 1)}
-                className="h-10 w-10 shadow-lg"
-                title="Zoom Out"
-              >
-                −
-              </Button>
-            </div>
+            {mode === "edit" && (
+              <>
+                <div className="absolute left-3 top-3 flex flex-col gap-2">
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    onClick={() => setMapZoom(mapZoom + 1)}
+                    className="h-10 w-10 shadow-lg"
+                    title="Zoom In"
+                  >
+                    +
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    onClick={() => setMapZoom(mapZoom - 1)}
+                    className="h-10 w-10 shadow-lg"
+                    title="Zoom Out"
+                  >
+                    −
+                  </Button>
+                </div>
 
-            <div className="absolute left-3 bottom-3 flex flex-col gap-2">
-              <Button
-                variant="default"
-                size="icon"
-                onClick={handleNewLocation}
-                className="h-10 w-10 shadow-lg bg-blue-600 hover:bg-blue-700"
-                title="New Location"
-              >
-                <Plus className="h-5 w-5" />
-              </Button>
-              <div className="h-px bg-border" />
-              <Button
-                variant={drawingMode === "marker" ? "default" : "secondary"}
-                size="icon"
-                onClick={() => setDrawingMode(drawingMode === "marker" ? null : "marker")}
-                className="h-10 w-10 shadow-lg"
-                title="Place Marker"
-              >
-                <MapPin className="h-5 w-5" />
-              </Button>
-              <Button
-                variant={drawingMode === "polygon" ? "default" : "secondary"}
-                size="icon"
-                onClick={() => setDrawingMode(drawingMode === "polygon" ? null : "polygon")}
-                className="h-10 w-10 shadow-lg"
-                title="Draw Polygon"
-              >
-                <Pentagon className="h-5 w-5" />
-              </Button>
-              <Button
-                variant={drawingMode === "polyline" ? "default" : "secondary"}
-                size="icon"
-                onClick={() => setDrawingMode(drawingMode === "polyline" ? null : "polyline")}
-                className="h-10 w-10 shadow-lg"
-                title="Draw Path"
-              >
-                <Route className="h-5 w-5" />
-              </Button>
-              <div className="h-px bg-border" />
-              {(drawingMode === "polygon" || drawingMode === "polyline") && (
-                <Button
-                  variant="default"
-                  size="icon"
-                  onClick={finishDrawing}
-                  className="h-10 w-10 shadow-lg bg-green-600 hover:bg-green-700"
-                  title="Finish Drawing"
-                >
-                  <Check className="h-5 w-5" />
-                </Button>
-              )}
-              <Button
-                variant="secondary"
-                size="icon"
-                onClick={undoLastPoint}
-                disabled={
-                  (drawingMode === "polygon" && polygonPoints.length === 0) ||
-                  (drawingMode === "polyline" && polylinePoints.length === 0) ||
-                  (!drawingMode && polygonPoints.length === 0 && polylinePoints.length === 0)
-                }
-                className="h-10 w-10 shadow-lg"
-                title="Undo Last Point"
-              >
-                <Undo className="h-5 w-5" />
-              </Button>
-              <Button
-                variant="destructive"
-                size="icon"
-                onClick={clearDrawing}
-                className="h-10 w-10 shadow-lg"
-                title="Clear All"
-              >
-                <Trash2 className="h-5 w-5" />
-              </Button>
-            </div>
+                <div className="absolute left-3 bottom-3 flex flex-col gap-2">
+                  <Button
+                    variant="default"
+                    size="icon"
+                    onClick={handleNewLocation}
+                    className="h-10 w-10 shadow-lg bg-blue-600 hover:bg-blue-700"
+                    title="New Location"
+                  >
+                    <Plus className="h-5 w-5" />
+                  </Button>
+                  <div className="h-px bg-border" />
+                  <Button
+                    variant={drawingMode === "marker" ? "default" : "secondary"}
+                    size="icon"
+                    onClick={() => setDrawingMode(drawingMode === "marker" ? null : "marker")}
+                    className="h-10 w-10 shadow-lg"
+                    title="Place Marker"
+                  >
+                    <MapPin className="h-5 w-5" />
+                  </Button>
+                  <Button
+                    variant={drawingMode === "polygon" ? "default" : "secondary"}
+                    size="icon"
+                    onClick={() => setDrawingMode(drawingMode === "polygon" ? null : "polygon")}
+                    className="h-10 w-10 shadow-lg"
+                    title="Draw Polygon"
+                  >
+                    <Pentagon className="h-5 w-5" />
+                  </Button>
+                  <Button
+                    variant={drawingMode === "polyline" ? "default" : "secondary"}
+                    size="icon"
+                    onClick={() => setDrawingMode(drawingMode === "polyline" ? null : "polyline")}
+                    className="h-10 w-10 shadow-lg"
+                    title="Draw Path"
+                  >
+                    <Route className="h-5 w-5" />
+                  </Button>
+                  <div className="h-px bg-border" />
+                  {(drawingMode === "polygon" || drawingMode === "polyline") && (
+                    <Button
+                      variant="default"
+                      size="icon"
+                      onClick={finishDrawing}
+                      className="h-10 w-10 shadow-lg bg-green-600 hover:bg-green-700"
+                      title="Finish Drawing"
+                    >
+                      <Check className="h-5 w-5" />
+                    </Button>
+                  )}
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    onClick={undoLastPoint}
+                    disabled={
+                      (drawingMode === "polygon" && polygonPoints.length === 0) ||
+                      (drawingMode === "polyline" && polylinePoints.length === 0) ||
+                      (!drawingMode && polygonPoints.length === 0 && polylinePoints.length === 0)
+                    }
+                    className="h-10 w-10 shadow-lg"
+                    title="Undo Last Point"
+                  >
+                    <Undo className="h-5 w-5" />
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    onClick={clearDrawing}
+                    className="h-10 w-10 shadow-lg"
+                    title="Clear All"
+                  >
+                    <Trash2 className="h-5 w-5" />
+                  </Button>
+                </div>
+              </>
+            )}
 
             <div className="absolute right-3 top-3 flex gap-2">
               <DropdownMenu>
@@ -986,335 +1051,390 @@ export function GoogleMapEditor({
               </Button>
             </div>
 
-            {!editingLocationId && !prefilledName && (
-              <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg border">
-                <p className="text-sm font-medium">Click any location on the map to edit it</p>
-              </div>
+            {mode === "edit" && (
+              <>
+                {!editingLocationId && !prefilledName && (
+                  <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg border">
+                    <p className="text-sm font-medium">Click any location on the map to edit it</p>
+                  </div>
+                )}
+
+                {editingLocationId && (
+                  <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg border">
+                    <p className="text-sm font-medium">Editing: {name || "Location"}</p>
+                  </div>
+                )}
+
+                {locationType === "neighborhood" && prefilledName && !editingLocationId && (
+                  <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-purple-600 text-white px-4 py-2 rounded-lg shadow-lg border">
+                    <p className="text-sm font-medium">Creating boundary for: {prefilledName}</p>
+                  </div>
+                )}
+
+                {(drawingMode === "polygon" || drawingMode === "polyline") && (
+                  <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-background/95 backdrop-blur-sm px-4 py-2 rounded-lg shadow-lg border">
+                    <p className="text-sm font-medium">
+                      {drawingMode === "polygon" && (
+                        <>
+                          {polygonPoints.length === 0
+                            ? "Click on the map to start drawing"
+                            : polygonPoints.length < 3
+                              ? `${polygonPoints.length} point${polygonPoints.length === 1 ? "" : "s"} placed (need ${3 - polygonPoints.length} more)`
+                              : `${polygonPoints.length} points placed - Ready to save!`}
+                        </>
+                      )}
+                      {drawingMode === "polyline" && (
+                        <>
+                          {polylinePoints.length === 0
+                            ? "Click on the map to start drawing"
+                            : polylinePoints.length < 2
+                              ? `${polylinePoints.length} point placed (need ${2 - polylinePoints.length} more)`
+                              : `${polylinePoints.length} points placed - Ready to save!`}
+                        </>
+                      )}
+                    </p>
+                  </div>
+                )}
+                {editLocationIdFromUrl && !editingLocationId && (
+                  <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg border">
+                    <p className="text-sm font-medium">Location highlighted in red - Click it to edit</p>
+                  </div>
+                )}
+              </>
             )}
 
-            {editingLocationId && (
-              <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg border">
-                <p className="text-sm font-medium">Editing: {name || "Location"}</p>
-              </div>
-            )}
-
-            {locationType === "neighborhood" && prefilledName && !editingLocationId && (
-              <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-purple-600 text-white px-4 py-2 rounded-lg shadow-lg border">
-                <p className="text-sm font-medium">Creating boundary for: {prefilledName}</p>
-              </div>
-            )}
-
-            {(drawingMode === "polygon" || drawingMode === "polyline") && (
-              <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-background/95 backdrop-blur-sm px-4 py-2 rounded-lg shadow-lg border">
-                <p className="text-sm font-medium">
-                  {drawingMode === "polygon" && (
-                    <>
-                      {polygonPoints.length === 0
-                        ? "Click on the map to start drawing"
-                        : polygonPoints.length < 3
-                          ? `${polygonPoints.length} point${polygonPoints.length === 1 ? "" : "s"} placed (need ${3 - polygonPoints.length} more)`
-                          : `${polygonPoints.length} points placed - Ready to save!`}
-                    </>
-                  )}
-                  {drawingMode === "polyline" && (
-                    <>
-                      {polylinePoints.length === 0
-                        ? "Click on the map to start drawing"
-                        : polylinePoints.length < 2
-                          ? `${polylinePoints.length} point placed (need ${2 - polylinePoints.length} more)`
-                          : `${polylinePoints.length} points placed - Ready to save!`}
-                    </>
-                  )}
-                </p>
-              </div>
-            )}
-            {editLocationIdFromUrl && !editingLocationId && (
-              <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg border">
-                <p className="text-sm font-medium">Location highlighted in red - Click it to edit</p>
+            {mode === "view" && selectedLocation && (
+              <div className="absolute bottom-20 left-3 right-3 md:left-auto md:right-3 md:w-80 bg-background/95 backdrop-blur-sm rounded-lg shadow-lg border p-4">
+                <div className="flex items-start justify-between mb-2">
+                  <h3 className="font-semibold text-lg">{selectedLocation.name}</h3>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setSelectedLocation(null)}
+                    className="h-6 w-6 -mt-1 -mr-1"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                {selectedLocation.description && (
+                  <p className="text-sm text-muted-foreground mb-2">{selectedLocation.description}</p>
+                )}
+                <div className="flex items-center gap-2 text-sm">
+                  <Badge variant="secondary">
+                    {selectedLocation.type === "facility"
+                      ? "Facility"
+                      : selectedLocation.type === "lot"
+                        ? "Lot"
+                        : selectedLocation.type === "walking_path"
+                          ? "Walking Path"
+                          : "Neighborhood"}
+                  </Badge>
+                  {selectedLocation.facility_type && <Badge variant="outline">{selectedLocation.facility_type}</Badge>}
+                </div>
+                {selectedLocation.photos && selectedLocation.photos.length > 0 && (
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    {selectedLocation.photos.map((url: string, index: number) => (
+                      <img
+                        key={url}
+                        src={url || "/placeholder.svg"}
+                        alt={`${selectedLocation.name} ${index + 1}`}
+                        className="w-full h-24 object-cover rounded"
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="space-y-4">
-          {editingLocationId && (
-            <Badge className="w-full justify-center bg-green-600 text-white">Editing Existing Location</Badge>
-          )}
+      {mode === "edit" && (
+        <Card>
+          <CardContent className="space-y-4">
+            {editingLocationId && (
+              <Badge className="w-full justify-center bg-green-600 text-white">Editing Existing Location</Badge>
+            )}
 
-          {isEditingLot && !editingLocationId && (
-            <Alert className="bg-blue-50 border-blue-200">
-              <AlertCircle className="h-4 w-4 text-blue-600" />
-              <AlertTitle className="text-blue-900">Editing Lot</AlertTitle>
-              <AlertDescription className="text-blue-700">
-                Click on a <strong>blue lot polygon</strong> on the map to edit it. Other object types are filtered out.
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {isEditingNeighborhood && !editingLocationId && (
-            <Alert className="bg-purple-50 border-purple-200">
-              <AlertCircle className="h-4 w-4 text-purple-600" />
-              <AlertTitle className="text-purple-900">Editing Neighborhood</AlertTitle>
-              <AlertDescription className="text-purple-700">
-                Click on a <strong>purple neighborhood polygon</strong> on the map to edit it. Other object types are
-                filtered out.
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {locationType === "neighborhood" && prefilledName && !editingLocationId && (
-            <Alert className="bg-purple-50 border-purple-200">
-              <AlertCircle className="h-4 w-4 text-purple-600" />
-              <AlertTitle className="text-purple-900">Creating Neighborhood Boundary</AlertTitle>
-              <AlertDescription className="text-purple-700">
-                You're adding a boundary for <strong>{prefilledName}</strong>
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {locationType === "lot" && selectedLotId && !editingLocationId && !isEditingLot && (
-            <Alert className="bg-blue-50 border-blue-200">
-              <AlertCircle className="h-4 w-4 text-blue-600" />
-              <AlertTitle className="text-blue-900">Linking to Lot</AlertTitle>
-              <AlertDescription className="text-blue-700">
-                This location will be linked to <strong>{lots.find((l) => l.id === selectedLotId)?.lot_number}</strong>
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {locationType === "neighborhood" &&
-            selectedNeighborhoodId &&
-            !prefilledName &&
-            !editingLocationId &&
-            !isEditingNeighborhood && (
-              <Alert className="bg-purple-50 border-purple-200">
-                <AlertCircle className="h-4 w-4 text-purple-600" />
-                <AlertTitle className="text-purple-900">Linking to Neighborhood</AlertTitle>
-                <AlertDescription className="text-purple-700">
-                  This location will be linked to{" "}
-                  <strong>{neighborhoods.find((n) => n.id === selectedNeighborhoodId)?.name}</strong>
+            {isEditingLot && !editingLocationId && (
+              <Alert className="bg-blue-50 border-blue-200">
+                <AlertCircle className="h-4 w-4 text-blue-600" />
+                <AlertTitle className="text-blue-900">Editing Lot</AlertTitle>
+                <AlertDescription className="text-blue-700">
+                  Click on a <strong>blue lot polygon</strong> on the map to edit it. Other object types are filtered
+                  out.
                 </AlertDescription>
               </Alert>
             )}
 
-          <div className="space-y-2">
-            <Label htmlFor="type">Location Type</Label>
-            <Select value={locationType} onValueChange={(v) => setLocationType(v as any)}>
-              <SelectTrigger id="type">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="facility">Facility</SelectItem>
-                <SelectItem value="lot">Lot</SelectItem>
-                <SelectItem value="neighborhood">Neighborhood</SelectItem>
-                <SelectItem value="walking_path">Walking Path</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+            {isEditingNeighborhood && !editingLocationId && (
+              <Alert className="bg-purple-50 border-purple-200">
+                <AlertCircle className="h-4 w-4 text-purple-600" />
+                <AlertTitle className="text-purple-900">Editing Neighborhood</AlertTitle>
+                <AlertDescription className="text-purple-700">
+                  Click on a <strong>purple neighborhood polygon</strong> on the map to edit it. Other object types are
+                  filtered out.
+                </AlertDescription>
+              </Alert>
+            )}
 
-          {locationType === "lot" && (
+            {locationType === "neighborhood" && prefilledName && !editingLocationId && (
+              <Alert className="bg-purple-50 border-purple-200">
+                <AlertCircle className="h-4 w-4 text-purple-600" />
+                <AlertTitle className="text-purple-900">Creating Neighborhood Boundary</AlertTitle>
+                <AlertDescription className="text-purple-700">
+                  You're adding a boundary for <strong>{prefilledName}</strong>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {locationType === "lot" && selectedLotId && !editingLocationId && !isEditingLot && (
+              <Alert className="bg-blue-50 border-blue-200">
+                <AlertCircle className="h-4 w-4 text-blue-600" />
+                <AlertTitle className="text-blue-900">Linking to Lot</AlertTitle>
+                <AlertDescription className="text-blue-700">
+                  This location will be linked to{" "}
+                  <strong>{lots.find((l) => l.id === selectedLotId)?.lot_number}</strong>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {locationType === "neighborhood" &&
+              selectedNeighborhoodId &&
+              !prefilledName &&
+              !editingLocationId &&
+              !isEditingNeighborhood && (
+                <Alert className="bg-purple-50 border-purple-200">
+                  <AlertCircle className="h-4 w-4 text-purple-600" />
+                  <AlertTitle className="text-purple-900">Linking to Neighborhood</AlertTitle>
+                  <AlertDescription className="text-purple-700">
+                    This location will be linked to{" "}
+                    <strong>{neighborhoods.find((n) => n.id === selectedNeighborhoodId)?.name}</strong>
+                  </AlertDescription>
+                </Alert>
+              )}
+
             <div className="space-y-2">
-              <Label htmlFor="lot">Select Lot *</Label>
-              <Select value={selectedLotId} onValueChange={setSelectedLotId}>
-                <SelectTrigger id="lot">
-                  <SelectValue placeholder="Choose a lot..." />
+              <Label htmlFor="type">Location Type</Label>
+              <Select value={locationType} onValueChange={(v) => setLocationType(v as any)}>
+                <SelectTrigger id="type">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {lots.map((lot) => (
-                    <SelectItem key={lot.id} value={lot.id}>
-                      {lot.lot_number} {lot.neighborhoods?.name && `(${lot.neighborhoods.name})`}
-                      {lot.address && ` - ${lot.address}`}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="facility">Facility</SelectItem>
+                  <SelectItem value="lot">Lot</SelectItem>
+                  <SelectItem value="neighborhood">Neighborhood</SelectItem>
+                  <SelectItem value="walking_path">Walking Path</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-          )}
 
-          {locationType === "neighborhood" && (
+            {locationType === "lot" && (
+              <div className="space-y-2">
+                <Label htmlFor="lot">Select Lot *</Label>
+                <Select value={selectedLotId} onValueChange={setSelectedLotId}>
+                  <SelectTrigger id="lot">
+                    <SelectValue placeholder="Choose a lot..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {lots.map((lot) => (
+                      <SelectItem key={lot.id} value={lot.id}>
+                        {lot.lot_number} {lot.neighborhoods?.name && `(${lot.neighborhoods.name})`}
+                        {lot.address && ` - ${lot.address}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {locationType === "neighborhood" && (
+              <div className="space-y-2">
+                <Label htmlFor="neighborhood-select">Select Neighborhood *</Label>
+                <Select value={selectedNeighborhoodId} onValueChange={setSelectedNeighborhoodId}>
+                  <SelectTrigger id="neighborhood-select">
+                    <SelectValue placeholder="Choose a neighborhood..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {neighborhoods.map((neighborhood) => (
+                      <SelectItem key={neighborhood.id} value={neighborhood.id}>
+                        {neighborhood.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {(locationType === "facility" || locationType === "walking_path") && neighborhoods.length > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="neighborhood">Neighborhood (Optional)</Label>
+                <Select value={selectedNeighborhoodId} onValueChange={setSelectedNeighborhoodId}>
+                  <SelectTrigger id="neighborhood">
+                    <SelectValue placeholder="Choose a neighborhood..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {neighborhoods.map((neighborhood) => (
+                      <SelectItem key={neighborhood.id} value={neighborhood.id}>
+                        {neighborhood.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div className="space-y-2">
-              <Label htmlFor="neighborhood-select">Select Neighborhood *</Label>
-              <Select value={selectedNeighborhoodId} onValueChange={setSelectedNeighborhoodId}>
-                <SelectTrigger id="neighborhood-select">
-                  <SelectValue placeholder="Choose a neighborhood..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {neighborhoods.map((neighborhood) => (
-                    <SelectItem key={neighborhood.id} value={neighborhood.id}>
-                      {neighborhood.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {(locationType === "facility" || locationType === "walking_path") && neighborhoods.length > 0 && (
-            <div className="space-y-2">
-              <Label htmlFor="neighborhood">Neighborhood (Optional)</Label>
-              <Select value={selectedNeighborhoodId} onValueChange={setSelectedNeighborhoodId}>
-                <SelectTrigger id="neighborhood">
-                  <SelectValue placeholder="Choose a neighborhood..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  {neighborhoods.map((neighborhood) => (
-                    <SelectItem key={neighborhood.id} value={neighborhood.id}>
-                      {neighborhood.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <Label htmlFor="name">
-              {locationType === "lot" ? "Lot Number" : locationType === "neighborhood" ? "Neighborhood Name" : "Name *"}
-            </Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={
-                locationType === "lot"
-                  ? "Select a lot first"
+              <Label htmlFor="name">
+                {locationType === "lot"
+                  ? "Lot Number"
                   : locationType === "neighborhood"
-                    ? "Select a neighborhood first"
-                    : "e.g., Community Pool"
-              }
-              disabled={locationType === "lot" || locationType === "neighborhood"}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Optional description"
-              rows={3}
-            />
-          </div>
-
-          {locationType === "facility" && (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="facilityType">Facility Type</Label>
-                <Input
-                  id="facilityType"
-                  value={facilityType}
-                  onChange={(e) => setFacilityType(e.target.value)}
-                  placeholder="e.g., Pool, Gym, Park"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="icon">Icon</Label>
-                <Input
-                  id="icon"
-                  value={icon}
-                  onChange={(e) => setIcon(e.target.value)}
-                  placeholder="e.g., 🏊 or pool"
-                />
-              </div>
-            </>
-          )}
-
-          <div className="space-y-2">
-            <Label htmlFor="photos">Photos</Label>
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Input
-                  id="photos"
-                  type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/webp"
-                  multiple
-                  onChange={handlePhotoUpload}
-                  disabled={uploadingPhoto}
-                  className="hidden"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => document.getElementById("photos")?.click()}
-                  disabled={uploadingPhoto}
-                  className="w-full"
-                >
-                  {uploadingPhoto ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="mr-2 h-4 w-4" />
-                      Upload Photos
-                    </>
-                  )}
-                </Button>
-              </div>
-
-              {uploadedPhotos.length > 0 && (
-                <div className="grid grid-cols-2 gap-2">
-                  {uploadedPhotos.map((url, index) => (
-                    <div key={url} className="relative group aspect-square rounded-lg overflow-hidden border">
-                      <img
-                        src={url || "/placeholder.svg"}
-                        alt={`Upload ${index + 1}`}
-                        className="w-full h-full object-cover"
-                      />
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="icon"
-                        onClick={() => removePhoto(url)}
-                        className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {uploadedPhotos.length === 0 && (
-                <div className="flex items-center justify-center h-24 border-2 border-dashed rounded-lg text-muted-foreground">
-                  <div className="text-center">
-                    <ImageIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">No photos uploaded</p>
-                  </div>
-                </div>
-              )}
+                    ? "Neighborhood Name"
+                    : "Name *"}
+              </Label>
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={
+                  locationType === "lot"
+                    ? "Select a lot first"
+                    : locationType === "neighborhood"
+                      ? "Select a neighborhood first"
+                      : "e.g., Community Pool"
+                }
+                disabled={locationType === "lot" || locationType === "neighborhood"}
+              />
             </div>
-          </div>
 
-          <div className="pt-4 space-y-2">
-            <Button onClick={handleSave} disabled={saving} className="w-full">
-              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {editingLocationId ? "Update Location" : "Save Location"}
-            </Button>
-            {editingLocationId && (
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Optional description"
+                rows={3}
+              />
+            </div>
+
+            {locationType === "facility" && (
               <>
-                <Button variant="destructive" onClick={handleDelete} disabled={deleting} className="w-full">
-                  {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete Location
-                </Button>
-                <Button variant="outline" onClick={handleCancelEdit} className="w-full bg-transparent">
-                  Cancel Edit
-                </Button>
+                <div className="space-y-2">
+                  <Label htmlFor="facilityType">Facility Type</Label>
+                  <Input
+                    id="facilityType"
+                    value={facilityType}
+                    onChange={(e) => setFacilityType(e.target.value)}
+                    placeholder="e.g., Pool, Gym, Park"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="icon">Icon</Label>
+                  <Input
+                    id="icon"
+                    value={icon}
+                    onChange={(e) => setIcon(e.target.value)}
+                    placeholder="e.g., 🏊 or pool"
+                  />
+                </div>
               </>
             )}
-            <Button variant="outline" onClick={() => router.push(`/t/${tenantSlug}/admin/map`)} className="w-full">
-              {editingLocationId ? "Back" : "Cancel"}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+
+            <div className="space-y-2">
+              <Label htmlFor="photos">Photos</Label>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="photos"
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,image/webp"
+                    multiple
+                    onChange={handlePhotoUpload}
+                    disabled={uploadingPhoto}
+                    className="hidden"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => document.getElementById("photos")?.click()}
+                    disabled={uploadingPhoto}
+                    className="w-full"
+                  >
+                    {uploadingPhoto ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="mr-2 h-4 w-4" />
+                        Upload Photos
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                {uploadedPhotos.length > 0 && (
+                  <div className="grid grid-cols-2 gap-2">
+                    {uploadedPhotos.map((url, index) => (
+                      <div key={url} className="relative group aspect-square rounded-lg overflow-hidden border">
+                        <img
+                          src={url || "/placeholder.svg"}
+                          alt={`Upload ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          onClick={() => removePhoto(url)}
+                          className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {uploadedPhotos.length === 0 && (
+                  <div className="flex items-center justify-center h-24 border-2 border-dashed rounded-lg text-muted-foreground">
+                    <div className="text-center">
+                      <ImageIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">No photos uploaded</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="pt-4 space-y-2">
+              <Button onClick={handleSave} disabled={saving} className="w-full">
+                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {editingLocationId ? "Update Location" : "Save Location"}
+              </Button>
+              {editingLocationId && (
+                <>
+                  <Button variant="destructive" onClick={handleDelete} disabled={deleting} className="w-full">
+                    {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete Location
+                  </Button>
+                  <Button variant="outline" onClick={handleCancelEdit} className="w-full bg-transparent">
+                    Cancel Edit
+                  </Button>
+                </>
+              )}
+              <Button variant="outline" onClick={() => router.push(`/t/${tenantSlug}/admin/map`)} className="w-full">
+                {editingLocationId ? "Back" : "Cancel"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

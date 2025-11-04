@@ -1,5 +1,5 @@
 import { createServerClient } from "@/lib/supabase/server"
-import { GoogleMapViewer } from "@/components/map/google-map-viewer"
+import { GoogleMapEditor } from "@/components/map/google-map-editor"
 
 export default async function MapViewerPage({
   params,
@@ -18,7 +18,6 @@ export default async function MapViewerPage({
     return <div>Tenant not found</div>
   }
 
-  // Get all locations for this tenant
   const { data: locations } = await supabase
     .from("locations")
     .select("*")
@@ -27,17 +26,15 @@ export default async function MapViewerPage({
 
   const communityBoundary = tenant.map_boundary_coordinates || null
 
-  console.log("[v0] Viewer page - Community boundary from DB:", communityBoundary)
-  console.log("[v0] Viewer page - locationId from URL:", locationId)
-
   return (
     <div className="h-[100vh] w-full">
-      <GoogleMapViewer
+      <GoogleMapEditor
         tenantSlug={slug}
+        tenantId={tenant.id}
+        mode="view"
         initialLocations={locations || []}
         mapCenter={tenant.map_center_coordinates as { lat: number; lng: number } | null}
         mapZoom={tenant.map_default_zoom || 15}
-        isAdmin={true}
         communityBoundary={communityBoundary}
         highlightLocationId={locationId}
       />

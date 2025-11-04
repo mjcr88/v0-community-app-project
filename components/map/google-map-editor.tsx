@@ -266,8 +266,13 @@ export function GoogleMapEditor({
   }, [isEditingLot, isEditingNeighborhood])
 
   const handleLocationClick = (location: any) => {
+    console.log("[v0] handleLocationClick called", { mode, locationId: location.id, highlightedLocationId })
+
     if (mode === "view") {
-      setHighlightedLocationId(undefined)
+      if (highlightedLocationId && highlightedLocationId !== location.id) {
+        console.log("[v0] Clearing highlight because clicked different location")
+        setHighlightedLocationId(undefined)
+      }
       setSelectedLocation(location)
       return
     }
@@ -319,7 +324,12 @@ export function GoogleMapEditor({
   }
 
   const handleMapClick = (lat: number, lng: number) => {
+    console.log("[v0] handleMapClick called", { mode, lat, lng, highlightedLocationId })
+
     if (mode === "view") {
+      if (highlightedLocationId) {
+        console.log("[v0] Clearing highlight because clicked empty space")
+      }
       setHighlightedLocationId(undefined)
       setSelectedLocation(null)
       return

@@ -59,7 +59,7 @@ interface GoogleMapEditorProps {
   initialLocations?: any[]
   mapCenter?: { lat: number; lng: number } | null
   mapZoom?: number
-  highlightLocationId?: string
+  initialHighlightLocationId?: string
 }
 
 function MapClickHandler({
@@ -102,7 +102,7 @@ export function GoogleMapEditor({
   initialLocations = [],
   mapCenter: initialMapCenter,
   mapZoom: initialMapZoom,
-  highlightLocationId,
+  initialHighlightLocationId,
 }: GoogleMapEditorProps) {
   const router = useRouter()
   const { toast } = useToast()
@@ -147,7 +147,7 @@ export function GoogleMapEditor({
   const [deleting, setDeleting] = useState(false)
 
   const [hoveredLocationId, setHoveredLocationId] = useState<string | null>(null)
-  const [highlightedLocationId, setHighlightedLocationId] = useState<string | undefined>(highlightLocationId)
+  const [highlightedLocationId, setHighlightedLocationId] = useState<string | undefined>(initialHighlightLocationId)
   const [selectedLocation, setSelectedLocation] = useState<any>(null)
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""
@@ -178,8 +178,8 @@ export function GoogleMapEditor({
   }, [tenantId, editLocationIdFromUrl, mode, initialLocations])
 
   useEffect(() => {
-    if (mode === "view" && highlightLocationId) {
-      const location = savedLocations.find((loc) => loc.id === highlightLocationId)
+    if (mode === "view" && initialHighlightLocationId) {
+      const location = savedLocations.find((loc) => loc.id === initialHighlightLocationId)
       if (location) {
         setSelectedLocation(location)
 
@@ -198,7 +198,7 @@ export function GoogleMapEditor({
         }
       }
     }
-  }, [mode, highlightLocationId, savedLocations])
+  }, [mode, initialHighlightLocationId, savedLocations])
 
   useEffect(() => {
     if (preselectedNeighborhoodId) {

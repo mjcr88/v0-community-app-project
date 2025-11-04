@@ -36,7 +36,7 @@ export default async function MapViewerPage({
         mapCenter={tenant.map_center_coordinates as { lat: number; lng: number } | null}
         mapZoom={tenant.map_default_zoom || 15}
         communityBoundary={communityBoundary}
-        highlightLocationId={locationId}
+        initialHighlightLocationId={locationId}
       />
     </div>
   )

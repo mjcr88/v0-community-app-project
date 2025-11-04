@@ -135,7 +135,7 @@ importers:
         specifier: 4.4.0
         version: 4.4.0
       google-maps:
-        specifier: 4.3.3
+        specifier: latest
         version: 4.3.3
       googlemaps:
         specifier: 1.12.0

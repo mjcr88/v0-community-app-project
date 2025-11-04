@@ -52,7 +52,6 @@ type LatLng = { lat: number; lng: number }
 interface GoogleMapEditorProps {
   tenantSlug: string
   tenantId: string
-  communityBoundary?: Array<[number, number]> | null
   lots?: Array<{ id: string; lot_number: string; address: string | null; neighborhoods: { name: string } | null }>
   neighborhoods?: Array<{ id: string; name: string }>
   mode?: "view" | "edit"
@@ -95,7 +94,6 @@ function MapClickHandler({
 export function GoogleMapEditor({
   tenantSlug,
   tenantId,
-  communityBoundary,
   lots = [],
   neighborhoods = [],
   mode = "edit",
@@ -750,18 +748,6 @@ export function GoogleMapEditor({
                 onZoomChanged={(e) => setMapZoom(e.detail.zoom)}
               >
                 <MapClickHandler drawingMode={drawingMode} onMapClick={handleMapClick} />
-
-                {communityBoundary && communityBoundary.length >= 3 && (
-                  <Polygon
-                    paths={communityBoundary.map((coord: [number, number]) => ({ lat: coord[0], lng: coord[1] }))}
-                    strokeColor="#fbbf24"
-                    strokeOpacity={0.5}
-                    strokeWeight={0.5}
-                    fillColor="#fef3c7"
-                    fillOpacity={0.25}
-                    clickable={false}
-                  />
-                )}
 
                 {mode === "edit" && markerPosition && <Marker position={markerPosition} />}
 

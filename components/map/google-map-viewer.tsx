@@ -37,7 +37,6 @@ interface GoogleMapViewerProps {
   mapCenter?: { lat: number; lng: number } | null
   mapZoom?: number
   isAdmin?: boolean
-  communityBoundary?: Array<[number, number]> | null
   highlightLocationId?: string
 }
 
@@ -47,7 +46,6 @@ export function GoogleMapViewer({
   mapCenter,
   mapZoom = 15,
   isAdmin = false,
-  communityBoundary,
   highlightLocationId,
 }: GoogleMapViewerProps) {
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null)
@@ -141,18 +139,6 @@ export function GoogleMapViewer({
           onZoomChanged={(e) => setZoom(e.detail.zoom)}
           onClick={handleMapClick}
         >
-          {communityBoundary && communityBoundary.length >= 3 && (
-            <Polygon
-              paths={communityBoundary.map((coord) => ({ lat: coord[0], lng: coord[1] }))}
-              strokeColor="#fbbf24"
-              strokeOpacity={0.5}
-              strokeWeight={0.5}
-              fillColor="#fef3c7"
-              fillOpacity={0.25}
-              clickable={false}
-            />
-          )}
-
           {neighborhoodPolygons.map((location) => {
             const paths = location.boundary_coordinates!.map((coord) => ({ lat: coord[0], lng: coord[1] }))
             const isHighlighted = highlightedLocationId === location.id

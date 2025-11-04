@@ -2,8 +2,16 @@ import { redirect } from "next/navigation"
 import { createServerClient } from "@/lib/supabase/server"
 import { GoogleMapEditor } from "@/components/map/google-map-editor"
 
-export default async function CreateLocationPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function CreateLocationPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>
+  searchParams: Promise<{ preview?: string }>
+}) {
   const { slug } = await params
+  const { preview } = await searchParams
+
   const supabase = await createServerClient()
 
   console.log("[v0] Create location page - slug:", slug)
@@ -59,11 +67,25 @@ export default async function CreateLocationPage({ params }: { params: Promise<{
     .eq("tenant_id", tenant.id)
     .order("name")
 
+  let previewData = null
+  if (preview) {
+    try {
+      previewData = JSON.parse(decodeURIComponent(preview))
+      console.log("[v0] Preview data loaded:", previewData.summary)
+    } catch (error) {
+      console.error("[v0] Failed to parse preview data:", error)
+    }
+  }
+
   return (
     <div className="container mx-auto p-6">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold">Add Location</h1>
-        <p className="text-muted-foreground">Draw a facility, lot boundary, or walking path on the map</p>
+        <h1 className="text-3xl font-bold">{previewData ? "Preview GeoJSON Import" : "Add Location"}</h1>
+        <p className="text-muted-foreground">
+          {previewData
+            ? `Previewing ${previewData.summary.totalFeatures} features from GeoJSON file`
+            : "Draw a facility, lot boundary, or walking path on the map"}
+        </p>
       </div>
       <GoogleMapEditor
         tenantSlug={slug}
@@ -71,6 +93,7 @@ export default async function CreateLocationPage({ params }: { params: Promise<{
         communityBoundary={communityBoundary}
         lots={lots || []}
         neighborhoods={neighborhoods || []}
+        previewData={previewData}
       />
     </div>
   )

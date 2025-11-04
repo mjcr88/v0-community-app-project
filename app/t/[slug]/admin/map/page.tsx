@@ -35,7 +35,7 @@ export default async function MapManagementPage({ params }: { params: Promise<{ 
 
   const { data: locations, error: locationsError } = await supabase
     .from("locations")
-    .select("*, neighborhoods(name)")
+    .select("*, neighborhoods!locations_neighborhood_id_fkey(name)")
     .eq("tenant_id", tenant.id)
     .order("created_at", { ascending: false })
 

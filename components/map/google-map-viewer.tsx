@@ -115,6 +115,11 @@ export function GoogleMapViewer({
     setSelectedLocation(null)
   }
 
+  const handleLocationClick = (location: Location) => {
+    setHighlightedLocationId(undefined)
+    setSelectedLocation(location)
+  }
+
   if (!apiKey) {
     return (
       <div className="flex items-center justify-center h-full bg-muted rounded-lg">
@@ -160,13 +165,13 @@ export function GoogleMapViewer({
                 strokeWeight={isHighlighted ? 4 : 2}
                 fillColor={isHighlighted ? "#fca5a5" : "#c084fc"}
                 fillOpacity={isHighlighted ? 0.4 : 0.25}
-                onClick={() => setSelectedLocation(location)}
+                onClick={() => handleLocationClick(location)}
               />
             )
           })}
 
           {facilityMarkers.map((location) => (
-            <Marker key={location.id} position={location.coordinates!} onClick={() => setSelectedLocation(location)} />
+            <Marker key={location.id} position={location.coordinates!} onClick={() => handleLocationClick(location)} />
           ))}
 
           {facilityPolygons.map((location) => {
@@ -181,7 +186,7 @@ export function GoogleMapViewer({
                 strokeWeight={isHighlighted ? 4 : 2}
                 fillColor={isHighlighted ? "#fca5a5" : "#fdba74"}
                 fillOpacity={isHighlighted ? 0.4 : 0.25}
-                onClick={() => setSelectedLocation(location)}
+                onClick={() => handleLocationClick(location)}
               />
             )
           })}
@@ -198,7 +203,7 @@ export function GoogleMapViewer({
                 strokeWeight={isHighlighted ? 4 : 2}
                 fillColor={isHighlighted ? "#fca5a5" : "#93c5fd"}
                 fillOpacity={isHighlighted ? 0.4 : 0.25}
-                onClick={() => setSelectedLocation(location)}
+                onClick={() => handleLocationClick(location)}
               />
             )
           })}
@@ -213,7 +218,7 @@ export function GoogleMapViewer({
                 strokeColor={isHighlighted ? "#ef4444" : "#3b82f6"}
                 strokeOpacity={isHighlighted ? 1 : 0.8}
                 strokeWeight={isHighlighted ? 5 : 3}
-                onClick={() => setSelectedLocation(location)}
+                onClick={() => handleLocationClick(location)}
               />
             )
           })}

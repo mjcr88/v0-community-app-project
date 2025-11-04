@@ -20,6 +20,8 @@ export interface ParsedGeoJSON {
     totalFeatures: number
     byType: Record<GeoJSONGeometryType, number>
   }
+  transformed?: boolean
+  originalSystem?: string
 }
 
 export interface ValidationError {
@@ -276,24 +278,58 @@ function checkCoordinateSystem(coords: any): { valid: boolean; warning?: Validat
   return { valid: false }
 }
 
+import { transformGeometry } from "./coordinate-transformer"
+
 export function parseGeoJSON(data: any): ParsedGeoJSON {
   // Normalize to FeatureCollection
   let features: GeoJSONFeature[]
+  let transformed = false
+  let originalSystem: string | undefined
 
   if (data.type === "GeometryCollection") {
     // Convert GeometryCollection to Features
-    features = data.geometries.map((geometry: any, index: number) => ({
-      type: "Feature" as const,
-      geometry,
-      properties: {
-        name: `Geometry ${index + 1}`,
-        source: "GeometryCollection",
-      },
-    }))
+    features = data.geometries.map((geometry: any, index: number) => {
+      const result = transformGeometry(geometry)
+      if (result.transformed) {
+        transformed = true
+        originalSystem = result.system
+      }
+
+      return {
+        type: "Feature" as const,
+        geometry: result.geometry,
+        properties: {
+          name: `Geometry ${index + 1}`,
+          source: "GeometryCollection",
+        },
+      }
+    })
   } else if (data.type === "Feature") {
-    features = [data]
+    const result = transformGeometry(data.geometry)
+    if (result.transformed) {
+      transformed = true
+      originalSystem = result.system
+    }
+
+    features = [
+      {
+        ...data,
+        geometry: result.geometry,
+      },
+    ]
   } else {
-    features = data.features
+    features = data.features.map((feature: any) => {
+      const result = transformGeometry(feature.geometry)
+      if (result.transformed) {
+        transformed = true
+        originalSystem = result.system
+      }
+
+      return {
+        ...feature,
+        geometry: result.geometry,
+      }
+    })
   }
 
   // Generate summary
@@ -310,5 +346,7 @@ export function parseGeoJSON(data: any): ParsedGeoJSON {
       totalFeatures: features.length,
       byType: byType as Record<GeoJSONGeometryType, number>,
     },
+    transformed,
+    originalSystem,
   }
 }

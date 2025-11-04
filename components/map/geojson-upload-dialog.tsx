@@ -28,13 +28,13 @@ export function GeoJSONUploadDialog({ open, onOpenChange, tenantId, tenantSlug }
   const [parsedData, setParsedData] = useState<ParsedGeoJSON | null>(null)
   const [error, setError] = useState<ValidationError | null>(null)
   const [isDragging, setIsDragging] = useState(false)
-  const [isWarning, setIsWarning] = useState(false)
+  const [transformationInfo, setTransformationInfo] = useState<string | null>(null)
 
   const handleFileSelect = async (selectedFile: File) => {
     setFile(selectedFile)
     setError(null)
     setParsedData(null)
-    setIsWarning(false)
+    setTransformationInfo(null)
 
     try {
       const text = await selectedFile.text()
@@ -44,7 +44,6 @@ export function GeoJSONUploadDialog({ open, onOpenChange, tenantId, tenantSlug }
 
       if (validationResult.error) {
         setError(validationResult.error)
-        setIsWarning(false)
         return
       }
 
@@ -52,19 +51,23 @@ export function GeoJSONUploadDialog({ open, onOpenChange, tenantId, tenantSlug }
       const parsed = parseGeoJSON(data)
       setParsedData(parsed)
 
-      if (validationResult.warnings.length > 0) {
+      if (parsed.transformed) {
+        setTransformationInfo(
+          `Coordinates automatically transformed from ${parsed.originalSystem || "projected coordinate system"} to WGS84 (lat/lng)`,
+        )
+      }
+
+      if (validationResult.warnings.length > 0 && !parsed.transformed) {
         setError({
           message: validationResult.warnings[0].message,
           details: validationResult.warnings[0].details,
         })
-        setIsWarning(true)
       }
     } catch (err) {
       setError({
         message: "Failed to parse file",
         details: err instanceof Error ? err.message : "Unknown error occurred",
       })
-      setIsWarning(false)
     }
   }
 
@@ -103,7 +106,7 @@ export function GeoJSONUploadDialog({ open, onOpenChange, tenantId, tenantSlug }
     setFile(null)
     setParsedData(null)
     setError(null)
-    setIsWarning(false)
+    setTransformationInfo(null)
     onOpenChange(false)
   }
 
@@ -113,8 +116,8 @@ export function GeoJSONUploadDialog({ open, onOpenChange, tenantId, tenantSlug }
         <DialogHeader>
           <DialogTitle>Upload GeoJSON File</DialogTitle>
           <DialogDescription>
-            Upload a GeoJSON file to bulk-create locations on your community map. The file must use WGS84 (EPSG:4326)
-            coordinate system.
+            Upload a GeoJSON file to bulk-create locations on your community map. Projected coordinates will be
+            automatically converted to WGS84.
           </DialogDescription>
         </DialogHeader>
 
@@ -155,40 +158,29 @@ export function GeoJSONUploadDialog({ open, onOpenChange, tenantId, tenantSlug }
             </label>
           </div>
 
-          {error && (
-            <Alert variant={isWarning ? "default" : "destructive"}>
+          {error && !parsedData && (
+            <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertTitle>{isWarning ? "Warning" : "Error"}</AlertTitle>
+              <AlertTitle>Error</AlertTitle>
               <AlertDescription>
                 <div className="space-y-2">
                   <p>{error.message}</p>
                   {error.details && <p className="text-sm">{error.details}</p>}
-
-                  {isWarning && error.message.includes("Projected coordinate system") && (
-                    <div className="mt-3 p-3 bg-background rounded border">
-                      <p className="font-medium text-sm mb-2">How to fix this:</p>
-                      <ol className="text-sm space-y-1 list-decimal list-inside">
-                        <li>Open your GIS software (QGIS, ArcGIS, etc.)</li>
-                        <li>
-                          Select <strong>Export</strong> or <strong>Save As</strong>
-                        </li>
-                        <li>
-                          Choose <strong>GeoJSON</strong> as the format
-                        </li>
-                        <li>
-                          Set the coordinate system to <strong>WGS84 (EPSG:4326)</strong>
-                        </li>
-                        <li>Export and upload the new file</li>
-                      </ol>
-                    </div>
-                  )}
                 </div>
               </AlertDescription>
             </Alert>
           )}
 
+          {transformationInfo && parsedData && (
+            <Alert>
+              <CheckCircle2 className="h-4 w-4" />
+              <AlertTitle>Coordinates Transformed</AlertTitle>
+              <AlertDescription>{transformationInfo}</AlertDescription>
+            </Alert>
+          )}
+
           {/* Success Display */}
-          {parsedData && !isWarning && (
+          {parsedData && (
             <Alert>
               <CheckCircle2 className="h-4 w-4" />
               <div>
@@ -212,7 +204,7 @@ export function GeoJSONUploadDialog({ open, onOpenChange, tenantId, tenantSlug }
           <Button variant="outline" onClick={handleClose}>
             Cancel
           </Button>
-          <Button disabled={!parsedData || isWarning} onClick={() => console.log("[v0] Next: Preview features on map")}>
+          <Button disabled={!parsedData} onClick={() => console.log("[v0] Next: Preview features on map")}>
             Next: Preview
           </Button>
         </DialogFooter>

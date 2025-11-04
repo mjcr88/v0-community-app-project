@@ -27,32 +27,151 @@ export interface ValidationError {
   details?: string
 }
 
-export function validateGeoJSON(data: any): ValidationError | null {
+export interface ValidationWarning {
+  message: string
+  details?: string
+}
+
+export interface ValidationResult {
+  error: ValidationError | null
+  warnings: ValidationWarning[]
+}
+
+export function validateGeoJSON(data: any): ValidationResult {
+  const warnings: ValidationWarning[] = []
+
   // Check if it's valid JSON object
   if (!data || typeof data !== "object") {
-    return { message: "Invalid JSON format", details: "File must contain a valid JSON object" }
-  }
-
-  // Check if it's a Feature or FeatureCollection
-  if (data.type !== "Feature" && data.type !== "FeatureCollection") {
     return {
-      message: "Invalid GeoJSON type",
-      details: 'GeoJSON must have type "Feature" or "FeatureCollection"',
+      error: { message: "Invalid JSON format", details: "File must contain a valid JSON object" },
+      warnings: [],
     }
   }
 
-  // If it's a single Feature, wrap it in a FeatureCollection
+  if (data.type !== "Feature" && data.type !== "FeatureCollection" && data.type !== "GeometryCollection") {
+    return {
+      error: {
+        message: "Invalid GeoJSON type",
+        details: 'GeoJSON must have type "Feature", "FeatureCollection", or "GeometryCollection"',
+      },
+      warnings: [],
+    }
+  }
+
+  if (data.type === "GeometryCollection") {
+    if (!Array.isArray(data.geometries)) {
+      return {
+        error: { message: "Invalid GeometryCollection", details: "GeometryCollection must have a geometries array" },
+        warnings: [],
+      }
+    }
+
+    if (data.geometries.length === 0) {
+      return {
+        error: { message: "Empty GeometryCollection", details: "No geometries found in the GeoJSON file" },
+        warnings: [],
+      }
+    }
+
+    // Validate each geometry
+    for (let i = 0; i < data.geometries.length; i++) {
+      const geometry = data.geometries[i]
+
+      if (!geometry.type) {
+        return {
+          error: { message: `Invalid geometry at index ${i}`, details: "Each geometry must have a type" },
+          warnings: [],
+        }
+      }
+
+      const validTypes = ["Point", "LineString", "Polygon", "MultiPoint", "MultiLineString", "MultiPolygon"]
+      if (!validTypes.includes(geometry.type)) {
+        return {
+          error: {
+            message: `Unsupported geometry type at index ${i}`,
+            details: `Geometry type "${geometry.type}" is not supported`,
+          },
+          warnings: [],
+        }
+      }
+
+      if (!geometry.coordinates) {
+        return {
+          error: { message: `Missing coordinates at geometry ${i}`, details: "Each geometry must have coordinates" },
+          warnings: [],
+        }
+      }
+
+      // Check coordinate system
+      const coordCheck = checkCoordinateSystem(geometry.coordinates)
+      if (coordCheck.warning) {
+        warnings.push(coordCheck.warning)
+      }
+      if (!coordCheck.valid) {
+        return {
+          error: { message: `Invalid coordinates at geometry ${i}`, details: "Coordinates must be valid numbers" },
+          warnings: [],
+        }
+      }
+    }
+
+    return { error: null, warnings }
+  }
+
+  // If it's a single Feature, validate it
   if (data.type === "Feature") {
-    return null
+    if (!data.geometry || !data.geometry.type) {
+      return {
+        error: { message: "Invalid feature", details: "Feature must have a geometry with a type" },
+        warnings: [],
+      }
+    }
+
+    const validTypes = ["Point", "LineString", "Polygon", "MultiPoint", "MultiLineString", "MultiPolygon"]
+    if (!validTypes.includes(data.geometry.type)) {
+      return {
+        error: {
+          message: "Unsupported geometry type",
+          details: `Geometry type "${data.geometry.type}" is not supported`,
+        },
+        warnings: [],
+      }
+    }
+
+    if (!data.geometry.coordinates) {
+      return {
+        error: { message: "Missing coordinates", details: "Geometry must have coordinates" },
+        warnings: [],
+      }
+    }
+
+    const coordCheck = checkCoordinateSystem(data.geometry.coordinates)
+    if (coordCheck.warning) {
+      warnings.push(coordCheck.warning)
+    }
+    if (!coordCheck.valid) {
+      return {
+        error: { message: "Invalid coordinates", details: "Coordinates must be valid numbers" },
+        warnings: [],
+      }
+    }
+
+    return { error: null, warnings }
   }
 
   // Validate FeatureCollection
   if (!Array.isArray(data.features)) {
-    return { message: "Invalid FeatureCollection", details: "FeatureCollection must have a features array" }
+    return {
+      error: { message: "Invalid FeatureCollection", details: "FeatureCollection must have a features array" },
+      warnings: [],
+    }
   }
 
   if (data.features.length === 0) {
-    return { message: "Empty FeatureCollection", details: "No features found in the GeoJSON file" }
+    return {
+      error: { message: "Empty FeatureCollection", details: "No features found in the GeoJSON file" },
+      warnings: [],
+    }
   }
 
   // Validate each feature
@@ -60,58 +179,118 @@ export function validateGeoJSON(data: any): ValidationError | null {
     const feature = data.features[i]
 
     if (feature.type !== "Feature") {
-      return { message: `Invalid feature at index ${i}`, details: 'Each feature must have type "Feature"' }
+      return {
+        error: { message: `Invalid feature at index ${i}`, details: 'Each feature must have type "Feature"' },
+        warnings: [],
+      }
     }
 
     if (!feature.geometry || !feature.geometry.type) {
-      return { message: `Invalid geometry at feature ${i}`, details: "Each feature must have a geometry with a type" }
+      return {
+        error: {
+          message: `Invalid geometry at feature ${i}`,
+          details: "Each feature must have a geometry with a type",
+        },
+        warnings: [],
+      }
     }
 
     const validTypes = ["Point", "LineString", "Polygon", "MultiPoint", "MultiLineString", "MultiPolygon"]
     if (!validTypes.includes(feature.geometry.type)) {
       return {
-        message: `Unsupported geometry type at feature ${i}`,
-        details: `Geometry type "${feature.geometry.type}" is not supported`,
+        error: {
+          message: `Unsupported geometry type at feature ${i}`,
+          details: `Geometry type "${feature.geometry.type}" is not supported`,
+        },
+        warnings: [],
       }
     }
 
     if (!feature.geometry.coordinates) {
-      return { message: `Missing coordinates at feature ${i}`, details: "Each geometry must have coordinates" }
+      return {
+        error: { message: `Missing coordinates at feature ${i}`, details: "Each geometry must have coordinates" },
+        warnings: [],
+      }
     }
 
-    // Validate coordinates are numbers
-    const coords = feature.geometry.coordinates
-    if (!validateCoordinates(coords)) {
-      return { message: `Invalid coordinates at feature ${i}`, details: "Coordinates must be valid numbers" }
+    // Check coordinate system
+    const coordCheck = checkCoordinateSystem(feature.geometry.coordinates)
+    if (coordCheck.warning) {
+      warnings.push(coordCheck.warning)
+    }
+    if (!coordCheck.valid) {
+      return {
+        error: { message: `Invalid coordinates at feature ${i}`, details: "Coordinates must be valid numbers" },
+        warnings: [],
+      }
     }
   }
 
-  return null
+  return { error: null, warnings }
 }
 
-function validateCoordinates(coords: any): boolean {
+function checkCoordinateSystem(coords: any): { valid: boolean; warning?: ValidationWarning } {
   if (Array.isArray(coords)) {
-    if (coords.length === 0) return false
+    if (coords.length === 0) return { valid: false }
 
     // Check if it's a coordinate pair [lng, lat]
     if (typeof coords[0] === "number" && typeof coords[1] === "number") {
-      // Validate lng/lat ranges
       const [lng, lat] = coords
-      return lng >= -180 && lng <= 180 && lat >= -90 && lat <= 90
+
+      // Check if coordinates are in a projected system (values too large for lat/lng)
+      if (Math.abs(lng) > 180 || Math.abs(lat) > 90) {
+        return {
+          valid: true,
+          warning: {
+            message: "Projected coordinate system detected",
+            details:
+              "Coordinates appear to be in a projected coordinate system (e.g., UTM). You may need to convert them to WGS84 (lat/lng) for proper display on the map.",
+          },
+        }
+      }
+
+      // Validate lng/lat ranges for WGS84
+      if (lng < -180 || lng > 180 || lat < -90 || lat > 90) {
+        return { valid: false }
+      }
+
+      return { valid: true }
     }
 
     // Recursively validate nested arrays
-    return coords.every((c) => validateCoordinates(c))
+    let hasWarning = false
+    let warning: ValidationWarning | undefined
+
+    for (const c of coords) {
+      const result = checkCoordinateSystem(c)
+      if (!result.valid) return { valid: false }
+      if (result.warning && !hasWarning) {
+        hasWarning = true
+        warning = result.warning
+      }
+    }
+
+    return { valid: true, warning }
   }
 
-  return false
+  return { valid: false }
 }
 
 export function parseGeoJSON(data: any): ParsedGeoJSON {
   // Normalize to FeatureCollection
   let features: GeoJSONFeature[]
 
-  if (data.type === "Feature") {
+  if (data.type === "GeometryCollection") {
+    // Convert GeometryCollection to Features
+    features = data.geometries.map((geometry: any, index: number) => ({
+      type: "Feature" as const,
+      geometry,
+      properties: {
+        name: `Geometry ${index + 1}`,
+        source: "GeometryCollection",
+      },
+    }))
+  } else if (data.type === "Feature") {
     features = [data]
   } else {
     features = data.features

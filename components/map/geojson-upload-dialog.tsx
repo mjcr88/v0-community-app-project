@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Alert } from "@/components/ui/alert"
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { Upload, FileJson, AlertCircle, CheckCircle2 } from "lucide-react"
 import { parseGeoJSON, validateGeoJSON, type ParsedGeoJSON, type ValidationError } from "@/lib/geojson-parser"
 
@@ -28,31 +28,43 @@ export function GeoJSONUploadDialog({ open, onOpenChange, tenantId, tenantSlug }
   const [parsedData, setParsedData] = useState<ParsedGeoJSON | null>(null)
   const [error, setError] = useState<ValidationError | null>(null)
   const [isDragging, setIsDragging] = useState(false)
+  const [isWarning, setIsWarning] = useState(false)
 
   const handleFileSelect = async (selectedFile: File) => {
     setFile(selectedFile)
     setError(null)
     setParsedData(null)
+    setIsWarning(false)
 
     try {
       const text = await selectedFile.text()
       const data = JSON.parse(text)
 
-      // Validate GeoJSON
-      const validationError = validateGeoJSON(data)
-      if (validationError) {
-        setError(validationError)
+      const validationResult = validateGeoJSON(data)
+
+      if (validationResult.error) {
+        setError(validationResult.error)
+        setIsWarning(false)
         return
       }
 
       // Parse GeoJSON
       const parsed = parseGeoJSON(data)
       setParsedData(parsed)
+
+      if (validationResult.warnings.length > 0) {
+        setError({
+          message: validationResult.warnings[0].message,
+          details: validationResult.warnings[0].details,
+        })
+        setIsWarning(true)
+      }
     } catch (err) {
       setError({
         message: "Failed to parse file",
         details: err instanceof Error ? err.message : "Unknown error occurred",
       })
+      setIsWarning(false)
     }
   }
 
@@ -91,6 +103,7 @@ export function GeoJSONUploadDialog({ open, onOpenChange, tenantId, tenantSlug }
     setFile(null)
     setParsedData(null)
     setError(null)
+    setIsWarning(false)
     onOpenChange(false)
   }
 
@@ -100,8 +113,8 @@ export function GeoJSONUploadDialog({ open, onOpenChange, tenantId, tenantSlug }
         <DialogHeader>
           <DialogTitle>Upload GeoJSON File</DialogTitle>
           <DialogDescription>
-            Upload a GeoJSON file to bulk-create locations on your community map. Supports boundaries, facilities, and
-            other location types.
+            Upload a GeoJSON file to bulk-create locations on your community map. Supports Feature, FeatureCollection,
+            and GeometryCollection formats.
           </DialogDescription>
         </DialogHeader>
 
@@ -144,12 +157,18 @@ export function GeoJSONUploadDialog({ open, onOpenChange, tenantId, tenantSlug }
 
           {/* Error Display */}
           {error && (
-            <Alert variant="destructive">
+            <Alert variant={isWarning ? "default" : "destructive"}>
               <AlertCircle className="h-4 w-4" />
-              <div>
-                <p className="font-medium">{error.message}</p>
-                {error.details && <p className="text-sm mt-1">{error.details}</p>}
-              </div>
+              <AlertTitle>{isWarning ? "Warning" : "Error"}</AlertTitle>
+              <AlertDescription>
+                {error.message}
+                {error.details && (
+                  <>
+                    <br />
+                    <span className="text-sm text-muted-foreground mt-1">{error.details}</span>
+                  </>
+                )}
+              </AlertDescription>
             </Alert>
           )}
 

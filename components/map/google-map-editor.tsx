@@ -150,7 +150,9 @@ export function GoogleMapEditor({
         if (editLocationIdFromUrl) {
           const locationToEdit = data.find((loc) => loc.id === editLocationIdFromUrl)
           if (locationToEdit) {
-            handleLocationClick(locationToEdit)
+            console.log("[v0] Auto-loading location for editing:", locationToEdit)
+            // Don't call handleLocationClick yet, just highlight it
+            // User needs to click it to start editing
           }
         }
       }

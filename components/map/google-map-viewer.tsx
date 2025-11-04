@@ -94,7 +94,7 @@ export function GoogleMapViewer({
         }
       }
     }
-  }, [highlightLocationId, initialLocations])
+  }, []) // Only run once on mount
 
   const facilityMarkers = initialLocations.filter((loc) => showFacilities && loc.type === "facility" && loc.coordinates)
   const facilityPolygons = initialLocations.filter(

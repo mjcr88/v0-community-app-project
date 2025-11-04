@@ -1,8 +1,15 @@
 import { createServerClient } from "@/lib/supabase/server"
 import { GoogleMapViewer } from "@/components/map/google-map-viewer"
 
-export default async function MapViewerPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function MapViewerPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>
+  searchParams: Promise<{ locationId?: string }>
+}) {
   const { slug } = await params
+  const { locationId } = await searchParams
   const supabase = await createServerClient()
 
   const { data: tenant } = await supabase.from("tenants").select("*").eq("slug", slug).single()
@@ -21,6 +28,7 @@ export default async function MapViewerPage({ params }: { params: Promise<{ slug
   const communityBoundary = tenant.map_boundary_coordinates || null
 
   console.log("[v0] Viewer page - Community boundary from DB:", communityBoundary)
+  console.log("[v0] Viewer page - locationId from URL:", locationId)
 
   return (
     <div className="h-[100vh] w-full">
@@ -31,6 +39,7 @@ export default async function MapViewerPage({ params }: { params: Promise<{ slug
         mapZoom={tenant.map_default_zoom || 15}
         isAdmin={true}
         communityBoundary={communityBoundary}
+        highlightLocationId={locationId}
       />
     </div>
   )

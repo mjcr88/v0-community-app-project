@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { APIProvider, Map, Marker } from "@vis.gl/react-google-maps"
 import { Button } from "@/components/ui/button"
 import { Plus, Locate, Layers, Filter } from "lucide-react"
@@ -38,6 +38,7 @@ interface GoogleMapViewerProps {
   mapZoom?: number
   isAdmin?: boolean
   communityBoundary?: Array<[number, number]> | null
+  highlightLocationId?: string
 }
 
 export function GoogleMapViewer({
@@ -47,6 +48,7 @@ export function GoogleMapViewer({
   mapZoom = 15,
   isAdmin = false,
   communityBoundary,
+  highlightLocationId,
 }: GoogleMapViewerProps) {
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null)
   const [center, setCenter] = useState<{ lat: number; lng: number }>(mapCenter || { lat: 9.9567, lng: -84.5333 })
@@ -65,23 +67,32 @@ export function GoogleMapViewer({
     "[v0] Location types:",
     initialLocations.map((l) => l.type),
   )
+  console.log("[v0] GoogleMapViewer highlightLocationId:", highlightLocationId)
 
-  const handleLocate = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setCenter({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          })
-          setZoom(16)
-        },
-        (error) => {
-          console.error("Error getting location:", error)
-        },
-      )
+  useEffect(() => {
+    if (highlightLocationId) {
+      const location = initialLocations.find((loc) => loc.id === highlightLocationId)
+      if (location) {
+        console.log("[v0] Auto-selecting highlighted location:", location.name)
+        setSelectedLocation(location)
+
+        if (location.coordinates) {
+          setCenter(location.coordinates)
+          setZoom(17)
+        } else if (location.boundary_coordinates && location.boundary_coordinates.length > 0) {
+          const lats = location.boundary_coordinates.map((c) => c[0])
+          const lngs = location.boundary_coordinates.map((c) => c[1])
+          const centerLat = lats.reduce((a, b) => a + b, 0) / lats.length
+          const centerLng = lngs.reduce((a, b) => a + b, 0) / lngs.length
+          setCenter({ lat: centerLat, lng: centerLng })
+          setZoom(17)
+        } else if (location.path_coordinates && location.path_coordinates.length > 0) {
+          setCenter({ lat: location.path_coordinates[0][0], lng: location.path_coordinates[0][1] })
+          setZoom(17)
+        }
+      }
     }
-  }
+  }, [highlightLocationId, initialLocations])
 
   const facilityMarkers = initialLocations.filter((loc) => showFacilities && loc.type === "facility" && loc.coordinates)
   const facilityPolygons = initialLocations.filter(
@@ -131,69 +142,69 @@ export function GoogleMapViewer({
 
           {neighborhoodPolygons.map((location) => {
             const paths = location.boundary_coordinates!.map((coord) => ({ lat: coord[0], lng: coord[1] }))
+            const isHighlighted = highlightLocationId === location.id
             return (
               <Polygon
                 key={location.id}
                 paths={paths}
-                strokeColor="#a855f7"
-                strokeOpacity={0.7}
-                strokeWeight={2}
-                fillColor="#c084fc"
-                fillOpacity={0.25}
+                strokeColor={isHighlighted ? "#ef4444" : "#a855f7"}
+                strokeOpacity={isHighlighted ? 1 : 0.7}
+                strokeWeight={isHighlighted ? 4 : 2}
+                fillColor={isHighlighted ? "#fca5a5" : "#c084fc"}
+                fillOpacity={isHighlighted ? 0.4 : 0.25}
                 onClick={() => setSelectedLocation(location)}
               />
             )
           })}
 
-          {/* Facility Markers */}
           {facilityMarkers.map((location) => (
             <Marker key={location.id} position={location.coordinates!} onClick={() => setSelectedLocation(location)} />
           ))}
 
-          {/* Facility Polygons */}
           {facilityPolygons.map((location) => {
             const paths = location.boundary_coordinates!.map((coord) => ({ lat: coord[0], lng: coord[1] }))
+            const isHighlighted = highlightLocationId === location.id
             return (
               <Polygon
                 key={location.id}
                 paths={paths}
-                strokeColor="#fb923c"
-                strokeOpacity={0.7}
-                strokeWeight={2}
-                fillColor="#fdba74"
-                fillOpacity={0.25}
+                strokeColor={isHighlighted ? "#ef4444" : "#fb923c"}
+                strokeOpacity={isHighlighted ? 1 : 0.7}
+                strokeWeight={isHighlighted ? 4 : 2}
+                fillColor={isHighlighted ? "#fca5a5" : "#fdba74"}
+                fillOpacity={isHighlighted ? 0.4 : 0.25}
                 onClick={() => setSelectedLocation(location)}
               />
             )
           })}
 
-          {/* Lot Polygons */}
           {lotPolygons.map((location) => {
             const paths = location.boundary_coordinates!.map((coord) => ({ lat: coord[0], lng: coord[1] }))
+            const isHighlighted = highlightLocationId === location.id
             return (
               <Polygon
                 key={location.id}
                 paths={paths}
-                strokeColor="#60a5fa"
-                strokeOpacity={0.7}
-                strokeWeight={2}
-                fillColor="#93c5fd"
-                fillOpacity={0.25}
+                strokeColor={isHighlighted ? "#ef4444" : "#60a5fa"}
+                strokeOpacity={isHighlighted ? 1 : 0.7}
+                strokeWeight={isHighlighted ? 4 : 2}
+                fillColor={isHighlighted ? "#fca5a5" : "#93c5fd"}
+                fillOpacity={isHighlighted ? 0.4 : 0.25}
                 onClick={() => setSelectedLocation(location)}
               />
             )
           })}
 
-          {/* Walking Paths */}
           {walkingPaths.map((location) => {
             const path = location.path_coordinates!.map((coord) => ({ lat: coord[0], lng: coord[1] }))
+            const isHighlighted = highlightLocationId === location.id
             return (
               <Polyline
                 key={location.id}
                 path={path}
-                strokeColor="#3b82f6"
-                strokeOpacity={0.8}
-                strokeWeight={3}
+                strokeColor={isHighlighted ? "#ef4444" : "#3b82f6"}
+                strokeOpacity={isHighlighted ? 1 : 0.8}
+                strokeWeight={isHighlighted ? 5 : 3}
                 onClick={() => setSelectedLocation(location)}
               />
             )
@@ -207,7 +218,6 @@ export function GoogleMapViewer({
         </div>
       )}
 
-      {/* Top left: Zoom controls */}
       <div className="absolute left-3 top-3 flex flex-col gap-2 z-10">
         <Button
           variant="secondary"
@@ -229,7 +239,6 @@ export function GoogleMapViewer({
         </Button>
       </div>
 
-      {/* Bottom left: Add location button (admin only) */}
       {isAdmin && (
         <div className="absolute bottom-3 left-3 z-10">
           <Button asChild size="icon" className="shadow-lg h-10 w-10">
@@ -240,7 +249,6 @@ export function GoogleMapViewer({
         </div>
       )}
 
-      {/* Top right: Controls */}
       <div className="absolute right-3 top-3 z-10 flex gap-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -266,7 +274,6 @@ export function GoogleMapViewer({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Layer selector */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="secondary" size="icon" className="h-10 w-10 shadow-lg" title="Map Type">
@@ -281,15 +288,8 @@ export function GoogleMapViewer({
         </DropdownMenu>
       </div>
 
-      {/* Bottom right: Locate me */}
       <div className="absolute bottom-3 right-3 z-10">
-        <Button
-          variant="secondary"
-          size="icon"
-          onClick={handleLocate}
-          className="h-10 w-10 shadow-lg"
-          title="Locate Me"
-        >
+        <Button variant="secondary" size="icon" onClick={() => {}} className="h-10 w-10 shadow-lg" title="Locate Me">
           <Locate className="h-5 w-5" />
         </Button>
       </div>

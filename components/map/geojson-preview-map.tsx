@@ -20,7 +20,6 @@ export function GeoJSONPreviewMap({
         <Map
           defaultCenter={center}
           defaultZoom={zoom}
-          mapId={process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID}
           gestureHandling="greedy"
           disableDefaultUI={false}
           zoomControl={true}

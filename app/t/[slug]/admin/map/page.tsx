@@ -7,12 +7,17 @@ import { LocationsTable } from "@/components/map/locations-table"
 import { GeoJSONUploadButton } from "@/components/map/geojson-upload-button"
 
 export default async function MapManagementPage({ params }: { params: Promise<{ slug: string }> }) {
+  console.log("[v0] Map page rendering started")
   const { slug } = await params
+  console.log("[v0] Slug:", slug)
+
   const supabase = await createServerClient()
 
   const { data: tenant } = await supabase.from("tenants").select("*").eq("slug", slug).single()
+  console.log("[v0] Tenant:", tenant?.id)
 
   if (!tenant) {
+    console.log("[v0] Tenant not found")
     return <div>Tenant not found</div>
   }
 
@@ -41,6 +46,7 @@ export default async function MapManagementPage({ params }: { params: Promise<{ 
     .order("created_at", { ascending: false })
 
   console.log("[v0] Locations query result:", { count: locations?.length, error: locationsError })
+  console.log("[v0] Map page rendering complete")
 
   return (
     <div className="space-y-6">

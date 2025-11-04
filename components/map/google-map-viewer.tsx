@@ -56,8 +56,15 @@ export function GoogleMapViewer({
   const [showFacilities, setShowFacilities] = useState(true)
   const [showLots, setShowLots] = useState(true)
   const [showWalkingPaths, setShowWalkingPaths] = useState(true)
+  const [showNeighborhoods, setShowNeighborhoods] = useState(true)
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""
+
+  console.log("[v0] GoogleMapViewer received locations:", initialLocations.length)
+  console.log(
+    "[v0] Location types:",
+    initialLocations.map((l) => l.type),
+  )
 
   const handleLocate = () => {
     if (navigator.geolocation) {
@@ -84,6 +91,11 @@ export function GoogleMapViewer({
   const walkingPaths = initialLocations.filter(
     (loc) => showWalkingPaths && loc.type === "walking_path" && loc.path_coordinates,
   )
+  const neighborhoodPolygons = initialLocations.filter(
+    (loc) => showNeighborhoods && loc.type === "neighborhood" && loc.boundary_coordinates,
+  )
+
+  console.log("[v0] Filtered neighborhoods:", neighborhoodPolygons.length)
 
   if (!apiKey) {
     return (
@@ -116,6 +128,22 @@ export function GoogleMapViewer({
               clickable={false}
             />
           )}
+
+          {neighborhoodPolygons.map((location) => {
+            const paths = location.boundary_coordinates!.map((coord) => ({ lat: coord[0], lng: coord[1] }))
+            return (
+              <Polygon
+                key={location.id}
+                paths={paths}
+                strokeColor="#a855f7"
+                strokeOpacity={0.7}
+                strokeWeight={2}
+                fillColor="#c084fc"
+                fillOpacity={0.25}
+                onClick={() => setSelectedLocation(location)}
+              />
+            )
+          })}
 
           {/* Facility Markers */}
           {facilityMarkers.map((location) => (
@@ -223,6 +251,9 @@ export function GoogleMapViewer({
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Show on Map</DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuCheckboxItem checked={showNeighborhoods} onCheckedChange={setShowNeighborhoods}>
+              Neighborhoods
+            </DropdownMenuCheckboxItem>
             <DropdownMenuCheckboxItem checked={showFacilities} onCheckedChange={setShowFacilities}>
               Facilities
             </DropdownMenuCheckboxItem>

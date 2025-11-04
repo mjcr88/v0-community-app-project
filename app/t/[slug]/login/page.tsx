@@ -27,25 +27,32 @@ export default async function TenantLoginPage({
     )
   }
 
-  // Check if already logged in
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  try {
+    // Check if already logged in
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
 
-  if (user) {
-    const { data: userData } = await supabase
-      .from("users")
-      .select("role, is_tenant_admin, onboarding_completed")
-      .eq("id", user.id)
-      .single()
+    if (user && !authError) {
+      const { data: userData, error: userDataError } = await supabase
+        .from("users")
+        .select("role, is_tenant_admin, onboarding_completed")
+        .eq("id", user.id)
+        .single()
 
-    if (userData?.role === "super_admin" || userData?.is_tenant_admin) {
-      redirect(`/t/${slug}/admin/dashboard`)
-    } else if (userData?.onboarding_completed) {
-      redirect(`/t/${slug}/dashboard`)
-    } else {
-      redirect(`/t/${slug}/onboarding`)
+      if (userData && !userDataError) {
+        if (userData.role === "super_admin" || userData.is_tenant_admin) {
+          redirect(`/t/${slug}/admin/dashboard`)
+        } else if (userData.onboarding_completed) {
+          redirect(`/t/${slug}/dashboard`)
+        } else {
+          redirect(`/t/${slug}/onboarding`)
+        }
+      }
     }
+  } catch (error) {
+    console.error("[v0] Auth check failed:", error)
   }
 
   return (

@@ -113,9 +113,8 @@ export function GeoJSONUploadDialog({ open, onOpenChange, tenantId, tenantSlug }
   const handlePreview = () => {
     if (!parsedData) return
 
-    // Encode the parsed data as a URL parameter
-    const previewData = encodeURIComponent(JSON.stringify(parsedData))
-    router.push(`/t/${tenantSlug}/admin/map/locations/create?preview=${previewData}`)
+    sessionStorage.setItem("geojson-preview", JSON.stringify(parsedData))
+    router.push(`/t/${tenantSlug}/admin/map/locations/create?preview=true`)
     handleClose()
   }
 

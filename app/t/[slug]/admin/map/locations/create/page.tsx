@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation"
 import { createServerClient } from "@/lib/supabase/server"
-import { GoogleMapEditor } from "@/components/map/google-map-editor"
+import { GoogleMapEditorClientWrapper } from "@/components/map/google-map-editor-client"
 
 export default async function CreateLocationPage({
   params,
@@ -67,33 +67,25 @@ export default async function CreateLocationPage({
     .eq("tenant_id", tenant.id)
     .order("name")
 
-  let previewData = null
-  if (preview) {
-    try {
-      previewData = JSON.parse(decodeURIComponent(preview))
-      console.log("[v0] Preview data loaded:", previewData.summary)
-    } catch (error) {
-      console.error("[v0] Failed to parse preview data:", error)
-    }
-  }
+  const isPreview = preview === "true"
 
   return (
     <div className="container mx-auto p-6">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold">{previewData ? "Preview GeoJSON Import" : "Add Location"}</h1>
+        <h1 className="text-3xl font-bold">{isPreview ? "Preview GeoJSON Import" : "Add Location"}</h1>
         <p className="text-muted-foreground">
-          {previewData
-            ? `Previewing ${previewData.summary.totalFeatures} features from GeoJSON file`
+          {isPreview
+            ? "Review the imported features and configure location settings"
             : "Draw a facility, lot boundary, or walking path on the map"}
         </p>
       </div>
-      <GoogleMapEditor
+      <GoogleMapEditorClientWrapper
         tenantSlug={slug}
         tenantId={tenant.id}
         communityBoundary={communityBoundary}
         lots={lots || []}
         neighborhoods={neighborhoods || []}
-        previewData={previewData}
+        isPreview={isPreview}
       />
     </div>
   )

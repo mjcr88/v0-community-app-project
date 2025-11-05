@@ -291,15 +291,67 @@ function checkCoordinateSystem(coords: any): { valid: boolean; warning?: Validat
 
 import { transformGeometry } from "./coordinate-transformer"
 
+function preprocessGeometryCollection(data: any): any {
+  // Check if it's a GeometryCollection
+  if (data.type === "GeometryCollection" && Array.isArray(data.geometries)) {
+    // Check if all geometries are LineStrings
+    const allLineStrings = data.geometries.every((geom: any) => geom.type === "LineString")
+
+    if (allLineStrings && data.geometries.length > 0) {
+      console.log(
+        "[v0] Pre-processing: Converting GeometryCollection of",
+        data.geometries.length,
+        "LineStrings to Polygon",
+      )
+
+      // Combine all LineString coordinates into a single array
+      const allCoordinates: number[][] = []
+      data.geometries.forEach((geom: any) => {
+        if (geom.coordinates && Array.isArray(geom.coordinates)) {
+          allCoordinates.push(...geom.coordinates)
+        }
+      })
+
+      // Ensure the polygon is closed (first and last coordinates should be the same)
+      if (allCoordinates.length > 0) {
+        const first = allCoordinates[0]
+        const last = allCoordinates[allCoordinates.length - 1]
+        if (first[0] !== last[0] || first[1] !== last[1]) {
+          allCoordinates.push([...first])
+        }
+      }
+
+      console.log("[v0] Pre-processing: Created Polygon with", allCoordinates.length, "coordinates")
+
+      // Convert to a Feature with Polygon geometry
+      return {
+        type: "Feature",
+        geometry: {
+          type: "Polygon",
+          coordinates: [allCoordinates],
+        },
+        properties: data.properties || {
+          name: "Boundary",
+          source: "GeometryCollection",
+        },
+      }
+    }
+  }
+
+  return data
+}
+
 export function parseGeoJSON(data: any): ParsedGeoJSON {
+  const preprocessedData = preprocessGeometryCollection(data)
+
   // Normalize to FeatureCollection
   let features: GeoJSONFeature[]
   let transformed = false
   let originalSystem: string | undefined
 
-  if (data.type === "GeometryCollection") {
+  if (preprocessedData.type === "GeometryCollection") {
     // Transform each geometry in the collection
-    const transformedGeometries = data.geometries.map((geometry: any) => {
+    const transformedGeometries = preprocessedData.geometries.map((geometry: any) => {
       const result = transformGeometry(geometry)
       if (result.transformed) {
         transformed = true
@@ -322,8 +374,8 @@ export function parseGeoJSON(data: any): ParsedGeoJSON {
         },
       },
     ]
-  } else if (data.type === "Feature") {
-    const result = transformGeometry(data.geometry)
+  } else if (preprocessedData.type === "Feature") {
+    const result = transformGeometry(preprocessedData.geometry)
     if (result.transformed) {
       transformed = true
       originalSystem = result.system
@@ -331,12 +383,12 @@ export function parseGeoJSON(data: any): ParsedGeoJSON {
 
     features = [
       {
-        ...data,
+        ...preprocessedData,
         geometry: result.geometry,
       },
     ]
   } else {
-    features = data.features.map((feature: any) => {
+    features = preprocessedData.features.map((feature: any) => {
       const result = transformGeometry(feature.geometry)
       if (result.transformed) {
         transformed = true

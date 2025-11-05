@@ -116,33 +116,6 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
                 minLng = Math.min(minLng, lng)
                 maxLng = Math.max(maxLng, lng)
               })
-            } else if (feature.geometry.type === "GeometryCollection") {
-              const geometries = feature.geometry.geometries || []
-              geometries.forEach((geom: any) => {
-                if (geom.type === "LineString") {
-                  geom.coordinates.forEach((coord: number[]) => {
-                    const [lng, lat] = coord
-                    minLat = Math.min(minLat, lat)
-                    maxLat = Math.max(maxLat, lat)
-                    minLng = Math.min(minLng, lng)
-                    maxLng = Math.max(maxLng, lng)
-                  })
-                } else if (geom.type === "Point") {
-                  const [lng, lat] = geom.coordinates
-                  minLat = Math.min(minLat, lat)
-                  maxLat = Math.max(maxLat, lat)
-                  minLng = Math.min(minLng, lng)
-                  maxLng = Math.max(maxLng, lng)
-                } else if (geom.type === "Polygon") {
-                  geom.coordinates[0].forEach((coord: number[]) => {
-                    const [lng, lat] = coord
-                    minLat = Math.min(minLat, lat)
-                    maxLat = Math.max(maxLat, lat)
-                    minLng = Math.min(minLng, lng)
-                    maxLng = Math.max(maxLng, lng)
-                  })
-                }
-              })
             }
           })
 
@@ -237,35 +210,10 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
           boundaryCoordinatesArray = feature.geometry.coordinates[0].map((coord: number[]) => [coord[1], coord[0]])
         } else if (feature.geometry.type === "MultiPolygon") {
           boundaryCoordinatesArray = feature.geometry.coordinates[0][0].map((coord: number[]) => [coord[1], coord[0]])
-        } else if (feature.geometry.type === "GeometryCollection") {
-          const lineStrings = feature.geometry.geometries?.filter((geom: any) => geom.type === "LineString") || []
-
-          if (lineStrings.length === 0) {
-            toast({
-              title: "Validation Error",
-              description: "GeometryCollection must contain LineStrings.",
-              variant: "destructive",
-            })
-            setSaving(false)
-            return
-          }
-
-          console.log("[v0] Converting", lineStrings.length, "LineStrings to boundary polygon")
-
-          const allCoordinates: number[][] = []
-          lineStrings.forEach((geom: any) => {
-            geom.coordinates.forEach((coord: number[]) => {
-              allCoordinates.push(coord)
-            })
-          })
-
-          console.log("[v0] Extracted", allCoordinates.length, "coordinates from GeometryCollection")
-
-          boundaryCoordinatesArray = allCoordinates.map((coord) => [coord[1], coord[0]])
         } else {
           toast({
             title: "Validation Error",
-            description: "Boundary must be a Polygon, MultiPolygon, or GeometryCollection of LineStrings.",
+            description: "Boundary must be a Polygon or MultiPolygon.",
             variant: "destructive",
           })
           setSaving(false)
@@ -454,30 +402,6 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
                       lat: coord[1],
                       lng: coord[0],
                     }))
-
-                    const isBoundary = locationType === "boundary"
-
-                    return (
-                      <Polygon
-                        key={`preview-${index}`}
-                        paths={paths}
-                        strokeColor={isBoundary ? "#ffffff" : "#a855f7"}
-                        strokeOpacity={isBoundary ? 0.8 : 0.9}
-                        strokeWeight={isBoundary ? 2 : 1}
-                        fillColor={isBoundary ? "#ffffff" : "#a855f7"}
-                        fillOpacity={isBoundary ? 0.15 : 0.2}
-                        clickable={false}
-                      />
-                    )
-                  } else if (feature.geometry.type === "GeometryCollection") {
-                    const lineStrings =
-                      feature.geometry.geometries?.filter((geom: any) => geom.type === "LineString") || []
-
-                    if (lineStrings.length === 0) return null
-
-                    const paths = lineStrings.flatMap((geom: any) =>
-                      geom.coordinates.map((coord: number[]) => ({ lat: coord[1], lng: coord[0] })),
-                    )
 
                     const isBoundary = locationType === "boundary"
 

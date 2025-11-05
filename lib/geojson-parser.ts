@@ -294,20 +294,46 @@ import { transformGeometry } from "./coordinate-transformer"
 function preprocessGeometryCollection(data: any): any {
   // Check if it's a GeometryCollection
   if (data.type === "GeometryCollection" && Array.isArray(data.geometries)) {
-    console.log(
-      "[v0] Pre-processing: Converting GeometryCollection of",
-      data.geometries.length,
-      "geometries to FeatureCollection",
-    )
+    console.log("[v0] Pre-processing: GeometryCollection with", data.geometries.length, "geometries detected")
+
+    // Check if all geometries are LineStrings (potential boundary segments)
+    const allLineStrings = data.geometries.every((g: any) => g.type === "LineString")
+
+    // Check if geometries have individual names/properties (separate locations)
+    const hasIndividualProperties = data.geometries.some((g: any) => g.properties && g.properties.name)
+
+    // If all are LineStrings and no individual properties, treat as ONE boundary
+    if (allLineStrings && !hasIndividualProperties) {
+      console.log("[v0] Pre-processing: Detected boundary segments, combining into single Polygon")
+
+      // Combine all LineString coordinates into one Polygon
+      const allCoordinates = data.geometries.flatMap((geometry: any) => geometry.coordinates)
+
+      return {
+        type: "Feature",
+        geometry: {
+          type: "Polygon",
+          coordinates: [allCoordinates],
+        },
+        properties: data.properties || {
+          name: "Boundary",
+          source: "GeometryCollection",
+        },
+      }
+    }
+
+    // Otherwise, treat as multiple separate locations
+    console.log("[v0] Pre-processing: Converting to", data.geometries.length, "separate features")
 
     // Convert each geometry to a separate Feature
     const features = data.geometries.map((geometry: any, index: number) => ({
       type: "Feature",
       geometry: geometry,
-      properties: data.properties || {
-        name: `Location ${index + 1}`,
-        source: "GeometryCollection",
-      },
+      properties: geometry.properties ||
+        data.properties || {
+          name: `Location ${index + 1}`,
+          source: "GeometryCollection",
+        },
     }))
 
     console.log("[v0] Pre-processing: Created", features.length, "features from GeometryCollection")

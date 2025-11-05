@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { GoogleMapEditor } from "./google-map-editor"
 import type { ParsedGeoJSON } from "@/lib/geojson-parser"
 
 interface GoogleMapEditorClientWrapperProps {
@@ -21,6 +22,7 @@ export function GoogleMapEditorClientWrapper({
   isPreview,
 }: GoogleMapEditorClientWrapperProps) {
   const [previewData, setPreviewData] = useState<ParsedGeoJSON | null>(null)
+  const [isLoading, setIsLoading] = useState(isPreview)
 
   useEffect(() => {
     if (isPreview) {
@@ -30,19 +32,25 @@ export function GoogleMapEditorClientWrapper({
           const parsed = JSON.parse(storedData)
           setPreviewData(parsed)
           console.log("[v0] Preview data loaded from sessionStorage:", parsed.summary)
-          // Clear after reading
-          sessionStorage.removeItem("geojson-preview")
         } catch (error) {
           console.error("[v0] Failed to parse preview data:", error)
         }
       }
+      setIsLoading(false)
     }
   }, [isPreview])
 
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-[600px]">Loading preview...</div>
+  }
+
   return (
-    <div>
-      {/* GoogleMapEditor component will go here */}
-      <p>Preview data: {previewData ? JSON.stringify(previewData.summary) : "None"}</p>
-    </div>
+    <GoogleMapEditor
+      tenantSlug={tenantSlug}
+      tenantId={tenantId}
+      lots={lots}
+      neighborhoods={neighborhoods}
+      mode="edit"
+    />
   )
 }

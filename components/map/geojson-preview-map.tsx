@@ -116,6 +116,33 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
                 minLng = Math.min(minLng, lng)
                 maxLng = Math.max(maxLng, lng)
               })
+            } else if (feature.geometry.type === "GeometryCollection") {
+              const geometries = feature.geometry.geometries || []
+              geometries.forEach((geom: any) => {
+                if (geom.type === "LineString") {
+                  geom.coordinates.forEach((coord: number[]) => {
+                    const [lng, lat] = coord
+                    minLat = Math.min(minLat, lat)
+                    maxLat = Math.max(maxLat, lat)
+                    minLng = Math.min(minLng, lng)
+                    maxLng = Math.max(maxLng, lng)
+                  })
+                } else if (geom.type === "Point") {
+                  const [lng, lat] = geom.coordinates
+                  minLat = Math.min(minLat, lat)
+                  maxLat = Math.max(maxLat, lat)
+                  minLng = Math.min(minLng, lng)
+                  maxLng = Math.max(maxLng, lng)
+                } else if (geom.type === "Polygon") {
+                  geom.coordinates[0].forEach((coord: number[]) => {
+                    const [lng, lat] = coord
+                    minLat = Math.min(minLat, lat)
+                    maxLat = Math.max(maxLat, lat)
+                    minLng = Math.min(minLng, lng)
+                    maxLng = Math.max(maxLng, lng)
+                  })
+                }
+              })
             }
           })
 

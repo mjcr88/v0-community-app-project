@@ -178,12 +178,22 @@ export function GoogleMapEditor({
   useEffect(() => {
     if (mode === "view") {
       setSavedLocations(initialLocations)
+      console.log("[v0] View mode - initial locations:", initialLocations)
+      console.log(
+        "[v0] Boundary locations:",
+        initialLocations.filter((loc) => loc.type === "boundary"),
+      )
       return
     }
 
     const loadLocations = async () => {
       const supabase = createBrowserClient()
       const { data } = await supabase.from("locations").select("*").eq("tenant_id", tenantId)
+      console.log("[v0] Loaded locations:", data)
+      console.log(
+        "[v0] Boundary locations:",
+        data?.filter((loc) => loc.type === "boundary"),
+      )
       if (data) {
         setSavedLocations(data)
 

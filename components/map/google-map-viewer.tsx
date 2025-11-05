@@ -106,8 +106,14 @@ export function GoogleMapViewer({
         .eq("slug", tenantSlug)
         .single()
 
+      console.log("[v0] Tenant boundary data:", tenant)
+      console.log("[v0] Tenant boundary coordinates:", tenant?.map_boundary_coordinates)
+
       if (tenant?.map_boundary_coordinates) {
         setTenantBoundary(tenant.map_boundary_coordinates as Array<{ lat: number; lng: number }>)
+        console.log("[v0] Tenant boundary set:", tenant.map_boundary_coordinates)
+      } else {
+        console.log("[v0] No tenant boundary found")
       }
     }
 

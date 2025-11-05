@@ -189,24 +189,72 @@ export function GoogleMapEditor({
       if (previewData) {
         try {
           const parsed = JSON.parse(previewData)
+          console.log("[v0] Preview data loaded:", parsed)
+
           setPreviewFeatures(parsed.features || [])
           setIsImporting(true)
 
-          // Center map on first feature
           if (parsed.features && parsed.features.length > 0) {
-            const firstFeature = parsed.features[0]
-            if (firstFeature.geometry.type === "Point") {
-              setMapCenter({ lat: firstFeature.geometry.coordinates[1], lng: firstFeature.geometry.coordinates[0] })
-              setMapZoom(16)
-            } else if (firstFeature.geometry.type === "LineString" && firstFeature.geometry.coordinates.length > 0) {
-              const firstCoord = firstFeature.geometry.coordinates[0]
-              setMapCenter({ lat: firstCoord[1], lng: firstCoord[0] })
-              setMapZoom(15)
-            } else if (firstFeature.geometry.type === "Polygon" && firstFeature.geometry.coordinates[0].length > 0) {
-              const firstCoord = firstFeature.geometry.coordinates[0][0]
-              setMapCenter({ lat: firstCoord[1], lng: firstCoord[0] })
-              setMapZoom(15)
-            }
+            let minLat = Number.POSITIVE_INFINITY,
+              maxLat = Number.NEGATIVE_INFINITY
+            let minLng = Number.POSITIVE_INFINITY,
+              maxLng = Number.NEGATIVE_INFINITY
+
+            parsed.features.forEach((feature: any) => {
+              const coords = feature.geometry.coordinates
+              console.log("[v0] Feature geometry:", feature.geometry.type, "coords:", coords)
+
+              if (feature.geometry.type === "Point") {
+                const [lng, lat] = coords
+                console.log("[v0] Point coords - lng:", lng, "lat:", lat)
+                minLat = Math.min(minLat, lat)
+                maxLat = Math.max(maxLat, lat)
+                minLng = Math.min(minLng, lng)
+                maxLng = Math.max(maxLng, lng)
+              } else if (feature.geometry.type === "LineString") {
+                coords.forEach((coord: number[]) => {
+                  const [lng, lat] = coord
+                  console.log("[v0] LineString point - lng:", lng, "lat:", lat)
+                  minLat = Math.min(minLat, lat)
+                  maxLat = Math.max(maxLat, lat)
+                  minLng = Math.min(minLng, lng)
+                  maxLng = Math.max(maxLng, lng)
+                })
+              } else if (feature.geometry.type === "Polygon") {
+                coords[0].forEach((coord: number[]) => {
+                  const [lng, lat] = coord
+                  console.log("[v0] Polygon point - lng:", lng, "lat:", lat)
+                  minLat = Math.min(minLat, lat)
+                  maxLat = Math.max(maxLat, lat)
+                  minLng = Math.min(minLng, lng)
+                  maxLng = Math.max(maxLng, lng)
+                })
+              }
+            })
+
+            // Calculate center and appropriate zoom
+            const centerLat = (minLat + maxLat) / 2
+            const centerLng = (minLng + maxLng) / 2
+
+            console.log("[v0] Calculated bounds:", { minLat, maxLat, minLng, maxLng })
+            console.log("[v0] Calculated center:", { lat: centerLat, lng: centerLng })
+
+            setMapCenter({ lat: centerLat, lng: centerLng })
+
+            // Calculate zoom based on bounds
+            const latDiff = maxLat - minLat
+            const lngDiff = maxLng - minLng
+            const maxDiff = Math.max(latDiff, lngDiff)
+
+            // Rough zoom calculation (adjust as needed)
+            let zoom = 15
+            if (maxDiff > 0.1) zoom = 12
+            if (maxDiff > 0.5) zoom = 10
+            if (maxDiff > 1) zoom = 9
+            if (maxDiff > 5) zoom = 7
+
+            console.log("[v0] Setting zoom to:", zoom, "based on maxDiff:", maxDiff)
+            setMapZoom(zoom)
           }
 
           toast({

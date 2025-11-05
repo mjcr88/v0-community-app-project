@@ -178,6 +178,12 @@ export async function deleteLocation(locationId: string, tenantId: string) {
     throw new Error("Unauthorized")
   }
 
+  const { data: location } = await supabase.from("locations").select("type").eq("id", locationId).single()
+
+  if (location?.type === "boundary") {
+    await supabase.from("tenants").update({ map_boundary_coordinates: null }).eq("id", tenantId)
+  }
+
   await supabase.from("lots").update({ location_id: null }).eq("location_id", locationId)
   await supabase.from("neighborhoods").update({ location_id: null }).eq("location_id", locationId)
 

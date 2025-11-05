@@ -47,15 +47,6 @@ export default async function TenantAdminDashboard({
 
   const neighborhoodIdList = neighborhoodIds?.map((n) => n.id) || []
 
-  const { count: lotsCount } = await supabase
-    .from("lots")
-    .select("*", { count: "exact", head: true })
-    .in("neighborhood_id", neighborhoodIdList)
-
-  const { data: lotIds } = await supabase.from("lots").select("id").in("neighborhood_id", neighborhoodIdList)
-
-  const lotIdList = lotIds?.map((l) => l.id) || []
-
   const { count: residentsCount } = await supabase
     .from("users")
     .select("*", { count: "exact", head: true })
@@ -83,6 +74,60 @@ export default async function TenantAdminDashboard({
     .from("interests")
     .select("*", { count: "exact", head: true })
     .eq("tenant_id", tenant?.id || "")
+
+  const { count: facilitiesCount } = await supabase
+    .from("locations")
+    .select("*", { count: "exact", head: true })
+    .eq("tenant_id", tenant?.id || "")
+    .eq("type", "facility")
+
+  const { count: lotsCount } = await supabase
+    .from("locations")
+    .select("*", { count: "exact", head: true })
+    .eq("tenant_id", tenant?.id || "")
+    .eq("type", "lot")
+
+  const { count: walkingPathsCount } = await supabase
+    .from("locations")
+    .select("*", { count: "exact", head: true })
+    .eq("tenant_id", tenant?.id || "")
+    .eq("type", "walking_path")
+
+  const { count: protectionZonesCount } = await supabase
+    .from("locations")
+    .select("*", { count: "exact", head: true })
+    .eq("tenant_id", tenant?.id || "")
+    .eq("type", "protection_zone")
+
+  const { count: easementsCount } = await supabase
+    .from("locations")
+    .select("*", { count: "exact", head: true })
+    .eq("tenant_id", tenant?.id || "")
+    .eq("type", "easement")
+
+  const { count: playgroundsCount } = await supabase
+    .from("locations")
+    .select("*", { count: "exact", head: true })
+    .eq("tenant_id", tenant?.id || "")
+    .eq("type", "playground")
+
+  const { count: publicStreetsCount } = await supabase
+    .from("locations")
+    .select("*", { count: "exact", head: true })
+    .eq("tenant_id", tenant?.id || "")
+    .eq("type", "public_street")
+
+  const { count: greenAreasCount } = await supabase
+    .from("locations")
+    .select("*", { count: "exact", head: true })
+    .eq("tenant_id", tenant?.id || "")
+    .eq("type", "green_area")
+
+  const { count: recreationalZonesCount } = await supabase
+    .from("locations")
+    .select("*", { count: "exact", head: true })
+    .eq("tenant_id", tenant?.id || "")
+    .eq("type", "recreational_zone")
 
   return (
     <div className="space-y-6">
@@ -194,6 +239,123 @@ export default async function TenantAdminDashboard({
             </CardContent>
           </Card>
         )}
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Facilities</CardTitle>
+            <CardDescription>Community amenities</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <p className="text-3xl font-bold">{facilitiesCount || 0}</p>
+              <p className="text-sm text-muted-foreground">Total facilities</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Lots</CardTitle>
+            <CardDescription>Property boundaries</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <p className="text-3xl font-bold">{lotsCount || 0}</p>
+              <p className="text-sm text-muted-foreground">Total lots</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Walking Paths</CardTitle>
+            <CardDescription>Community trails</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <p className="text-3xl font-bold">{walkingPathsCount || 0}</p>
+              <p className="text-sm text-muted-foreground">Total paths</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Protection Zones</CardTitle>
+            <CardDescription>Protected areas</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <p className="text-3xl font-bold">{protectionZonesCount || 0}</p>
+              <p className="text-sm text-muted-foreground">Total zones</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Easements</CardTitle>
+            <CardDescription>Easement areas</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <p className="text-3xl font-bold">{easementsCount || 0}</p>
+              <p className="text-sm text-muted-foreground">Total easements</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Playgrounds</CardTitle>
+            <CardDescription>Play areas</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <p className="text-3xl font-bold">{playgroundsCount || 0}</p>
+              <p className="text-sm text-muted-foreground">Total playgrounds</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Public Streets</CardTitle>
+            <CardDescription>Street network</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <p className="text-3xl font-bold">{publicStreetsCount || 0}</p>
+              <p className="text-sm text-muted-foreground">Total streets</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Green Areas</CardTitle>
+            <CardDescription>Green spaces</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <p className="text-3xl font-bold">{greenAreasCount || 0}</p>
+              <p className="text-sm text-muted-foreground">Total green areas</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Recreational Zones</CardTitle>
+            <CardDescription>Recreation areas</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <p className="text-3xl font-bold">{recreationalZonesCount || 0}</p>
+              <p className="text-sm text-muted-foreground">Total zones</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )

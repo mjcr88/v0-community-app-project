@@ -44,90 +44,103 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
   >("facility")
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [boundaryExists, setBoundaryExists] = useState(false)
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""
   const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAP_ID || "DEMO_MAP_ID"
 
   useEffect(() => {
-    const previewData = sessionStorage.getItem("geojson-preview")
-    if (!previewData) {
-      toast({
-        title: "No Preview Data",
-        description: "Redirecting to map...",
-        variant: "destructive",
-      })
-      router.push(`/t/${tenantSlug}/admin/map`)
-      return
-    }
-
-    try {
-      const parsed = JSON.parse(previewData)
-      setPreviewFeatures(parsed.features || [])
-
-      // Calculate bounds and center
-      if (parsed.features && parsed.features.length > 0) {
-        let minLat = Number.POSITIVE_INFINITY
-        let maxLat = Number.NEGATIVE_INFINITY
-        let minLng = Number.POSITIVE_INFINITY
-        let maxLng = Number.NEGATIVE_INFINITY
-
-        parsed.features.forEach((feature: any) => {
-          const coords = feature.geometry.coordinates
-
-          if (feature.geometry.type === "Point") {
-            const [lng, lat] = coords
-            minLat = Math.min(minLat, lat)
-            maxLat = Math.max(maxLat, lat)
-            minLng = Math.min(minLng, lng)
-            maxLng = Math.max(maxLng, lng)
-          } else if (feature.geometry.type === "LineString") {
-            coords.forEach((coord: number[]) => {
-              const [lng, lat] = coord
-              minLat = Math.min(minLat, lat)
-              maxLat = Math.max(maxLat, lat)
-              minLng = Math.min(minLng, lng)
-              maxLng = Math.max(maxLng, lng)
-            })
-          } else if (feature.geometry.type === "Polygon") {
-            coords[0].forEach((coord: number[]) => {
-              const [lng, lat] = coord
-              minLat = Math.min(minLat, lat)
-              maxLat = Math.max(maxLat, lat)
-              minLng = Math.min(minLng, lng)
-              maxLng = Math.max(maxLng, lng)
-            })
-          }
+    const loadData = async () => {
+      const previewData = sessionStorage.getItem("geojson-preview")
+      if (!previewData) {
+        toast({
+          title: "No Preview Data",
+          description: "Redirecting to map...",
+          variant: "destructive",
         })
-
-        const centerLat = (minLat + maxLat) / 2
-        const centerLng = (minLng + maxLng) / 2
-        setMapCenter({ lat: centerLat, lng: centerLng })
-
-        // Calculate zoom
-        const latDiff = maxLat - minLat
-        const lngDiff = maxLng - minLng
-        const maxDiff = Math.max(latDiff, lngDiff)
-
-        let zoom = 15
-        if (maxDiff > 0.1) zoom = 12
-        if (maxDiff > 0.5) zoom = 10
-        if (maxDiff > 1) zoom = 9
-        if (maxDiff > 5) zoom = 7
-
-        setMapZoom(zoom)
+        router.push(`/t/${tenantSlug}/admin/map`)
+        return
       }
 
-      setLoading(false)
-    } catch (error) {
-      console.error("Error loading preview data:", error)
-      toast({
-        title: "Error",
-        description: "Failed to load preview data",
-        variant: "destructive",
-      })
-      router.push(`/t/${tenantSlug}/admin/map`)
+      try {
+        const parsed = JSON.parse(previewData)
+        setPreviewFeatures(parsed.features || [])
+
+        const supabase = createBrowserClient()
+        const { data: existingBoundary } = await supabase
+          .from("locations")
+          .select("id")
+          .eq("tenant_id", tenantId)
+          .eq("type", "boundary")
+          .maybeSingle()
+
+        setBoundaryExists(!!existingBoundary)
+
+        if (parsed.features && parsed.features.length > 0) {
+          let minLat = Number.POSITIVE_INFINITY
+          let maxLat = Number.NEGATIVE_INFINITY
+          let minLng = Number.POSITIVE_INFINITY
+          let maxLng = Number.NEGATIVE_INFINITY
+
+          parsed.features.forEach((feature: any) => {
+            const coords = feature.geometry.coordinates
+
+            if (feature.geometry.type === "Point") {
+              const [lng, lat] = coords
+              minLat = Math.min(minLat, lat)
+              maxLat = Math.max(maxLat, lat)
+              minLng = Math.min(minLng, lng)
+              maxLng = Math.max(maxLng, lng)
+            } else if (feature.geometry.type === "LineString") {
+              coords.forEach((coord: number[]) => {
+                const [lng, lat] = coord
+                minLat = Math.min(minLat, lat)
+                maxLat = Math.max(maxLat, lat)
+                minLng = Math.min(minLng, lng)
+                maxLng = Math.max(maxLng, lng)
+              })
+            } else if (feature.geometry.type === "Polygon") {
+              coords[0].forEach((coord: number[]) => {
+                const [lng, lat] = coord
+                minLat = Math.min(minLat, lat)
+                maxLat = Math.max(maxLat, lat)
+                minLng = Math.min(minLng, lng)
+                maxLng = Math.max(maxLng, lng)
+              })
+            }
+          })
+
+          const centerLat = (minLat + maxLat) / 2
+          const centerLng = (minLng + maxLng) / 2
+          setMapCenter({ lat: centerLat, lng: centerLng })
+
+          const latDiff = maxLat - minLat
+          const lngDiff = maxLng - minLng
+          const maxDiff = Math.max(latDiff, lngDiff)
+
+          let zoom = 15
+          if (maxDiff > 0.1) zoom = 12
+          if (maxDiff > 0.5) zoom = 10
+          if (maxDiff > 1) zoom = 9
+          if (maxDiff > 5) zoom = 7
+
+          setMapZoom(zoom)
+        }
+
+        setLoading(false)
+      } catch (error) {
+        console.error("Error loading preview data:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load preview data",
+          variant: "destructive",
+        })
+        router.push(`/t/${tenantSlug}/admin/map`)
+      }
     }
-  }, [tenantSlug, router, toast])
+
+    loadData()
+  }, [tenantSlug, tenantId, router, toast])
 
   const locateUser = async () => {
     try {
@@ -153,41 +166,101 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
       return
     }
 
+    if (locationType === "boundary" && boundaryExists) {
+      toast({
+        title: "Validation Error",
+        description: "A boundary already exists. Please delete the existing boundary first.",
+        variant: "destructive",
+      })
+      return
+    }
+
     setSaving(true)
 
     try {
       const supabase = createBrowserClient()
 
-      for (const feature of previewFeatures) {
-        const locationData: any = {
+      if (locationType === "boundary") {
+        if (previewFeatures.length > 1) {
+          toast({
+            title: "Validation Error",
+            description: "Only one boundary can be imported at a time.",
+            variant: "destructive",
+          })
+          setSaving(false)
+          return
+        }
+
+        const feature = previewFeatures[0]
+        if (feature.geometry.type !== "Polygon") {
+          toast({
+            title: "Validation Error",
+            description: "Boundary must be a polygon.",
+            variant: "destructive",
+          })
+          setSaving(false)
+          return
+        }
+
+        const boundaryCoordinates = feature.geometry.coordinates[0].map((coord: number[]) => ({
+          lat: coord[1],
+          lng: coord[0],
+        }))
+
+        const locationData = {
           tenant_id: tenantId,
-          name: feature.properties?.name || `Imported ${feature.geometry.type}`,
-          type: locationType,
+          name: feature.properties?.name || "Community Boundary",
+          type: "boundary",
           description: feature.properties?.description || null,
+          boundary_coordinates: feature.geometry.coordinates[0].map((coord: number[]) => [coord[1], coord[0]]),
         }
 
-        if (feature.geometry.type === "Point") {
-          locationData.coordinates = {
-            lat: feature.geometry.coordinates[1],
-            lng: feature.geometry.coordinates[0],
+        const { error: locationError } = await supabase.from("locations").insert(locationData)
+        if (locationError) throw locationError
+
+        const { error: tenantError } = await supabase
+          .from("tenants")
+          .update({ map_boundary_coordinates: boundaryCoordinates })
+          .eq("id", tenantId)
+
+        if (tenantError) throw tenantError
+
+        toast({
+          title: "Success",
+          description: "Community boundary created successfully!",
+        })
+      } else {
+        for (const feature of previewFeatures) {
+          const locationData: any = {
+            tenant_id: tenantId,
+            name: feature.properties?.name || `Imported ${feature.geometry.type}`,
+            type: locationType,
+            description: feature.properties?.description || null,
           }
-        } else if (feature.geometry.type === "LineString") {
-          locationData.path_coordinates = feature.geometry.coordinates.map((coord: number[]) => [coord[1], coord[0]])
-        } else if (feature.geometry.type === "Polygon") {
-          locationData.boundary_coordinates = feature.geometry.coordinates[0].map((coord: number[]) => [
-            coord[1],
-            coord[0],
-          ])
+
+          if (feature.geometry.type === "Point") {
+            locationData.coordinates = {
+              lat: feature.geometry.coordinates[1],
+              lng: feature.geometry.coordinates[0],
+            }
+          } else if (feature.geometry.type === "LineString") {
+            locationData.path_coordinates = feature.geometry.coordinates.map((coord: number[]) => [coord[1], coord[0]])
+          } else if (feature.geometry.type === "Polygon") {
+            locationData.boundary_coordinates = feature.geometry.coordinates[0].map((coord: number[]) => [
+              coord[1],
+              coord[0],
+            ])
+          }
+
+          const { error } = await supabase.from("locations").insert(locationData)
+          if (error) throw error
         }
 
-        const { error } = await supabase.from("locations").insert(locationData)
-        if (error) throw error
+        toast({
+          title: "Success",
+          description: `${previewFeatures.length} location(s) created successfully!`,
+        })
       }
-
-      toast({
-        title: "Success",
-        description: `${previewFeatures.length} location(s) created successfully!`,
-      })
 
       sessionStorage.removeItem("geojson-preview")
       router.push(`/t/${tenantSlug}/admin/map`)
@@ -295,7 +368,6 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
               </Map>
             </APIProvider>
 
-            {/* Zoom Controls */}
             <div className="absolute left-3 top-3 flex flex-col gap-2">
               <Button
                 variant="secondary"
@@ -315,7 +387,6 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
               </Button>
             </div>
 
-            {/* Locate Button */}
             <div className="absolute bottom-3 right-3">
               <Button variant="secondary" size="icon" onClick={locateUser} className="h-10 w-10 shadow-lg">
                 <Locate className="h-5 w-5" />
@@ -325,7 +396,6 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
         </CardContent>
       </Card>
 
-      {/* Form */}
       <Card>
         <CardContent className="p-6 space-y-4">
           <div>
@@ -342,6 +412,17 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
             </AlertDescription>
           </Alert>
 
+          {boundaryExists && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Boundary Exists</AlertTitle>
+              <AlertDescription>
+                A community boundary already exists. Delete the existing boundary from the map editor before importing a
+                new one.
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="location-type">Location Type *</Label>
             <Select value={locationType} onValueChange={(v) => setLocationType(v as any)}>
@@ -353,7 +434,9 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
                 <SelectItem value="lot">Lot</SelectItem>
                 <SelectItem value="neighborhood">Neighborhood</SelectItem>
                 <SelectItem value="walking_path">Walking Path</SelectItem>
-                <SelectItem value="boundary">Boundary</SelectItem>
+                <SelectItem value="boundary" disabled={boundaryExists}>
+                  Boundary {boundaryExists && "(Already exists)"}
+                </SelectItem>
                 <SelectItem value="protection_zone">Protection Zone</SelectItem>
                 <SelectItem value="easement">Easement</SelectItem>
                 <SelectItem value="playground">Playground</SelectItem>

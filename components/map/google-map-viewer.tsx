@@ -17,11 +17,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu"
+import { createBrowserClient } from "@/utils/supabase-client"
 
 interface Location {
   id: string
   name: string
-  type: "facility" | "lot" | "walking_path" | "neighborhood"
+  type: "facility" | "lot" | "walking_path" | "neighborhood" | "boundary"
   coordinates?: { lat: number; lng: number }
   boundary_coordinates?: Array<[number, number]>
   path_coordinates?: Array<[number, number]>
@@ -58,6 +59,8 @@ export function GoogleMapViewer({
   const [showLots, setShowLots] = useState(true)
   const [showWalkingPaths, setShowWalkingPaths] = useState(true)
   const [showNeighborhoods, setShowNeighborhoods] = useState(true)
+  const [showBoundary, setShowBoundary] = useState(true)
+  const [tenantBoundary, setTenantBoundary] = useState<Array<{ lat: number; lng: number }> | null>(null)
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""
 
@@ -94,6 +97,23 @@ export function GoogleMapViewer({
     }
   }, []) // Only run once on mount
 
+  useEffect(() => {
+    const loadTenantBoundary = async () => {
+      const supabase = createBrowserClient()
+      const { data: tenant } = await supabase
+        .from("tenants")
+        .select("map_boundary_coordinates")
+        .eq("slug", tenantSlug)
+        .single()
+
+      if (tenant?.map_boundary_coordinates) {
+        setTenantBoundary(tenant.map_boundary_coordinates as Array<{ lat: number; lng: number }>)
+      }
+    }
+
+    loadTenantBoundary()
+  }, [tenantSlug])
+
   const facilityMarkers = initialLocations.filter((loc) => showFacilities && loc.type === "facility" && loc.coordinates)
   const facilityPolygons = initialLocations.filter(
     (loc) => showFacilities && loc.type === "facility" && loc.boundary_coordinates,
@@ -104,6 +124,9 @@ export function GoogleMapViewer({
   )
   const neighborhoodPolygons = initialLocations.filter(
     (loc) => showNeighborhoods && loc.type === "neighborhood" && loc.boundary_coordinates,
+  )
+  const boundaryLocations = initialLocations.filter(
+    (loc) => showBoundary && loc.type === "boundary" && loc.boundary_coordinates,
   )
 
   console.log("[v0] Filtered neighborhoods:", neighborhoodPolygons.length)
@@ -139,6 +162,34 @@ export function GoogleMapViewer({
           onZoomChanged={(e) => setZoom(e.detail.zoom)}
           onClick={handleMapClick}
         >
+          {showBoundary && tenantBoundary && (
+            <Polygon
+              paths={tenantBoundary}
+              strokeColor="#ffffff"
+              strokeOpacity={0.8}
+              strokeWeight={2}
+              fillColor="#ffffff"
+              fillOpacity={0.15}
+              clickable={false}
+            />
+          )}
+
+          {boundaryLocations.map((location) => {
+            const paths = location.boundary_coordinates!.map((coord) => ({ lat: coord[0], lng: coord[1] }))
+            return (
+              <Polygon
+                key={location.id}
+                paths={paths}
+                strokeColor="#ffffff"
+                strokeOpacity={0.8}
+                strokeWeight={2}
+                fillColor="#ffffff"
+                fillOpacity={0.15}
+                onClick={() => handleLocationClick(location)}
+              />
+            )
+          })}
+
           {neighborhoodPolygons.map((location) => {
             const paths = location.boundary_coordinates!.map((coord) => ({ lat: coord[0], lng: coord[1] }))
             const isHighlighted = highlightedLocationId === location.id
@@ -258,6 +309,9 @@ export function GoogleMapViewer({
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Show on Map</DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuCheckboxItem checked={showBoundary} onCheckedChange={setShowBoundary}>
+              Boundary
+            </DropdownMenuCheckboxItem>
             <DropdownMenuCheckboxItem checked={showNeighborhoods} onCheckedChange={setShowNeighborhoods}>
               Neighborhoods
             </DropdownMenuCheckboxItem>

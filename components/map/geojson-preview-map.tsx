@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { geolocate } from "@/lib/geolocate"
+import { createLocation, updateTenantBoundary } from "@/lib/location-utils"
 
 type LatLng = { lat: number; lng: number }
 
@@ -190,12 +191,82 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
 
       if (locationType === "boundary") {
         if (previewFeatures.length > 1) {
-          toast({
-            title: "Validation Error",
-            description: "Only one boundary can be imported at a time.",
-            variant: "destructive",
+          const allLineStrings = previewFeatures.every((f) => f.geometry.type === "LineString")
+
+          if (!allLineStrings) {
+            toast({
+              title: "Validation Error",
+              description: "Only one boundary can be imported at a time.",
+              variant: "destructive",
+            })
+            setSaving(false)
+            return
+          }
+
+          // Combine all LineStrings into a single boundary polygon
+          console.log("[v0] Combining", previewFeatures.length, "LineStrings into boundary")
+
+          const allCoordinates: number[][] = []
+          previewFeatures.forEach((feature) => {
+            if (feature.geometry.type === "LineString") {
+              feature.geometry.coordinates.forEach((coord: number[]) => {
+                allCoordinates.push(coord)
+              })
+            }
           })
-          setSaving(false)
+
+          console.log("[v0] Total coordinates extracted:", allCoordinates.length)
+
+          const boundaryCoordinates = allCoordinates.map((coord) => ({
+            lat: coord[1],
+            lng: coord[0],
+          }))
+          const boundaryCoordinatesArray = allCoordinates.map((coord) => [coord[1], coord[0]])
+
+          console.log("[v0] Saving boundary with", boundaryCoordinates.length, "coordinates")
+
+          // Save boundary location
+          const locationResult = await createLocation({
+            tenant_id: tenantId,
+            name: "Community Boundary",
+            type: "boundary",
+            boundary_coordinates: boundaryCoordinatesArray,
+          })
+
+          if (!locationResult.success) {
+            toast({
+              title: "Error",
+              description: locationResult.error || "Failed to create boundary location",
+              variant: "destructive",
+            })
+            setSaving(false)
+            return
+          }
+
+          console.log("[v0] Boundary location created, updating tenant...")
+
+          // Update tenant boundary
+          const tenantResult = await updateTenantBoundary(tenantId, boundaryCoordinatesArray)
+
+          if (!tenantResult.success) {
+            toast({
+              title: "Error",
+              description: tenantResult.error || "Failed to update tenant boundary",
+              variant: "destructive",
+            })
+            setSaving(false)
+            return
+          }
+
+          console.log("[v0] Tenant boundary updated successfully")
+
+          toast({
+            title: "Success",
+            description: "Boundary imported successfully",
+          })
+
+          sessionStorage.removeItem("geojson-preview")
+          router.push(`/t/${tenantSlug}/admin/map`)
           return
         }
 

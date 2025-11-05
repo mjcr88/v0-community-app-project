@@ -12,7 +12,9 @@ import { AlertCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { geolocate } from "@/lib/geolocate"
-import { APIProvider, Map, Marker, Polygon, Polyline } from "@vis.gl/react-google-maps"
+import { APIProvider, Map, Marker } from "@vis.gl/react-google-maps"
+import { Polygon } from "./polygon"
+import { Polyline } from "./polyline"
 import { Button } from "@/components/ui/button"
 
 type DrawingMode = "marker" | "polygon" | "polyline" | null

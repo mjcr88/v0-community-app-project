@@ -138,6 +138,7 @@ export function GoogleMapEditor({
 
   const [previewFeatures, setPreviewFeatures] = useState<any[]>([])
   const [isImporting, setIsImporting] = useState(false)
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false)
 
   // State for toggling visibility of different location types on the map
   const [showFacilities, setShowFacilities] = useState(true)
@@ -185,6 +186,8 @@ export function GoogleMapEditor({
 
   useEffect(() => {
     if (isPreviewMode) {
+      setIsLoadingPreview(true)
+
       const previewData = sessionStorage.getItem("geojson-preview")
       if (previewData) {
         try {
@@ -287,7 +290,11 @@ export function GoogleMapEditor({
             description: "Failed to load preview data",
             variant: "destructive",
           })
+        } finally {
+          setIsLoadingPreview(false)
         }
+      } else {
+        setIsLoadingPreview(false)
       }
     }
   }, [isPreviewMode, toast])
@@ -947,214 +954,229 @@ export function GoogleMapEditor({
       <Card className={mode === "view" ? "h-full" : "min-h-[600px]"}>
         <CardContent className="p-1.5 h-full">
           <div className="relative h-full w-full overflow-hidden rounded-lg">
-            <APIProvider apiKey={apiKey}>
-              <Map
-                mapId={process.env.NEXT_PUBLIC_GOOGLE_MAP_ID || "DEMO_MAP_ID"}
-                center={mapCenter}
-                zoom={mapZoom}
-                mapTypeId={mapType}
-                gestureHandling="greedy"
-                disableDefaultUI={true}
-                clickableIcons={false}
-                onCenterChanged={(e) => setMapCenter(e.detail.center)}
-                onZoomChanged={(e) => setMapZoom(e.detail.zoom)}
-              >
-                <MapClickHandler drawingMode={drawingMode} onMapClick={handleMapClick} />
+            {isLoadingPreview ? (
+              <div className="flex items-center justify-center h-full bg-muted">
+                <div className="text-center space-y-4">
+                  <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
+                  <p className="text-sm text-muted-foreground">Loading preview data...</p>
+                </div>
+              </div>
+            ) : (
+              <APIProvider apiKey={apiKey}>
+                <Map
+                  mapId={process.env.NEXT_PUBLIC_GOOGLE_MAP_ID || "DEMO_MAP_ID"}
+                  center={mapCenter}
+                  zoom={mapZoom}
+                  mapTypeId={mapType}
+                  gestureHandling="greedy"
+                  disableDefaultUI={true}
+                  clickableIcons={false}
+                  onCenterChanged={(e) => setMapCenter(e.detail.center)}
+                  onZoomChanged={(e) => setMapZoom(e.detail.zoom)}
+                >
+                  <MapClickHandler drawingMode={drawingMode} onMapClick={handleMapClick} />
 
-                {mode === "edit" && markerPosition && <Marker position={markerPosition} />}
+                  {mode === "edit" && markerPosition && <Marker position={markerPosition} />}
 
-                {mode === "edit" && polygonPoints.length === 1 && <Marker position={polygonPoints[0]} />}
+                  {mode === "edit" && polygonPoints.length === 1 && <Marker position={polygonPoints[0]} />}
 
-                {mode === "edit" && polygonPoints.length === 2 && (
-                  <>
-                    <Marker position={polygonPoints[0]} />
-                    <Marker position={polygonPoints[1]} />
-                    <Polyline
-                      path={polygonPoints}
+                  {mode === "edit" && polygonPoints.length === 2 && (
+                    <>
+                      <Marker position={polygonPoints[0]} />
+                      <Marker position={polygonPoints[1]} />
+                      <Polyline
+                        path={polygonPoints}
+                        strokeColor="#ef4444"
+                        strokeOpacity={0.8}
+                        strokeWeight={2}
+                        clickable={false}
+                      />
+                    </>
+                  )}
+
+                  {mode === "edit" && polygonPoints.length >= 3 && (
+                    <Polygon
+                      key={`drawing-polygon-${polygonPoints.length}`}
+                      paths={polygonPoints}
                       strokeColor="#ef4444"
                       strokeOpacity={0.8}
                       strokeWeight={2}
+                      fillColor="#ef4444"
+                      fillOpacity={0.2}
                       clickable={false}
                     />
-                  </>
-                )}
+                  )}
 
-                {mode === "edit" && polygonPoints.length >= 3 && (
-                  <Polygon
-                    key={`drawing-polygon-${polygonPoints.length}`}
-                    paths={polygonPoints}
-                    strokeColor="#ef4444"
-                    strokeOpacity={0.8}
-                    strokeWeight={2}
-                    fillColor="#ef4444"
-                    fillOpacity={0.2}
-                    clickable={false}
-                  />
-                )}
+                  {mode === "edit" && polylinePoints.length === 1 && <Marker position={polylinePoints[0]} />}
 
-                {mode === "edit" && polylinePoints.length === 1 && <Marker position={polylinePoints[0]} />}
+                  {mode === "edit" && polylinePoints.length >= 2 && (
+                    <Polyline
+                      key={`drawing-polyline-${polylinePoints.length}`}
+                      path={polylinePoints}
+                      strokeColor="#f59e0b"
+                      strokeOpacity={0.8}
+                      strokeWeight={3}
+                      clickable={false}
+                    />
+                  )}
 
-                {mode === "edit" && polylinePoints.length >= 2 && (
-                  <Polyline
-                    key={`drawing-polyline-${polylinePoints.length}`}
-                    path={polylinePoints}
-                    strokeColor="#f59e0b"
-                    strokeOpacity={0.8}
-                    strokeWeight={3}
-                    clickable={false}
-                  />
-                )}
+                  {isImporting &&
+                    previewFeatures.map((feature, index) => {
+                      if (feature.geometry.type === "Point") {
+                        return (
+                          <Marker
+                            key={`preview-${index}`}
+                            position={{
+                              lat: feature.geometry.coordinates[1],
+                              lng: feature.geometry.coordinates[0],
+                            }}
+                          />
+                        )
+                      } else if (feature.geometry.type === "LineString") {
+                        const path = feature.geometry.coordinates.map((coord: number[]) => ({
+                          lat: coord[1],
+                          lng: coord[0],
+                        }))
+                        return (
+                          <Polyline
+                            key={`preview-${index}`}
+                            path={path}
+                            strokeColor="#a855f7"
+                            strokeOpacity={0.9}
+                            strokeWeight={4}
+                            clickable={false}
+                          />
+                        )
+                      } else if (feature.geometry.type === "Polygon") {
+                        const paths = feature.geometry.coordinates[0].map((coord: number[]) => ({
+                          lat: coord[1],
+                          lng: coord[0],
+                        }))
+                        return (
+                          <Polygon
+                            key={`preview-${index}`}
+                            paths={paths}
+                            strokeColor="#a855f7"
+                            strokeOpacity={0.9}
+                            strokeWeight={3}
+                            fillColor="#a855f7"
+                            fillOpacity={0.3}
+                            clickable={false}
+                          />
+                        )
+                      }
+                      return null
+                    })}
 
-                {isImporting &&
-                  previewFeatures.map((feature, index) => {
-                    if (feature.geometry.type === "Point") {
+                  {filteredLocations.map((location) => {
+                    const isEditing = mode === "edit" && editingLocationId === location.id
+                    const isHovered = hoveredLocationId === location.id
+                    const isHighlightedFromUrl = mode === "edit" && editLocationIdFromUrl === location.id
+                    const isHighlightedInView = mode === "view" && highlightedLocationId === location.id
+
+                    if (location.type === "facility" && location.coordinates) {
                       return (
                         <Marker
-                          key={`preview-${index}`}
-                          position={{
-                            lat: feature.geometry.coordinates[1],
-                            lng: feature.geometry.coordinates[0],
-                          }}
+                          key={`saved-${location.id}`}
+                          position={location.coordinates}
+                          onClick={() => handleLocationClick(location)}
                         />
                       )
-                    } else if (feature.geometry.type === "LineString") {
-                      const path = feature.geometry.coordinates.map((coord: number[]) => ({
-                        lat: coord[1],
-                        lng: coord[0],
-                      }))
-                      return (
-                        <Polyline
-                          key={`preview-${index}`}
-                          path={path}
-                          strokeColor="#a855f7"
-                          strokeOpacity={0.9}
-                          strokeWeight={4}
-                          clickable={false}
-                        />
-                      )
-                    } else if (feature.geometry.type === "Polygon") {
-                      const paths = feature.geometry.coordinates[0].map((coord: number[]) => ({
-                        lat: coord[1],
-                        lng: coord[0],
+                    }
+                    if (
+                      (location.type === "facility" || location.type === "neighborhood") &&
+                      location.boundary_coordinates
+                    ) {
+                      const paths = location.boundary_coordinates.map((coord: [number, number]) => ({
+                        lat: coord[0],
+                        lng: coord[1],
                       }))
                       return (
                         <Polygon
-                          key={`preview-${index}`}
+                          key={`saved-${location.id}`}
                           paths={paths}
-                          strokeColor="#a855f7"
-                          strokeOpacity={0.9}
-                          strokeWeight={3}
-                          fillColor="#a855f7"
-                          fillOpacity={0.3}
-                          clickable={false}
+                          strokeColor={
+                            isHighlightedFromUrl || isHighlightedInView
+                              ? "#ef4444"
+                              : isEditing
+                                ? "#10b981"
+                                : location.type === "neighborhood"
+                                  ? "#a855f7"
+                                  : "#fb923c"
+                          }
+                          strokeOpacity={isHovered ? 1 : 0.7}
+                          strokeWeight={
+                            isHighlightedFromUrl || isHighlightedInView || isEditing ? 3 : isHovered ? 3 : 2
+                          }
+                          fillColor={
+                            isHighlightedFromUrl || isHighlightedInView
+                              ? "#fca5a5"
+                              : isEditing
+                                ? "#6ee7b7"
+                                : location.type === "neighborhood"
+                                  ? "#d8b4fe"
+                                  : "#fdba74"
+                          }
+                          fillOpacity={isHovered ? 0.4 : 0.25}
+                          onClick={() => handleLocationClick(location)}
+                          onMouseOver={() => setHoveredLocationId(location.id)}
+                          onMouseOut={() => setHoveredLocationId(null)}
+                        />
+                      )
+                    }
+                    if (location.type === "lot" && location.boundary_coordinates) {
+                      const paths = location.boundary_coordinates.map((coord: [number, number]) => ({
+                        lat: coord[0],
+                        lng: coord[1],
+                      }))
+                      return (
+                        <Polygon
+                          key={`saved-${location.id}`}
+                          paths={paths}
+                          strokeColor={
+                            isHighlightedFromUrl || isHighlightedInView ? "#ef4444" : isEditing ? "#10b981" : "#60a5fa"
+                          }
+                          strokeOpacity={isHovered ? 1 : 0.7}
+                          strokeWeight={
+                            isHighlightedFromUrl || isHighlightedInView || isEditing ? 3 : isHovered ? 3 : 2
+                          }
+                          fillColor={
+                            isHighlightedFromUrl || isHighlightedInView ? "#fca5a5" : isEditing ? "#6ee7b7" : "#93c5fd"
+                          }
+                          fillOpacity={isHovered ? 0.4 : 0.25}
+                          onClick={() => handleLocationClick(location)}
+                          onMouseOver={() => setHoveredLocationId(location.id)}
+                          onMouseOut={() => setHoveredLocationId(null)}
+                        />
+                      )
+                    }
+                    if (location.type === "walking_path" && location.path_coordinates) {
+                      const path = location.path_coordinates.map((coord: [number, number]) => ({
+                        lat: coord[0],
+                        lng: coord[1],
+                      }))
+                      return (
+                        <Polyline
+                          key={`saved-${location.id}`}
+                          path={path}
+                          strokeColor={
+                            isHighlightedFromUrl || isHighlightedInView ? "#ef4444" : isEditing ? "#10b981" : "#3b82f6"
+                          }
+                          strokeOpacity={isHovered ? 1 : 0.8}
+                          strokeWeight={
+                            isHighlightedFromUrl || isHighlightedInView || isEditing ? 4 : isHovered ? 5 : 3
+                          }
+                          onClick={() => handleLocationClick(location)}
+                          onMouseOver={() => setHoveredLocationId(location.id)}
+                          onMouseOut={() => setHoveredLocationId(null)}
                         />
                       )
                     }
                     return null
                   })}
-
-                {filteredLocations.map((location) => {
-                  const isEditing = mode === "edit" && editingLocationId === location.id
-                  const isHovered = hoveredLocationId === location.id
-                  const isHighlightedFromUrl = mode === "edit" && editLocationIdFromUrl === location.id
-                  const isHighlightedInView = mode === "view" && highlightedLocationId === location.id
-
-                  if (location.type === "facility" && location.coordinates) {
-                    return (
-                      <Marker
-                        key={`saved-${location.id}`}
-                        position={location.coordinates}
-                        onClick={() => handleLocationClick(location)}
-                      />
-                    )
-                  }
-                  if (
-                    (location.type === "facility" || location.type === "neighborhood") &&
-                    location.boundary_coordinates
-                  ) {
-                    const paths = location.boundary_coordinates.map((coord: [number, number]) => ({
-                      lat: coord[0],
-                      lng: coord[1],
-                    }))
-                    return (
-                      <Polygon
-                        key={`saved-${location.id}`}
-                        paths={paths}
-                        strokeColor={
-                          isHighlightedFromUrl || isHighlightedInView
-                            ? "#ef4444"
-                            : isEditing
-                              ? "#10b981"
-                              : location.type === "neighborhood"
-                                ? "#a855f7"
-                                : "#fb923c"
-                        }
-                        strokeOpacity={isHovered ? 1 : 0.7}
-                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 3 : isHovered ? 3 : 2}
-                        fillColor={
-                          isHighlightedFromUrl || isHighlightedInView
-                            ? "#fca5a5"
-                            : isEditing
-                              ? "#6ee7b7"
-                              : location.type === "neighborhood"
-                                ? "#d8b4fe"
-                                : "#fdba74"
-                        }
-                        fillOpacity={isHovered ? 0.4 : 0.25}
-                        onClick={() => handleLocationClick(location)}
-                        onMouseOver={() => setHoveredLocationId(location.id)}
-                        onMouseOut={() => setHoveredLocationId(null)}
-                      />
-                    )
-                  }
-                  if (location.type === "lot" && location.boundary_coordinates) {
-                    const paths = location.boundary_coordinates.map((coord: [number, number]) => ({
-                      lat: coord[0],
-                      lng: coord[1],
-                    }))
-                    return (
-                      <Polygon
-                        key={`saved-${location.id}`}
-                        paths={paths}
-                        strokeColor={
-                          isHighlightedFromUrl || isHighlightedInView ? "#ef4444" : isEditing ? "#10b981" : "#60a5fa"
-                        }
-                        strokeOpacity={isHovered ? 1 : 0.7}
-                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 3 : isHovered ? 3 : 2}
-                        fillColor={
-                          isHighlightedFromUrl || isHighlightedInView ? "#fca5a5" : isEditing ? "#6ee7b7" : "#93c5fd"
-                        }
-                        fillOpacity={isHovered ? 0.4 : 0.25}
-                        onClick={() => handleLocationClick(location)}
-                        onMouseOver={() => setHoveredLocationId(location.id)}
-                        onMouseOut={() => setHoveredLocationId(null)}
-                      />
-                    )
-                  }
-                  if (location.type === "walking_path" && location.path_coordinates) {
-                    const path = location.path_coordinates.map((coord: [number, number]) => ({
-                      lat: coord[0],
-                      lng: coord[1],
-                    }))
-                    return (
-                      <Polyline
-                        key={`saved-${location.id}`}
-                        path={path}
-                        strokeColor={
-                          isHighlightedFromUrl || isHighlightedInView ? "#ef4444" : isEditing ? "#10b981" : "#3b82f6"
-                        }
-                        strokeOpacity={isHovered ? 1 : 0.8}
-                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 4 : isHovered ? 5 : 3}
-                        onClick={() => handleLocationClick(location)}
-                        onMouseOver={() => setHoveredLocationId(location.id)}
-                        onMouseOut={() => setHoveredLocationId(null)}
-                      />
-                    )
-                  }
-                  return null
-                })}
-              </Map>
-            </APIProvider>
+                </Map>
+              </APIProvider>
+            )}
 
             {mode === "edit" && (
               <>

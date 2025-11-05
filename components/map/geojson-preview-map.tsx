@@ -200,28 +200,57 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
         }
 
         const feature = previewFeatures[0]
-        if (feature.geometry.type !== "Polygon" && feature.geometry.type !== "MultiPolygon") {
-          toast({
-            title: "Validation Error",
-            description: "Boundary must be a polygon or multi-polygon.",
-            variant: "destructive",
-          })
-          setSaving(false)
-          return
-        }
 
         let boundaryCoordinates: { lat: number; lng: number }[]
+        let boundaryCoordinatesArray: number[][]
+
         if (feature.geometry.type === "Polygon") {
           boundaryCoordinates = feature.geometry.coordinates[0].map((coord: number[]) => ({
             lat: coord[1],
             lng: coord[0],
           }))
-        } else {
-          // MultiPolygon - use the first polygon
+          boundaryCoordinatesArray = feature.geometry.coordinates[0].map((coord: number[]) => [coord[1], coord[0]])
+        } else if (feature.geometry.type === "MultiPolygon") {
           boundaryCoordinates = feature.geometry.coordinates[0][0].map((coord: number[]) => ({
             lat: coord[1],
             lng: coord[0],
           }))
+          boundaryCoordinatesArray = feature.geometry.coordinates[0][0].map((coord: number[]) => [coord[1], coord[0]])
+        } else if (feature.geometry.type === "GeometryCollection") {
+          // Convert GeometryCollection of LineStrings into a single Polygon
+          const allCoordinates: number[][] = []
+
+          feature.geometry.geometries.forEach((geom: any) => {
+            if (geom.type === "LineString") {
+              geom.coordinates.forEach((coord: number[]) => {
+                allCoordinates.push(coord)
+              })
+            }
+          })
+
+          if (allCoordinates.length === 0) {
+            toast({
+              title: "Validation Error",
+              description: "GeometryCollection must contain LineStrings with coordinates.",
+              variant: "destructive",
+            })
+            setSaving(false)
+            return
+          }
+
+          boundaryCoordinates = allCoordinates.map((coord) => ({
+            lat: coord[1],
+            lng: coord[0],
+          }))
+          boundaryCoordinatesArray = allCoordinates.map((coord) => [coord[1], coord[0]])
+        } else {
+          toast({
+            title: "Validation Error",
+            description: "Boundary must be a Polygon, MultiPolygon, or GeometryCollection of LineStrings.",
+            variant: "destructive",
+          })
+          setSaving(false)
+          return
         }
 
         const locationData = {
@@ -229,10 +258,7 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
           name: feature.properties?.name || "Community Boundary",
           type: "boundary",
           description: feature.properties?.description || null,
-          boundary_coordinates:
-            feature.geometry.type === "Polygon"
-              ? feature.geometry.coordinates[0].map((coord: number[]) => [coord[1], coord[0]])
-              : feature.geometry.coordinates[0][0].map((coord: number[]) => [coord[1], coord[0]]),
+          boundary_coordinates: boundaryCoordinatesArray,
         }
 
         const { error: locationError } = await supabase.from("locations").insert(locationData)
@@ -387,6 +413,27 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
                       lat: coord[1],
                       lng: coord[0],
                     }))
+
+                    const isBoundary = locationType === "boundary"
+
+                    return (
+                      <Polygon
+                        key={`preview-${index}`}
+                        paths={paths}
+                        strokeColor={isBoundary ? "#ffffff" : "#a855f7"}
+                        strokeOpacity={isBoundary ? 0.8 : 0.9}
+                        strokeWeight={isBoundary ? 2 : 1}
+                        fillColor={isBoundary ? "#ffffff" : "#a855f7"}
+                        fillOpacity={isBoundary ? 0.15 : 0.2}
+                        clickable={false}
+                      />
+                    )
+                  } else if (feature.geometry.type === "GeometryCollection") {
+                    const paths = feature.geometry.geometries
+                      .filter((geom: any) => geom.type === "LineString")
+                      .flatMap((geom: any) =>
+                        geom.coordinates.map((coord: number[]) => ({ lat: coord[1], lng: coord[0] })),
+                      )
 
                     const isBoundary = locationType === "boundary"
 

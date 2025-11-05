@@ -39,6 +39,48 @@ export default async function MapManagementPage({ params }: { params: Promise<{ 
     .eq("tenant_id", tenant.id)
     .eq("type", "walking_path")
 
+  const { count: neighborhoodsCount } = await supabase
+    .from("locations")
+    .select("*", { count: "exact", head: true })
+    .eq("tenant_id", tenant.id)
+    .eq("type", "neighborhood")
+
+  const { count: protectionZonesCount } = await supabase
+    .from("locations")
+    .select("*", { count: "exact", head: true })
+    .eq("tenant_id", tenant.id)
+    .eq("type", "protection_zone")
+
+  const { count: easementsCount } = await supabase
+    .from("locations")
+    .select("*", { count: "exact", head: true })
+    .eq("tenant_id", tenant.id)
+    .eq("type", "easement")
+
+  const { count: playgroundsCount } = await supabase
+    .from("locations")
+    .select("*", { count: "exact", head: true })
+    .eq("tenant_id", tenant.id)
+    .eq("type", "playground")
+
+  const { count: publicStreetsCount } = await supabase
+    .from("locations")
+    .select("*", { count: "exact", head: true })
+    .eq("tenant_id", tenant.id)
+    .eq("type", "public_street")
+
+  const { count: greenAreasCount } = await supabase
+    .from("locations")
+    .select("*", { count: "exact", head: true })
+    .eq("tenant_id", tenant.id)
+    .eq("type", "green_area")
+
+  const { count: recreationalZonesCount } = await supabase
+    .from("locations")
+    .select("*", { count: "exact", head: true })
+    .eq("tenant_id", tenant.id)
+    .eq("type", "recreational_zone")
+
   const { data: locations, error: locationsError } = await supabase
     .from("locations")
     .select("*, neighborhoods!locations_neighborhood_id_fkey(name)")
@@ -69,7 +111,7 @@ export default async function MapManagementPage({ params }: { params: Promise<{ 
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle>Facilities</CardTitle>
@@ -82,11 +124,21 @@ export default async function MapManagementPage({ params }: { params: Promise<{ 
 
         <Card>
           <CardHeader>
-            <CardTitle>Lot Boundaries</CardTitle>
+            <CardTitle>Lots</CardTitle>
             <CardDescription>Property boundaries and lot markers</CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">{lotsCount || 0}</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Neighborhoods</CardTitle>
+            <CardDescription>Neighborhood areas</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold">{neighborhoodsCount || 0}</p>
           </CardContent>
         </Card>
 
@@ -97,6 +149,66 @@ export default async function MapManagementPage({ params }: { params: Promise<{ 
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">{pathsCount || 0}</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Protection Zones</CardTitle>
+            <CardDescription>Protected areas</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold">{protectionZonesCount || 0}</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Easements</CardTitle>
+            <CardDescription>Easement areas</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold">{easementsCount || 0}</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Playgrounds</CardTitle>
+            <CardDescription>Play areas</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold">{playgroundsCount || 0}</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Public Streets</CardTitle>
+            <CardDescription>Street network</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold">{publicStreetsCount || 0}</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Green Areas</CardTitle>
+            <CardDescription>Green spaces</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold">{greenAreasCount || 0}</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Recreational Zones</CardTitle>
+            <CardDescription>Recreation areas</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold">{recreationalZonesCount || 0}</p>
           </CardContent>
         </Card>
       </div>

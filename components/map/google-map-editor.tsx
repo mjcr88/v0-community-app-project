@@ -128,9 +128,19 @@ export function GoogleMapEditor({
   const [savedLocations, setSavedLocations] = useState<any[]>([])
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
-  const [locationType, setLocationType] = useState<"facility" | "lot" | "walking_path" | "neighborhood" | "boundary">(
-    "facility",
-  )
+  const [locationType, setLocationType] = useState<
+    | "facility"
+    | "lot"
+    | "walking_path"
+    | "neighborhood"
+    | "boundary"
+    | "protection_zone"
+    | "easement"
+    | "playground"
+    | "public_street"
+    | "green_area"
+    | "recreational_zone"
+  >("facility")
   const [facilityType, setFacilityType] = useState("")
   const [icon, setIcon] = useState("")
   const [selectedLotId, setSelectedLotId] = useState<string>("")
@@ -144,6 +154,13 @@ export function GoogleMapEditor({
   const [showLots, setShowLots] = useState(true)
   const [showWalkingPaths, setShowWalkingPaths] = useState(true)
   const [showNeighborhoods, setShowNeighborhoods] = useState(true)
+  const [showBoundaries, setShowBoundaries] = useState(true)
+  const [showProtectionZones, setShowProtectionZones] = useState(true)
+  const [showEasements, setShowEasements] = useState(true)
+  const [showPlaygrounds, setShowPlaygrounds] = useState(true)
+  const [showPublicStreets, setShowPublicStreets] = useState(true)
+  const [showGreenAreas, setShowGreenAreas] = useState(true)
+  const [showRecreationalZones, setShowRecreationalZones] = useState(true)
 
   // State for hover and selection
   const [hoveredLocationId, setHoveredLocationId] = useState<string | null>(null)
@@ -631,6 +648,16 @@ export function GoogleMapEditor({
         if (selectedNeighborhoodId && selectedNeighborhoodId !== "none") {
           locationData.neighborhood_id = selectedNeighborhoodId
         }
+      } else if (
+        locationType === "boundary" ||
+        locationType === "protection_zone" ||
+        locationType === "easement" ||
+        locationType === "playground" ||
+        locationType === "public_street" ||
+        locationType === "green_area" ||
+        locationType === "recreational_zone"
+      ) {
+        locationData.boundary_coordinates = polygonPoints.map((p) => [p.lat, p.lng])
       }
 
       console.log("[v0] Saving location:", locationData)
@@ -838,6 +865,13 @@ export function GoogleMapEditor({
     if (location.type === "lot") return showLots
     if (location.type === "walking_path") return showWalkingPaths
     if (location.type === "neighborhood") return showNeighborhoods
+    if (location.type === "boundary") return showBoundaries
+    if (location.type === "protection_zone") return showProtectionZones
+    if (location.type === "easement") return showEasements
+    if (location.type === "playground") return showPlaygrounds
+    if (location.type === "public_street") return showPublicStreets
+    if (location.type === "green_area") return showGreenAreas
+    if (location.type === "recreational_zone") return showRecreationalZones
     return true
   })
 
@@ -1050,6 +1084,14 @@ export function GoogleMapEditor({
                   const isHighlightedFromUrl = mode === "edit" && editLocationIdFromUrl === location.id
                   const isHighlightedInView = mode === "view" && highlightedLocationId === location.id
 
+                  const isBoundary = location.type === "boundary"
+                  const isProtectionZone = location.type === "protection_zone"
+                  const isEasement = location.type === "easement"
+                  const isPlayground = location.type === "playground"
+                  const isPublicStreet = location.type === "public_street"
+                  const isGreenArea = location.type === "green_area"
+                  const isRecreationalZone = location.type === "recreational_zone"
+
                   if (location.type === "facility" && location.coordinates) {
                     return (
                       <Marker
@@ -1060,38 +1102,83 @@ export function GoogleMapEditor({
                     )
                   }
                   if (
-                    (location.type === "facility" || location.type === "neighborhood") &&
+                    (location.type === "facility" ||
+                      location.type === "neighborhood" ||
+                      isBoundary ||
+                      isProtectionZone ||
+                      isEasement ||
+                      isPlayground ||
+                      isPublicStreet ||
+                      isGreenArea ||
+                      isRecreationalZone) &&
                     location.boundary_coordinates
                   ) {
                     const paths = location.boundary_coordinates.map((coord: [number, number]) => ({
                       lat: coord[0],
                       lng: coord[1],
                     }))
+
+                    const strokeColor = isBoundary
+                      ? "#ffffff"
+                      : isProtectionZone
+                        ? "#842029"
+                        : isEasement
+                          ? "#198754"
+                          : isPlayground
+                            ? "#0d6efd"
+                            : isPublicStreet
+                              ? "#6c757d"
+                              : isGreenArea
+                                ? "#198754"
+                                : isRecreationalZone
+                                  ? "#0d6efd"
+                                  : isHighlightedFromUrl || isHighlightedInView
+                                    ? "#ef4444"
+                                    : isEditing
+                                      ? "#10b981"
+                                      : location.type === "neighborhood"
+                                        ? "#a855f7"
+                                        : "#fb923c"
+
+                    const fillColor = isBoundary
+                      ? "#ffffff"
+                      : isProtectionZone
+                        ? "#f8d7da"
+                        : isEasement
+                          ? "#d1e7dd"
+                          : isPlayground
+                            ? "#cfe2ff"
+                            : isPublicStreet
+                              ? "#d3d3d3"
+                              : isGreenArea
+                                ? "#d1e7dd"
+                                : isRecreationalZone
+                                  ? "#cfe2ff"
+                                  : isHighlightedFromUrl || isHighlightedInView
+                                    ? "#fca5a5"
+                                    : isEditing
+                                      ? "#6ee7b7"
+                                      : location.type === "neighborhood"
+                                        ? "#d8b4fe"
+                                        : "#fdba74"
+
                     return (
                       <Polygon
                         key={`saved-${location.id}`}
                         paths={paths}
-                        strokeColor={
-                          isHighlightedFromUrl || isHighlightedInView
-                            ? "#ef4444"
-                            : isEditing
-                              ? "#10b981"
-                              : location.type === "neighborhood"
-                                ? "#a855f7"
-                                : "#fb923c"
+                        strokeColor={strokeColor}
+                        strokeOpacity={isBoundary ? 0.8 : isHovered ? 1 : 0.7}
+                        strokeWeight={
+                          isBoundary
+                            ? 2
+                            : isHighlightedFromUrl || isHighlightedInView || isEditing
+                              ? 2
+                              : isHovered
+                                ? 2
+                                : 1
                         }
-                        strokeOpacity={isHovered ? 1 : 0.7}
-                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 3 : isHovered ? 3 : 2}
-                        fillColor={
-                          isHighlightedFromUrl || isHighlightedInView
-                            ? "#fca5a5"
-                            : isEditing
-                              ? "#6ee7b7"
-                              : location.type === "neighborhood"
-                                ? "#d8b4fe"
-                                : "#fdba74"
-                        }
-                        fillOpacity={isHovered ? 0.4 : 0.25}
+                        fillColor={fillColor}
+                        fillOpacity={isBoundary ? 0.15 : isHovered ? 0.3 : 0.2}
                         onClick={() => handleLocationClick(location)}
                         onMouseOver={() => setHoveredLocationId(location.id)}
                         onMouseOut={() => setHoveredLocationId(null)}
@@ -1111,11 +1198,11 @@ export function GoogleMapEditor({
                           isHighlightedFromUrl || isHighlightedInView ? "#ef4444" : isEditing ? "#10b981" : "#60a5fa"
                         }
                         strokeOpacity={isHovered ? 1 : 0.7}
-                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 3 : isHovered ? 3 : 2}
+                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 2 : isHovered ? 2 : 1}
                         fillColor={
                           isHighlightedFromUrl || isHighlightedInView ? "#fca5a5" : isEditing ? "#6ee7b7" : "#93c5fd"
                         }
-                        fillOpacity={isHovered ? 0.4 : 0.25}
+                        fillOpacity={isHovered ? 0.3 : 0.2}
                         onClick={() => handleLocationClick(location)}
                         onMouseOver={() => setHoveredLocationId(location.id)}
                         onMouseOut={() => setHoveredLocationId(null)}
@@ -1135,7 +1222,9 @@ export function GoogleMapEditor({
                           isHighlightedFromUrl || isHighlightedInView ? "#ef4444" : isEditing ? "#10b981" : "#3b82f6"
                         }
                         strokeOpacity={isHovered ? 1 : 0.8}
-                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 4 : isHovered ? 5 : 3}
+                        strokeWeight={
+                          isHighlightedFromUrl || isHighlightedInView || isEditing ? 3 : isHovered ? 3 : 1.5
+                        }
                         onClick={() => handleLocationClick(location)}
                         onMouseOver={() => setHoveredLocationId(location.id)}
                         onMouseOut={() => setHoveredLocationId(null)}
@@ -1269,6 +1358,27 @@ export function GoogleMapEditor({
                   <DropdownMenuCheckboxItem checked={showNeighborhoods} onCheckedChange={setShowNeighborhoods}>
                     Neighborhoods
                   </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem checked={showBoundaries} onCheckedChange={setShowBoundaries}>
+                    Boundaries
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem checked={showProtectionZones} onCheckedChange={setShowProtectionZones}>
+                    Protection Zones
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem checked={showEasements} onCheckedChange={setShowEasements}>
+                    Easements
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem checked={showPlaygrounds} onCheckedChange={setShowPlaygrounds}>
+                    Playgrounds
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem checked={showPublicStreets} onCheckedChange={setShowPublicStreets}>
+                    Public Streets
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem checked={showGreenAreas} onCheckedChange={setShowGreenAreas}>
+                    Green Areas
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem checked={showRecreationalZones} onCheckedChange={setShowRecreationalZones}>
+                    Recreational Zones
+                  </DropdownMenuCheckboxItem>
                 </DropdownMenuContent>
               </DropdownMenu>
 
@@ -1382,7 +1492,23 @@ export function GoogleMapEditor({
                         ? "Lot"
                         : selectedLocation.type === "walking_path"
                           ? "Walking Path"
-                          : "Neighborhood"}
+                          : selectedLocation.type === "neighborhood"
+                            ? "Neighborhood"
+                            : selectedLocation.type === "boundary"
+                              ? "Boundary"
+                              : selectedLocation.type === "protection_zone"
+                                ? "Protection Zone"
+                                : selectedLocation.type === "easement"
+                                  ? "Easement"
+                                  : selectedLocation.type === "playground"
+                                    ? "Playground"
+                                    : selectedLocation.type === "public_street"
+                                      ? "Public Street"
+                                      : selectedLocation.type === "green_area"
+                                        ? "Green Area"
+                                        : selectedLocation.type === "recreational_zone"
+                                          ? "Recreational Zone"
+                                          : "Unknown"}
                   </Badge>
                   {selectedLocation.facility_type && <Badge variant="outline">{selectedLocation.facility_type}</Badge>}
                 </div>
@@ -1492,6 +1618,12 @@ export function GoogleMapEditor({
                       <SelectItem value="neighborhood">Neighborhood</SelectItem>
                       <SelectItem value="walking_path">Walking Path</SelectItem>
                       <SelectItem value="boundary">Boundary</SelectItem>
+                      <SelectItem value="protection_zone">Protection Zone</SelectItem>
+                      <SelectItem value="easement">Easement</SelectItem>
+                      <SelectItem value="playground">Playground</SelectItem>
+                      <SelectItem value="public_street">Public Street</SelectItem>
+                      <SelectItem value="green_area">Green Area</SelectItem>
+                      <SelectItem value="recreational_zone">Recreational Zone</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1521,6 +1653,13 @@ export function GoogleMapEditor({
                       <SelectItem value="lot">Lot</SelectItem>
                       <SelectItem value="neighborhood">Neighborhood</SelectItem>
                       <SelectItem value="walking_path">Walking Path</SelectItem>
+                      <SelectItem value="boundary">Boundary</SelectItem>
+                      <SelectItem value="protection_zone">Protection Zone</SelectItem>
+                      <SelectItem value="easement">Easement</SelectItem>
+                      <SelectItem value="playground">Playground</SelectItem>
+                      <SelectItem value="public_street">Public Street</SelectItem>
+                      <SelectItem value="green_area">Green Area</SelectItem>
+                      <SelectItem value="recreational_zone">Recreational Zone</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

@@ -29,9 +29,19 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
   const [previewFeatures, setPreviewFeatures] = useState<any[]>([])
   const [mapCenter, setMapCenter] = useState<LatLng>({ lat: 9.9567, lng: -84.5333 })
   const [mapZoom, setMapZoom] = useState(15)
-  const [locationType, setLocationType] = useState<"facility" | "lot" | "walking_path" | "neighborhood" | "boundary">(
-    "facility",
-  )
+  const [locationType, setLocationType] = useState<
+    | "facility"
+    | "lot"
+    | "walking_path"
+    | "neighborhood"
+    | "boundary"
+    | "protection_zone"
+    | "easement"
+    | "playground"
+    | "public_street"
+    | "green_area"
+    | "recreational_zone"
+  >("facility")
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
 
@@ -255,7 +265,7 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
                         path={path}
                         strokeColor="#a855f7"
                         strokeOpacity={0.9}
-                        strokeWeight={4}
+                        strokeWeight={1.5}
                         clickable={false}
                       />
                     )
@@ -264,15 +274,18 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
                       lat: coord[1],
                       lng: coord[0],
                     }))
+
+                    const isBoundary = locationType === "boundary"
+
                     return (
                       <Polygon
                         key={`preview-${index}`}
                         paths={paths}
-                        strokeColor="#a855f7"
-                        strokeOpacity={0.9}
-                        strokeWeight={2}
-                        fillColor="#a855f7"
-                        fillOpacity={0.3}
+                        strokeColor={isBoundary ? "#ffffff" : "#a855f7"}
+                        strokeOpacity={isBoundary ? 0.8 : 0.9}
+                        strokeWeight={isBoundary ? 2 : 1}
+                        fillColor={isBoundary ? "#ffffff" : "#a855f7"}
+                        fillOpacity={isBoundary ? 0.15 : 0.2}
                         clickable={false}
                       />
                     )
@@ -341,6 +354,12 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
                 <SelectItem value="neighborhood">Neighborhood</SelectItem>
                 <SelectItem value="walking_path">Walking Path</SelectItem>
                 <SelectItem value="boundary">Boundary</SelectItem>
+                <SelectItem value="protection_zone">Protection Zone</SelectItem>
+                <SelectItem value="easement">Easement</SelectItem>
+                <SelectItem value="playground">Playground</SelectItem>
+                <SelectItem value="public_street">Public Street</SelectItem>
+                <SelectItem value="green_area">Green Area</SelectItem>
+                <SelectItem value="recreational_zone">Recreational Zone</SelectItem>
               </SelectContent>
             </Select>
           </div>

@@ -1,10 +1,21 @@
-export type GeoJSONGeometryType = "Point" | "LineString" | "Polygon" | "MultiPoint" | "MultiLineString" | "MultiPolygon"
+export type GeoJSONGeometryType =
+  | "Point"
+  | "LineString"
+  | "Polygon"
+  | "MultiPoint"
+  | "MultiLineString"
+  | "MultiPolygon"
+  | "GeometryCollection"
 
 export interface GeoJSONFeature {
   type: "Feature"
   geometry: {
     type: GeoJSONGeometryType
-    coordinates: number[] | number[][] | number[][][] | number[][][][]
+    coordinates?: number[] | number[][] | number[][][] | number[][][][]
+    geometries?: Array<{
+      type: Exclude<GeoJSONGeometryType, "GeometryCollection">
+      coordinates: number[] | number[][] | number[][][] | number[][][][]
+    }>
   }
   properties: Record<string, any>
 }
@@ -287,23 +298,30 @@ export function parseGeoJSON(data: any): ParsedGeoJSON {
   let originalSystem: string | undefined
 
   if (data.type === "GeometryCollection") {
-    // Convert GeometryCollection to Features
-    features = data.geometries.map((geometry: any, index: number) => {
+    // Transform each geometry in the collection
+    const transformedGeometries = data.geometries.map((geometry: any) => {
       const result = transformGeometry(geometry)
       if (result.transformed) {
         transformed = true
         originalSystem = result.system
       }
+      return result.geometry
+    })
 
-      return {
+    // Create a single feature with GeometryCollection geometry
+    features = [
+      {
         type: "Feature" as const,
-        geometry: result.geometry,
+        geometry: {
+          type: "GeometryCollection" as const,
+          geometries: transformedGeometries,
+        },
         properties: {
-          name: `Geometry ${index + 1}`,
+          name: "Geometry Collection",
           source: "GeometryCollection",
         },
-      }
-    })
+      },
+    ]
   } else if (data.type === "Feature") {
     const result = transformGeometry(data.geometry)
     if (result.transformed) {

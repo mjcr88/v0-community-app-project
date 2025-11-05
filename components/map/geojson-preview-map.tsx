@@ -190,109 +190,30 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
       const supabase = createBrowserClient()
 
       if (locationType === "boundary") {
+        const feature = previewFeatures[0]
+
         if (previewFeatures.length > 1) {
-          const allLineStrings = previewFeatures.every((f) => f.geometry.type === "LineString")
-
-          if (!allLineStrings) {
-            toast({
-              title: "Validation Error",
-              description: "Only one boundary can be imported at a time.",
-              variant: "destructive",
-            })
-            setSaving(false)
-            return
-          }
-
-          // Combine all LineStrings into a single boundary polygon
-          console.log("[v0] Combining", previewFeatures.length, "LineStrings into boundary")
-
-          const allCoordinates: number[][] = []
-          previewFeatures.forEach((feature) => {
-            if (feature.geometry.type === "LineString") {
-              feature.geometry.coordinates.forEach((coord: number[]) => {
-                allCoordinates.push(coord)
-              })
-            }
-          })
-
-          console.log("[v0] Total coordinates extracted:", allCoordinates.length)
-
-          const boundaryCoordinates = allCoordinates.map((coord) => ({
-            lat: coord[1],
-            lng: coord[0],
-          }))
-          const boundaryCoordinatesArray = allCoordinates.map((coord) => [coord[1], coord[0]])
-
-          console.log("[v0] Saving boundary with", boundaryCoordinates.length, "coordinates")
-
-          // Save boundary location
-          const locationResult = await createLocation({
-            tenant_id: tenantId,
-            name: "Community Boundary",
-            type: "boundary",
-            boundary_coordinates: boundaryCoordinatesArray,
-          })
-
-          if (!locationResult.success) {
-            toast({
-              title: "Error",
-              description: locationResult.error || "Failed to create boundary location",
-              variant: "destructive",
-            })
-            setSaving(false)
-            return
-          }
-
-          console.log("[v0] Boundary location created, updating tenant...")
-
-          // Update tenant boundary
-          const tenantResult = await updateTenantBoundary(tenantId, boundaryCoordinatesArray)
-
-          if (!tenantResult.success) {
-            toast({
-              title: "Error",
-              description: tenantResult.error || "Failed to update tenant boundary",
-              variant: "destructive",
-            })
-            setSaving(false)
-            return
-          }
-
-          console.log("[v0] Tenant boundary updated successfully")
-
           toast({
-            title: "Success",
-            description: "Boundary imported successfully",
+            title: "Validation Error",
+            description: "Only one boundary can be imported at a time.",
+            variant: "destructive",
           })
-
-          sessionStorage.removeItem("geojson-preview")
-          router.push(`/t/${tenantSlug}/admin/map`)
+          setSaving(false)
           return
         }
 
-        const feature = previewFeatures[0]
-        console.log("[v0] Boundary feature geometry type:", feature.geometry.type)
-        console.log("[v0] Boundary feature geometry:", JSON.stringify(feature.geometry, null, 2))
+        console.log("[v0] Processing boundary with geometry type:", feature.geometry.type)
 
-        let boundaryCoordinates: { lat: number; lng: number }[]
         let boundaryCoordinatesArray: number[][]
 
         if (feature.geometry.type === "Polygon") {
-          boundaryCoordinates = feature.geometry.coordinates[0].map((coord: number[]) => ({
-            lat: coord[1],
-            lng: coord[0],
-          }))
           boundaryCoordinatesArray = feature.geometry.coordinates[0].map((coord: number[]) => [coord[1], coord[0]])
         } else if (feature.geometry.type === "MultiPolygon") {
-          boundaryCoordinates = feature.geometry.coordinates[0][0].map((coord: number[]) => ({
-            lat: coord[1],
-            lng: coord[0],
-          }))
           boundaryCoordinatesArray = feature.geometry.coordinates[0][0].map((coord: number[]) => [coord[1], coord[0]])
         } else if (feature.geometry.type === "GeometryCollection") {
-          const hasLineStrings = feature.geometry.geometries.some((geom: any) => geom.type === "LineString")
+          const lineStrings = feature.geometry.geometries?.filter((geom: any) => geom.type === "LineString") || []
 
-          if (!hasLineStrings) {
+          if (lineStrings.length === 0) {
             toast({
               title: "Validation Error",
               description: "GeometryCollection must contain LineStrings.",
@@ -302,35 +223,17 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
             return
           }
 
-          console.log("[v0] GeometryCollection geometries:", feature.geometry.geometries.length)
+          console.log("[v0] Converting", lineStrings.length, "LineStrings to boundary polygon")
 
-          // Convert GeometryCollection of LineStrings into a single Polygon
           const allCoordinates: number[][] = []
-
-          feature.geometry.geometries.forEach((geom: any) => {
-            if (geom.type === "LineString") {
-              geom.coordinates.forEach((coord: number[]) => {
-                allCoordinates.push(coord)
-              })
-            }
+          lineStrings.forEach((geom: any) => {
+            geom.coordinates.forEach((coord: number[]) => {
+              allCoordinates.push(coord)
+            })
           })
 
-          if (allCoordinates.length === 0) {
-            toast({
-              title: "Validation Error",
-              description: "GeometryCollection must contain LineStrings with coordinates.",
-              variant: "destructive",
-            })
-            setSaving(false)
-            return
-          }
+          console.log("[v0] Extracted", allCoordinates.length, "coordinates from GeometryCollection")
 
-          console.log("[v0] Total coordinates extracted:", allCoordinates.length)
-
-          boundaryCoordinates = allCoordinates.map((coord) => ({
-            lat: coord[1],
-            lng: coord[0],
-          }))
           boundaryCoordinatesArray = allCoordinates.map((coord) => [coord[1], coord[0]])
         } else {
           toast({
@@ -342,43 +245,50 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
           return
         }
 
-        console.log("[v0] Boundary coordinates for location:", boundaryCoordinatesArray.length, "points")
-        console.log("[v0] Boundary coordinates for tenant:", boundaryCoordinates.length, "points")
+        console.log("[v0] Saving boundary with", boundaryCoordinatesArray.length, "coordinates")
 
-        const locationData = {
+        const locationResult = await createLocation({
           tenant_id: tenantId,
           name: feature.properties?.name || "Community Boundary",
           type: "boundary",
           description: feature.properties?.description || null,
           boundary_coordinates: boundaryCoordinatesArray,
+        })
+
+        if (!locationResult.success) {
+          toast({
+            title: "Error",
+            description: locationResult.error || "Failed to create boundary location",
+            variant: "destructive",
+          })
+          setSaving(false)
+          return
         }
 
-        console.log("[v0] Inserting location with data:", JSON.stringify(locationData, null, 2))
+        console.log("[v0] Boundary location created, updating tenant...")
 
-        const { error: locationError } = await supabase.from("locations").insert(locationData)
-        if (locationError) {
-          console.error("[v0] Location insert error:", locationError)
-          throw locationError
+        const tenantResult = await updateTenantBoundary(tenantId, boundaryCoordinatesArray)
+
+        if (!tenantResult.success) {
+          toast({
+            title: "Error",
+            description: tenantResult.error || "Failed to update tenant boundary",
+            variant: "destructive",
+          })
+          setSaving(false)
+          return
         }
 
-        console.log("[v0] Location inserted successfully, now updating tenant...")
-
-        const { error: tenantError } = await supabase
-          .from("tenants")
-          .update({ map_boundary_coordinates: boundaryCoordinates })
-          .eq("id", tenantId)
-
-        if (tenantError) {
-          console.error("[v0] Tenant update error:", tenantError)
-          throw tenantError
-        }
-
-        console.log("[v0] Tenant updated successfully!")
+        console.log("[v0] Tenant boundary updated successfully")
 
         toast({
           title: "Success",
-          description: "Community boundary created successfully!",
+          description: "Boundary imported successfully",
         })
+
+        sessionStorage.removeItem("geojson-preview")
+        router.push(`/t/${tenantSlug}/admin/map`)
+        return
       } else {
         for (const feature of previewFeatures) {
           const locationData: any = {
@@ -533,11 +443,14 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
                       />
                     )
                   } else if (feature.geometry.type === "GeometryCollection") {
-                    const paths = feature.geometry.geometries
-                      .filter((geom: any) => geom.type === "LineString")
-                      .flatMap((geom: any) =>
-                        geom.coordinates.map((coord: number[]) => ({ lat: coord[1], lng: coord[0] })),
-                      )
+                    const lineStrings =
+                      feature.geometry.geometries?.filter((geom: any) => geom.type === "LineString") || []
+
+                    if (lineStrings.length === 0) return null
+
+                    const paths = lineStrings.flatMap((geom: any) =>
+                      geom.coordinates.map((coord: number[]) => ({ lat: coord[1], lng: coord[0] })),
+                    )
 
                     const isBoundary = locationType === "boundary"
 

@@ -183,6 +183,16 @@ export function GoogleMapEditor({
         "[v0] Boundary locations:",
         initialLocations.filter((loc) => loc.type === "boundary"),
       )
+      const boundaryLocs = initialLocations.filter((loc) => loc.type === "boundary")
+      if (boundaryLocs.length > 0) {
+        console.log("[v0] First boundary location details:", {
+          id: boundaryLocs[0].id,
+          name: boundaryLocs[0].name,
+          hasCoordinates: !!boundaryLocs[0].boundary_coordinates,
+          coordinateCount: boundaryLocs[0].boundary_coordinates?.length || 0,
+          firstCoord: boundaryLocs[0].boundary_coordinates?.[0],
+        })
+      }
       return
     }
 
@@ -194,6 +204,16 @@ export function GoogleMapEditor({
         "[v0] Boundary locations:",
         data?.filter((loc) => loc.type === "boundary"),
       )
+      const boundaryLocs = data?.filter((loc) => loc.type === "boundary") || []
+      if (boundaryLocs.length > 0) {
+        console.log("[v0] First boundary location details:", {
+          id: boundaryLocs[0].id,
+          name: boundaryLocs[0].name,
+          hasCoordinates: !!boundaryLocs[0].boundary_coordinates,
+          coordinateCount: boundaryLocs[0].boundary_coordinates?.length || 0,
+          firstCoord: boundaryLocs[0].boundary_coordinates?.[0],
+        })
+      }
       if (data) {
         setSavedLocations(data)
 

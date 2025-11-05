@@ -46,16 +46,25 @@ export async function updateTenantBoundary(
   try {
     const supabase = createBrowserClient()
 
+    console.log("[v0] Updating tenant boundary for tenant:", tenantId)
+    console.log("[v0] Boundary coordinates count:", boundaryCoordinates.length)
+    console.log("[v0] First coordinate:", boundaryCoordinates[0])
+
     // Convert to lat/lng format for tenant record
     const boundaryLatLng = boundaryCoordinates.map((coord) => ({
       lat: coord[0],
       lng: coord[1],
     }))
 
-    const { error } = await supabase
+    console.log("[v0] Converted to lat/lng format, first item:", boundaryLatLng[0])
+
+    const { data, error } = await supabase
       .from("tenants")
       .update({ map_boundary_coordinates: boundaryLatLng })
       .eq("id", tenantId)
+      .select()
+
+    console.log("[v0] Tenant update result:", { data, error })
 
     if (error) {
       console.error("[v0] Tenant update error:", error)
@@ -65,6 +74,7 @@ export async function updateTenantBoundary(
       }
     }
 
+    console.log("[v0] Tenant boundary updated successfully")
     return { success: true }
   } catch (error) {
     console.error("[v0] Unexpected error updating tenant boundary:", error)

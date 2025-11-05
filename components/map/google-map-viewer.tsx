@@ -61,6 +61,7 @@ export function GoogleMapViewer({
   const [showNeighborhoods, setShowNeighborhoods] = useState(true)
   const [showBoundary, setShowBoundary] = useState(true)
   const [tenantBoundary, setTenantBoundary] = useState<Array<{ lat: number; lng: number }> | null>(null)
+  const [boundaryLocationsFromTable, setBoundaryLocationsFromTable] = useState<Location[] | null>(null)
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""
 
@@ -102,7 +103,7 @@ export function GoogleMapViewer({
       const supabase = createBrowserClient()
       const { data: tenant } = await supabase
         .from("tenants")
-        .select("map_boundary_coordinates")
+        .select("map_boundary_coordinates, id")
         .eq("slug", tenantSlug)
         .single()
 
@@ -115,6 +116,24 @@ export function GoogleMapViewer({
       } else {
         console.log("[v0] No tenant boundary found")
       }
+
+      const { data: boundaryLocations } = await supabase
+        .from("locations")
+        .select("*")
+        .eq("type", "boundary")
+        .eq("tenant_id", tenant?.id || "")
+
+      console.log("[v0] Boundary locations from table:", boundaryLocations?.length || 0)
+      if (boundaryLocations && boundaryLocations.length > 0) {
+        console.log("[v0] First boundary location:", {
+          id: boundaryLocations[0].id,
+          name: boundaryLocations[0].name,
+          hasCoordinates: !!boundaryLocations[0].boundary_coordinates,
+          coordinateCount: boundaryLocations[0].boundary_coordinates?.length || 0,
+          firstCoord: boundaryLocations[0].boundary_coordinates?.[0],
+        })
+      }
+      setBoundaryLocationsFromTable(boundaryLocations)
     }
 
     loadTenantBoundary()
@@ -182,6 +201,8 @@ export function GoogleMapViewer({
 
           {boundaryLocations.map((location) => {
             const paths = location.boundary_coordinates!.map((coord) => ({ lat: coord[0], lng: coord[1] }))
+            console.log("[v0] Rendering boundary location:", location.id, "with", paths.length, "coordinate pairs")
+            console.log("[v0] First path coordinate:", paths[0])
             return (
               <Polygon
                 key={location.id}
@@ -190,6 +211,30 @@ export function GoogleMapViewer({
                 strokeOpacity={0.8}
                 strokeWeight={2}
                 fillColor="#ffffff"
+                fillOpacity={0.15}
+                onClick={() => handleLocationClick(location)}
+              />
+            )
+          })}
+
+          {boundaryLocationsFromTable?.map((location) => {
+            const paths = location.boundary_coordinates!.map((coord) => ({ lat: coord[0], lng: coord[1] }))
+            console.log(
+              "[v0] Rendering boundary location from table:",
+              location.id,
+              "with",
+              paths.length,
+              "coordinate pairs",
+            )
+            console.log("[v0] First path coordinate from table:", paths[0])
+            return (
+              <Polygon
+                key={location.id}
+                paths={paths}
+                strokeColor="#000000"
+                strokeOpacity={0.8}
+                strokeWeight={2}
+                fillColor="#000000"
                 fillOpacity={0.15}
                 onClick={() => handleLocationClick(location)}
               />

@@ -26,7 +26,7 @@ export default async function MapViewerPage({
 
   const communityBoundary = tenant.map_boundary_coordinates || null
 
-  const mode = preview === "true" ? "preview" : "view"
+  const mode = "view"
 
   return (
     <div className="h-[100vh] w-full">

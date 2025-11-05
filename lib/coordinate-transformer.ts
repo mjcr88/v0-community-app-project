@@ -1,5 +1,7 @@
 // Coordinate transformation utilities for converting projected coordinates to WGS84
 
+import proj4 from "proj4"
+
 export interface CoordinateSystemInfo {
   isProjected: boolean
   detectedSystem?: string
@@ -33,54 +35,19 @@ export function detectCoordinateSystem(coords: number[]): CoordinateSystemInfo {
 }
 
 /**
- * Converts UTM coordinates to WGS84 lat/lng
- * Simplified conversion for Central America (Costa Rica region)
+ * Converts UTM coordinates to WGS84 lat/lng using proj4
  */
 export function utmToLatLng(easting: number, northing: number, zone: number): [number, number] {
-  // UTM parameters
-  const k0 = 0.9996 // scale factor
-  const a = 6378137.0 // WGS84 equatorial radius
-  const e = 0.081819191 // WGS84 eccentricity
-  const e1sq = 0.006739497 // e'^2
+  // Define UTM projection for the detected zone (Northern hemisphere)
+  const utmProj = `+proj=utm +zone=${zone} +datum=WGS84 +units=m +no_defs`
+  const wgs84Proj = "+proj=longlat +datum=WGS84 +no_defs"
 
-  // Remove false easting and northing
-  const x = easting - 500000.0
-  const y = northing
+  console.log(`[v0] Converting UTM Zone ${zone}N: [${easting}, ${northing}]`)
 
-  // Calculate footpoint latitude
-  const M = y / k0
-  const mu = M / (a * (1 - Math.pow(e, 2) / 4 - (3 * Math.pow(e, 4)) / 64 - (5 * Math.pow(e, 6)) / 256))
+  // Transform from UTM to WGS84
+  const [lng, lat] = proj4(utmProj, wgs84Proj, [easting, northing])
 
-  const phi1 =
-    mu +
-    ((3 * e1sq) / 2 - (27 * Math.pow(e1sq, 3)) / 32) * Math.sin(2 * mu) +
-    ((21 * Math.pow(e1sq, 2)) / 16 - (55 * Math.pow(e1sq, 4)) / 32) * Math.sin(4 * mu) +
-    ((151 * Math.pow(e1sq, 3)) / 96) * Math.sin(6 * mu)
-
-  // Calculate latitude and longitude
-  const C1 = e1sq * Math.pow(Math.cos(phi1), 2)
-  const T1 = Math.pow(Math.tan(phi1), 2)
-  const N1 = a / Math.sqrt(1 - Math.pow(e * Math.sin(phi1), 2))
-  const R1 = (a * (1 - Math.pow(e, 2))) / Math.pow(1 - Math.pow(e * Math.sin(phi1), 2), 1.5)
-  const D = x / (N1 * k0)
-
-  const lat =
-    phi1 -
-    ((N1 * Math.tan(phi1)) / R1) *
-      ((Math.pow(D, 2) / 2 -
-        ((5 + 3 * T1 + 10 * C1 - 4 * Math.pow(C1, 2) - 9 * e1sq) * Math.pow(D, 4)) / 24 +
-        ((61 + 90 * T1 + 298 * C1 + 45 * Math.pow(T1, 2) - 252 * e1sq - 3 * Math.pow(C1, 2)) * Math.pow(D, 6)) / 720) /
-        (Math.PI / 180))
-
-  const lng =
-    ((D -
-      ((1 + 2 * T1 + C1) * Math.pow(D, 3)) / 6 +
-      ((5 - 2 * C1 + 28 * T1 - 3 * Math.pow(C1, 2) + 8 * e1sq + 24 * Math.pow(T1, 2)) * Math.pow(D, 5)) / 120) /
-      Math.cos(phi1)) *
-      (180 / Math.PI) +
-    (zone - 1) * 6 -
-    180 +
-    3
+  console.log(`[v0] Converted to WGS84: [${lng}, ${lat}]`)
 
   return [lng, lat]
 }

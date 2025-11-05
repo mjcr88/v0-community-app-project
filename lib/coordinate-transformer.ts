@@ -39,7 +39,7 @@ export function detectCoordinateSystem(coords: number[]): CoordinateSystemInfo {
  */
 export function utmToLatLng(easting: number, northing: number, zone: number): [number, number] {
   // Define UTM projection for the detected zone (Northern hemisphere)
-  const utmProj = `+proj=utm +zone=${zone} +north +datum=WGS84 +units=m +no_defs`
+  const utmProj = `+proj=utm +zone=${zone} +datum=WGS84 +units=m +no_defs`
   const wgs84Proj = "+proj=longlat +datum=WGS84 +no_defs"
 
   console.log(`[v0] Converting UTM Zone ${zone}N: [${easting}, ${northing}]`)
@@ -48,13 +48,6 @@ export function utmToLatLng(easting: number, northing: number, zone: number): [n
   const [lng, lat] = proj4(utmProj, wgs84Proj, [easting, northing])
 
   console.log(`[v0] Converted to WGS84: [${lng}, ${lat}]`)
-
-  if (lat < 8 || lat > 11 || lng < -86 || lng > -82) {
-    console.error(`[v0] ⚠️ WARNING: Converted coordinate is OUTSIDE Costa Rica bounds!`)
-    console.error(`[v0] Expected: lat 8-11, lng -86 to -82`)
-    console.error(`[v0] Got: lat ${lat}, lng ${lng}`)
-    console.error(`[v0] Original UTM: easting ${easting}, northing ${northing}, zone ${zone}`)
-  }
 
   return [lng, lat]
 }

@@ -12,6 +12,8 @@ import { AlertCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { geolocate } from "@/lib/geolocate"
+import { APIProvider, Map, Marker, Polygon, Polyline } from "@vis.gl/react-google-maps"
+import { Button } from "@/components/ui/button"
 
 type DrawingMode = "marker" | "polygon" | "polyline" | null
 type LatLng = { lat: number; lng: number }
@@ -693,6 +695,7 @@ export function GoogleMapEditor({
     setSelectedLotId("")
     setSelectedNeighborhoodId("")
     setUploadedPhotos([])
+    setDrawingMode(null)
     toast({
       description: "Edit cancelled",
     })
@@ -913,4 +916,183 @@ export function GoogleMapEditor({
     <div className={mode === "view" ? "h-full" : "grid gap-6 lg:grid-cols-[1fr_400px]"}>
       <Card className={mode === "view" ? "h-full" : "min-h-[600px]"}>
         <CardContent className="p-1.5 h-full">
-          <div className=\"relative h-full w-full overflow
+          <div className="relative h-full w-full overflow-hidden rounded-md">
+            <APIProvider apiKey={apiKey}>
+              <Map
+                center={mapCenter}
+                zoom={mapZoom}
+                mapTypeId={mapType}
+                mapId="community-map"
+                gestureHandling="greedy"
+                disableDefaultUI={true}
+                onCenterChanged={(e) => setMapCenter(e.detail.center)}
+                onZoomChanged={(e) => setMapZoom(e.detail.zoom)}
+              >
+                <MapClickHandler drawingMode={drawingMode} onMapClick={handleMapClick} />
+
+                {/* Preview Features (GeoJSON Import) */}
+                {previewFeatures.map((feature, idx) => {
+                  if (feature.geometry.type === "Point") {
+                    const [lng, lat] = feature.geometry.coordinates
+                    return <Marker key={`preview-${idx}`} position={{ lat, lng }} />
+                  } else if (feature.geometry.type === "LineString") {
+                    const path = feature.geometry.coordinates.map((coord: number[]) => ({
+                      lat: coord[1],
+                      lng: coord[0],
+                    }))
+                    return (
+                      <Polyline
+                        key={`preview-${idx}`}
+                        path={path}
+                        strokeColor="#a855f7"
+                        strokeOpacity={0.8}
+                        strokeWeight={1.5}
+                      />
+                    )
+                  } else if (feature.geometry.type === "Polygon") {
+                    const paths = feature.geometry.coordinates[0].map((coord: number[]) => ({
+                      lat: coord[1],
+                      lng: coord[0],
+                    }))
+                    return (
+                      <Polygon
+                        key={`preview-${idx}`}
+                        paths={paths}
+                        strokeColor="#a855f7"
+                        strokeOpacity={0.8}
+                        strokeWeight={1.5}
+                        fillColor="#c084fc"
+                        fillOpacity={0.2}
+                      />
+                    )
+                  }
+                  return null
+                })}
+
+                {/* Saved Locations */}
+                {filteredLocations.map((location) => {
+                  const isEditing = editingLocationId === location.id
+                  const isHovered = hoveredLocationId === location.id
+
+                  if (location.coordinates) {
+                    return (
+                      <Marker
+                        key={location.id}
+                        position={location.coordinates}
+                        onClick={() => handleLocationClick(location)}
+                      />
+                    )
+                  }
+
+                  if (location.boundary_coordinates) {
+                    const paths = location.boundary_coordinates.map((coord) => ({ lat: coord[0], lng: coord[1] }))
+                    let strokeColor = "#fb923c"
+                    let fillColor = "#fdba74"
+
+                    if (location.type === "lot") {
+                      strokeColor = "#60a5fa"
+                      fillColor = "#93c5fd"
+                    } else if (location.type === "neighborhood") {
+                      strokeColor = "#a855f7"
+                      fillColor = "#c084fc"
+                    }
+
+                    return (
+                      <Polygon
+                        key={location.id}
+                        paths={paths}
+                        strokeColor={isEditing || isHovered ? "#ef4444" : strokeColor}
+                        strokeOpacity={isEditing || isHovered ? 1 : 0.7}
+                        strokeWeight={isEditing || isHovered ? 4 : 2}
+                        fillColor={isEditing || isHovered ? "#fca5a5" : fillColor}
+                        fillOpacity={isEditing || isHovered ? 0.4 : 0.25}
+                        onClick={() => handleLocationClick(location)}
+                      />
+                    )
+                  }
+
+                  if (location.path_coordinates) {
+                    const path = location.path_coordinates.map((coord) => ({ lat: coord[0], lng: coord[1] }))
+                    return (
+                      <Polyline
+                        path={path}
+                        strokeColor={isEditing || isHovered ? "#ef4444" : "#3b82f6"}
+                        strokeOpacity={isEditing || isHovered ? 1 : 0.8}
+                        strokeWeight={isEditing || isHovered ? 5 : 3}
+                        onClick={() => handleLocationClick(location)}
+                      />
+                    )
+                  }
+
+                  return null
+                })}
+
+                {/* Current Drawing */}
+                {markerPosition && <Marker position={markerPosition} />}
+                {polygonPoints.length > 0 && (
+                  <Polygon
+                    paths={polygonPoints}
+                    strokeColor="#10b981"
+                    strokeOpacity={0.8}
+                    strokeWeight={2}
+                    fillColor="#34d399"
+                    fillOpacity={0.35}
+                  />
+                )}
+                {polylinePoints.length > 0 && (
+                  <Polyline path={polylinePoints} strokeColor="#10b981" strokeOpacity={0.8} strokeWeight={3} />
+                )}
+              </Map>
+            </APIProvider>
+          </div>
+        </CardContent>
+      </Card>
+
+      {mode === "edit" && !isImporting && (
+        <Card>
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              <h3 className="font-semibold">{editingLocationId ? "Edit Location" : "Add New Location"}</h3>
+              <p className="text-sm text-muted-foreground">Form UI placeholder</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {mode === "edit" && isImporting && (
+        <Card>
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              <h3 className="font-semibold">Import GeoJSON</h3>
+              <p className="text-sm text-muted-foreground">{previewFeatures.length} feature(s) ready to import</p>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Location Type</label>
+                <select
+                  value={locationType}
+                  onChange={(e) => setLocationType(e.target.value as any)}
+                  className="w-full p-2 border rounded"
+                >
+                  <option value="facility">Facility</option>
+                  <option value="lot">Lot</option>
+                  <option value="walking_path">Walking Path</option>
+                  <option value="neighborhood">Neighborhood</option>
+                  <option value="boundary">Boundary</option>
+                </select>
+              </div>
+
+              <div className="flex gap-2">
+                <Button onClick={handleSaveImport} disabled={saving} className="flex-1">
+                  {saving ? "Saving..." : "Save Import"}
+                </Button>
+                <Button onClick={handleCancelImport} variant="outline">
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  )
+}

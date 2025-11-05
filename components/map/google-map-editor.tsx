@@ -1043,7 +1043,7 @@ export function GoogleMapEditor({
                             path={path}
                             strokeColor="#a855f7"
                             strokeOpacity={0.9}
-                            strokeWeight={4}
+                            strokeWeight={1.5}
                             clickable={false}
                           />
                         )
@@ -1058,7 +1058,7 @@ export function GoogleMapEditor({
                             paths={paths}
                             strokeColor="#a855f7"
                             strokeOpacity={0.9}
-                            strokeWeight={3}
+                            strokeWeight={1.5}
                             fillColor="#a855f7"
                             fillOpacity={0.3}
                             clickable={false}

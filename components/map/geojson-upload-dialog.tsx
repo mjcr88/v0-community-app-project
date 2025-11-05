@@ -114,7 +114,7 @@ export function GeoJSONUploadDialog({ open, onOpenChange, tenantId, tenantSlug }
     if (!parsedData) return
 
     sessionStorage.setItem("geojson-preview", JSON.stringify(parsedData))
-    router.push(`/t/${tenantSlug}/admin/map/viewer?preview=true`)
+    router.push(`/t/${tenantSlug}/admin/map/create?preview=true`)
     handleClose()
   }
 

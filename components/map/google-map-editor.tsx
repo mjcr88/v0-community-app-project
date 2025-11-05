@@ -3,19 +3,20 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
-import { useMap } from "@vis.gl/react-google-maps"
+import { APIProvider, Map, Marker, useMap } from "@vis.gl/react-google-maps"
+import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { createLocation, updateLocation, deleteLocation } from "@/app/actions/locations"
 import { useRouter, useSearchParams } from "next/navigation"
 import { AlertCircle } from "lucide-react"
+import { Polygon } from "./polygon"
+import { Polyline } from "./polyline"
 import { useToast } from "@/hooks/use-toast"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { geolocate } from "@/lib/geolocate"
-import { APIProvider, Map, Marker } from "@vis.gl/react-google-maps"
-import { Polygon } from "./polygon"
-import { Polyline } from "./polyline"
-import { Button } from "@/components/ui/button"
 
 type DrawingMode = "marker" | "polygon" | "polyline" | null
 type LatLng = { lat: number; lng: number }
@@ -1069,18 +1070,23 @@ export function GoogleMapEditor({
               <p className="text-sm text-muted-foreground">{previewFeatures.length} feature(s) ready to import</p>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Location Type</label>
-                <select
+                <Label className="text-sm font-medium">Location Type</Label>
+                <Select
                   value={locationType}
                   onChange={(e) => setLocationType(e.target.value as any)}
                   className="w-full p-2 border rounded"
                 >
-                  <option value="facility">Facility</option>
-                  <option value="lot">Lot</option>
-                  <option value="walking_path">Walking Path</option>
-                  <option value="neighborhood">Neighborhood</option>
-                  <option value="boundary">Boundary</option>
-                </select>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select location type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="facility">Facility</SelectItem>
+                    <SelectItem value="lot">Lot</SelectItem>
+                    <SelectItem value="walking_path">Walking Path</SelectItem>
+                    <SelectItem value="neighborhood">Neighborhood</SelectItem>
+                    <SelectItem value="boundary">Boundary</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="flex gap-2">

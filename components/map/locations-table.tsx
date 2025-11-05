@@ -227,14 +227,6 @@ export function LocationsTable({ locations, tenantSlug, tenantId }: LocationsTab
                             Edit
                           </Link>
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(location.id, location.name)}
-                          disabled={deleting}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
                       </div>
                     </td>
                   </tr>

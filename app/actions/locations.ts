@@ -187,10 +187,14 @@ export async function deleteLocation(locationId: string, tenantId: string) {
   await supabase.from("lots").update({ location_id: null }).eq("location_id", locationId)
   await supabase.from("neighborhoods").update({ location_id: null }).eq("location_id", locationId)
 
-  const { error } = await supabase.from("locations").delete().eq("id", locationId)
+  const { error: deleteError } = await supabase
+    .from("locations")
+    .delete()
+    .eq("id", locationId)
+    .eq("tenant_id", tenantId)
 
-  if (error) {
-    console.error("Error deleting location:", error)
+  if (deleteError) {
+    console.error("Error deleting location:", deleteError)
     throw new Error("Failed to delete location")
   }
 

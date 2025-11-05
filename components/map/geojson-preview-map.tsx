@@ -107,6 +107,14 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
                 minLng = Math.min(minLng, lng)
                 maxLng = Math.max(maxLng, lng)
               })
+            } else if (feature.geometry.type === "MultiPolygon") {
+              coords[0][0].forEach((coord: number[]) => {
+                const [lng, lat] = coord
+                minLat = Math.min(minLat, lat)
+                maxLat = Math.max(maxLat, lat)
+                minLng = Math.min(minLng, lng)
+                maxLng = Math.max(maxLng, lng)
+              })
             }
           })
 
@@ -192,27 +200,39 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
         }
 
         const feature = previewFeatures[0]
-        if (feature.geometry.type !== "Polygon") {
+        if (feature.geometry.type !== "Polygon" && feature.geometry.type !== "MultiPolygon") {
           toast({
             title: "Validation Error",
-            description: "Boundary must be a polygon.",
+            description: "Boundary must be a polygon or multi-polygon.",
             variant: "destructive",
           })
           setSaving(false)
           return
         }
 
-        const boundaryCoordinates = feature.geometry.coordinates[0].map((coord: number[]) => ({
-          lat: coord[1],
-          lng: coord[0],
-        }))
+        let boundaryCoordinates: { lat: number; lng: number }[]
+        if (feature.geometry.type === "Polygon") {
+          boundaryCoordinates = feature.geometry.coordinates[0].map((coord: number[]) => ({
+            lat: coord[1],
+            lng: coord[0],
+          }))
+        } else {
+          // MultiPolygon - use the first polygon
+          boundaryCoordinates = feature.geometry.coordinates[0][0].map((coord: number[]) => ({
+            lat: coord[1],
+            lng: coord[0],
+          }))
+        }
 
         const locationData = {
           tenant_id: tenantId,
           name: feature.properties?.name || "Community Boundary",
           type: "boundary",
           description: feature.properties?.description || null,
-          boundary_coordinates: feature.geometry.coordinates[0].map((coord: number[]) => [coord[1], coord[0]]),
+          boundary_coordinates:
+            feature.geometry.type === "Polygon"
+              ? feature.geometry.coordinates[0].map((coord: number[]) => [coord[1], coord[0]])
+              : feature.geometry.coordinates[0][0].map((coord: number[]) => [coord[1], coord[0]]),
         }
 
         const { error: locationError } = await supabase.from("locations").insert(locationData)
@@ -344,6 +364,26 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
                     )
                   } else if (feature.geometry.type === "Polygon") {
                     const paths = feature.geometry.coordinates[0].map((coord: number[]) => ({
+                      lat: coord[1],
+                      lng: coord[0],
+                    }))
+
+                    const isBoundary = locationType === "boundary"
+
+                    return (
+                      <Polygon
+                        key={`preview-${index}`}
+                        paths={paths}
+                        strokeColor={isBoundary ? "#ffffff" : "#a855f7"}
+                        strokeOpacity={isBoundary ? 0.8 : 0.9}
+                        strokeWeight={isBoundary ? 2 : 1}
+                        fillColor={isBoundary ? "#ffffff" : "#a855f7"}
+                        fillOpacity={isBoundary ? 0.15 : 0.2}
+                        clickable={false}
+                      />
+                    )
+                  } else if (feature.geometry.type === "MultiPolygon") {
+                    const paths = feature.geometry.coordinates[0][0].map((coord: number[]) => ({
                       lat: coord[1],
                       lng: coord[0],
                     }))

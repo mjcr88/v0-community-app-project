@@ -8,6 +8,25 @@ export interface CoordinateSystemInfo {
   zone?: number
 }
 
+const COSTA_RICA_BOUNDS = {
+  minLng: -86.0,
+  maxLng: -82.0,
+  minLat: 8.0,
+  maxLat: 11.5,
+}
+
+/**
+ * Validates if coordinates are within Costa Rica bounds
+ */
+function isInCostaRica(lng: number, lat: number): boolean {
+  return (
+    lng >= COSTA_RICA_BOUNDS.minLng &&
+    lng <= COSTA_RICA_BOUNDS.maxLng &&
+    lat >= COSTA_RICA_BOUNDS.minLat &&
+    lat <= COSTA_RICA_BOUNDS.maxLat
+  )
+}
+
 /**
  * Detects if coordinates are in a projected system and attempts to identify it
  */
@@ -21,9 +40,8 @@ export function detectCoordinateSystem(coords: number[]): CoordinateSystemInfo {
 
   // Check for UTM (typical range: 166,000 - 834,000 for easting, 0 - 10,000,000 for northing)
   if (x >= 160000 && x <= 840000 && y >= 0 && y <= 10000000) {
-    // Detect UTM zone from easting (each zone is ~6 degrees wide)
-    // Costa Rica is typically in zones 16N or 17N
-    const zone = Math.floor((x - 166000) / 1000000) + 16
+    // Will be validated and corrected in utmToLatLng if needed
+    const zone = 17
     return {
       isProjected: true,
       detectedSystem: `UTM Zone ${zone}N`,
@@ -36,9 +54,9 @@ export function detectCoordinateSystem(coords: number[]): CoordinateSystemInfo {
 
 /**
  * Converts UTM coordinates to WGS84 lat/lng using proj4
+ * Automatically tries both Zone 16N and 17N to find the correct one for Costa Rica
  */
 export function utmToLatLng(easting: number, northing: number, zone: number): [number, number] {
-  // Define UTM projection for the detected zone (Northern hemisphere)
   const utmProj = `+proj=utm +zone=${zone} +datum=WGS84 +units=m +no_defs`
   const wgs84Proj = "+proj=longlat +datum=WGS84 +no_defs"
 
@@ -47,8 +65,28 @@ export function utmToLatLng(easting: number, northing: number, zone: number): [n
   // Transform from UTM to WGS84
   const [lng, lat] = proj4(utmProj, wgs84Proj, [easting, northing])
 
-  console.log(`[v0] Converted to WGS84: [${lng}, ${lat}]`)
+  console.log(`[v0] Converted to WGS84: [${lng.toFixed(6)}, ${lat.toFixed(6)}]`)
 
+  if (isInCostaRica(lng, lat)) {
+    console.log(`[v0] ✓ Coordinates validated in Costa Rica bounds`)
+    return [lng, lat]
+  }
+
+  console.warn(`[v0] ⚠️ Coordinates outside Costa Rica: [${lng.toFixed(6)}, ${lat.toFixed(6)}]`)
+  const alternateZone = zone === 16 ? 17 : 16
+  console.log(`[v0] Trying alternate Zone ${alternateZone}N...`)
+
+  const altUtmProj = `+proj=utm +zone=${alternateZone} +datum=WGS84 +units=m +no_defs`
+  const [altLng, altLat] = proj4(altUtmProj, wgs84Proj, [easting, northing])
+
+  console.log(`[v0] Alternate conversion: [${altLng.toFixed(6)}, ${altLat.toFixed(6)}]`)
+
+  if (isInCostaRica(altLng, altLat)) {
+    console.log(`[v0] ✓ Using Zone ${alternateZone}N - coordinates validated in Costa Rica`)
+    return [altLng, altLat]
+  }
+
+  console.error(`[v0] ❌ Neither Zone 16N nor 17N produced valid Costa Rica coordinates. Using Zone ${zone}N result.`)
   return [lng, lat]
 }
 

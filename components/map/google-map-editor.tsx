@@ -117,7 +117,7 @@ export function GoogleMapEditor({
   const isEditingNeighborhood = !!preselectedNeighborhoodId
 
   const [drawingMode, setDrawingMode] = useState<DrawingMode>(null)
-  const [mapType, setMapType] = useState<"roadmap" | "satellite" | "terrain">("roadmap")
+  const [mapType, setMapType] = useState<"roadmap" | "satellite" | "terrain">("satellite")
   const [saving, setSaving] = useState(false)
   const [mapCenter, setMapCenter] = useState<LatLng>(initialMapCenter || { lat: 9.9567, lng: -84.5333 })
   const [mapZoom, setMapZoom] = useState(initialMapZoom || 15)

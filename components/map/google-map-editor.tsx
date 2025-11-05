@@ -232,26 +232,45 @@ export function GoogleMapEditor({
               }
             })
 
-            // Calculate center and appropriate zoom
+            const latPadding = (maxLat - minLat) * 0.1
+            const lngPadding = (maxLng - minLng) * 0.1
+
+            minLat -= latPadding
+            maxLat += latPadding
+            minLng -= lngPadding
+            maxLng += lngPadding
+
+            // Calculate center
             const centerLat = (minLat + maxLat) / 2
             const centerLng = (minLng + maxLng) / 2
 
-            console.log("[v0] Calculated bounds:", { minLat, maxLat, minLng, maxLng })
+            console.log("[v0] Calculated bounds with padding:", { minLat, maxLat, minLng, maxLng })
             console.log("[v0] Calculated center:", { lat: centerLat, lng: centerLng })
 
             setMapCenter({ lat: centerLat, lng: centerLng })
 
-            // Calculate zoom based on bounds
             const latDiff = maxLat - minLat
             const lngDiff = maxLng - minLng
             const maxDiff = Math.max(latDiff, lngDiff)
 
-            // Rough zoom calculation (adjust as needed)
-            let zoom = 15
-            if (maxDiff > 0.1) zoom = 12
-            if (maxDiff > 0.5) zoom = 10
-            if (maxDiff > 1) zoom = 9
-            if (maxDiff > 5) zoom = 7
+            // Calculate zoom based on bounds size
+            // Rough approximation: each zoom level halves the visible area
+            let zoom = 15 // Default zoom
+
+            if (maxDiff > 10) zoom = 6
+            else if (maxDiff > 5) zoom = 7
+            else if (maxDiff > 2) zoom = 8
+            else if (maxDiff > 1) zoom = 9
+            else if (maxDiff > 0.5) zoom = 10
+            else if (maxDiff > 0.25) zoom = 11
+            else if (maxDiff > 0.1) zoom = 12
+            else if (maxDiff > 0.05) zoom = 13
+            else if (maxDiff > 0.025) zoom = 14
+            else if (maxDiff > 0.01) zoom = 15
+            else if (maxDiff > 0.005) zoom = 16
+            else zoom = 17
+
+            zoom = Math.max(10, Math.min(18, zoom))
 
             console.log("[v0] Setting zoom to:", zoom, "based on maxDiff:", maxDiff)
             setMapZoom(zoom)

@@ -4,8 +4,6 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { APIProvider, Map, Marker, useMap } from "@vis.gl/react-google-maps"
-import { Polygon } from "./polygon"
-import { Polyline } from "./polyline"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -41,6 +39,8 @@ import {
   ImageIcon,
   Plus,
 } from "lucide-react"
+import { Polygon } from "./polygon"
+import { Polyline } from "./polyline"
 import { useToast } from "@/hooks/use-toast"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { geolocate } from "@/lib/geolocate"
@@ -232,45 +232,26 @@ export function GoogleMapEditor({
               }
             })
 
-            const latPadding = (maxLat - minLat) * 0.1
-            const lngPadding = (maxLng - minLng) * 0.1
-
-            minLat -= latPadding
-            maxLat += latPadding
-            minLng -= lngPadding
-            maxLng += lngPadding
-
-            // Calculate center
+            // Calculate center and appropriate zoom
             const centerLat = (minLat + maxLat) / 2
             const centerLng = (minLng + maxLng) / 2
 
-            console.log("[v0] Calculated bounds with padding:", { minLat, maxLat, minLng, maxLng })
+            console.log("[v0] Calculated bounds:", { minLat, maxLat, minLng, maxLng })
             console.log("[v0] Calculated center:", { lat: centerLat, lng: centerLng })
 
             setMapCenter({ lat: centerLat, lng: centerLng })
 
+            // Calculate zoom based on bounds
             const latDiff = maxLat - minLat
             const lngDiff = maxLng - minLng
             const maxDiff = Math.max(latDiff, lngDiff)
 
-            // Calculate zoom based on bounds size
-            // Rough approximation: each zoom level halves the visible area
-            let zoom = 15 // Default zoom
-
-            if (maxDiff > 10) zoom = 6
-            else if (maxDiff > 5) zoom = 7
-            else if (maxDiff > 2) zoom = 8
-            else if (maxDiff > 1) zoom = 9
-            else if (maxDiff > 0.5) zoom = 10
-            else if (maxDiff > 0.25) zoom = 11
-            else if (maxDiff > 0.1) zoom = 12
-            else if (maxDiff > 0.05) zoom = 13
-            else if (maxDiff > 0.025) zoom = 14
-            else if (maxDiff > 0.01) zoom = 15
-            else if (maxDiff > 0.005) zoom = 16
-            else zoom = 17
-
-            zoom = Math.max(10, Math.min(18, zoom))
+            // Rough zoom calculation (adjust as needed)
+            let zoom = 15
+            if (maxDiff > 0.1) zoom = 12
+            if (maxDiff > 0.5) zoom = 10
+            if (maxDiff > 1) zoom = 9
+            if (maxDiff > 5) zoom = 7
 
             console.log("[v0] Setting zoom to:", zoom, "based on maxDiff:", maxDiff)
             setMapZoom(zoom)
@@ -726,7 +707,6 @@ export function GoogleMapEditor({
     setSelectedLotId("")
     setSelectedNeighborhoodId("")
     setUploadedPhotos([])
-    setDrawingMode(null)
     toast({
       description: "Edit cancelled",
     })
@@ -1508,7 +1488,8 @@ export function GoogleMapEditor({
 
                 <div className="pt-4 space-y-2">
                   <Button onClick={handleSaveImport} disabled={saving} className="w-full">
-                    {saving ? "Saving..." : "Save Import"}
+                    {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Create {previewFeatures.length} Location(s)
                   </Button>
                   <Button variant="outline" onClick={handleCancelImport} className="w-full bg-transparent">
                     Cancel Import
@@ -1720,13 +1701,13 @@ export function GoogleMapEditor({
 
             <div className="pt-4 space-y-2">
               <Button onClick={handleSave} disabled={saving} className="w-full">
-                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {editingLocationId ? "Update Location" : "Save Location"}
               </Button>
               {editingLocationId && (
                 <>
                   <Button variant="destructive" onClick={handleDelete} disabled={deleting} className="w-full">
-                    {deleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     <Trash2 className="mr-2 h-4 w-4" />
                     Delete Location
                   </Button>

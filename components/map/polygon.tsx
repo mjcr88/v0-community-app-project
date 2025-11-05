@@ -32,11 +32,8 @@ function usePolygon(props: PolygonProps) {
 
   const polygon = useRef(new google.maps.Polygon()).current
 
-  const polygonOptionsRef = useRef(polygonOptions)
-  polygonOptionsRef.current = polygonOptions
-
   useEffect(() => {
-    polygon.setOptions(polygonOptionsRef.current)
+    polygon.setOptions(polygonOptions)
   }, [polygon])
 
   const map = useContext(GoogleMapsContext)?.map

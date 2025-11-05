@@ -60,6 +60,7 @@ export function ProfileForm({ tenant, resident, isSuperAdmin }: ProfileFormProps
   const router = useRouter()
   const supabase = createClient()
   const [isLoading, setIsLoading] = useState(false)
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
 
   const parsePhone = (phone: string | null) => {
     if (!phone) return { countryCode: "+1", phoneNumber: "" }
@@ -151,9 +152,35 @@ export function ProfileForm({ tenant, resident, isSuperAdmin }: ProfileFormProps
     setFormData({ ...formData, languages: formData.languages.filter((l) => l !== language) })
   }
 
-  const handlePhotoUpload = () => {
-    // Implement Vercel Blob upload
-    alert("Photo upload will be implemented with Vercel Blob storage")
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploadingPhoto(true)
+
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Upload failed")
+      }
+
+      const data = await response.json()
+      setFormData((prev) => ({ ...prev, profilePicture: data.url }))
+    } catch (error) {
+      console.error("[v0] Photo upload error:", error)
+      alert("Failed to upload photo: " + (error instanceof Error ? error.message : "Unknown error"))
+    } finally {
+      setUploadingPhoto(false)
+      e.target.value = ""
+    }
   }
 
   const initials = [formData.firstName, formData.lastName]
@@ -178,9 +205,32 @@ export function ProfileForm({ tenant, resident, isSuperAdmin }: ProfileFormProps
               <AvatarImage src={formData.profilePicture || "/placeholder.svg"} alt={initials} />
               <AvatarFallback className="text-2xl">{initials || "?"}</AvatarFallback>
             </Avatar>
-            <Button type="button" variant="outline" size="sm" onClick={handlePhotoUpload}>
-              <Upload className="mr-2 h-4 w-4" />
-              Upload Photo
+            <Input
+              id="profile-photo"
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/webp"
+              onChange={handlePhotoUpload}
+              disabled={uploadingPhoto}
+              className="hidden"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => document.getElementById("profile-photo")?.click()}
+              disabled={uploadingPhoto}
+            >
+              {uploadingPhoto ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Upload Photo
+                </>
+              )}
             </Button>
             <p className="text-xs text-muted-foreground">Recommended: Square image, at least 400x400px</p>
           </div>

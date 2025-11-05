@@ -47,15 +47,6 @@ export default async function TenantAdminDashboard({
 
   const neighborhoodIdList = neighborhoodIds?.map((n) => n.id) || []
 
-  const { count: lotsCount } = await supabase
-    .from("lots")
-    .select("*", { count: "exact", head: true })
-    .in("neighborhood_id", neighborhoodIdList)
-
-  const { data: lotIds } = await supabase.from("lots").select("id").in("neighborhood_id", neighborhoodIdList)
-
-  const lotIdList = lotIds?.map((l) => l.id) || []
-
   const { count: residentsCount } = await supabase
     .from("users")
     .select("*", { count: "exact", head: true })
@@ -83,6 +74,60 @@ export default async function TenantAdminDashboard({
     .from("interests")
     .select("*", { count: "exact", head: true })
     .eq("tenant_id", tenant?.id || "")
+
+  const { count: facilitiesCount } = await supabase
+    .from("locations")
+    .select("*", { count: "exact", head: true })
+    .eq("tenant_id", tenant?.id || "")
+    .eq("type", "facility")
+
+  const { count: lotsCount } = await supabase
+    .from("locations")
+    .select("*", { count: "exact", head: true })
+    .eq("tenant_id", tenant?.id || "")
+    .eq("type", "lot")
+
+  const { count: walkingPathsCount } = await supabase
+    .from("locations")
+    .select("*", { count: "exact", head: true })
+    .eq("tenant_id", tenant?.id || "")
+    .eq("type", "walking_path")
+
+  const { count: protectionZonesCount } = await supabase
+    .from("locations")
+    .select("*", { count: "exact", head: true })
+    .eq("tenant_id", tenant?.id || "")
+    .eq("type", "protection_zone")
+
+  const { count: easementsCount } = await supabase
+    .from("locations")
+    .select("*", { count: "exact", head: true })
+    .eq("tenant_id", tenant?.id || "")
+    .eq("type", "easement")
+
+  const { count: playgroundsCount } = await supabase
+    .from("locations")
+    .select("*", { count: "exact", head: true })
+    .eq("tenant_id", tenant?.id || "")
+    .eq("type", "playground")
+
+  const { count: publicStreetsCount } = await supabase
+    .from("locations")
+    .select("*", { count: "exact", head: true })
+    .eq("tenant_id", tenant?.id || "")
+    .eq("type", "public_street")
+
+  const { count: greenAreasCount } = await supabase
+    .from("locations")
+    .select("*", { count: "exact", head: true })
+    .eq("tenant_id", tenant?.id || "")
+    .eq("type", "green_area")
+
+  const { count: recreationalZonesCount } = await supabase
+    .from("locations")
+    .select("*", { count: "exact", head: true })
+    .eq("tenant_id", tenant?.id || "")
+    .eq("type", "recreational_zone")
 
   return (
     <div className="space-y-6">

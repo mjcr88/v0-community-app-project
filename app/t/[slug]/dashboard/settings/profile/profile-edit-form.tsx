@@ -35,6 +35,7 @@ export function ProfileEditForm({
 }: ProfileEditFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const [formData, setFormData] = useState({
     firstName: resident.first_name || "",
     lastName: resident.last_name || "",
@@ -94,9 +95,36 @@ export function ProfileEditForm({
     }
   }
 
-  const handlePhotoUpload = () => {
-    // TODO: Implement Vercel Blob upload
-    alert("Photo upload will be implemented with Vercel Blob storage")
+  const handlePhotoUpload = async () => {
+    const input = document.createElement("input")
+    input.type = "file"
+    input.accept = "image/jpeg,image/png,image/webp"
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (!file) return
+
+      setUploadingPhoto(true)
+      try {
+        const formData = new FormData()
+        formData.append("file", file)
+
+        const response = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        })
+
+        if (!response.ok) throw new Error("Upload failed")
+
+        const { url } = await response.json()
+        setFormData({ ...formData, profilePicture: url })
+      } catch (error) {
+        console.error("[v0] Error uploading photo:", error)
+        alert("Failed to upload photo. Please try again.")
+      } finally {
+        setUploadingPhoto(false)
+      }
+    }
+    input.click()
   }
 
   const addLanguage = (language: string) => {
@@ -187,9 +215,18 @@ export function ProfileEditForm({
               <AvatarImage src={formData.profilePicture || "/placeholder.svg"} alt={initials} />
               <AvatarFallback className="text-2xl">{initials || "?"}</AvatarFallback>
             </Avatar>
-            <Button type="button" variant="outline" size="sm" onClick={handlePhotoUpload}>
-              <Upload className="mr-2 h-4 w-4" />
-              Upload Photo
+            <Button type="button" variant="outline" size="sm" onClick={handlePhotoUpload} disabled={uploadingPhoto}>
+              {uploadingPhoto ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Upload Photo
+                </>
+              )}
             </Button>
           </div>
 

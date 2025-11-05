@@ -56,7 +56,7 @@ export default async function WelcomePage({
     .select("*, tenants:tenant_id(id, name, slug, features)")
     .eq("id", user.id)
     .eq("role", "resident")
-    .single()
+    .maybeSingle()
 
   if (!resident) {
     redirect(`/t/${slug}/login`)

@@ -1,9 +1,18 @@
 import { redirect } from "next/navigation"
 import { createServerClient } from "@/lib/supabase/server"
-import { GoogleMapEditor } from "@/components/map/google-map-editor"
+import { GoogleMapEditorClientWrapper } from "@/components/map/google-map-editor-client"
+import { GeoJSONPreviewMap } from "@/components/map/geojson-preview-map"
 
-export default async function CreateLocationPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function CreateLocationPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>
+  searchParams: Promise<{ preview?: string }>
+}) {
   const { slug } = await params
+  const { preview } = await searchParams
+
   const supabase = await createServerClient()
 
   console.log("[v0] Create location page - slug:", slug)
@@ -43,7 +52,7 @@ export default async function CreateLocationPage({ params }: { params: Promise<{
     redirect(`/t/${slug}`)
   }
 
-  console.log("[v0] All checks passed, rendering GoogleMapEditor")
+  console.log("[v0] All checks passed, rendering appropriate map component")
 
   const communityBoundary = tenant.map_boundary_coordinates || null
 
@@ -59,19 +68,30 @@ export default async function CreateLocationPage({ params }: { params: Promise<{
     .eq("tenant_id", tenant.id)
     .order("name")
 
+  const isPreview = preview === "true"
+
   return (
     <div className="container mx-auto p-6">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold">Add Location</h1>
-        <p className="text-muted-foreground">Draw a facility, lot boundary, or walking path on the map</p>
+        <h1 className="text-3xl font-bold">{isPreview ? "Preview GeoJSON Import" : "Add Location"}</h1>
+        <p className="text-muted-foreground">
+          {isPreview
+            ? "Review the imported features and configure location settings"
+            : "Draw a facility, lot boundary, or walking path on the map"}
+        </p>
       </div>
-      <GoogleMapEditor
-        tenantSlug={slug}
-        tenantId={tenant.id}
-        communityBoundary={communityBoundary}
-        lots={lots || []}
-        neighborhoods={neighborhoods || []}
-      />
+      {isPreview ? (
+        <GeoJSONPreviewMap tenantSlug={slug} tenantId={tenant.id} />
+      ) : (
+        <GoogleMapEditorClientWrapper
+          tenantSlug={slug}
+          tenantId={tenant.id}
+          communityBoundary={communityBoundary}
+          lots={lots || []}
+          neighborhoods={neighborhoods || []}
+          isPreview={false}
+        />
+      )}
     </div>
   )
 }

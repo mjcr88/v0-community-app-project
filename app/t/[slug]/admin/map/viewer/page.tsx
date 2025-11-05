@@ -1,8 +1,15 @@
 import { createServerClient } from "@/lib/supabase/server"
-import { GoogleMapViewer } from "@/components/map/google-map-viewer"
+import { GoogleMapEditor } from "@/components/map/google-map-editor"
 
-export default async function MapViewerPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function MapViewerPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>
+  searchParams: Promise<{ locationId?: string; preview?: string }>
+}) {
   const { slug } = await params
+  const { locationId, preview } = await searchParams
   const supabase = await createServerClient()
 
   const { data: tenant } = await supabase.from("tenants").select("*").eq("slug", slug).single()
@@ -11,7 +18,6 @@ export default async function MapViewerPage({ params }: { params: Promise<{ slug
     return <div>Tenant not found</div>
   }
 
-  // Get all locations for this tenant
   const { data: locations } = await supabase
     .from("locations")
     .select("*")
@@ -20,17 +26,19 @@ export default async function MapViewerPage({ params }: { params: Promise<{ slug
 
   const communityBoundary = tenant.map_boundary_coordinates || null
 
-  console.log("[v0] Viewer page - Community boundary from DB:", communityBoundary)
+  const mode = "view"
 
   return (
     <div className="h-[100vh] w-full">
-      <GoogleMapViewer
+      <GoogleMapEditor
         tenantSlug={slug}
+        tenantId={tenant.id}
+        mode={mode}
         initialLocations={locations || []}
         mapCenter={tenant.map_center_coordinates as { lat: number; lng: number } | null}
         mapZoom={tenant.map_default_zoom || 15}
-        isAdmin={true}
         communityBoundary={communityBoundary}
+        initialHighlightLocationId={locationId}
       />
     </div>
   )

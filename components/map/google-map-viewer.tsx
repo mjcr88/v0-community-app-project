@@ -166,6 +166,13 @@ export function GoogleMapViewer({
     setSelectedLocation(location)
   }
 
+  const convertCoordinates = (coords: [number, number][]) => {
+    return coords.map((coord) => ({
+      lat: coord[0],
+      lng: coord[1],
+    }))
+  }
+
   if (!apiKey) {
     return (
       <div className="flex items-center justify-center h-full bg-muted rounded-lg">
@@ -189,7 +196,7 @@ export function GoogleMapViewer({
         >
           {showBoundary && tenantBoundary && (
             <Polygon
-              paths={tenantBoundary}
+              paths={convertCoordinates(tenantBoundary as any)}
               strokeColor="#ffffff"
               strokeOpacity={0.8}
               strokeWeight={2}
@@ -200,7 +207,7 @@ export function GoogleMapViewer({
           )}
 
           {boundaryLocations.map((location) => {
-            const paths = location.boundary_coordinates!.map((coord) => ({ lat: coord[0], lng: coord[1] }))
+            const paths = convertCoordinates(location.boundary_coordinates!)
             console.log("[v0] Rendering boundary location:", location.id, "with", paths.length, "coordinate pairs")
             console.log("[v0] First path coordinate:", paths[0])
             return (
@@ -218,7 +225,7 @@ export function GoogleMapViewer({
           })}
 
           {boundaryLocationsFromTable?.map((location) => {
-            const paths = location.boundary_coordinates!.map((coord) => ({ lat: coord[0], lng: coord[1] }))
+            const paths = convertCoordinates(location.boundary_coordinates!)
             console.log(
               "[v0] Rendering boundary location from table:",
               location.id,
@@ -242,7 +249,7 @@ export function GoogleMapViewer({
           })}
 
           {neighborhoodPolygons.map((location) => {
-            const paths = location.boundary_coordinates!.map((coord) => ({ lat: coord[0], lng: coord[1] }))
+            const paths = convertCoordinates(location.boundary_coordinates!)
             const isHighlighted = highlightedLocationId === location.id
             return (
               <Polygon
@@ -263,7 +270,7 @@ export function GoogleMapViewer({
           ))}
 
           {facilityPolygons.map((location) => {
-            const paths = location.boundary_coordinates!.map((coord) => ({ lat: coord[0], lng: coord[1] }))
+            const paths = convertCoordinates(location.boundary_coordinates!)
             const isHighlighted = highlightedLocationId === location.id
             return (
               <Polygon
@@ -280,7 +287,7 @@ export function GoogleMapViewer({
           })}
 
           {lotPolygons.map((location) => {
-            const paths = location.boundary_coordinates!.map((coord) => ({ lat: coord[0], lng: coord[1] }))
+            const paths = convertCoordinates(location.boundary_coordinates!)
             const isHighlighted = highlightedLocationId === location.id
             return (
               <Polygon
@@ -297,7 +304,7 @@ export function GoogleMapViewer({
           })}
 
           {walkingPaths.map((location) => {
-            const path = location.path_coordinates!.map((coord) => ({ lat: coord[0], lng: coord[1] }))
+            const path = convertCoordinates(location.path_coordinates!)
             const isHighlighted = highlightedLocationId === location.id
             return (
               <Polyline

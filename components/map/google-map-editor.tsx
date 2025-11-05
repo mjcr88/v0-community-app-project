@@ -996,6 +996,13 @@ export function GoogleMapEditor({
     router.push(`/t/${tenantSlug}/admin/map`)
   }
 
+  const convertCoordinates = (coords: [number, number][]) => {
+    return coords.map((coord) => ({
+      lat: coord[0],
+      lng: coord[1],
+    }))
+  }
+
   return (
     <div className={mode === "view" ? "h-full" : "grid gap-6 lg:grid-cols-[1fr_400px]"}>
       <Card className={mode === "view" ? "h-full" : "min-h-[600px]"}>
@@ -1143,10 +1150,7 @@ export function GoogleMapEditor({
                       isRecreationalZone) &&
                     location.boundary_coordinates
                   ) {
-                    const paths = location.boundary_coordinates.map((coord: [number, number]) => ({
-                      lat: coord[0],
-                      lng: coord[1],
-                    }))
+                    const paths = convertCoordinates(location.boundary_coordinates)
 
                     const strokeColor = isBoundary
                       ? "#ffffff"
@@ -1216,10 +1220,7 @@ export function GoogleMapEditor({
                     )
                   }
                   if (location.type === "lot" && location.boundary_coordinates) {
-                    const paths = location.boundary_coordinates.map((coord: [number, number]) => ({
-                      lat: coord[0],
-                      lng: coord[1],
-                    }))
+                    const paths = convertCoordinates(location.boundary_coordinates)
                     return (
                       <Polygon
                         key={`saved-${location.id}`}
@@ -1240,10 +1241,7 @@ export function GoogleMapEditor({
                     )
                   }
                   if (location.type === "walking_path" && location.path_coordinates) {
-                    const path = location.path_coordinates.map((coord: [number, number]) => ({
-                      lat: coord[0],
-                      lng: coord[1],
-                    }))
+                    const path = convertCoordinates(location.path_coordinates)
                     return (
                       <Polyline
                         key={`saved-${location.id}`}

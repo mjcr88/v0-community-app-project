@@ -52,7 +52,6 @@
     "geojson": "latest",
     "global": "4.4.0",
     "google-maps": "4.3.3",
-    "google.maps": "latest",
     "googlemaps": "1.12.0",
     "input-otp": "1.4.1",
     "leaflet": "latest",

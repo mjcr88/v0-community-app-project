@@ -930,6 +930,7 @@ export function GoogleMapEditor({
           <div className="relative h-full w-full overflow-hidden rounded-lg">
             <APIProvider apiKey={apiKey}>
               <Map
+                mapId={process.env.NEXT_PUBLIC_GOOGLE_MAP_ID || "DEMO_MAP_ID"}
                 center={mapCenter}
                 zoom={mapZoom}
                 mapTypeId={mapType}

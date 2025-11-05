@@ -200,6 +200,8 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
         }
 
         const feature = previewFeatures[0]
+        console.log("[v0] Boundary feature geometry type:", feature.geometry.type)
+        console.log("[v0] Boundary feature geometry:", JSON.stringify(feature.geometry, null, 2))
 
         let boundaryCoordinates: { lat: number; lng: number }[]
         let boundaryCoordinatesArray: number[][]
@@ -217,6 +219,20 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
           }))
           boundaryCoordinatesArray = feature.geometry.coordinates[0][0].map((coord: number[]) => [coord[1], coord[0]])
         } else if (feature.geometry.type === "GeometryCollection") {
+          const hasLineStrings = feature.geometry.geometries.some((geom: any) => geom.type === "LineString")
+
+          if (!hasLineStrings) {
+            toast({
+              title: "Validation Error",
+              description: "GeometryCollection must contain LineStrings.",
+              variant: "destructive",
+            })
+            setSaving(false)
+            return
+          }
+
+          console.log("[v0] GeometryCollection geometries:", feature.geometry.geometries.length)
+
           // Convert GeometryCollection of LineStrings into a single Polygon
           const allCoordinates: number[][] = []
 
@@ -238,6 +254,8 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
             return
           }
 
+          console.log("[v0] Total coordinates extracted:", allCoordinates.length)
+
           boundaryCoordinates = allCoordinates.map((coord) => ({
             lat: coord[1],
             lng: coord[0],
@@ -253,6 +271,9 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
           return
         }
 
+        console.log("[v0] Boundary coordinates for location:", boundaryCoordinatesArray.length, "points")
+        console.log("[v0] Boundary coordinates for tenant:", boundaryCoordinates.length, "points")
+
         const locationData = {
           tenant_id: tenantId,
           name: feature.properties?.name || "Community Boundary",
@@ -261,15 +282,27 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
           boundary_coordinates: boundaryCoordinatesArray,
         }
 
+        console.log("[v0] Inserting location with data:", JSON.stringify(locationData, null, 2))
+
         const { error: locationError } = await supabase.from("locations").insert(locationData)
-        if (locationError) throw locationError
+        if (locationError) {
+          console.error("[v0] Location insert error:", locationError)
+          throw locationError
+        }
+
+        console.log("[v0] Location inserted successfully, now updating tenant...")
 
         const { error: tenantError } = await supabase
           .from("tenants")
           .update({ map_boundary_coordinates: boundaryCoordinates })
           .eq("id", tenantId)
 
-        if (tenantError) throw tenantError
+        if (tenantError) {
+          console.error("[v0] Tenant update error:", tenantError)
+          throw tenantError
+        }
+
+        console.log("[v0] Tenant updated successfully!")
 
         toast({
           title: "Success",

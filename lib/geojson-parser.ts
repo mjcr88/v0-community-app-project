@@ -294,47 +294,28 @@ import { transformGeometry } from "./coordinate-transformer"
 function preprocessGeometryCollection(data: any): any {
   // Check if it's a GeometryCollection
   if (data.type === "GeometryCollection" && Array.isArray(data.geometries)) {
-    // Check if all geometries are LineStrings
-    const allLineStrings = data.geometries.every((geom: any) => geom.type === "LineString")
+    console.log(
+      "[v0] Pre-processing: Converting GeometryCollection of",
+      data.geometries.length,
+      "geometries to FeatureCollection",
+    )
 
-    if (allLineStrings && data.geometries.length > 0) {
-      console.log(
-        "[v0] Pre-processing: Converting GeometryCollection of",
-        data.geometries.length,
-        "LineStrings to Polygon",
-      )
+    // Convert each geometry to a separate Feature
+    const features = data.geometries.map((geometry: any, index: number) => ({
+      type: "Feature",
+      geometry: geometry,
+      properties: data.properties || {
+        name: `Location ${index + 1}`,
+        source: "GeometryCollection",
+      },
+    }))
 
-      // Combine all LineString coordinates into a single array
-      const allCoordinates: number[][] = []
-      data.geometries.forEach((geom: any) => {
-        if (geom.coordinates && Array.isArray(geom.coordinates)) {
-          allCoordinates.push(...geom.coordinates)
-        }
-      })
+    console.log("[v0] Pre-processing: Created", features.length, "features from GeometryCollection")
 
-      // Ensure the polygon is closed (first and last coordinates should be the same)
-      if (allCoordinates.length > 0) {
-        const first = allCoordinates[0]
-        const last = allCoordinates[allCoordinates.length - 1]
-        if (first[0] !== last[0] || first[1] !== last[1]) {
-          allCoordinates.push([...first])
-        }
-      }
-
-      console.log("[v0] Pre-processing: Created Polygon with", allCoordinates.length, "coordinates")
-
-      // Convert to a Feature with Polygon geometry
-      return {
-        type: "Feature",
-        geometry: {
-          type: "Polygon",
-          coordinates: [allCoordinates],
-        },
-        properties: data.properties || {
-          name: "Boundary",
-          source: "GeometryCollection",
-        },
-      }
+    // Return a FeatureCollection
+    return {
+      type: "FeatureCollection",
+      features: features,
     }
   }
 

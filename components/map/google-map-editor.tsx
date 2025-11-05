@@ -193,6 +193,45 @@ export function GoogleMapEditor({
           firstCoord: boundaryLocs[0].boundary_coordinates?.[0],
         })
       }
+
+      if (boundaryLocs.length > 0 && !initialMapCenter) {
+        const boundary = boundaryLocs[0]
+        if (boundary.boundary_coordinates && boundary.boundary_coordinates.length > 0) {
+          // Calculate bounds of the boundary
+          let minLat = Number.POSITIVE_INFINITY
+          let maxLat = Number.NEGATIVE_INFINITY
+          let minLng = Number.POSITIVE_INFINITY
+          let maxLng = Number.NEGATIVE_INFINITY
+
+          boundary.boundary_coordinates.forEach((coord: [number, number]) => {
+            const [lat, lng] = coord
+            minLat = Math.min(minLat, lat)
+            maxLat = Math.max(maxLat, lat)
+            minLng = Math.min(minLng, lng)
+            maxLng = Math.max(maxLng, lng)
+          })
+
+          const centerLat = (minLat + maxLat) / 2
+          const centerLng = (minLng + maxLng) / 2
+          setMapCenter({ lat: centerLat, lng: centerLng })
+
+          // Calculate appropriate zoom
+          const latDiff = maxLat - minLat
+          const lngDiff = maxLng - minLng
+          const maxDiff = Math.max(latDiff, lngDiff)
+
+          let zoom = 15
+          if (maxDiff > 0.01) zoom = 14
+          if (maxDiff > 0.05) zoom = 13
+          if (maxDiff > 0.1) zoom = 12
+          if (maxDiff > 0.5) zoom = 10
+          if (maxDiff > 1) zoom = 9
+
+          setMapZoom(zoom)
+          console.log("[v0] Auto-centered map on boundary:", { lat: centerLat, lng: centerLng, zoom })
+        }
+      }
+
       return
     }
 
@@ -213,6 +252,44 @@ export function GoogleMapEditor({
           coordinateCount: boundaryLocs[0].boundary_coordinates?.length || 0,
           firstCoord: boundaryLocs[0].boundary_coordinates?.[0],
         })
+
+        if (!initialMapCenter && !editLocationIdFromUrl) {
+          const boundary = boundaryLocs[0]
+          if (boundary.boundary_coordinates && boundary.boundary_coordinates.length > 0) {
+            // Calculate bounds of the boundary
+            let minLat = Number.POSITIVE_INFINITY
+            let maxLat = Number.NEGATIVE_INFINITY
+            let minLng = Number.POSITIVE_INFINITY
+            let maxLng = Number.NEGATIVE_INFINITY
+
+            boundary.boundary_coordinates.forEach((coord: [number, number]) => {
+              const [lat, lng] = coord
+              minLat = Math.min(minLat, lat)
+              maxLat = Math.max(maxLat, lat)
+              minLng = Math.min(minLng, lng)
+              maxLng = Math.max(maxLng, lng)
+            })
+
+            const centerLat = (minLat + maxLat) / 2
+            const centerLng = (minLng + maxLng) / 2
+            setMapCenter({ lat: centerLat, lng: centerLng })
+
+            // Calculate appropriate zoom
+            const latDiff = maxLat - minLat
+            const lngDiff = maxLng - minLng
+            const maxDiff = Math.max(latDiff, lngDiff)
+
+            let zoom = 15
+            if (maxDiff > 0.01) zoom = 14
+            if (maxDiff > 0.05) zoom = 13
+            if (maxDiff > 0.1) zoom = 12
+            if (maxDiff > 0.5) zoom = 10
+            if (maxDiff > 1) zoom = 9
+
+            setMapZoom(zoom)
+            console.log("[v0] Auto-centered map on boundary:", { lat: centerLat, lng: centerLng, zoom })
+          }
+        }
       }
       if (data) {
         setSavedLocations(data)
@@ -221,14 +298,12 @@ export function GoogleMapEditor({
           const locationToEdit = data.find((loc) => loc.id === editLocationIdFromUrl)
           if (locationToEdit) {
             console.log("[v0] Auto-loading location for editing:", locationToEdit)
-            // Don't call handleLocationClick yet, just highlight it
-            // User needs to click it to start editing
           }
         }
       }
     }
     loadLocations()
-  }, [tenantId, editLocationIdFromUrl, mode, initialLocations])
+  }, [tenantId, editLocationIdFromUrl, mode, initialLocations, initialMapCenter])
 
   useEffect(() => {
     if (isPreviewMode) {

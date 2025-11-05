@@ -265,36 +265,60 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
         router.push(`/t/${tenantSlug}/admin/map`)
         return
       } else {
+        let successCount = 0
+        let errorCount = 0
+
         for (const feature of previewFeatures) {
-          const locationData: any = {
-            tenant_id: tenantId,
-            name: feature.properties?.name || `Imported ${feature.geometry.type}`,
-            type: locationType,
-            description: feature.properties?.description || null,
-          }
-
-          if (feature.geometry.type === "Point") {
-            locationData.coordinates = {
-              lat: feature.geometry.coordinates[1],
-              lng: feature.geometry.coordinates[0],
+          try {
+            const locationData: any = {
+              tenant_id: tenantId,
+              name: feature.properties?.name || `Imported ${feature.geometry.type} ${successCount + 1}`,
+              type: locationType,
+              description: feature.properties?.description || null,
             }
-          } else if (feature.geometry.type === "LineString") {
-            locationData.path_coordinates = feature.geometry.coordinates.map((coord: number[]) => [coord[1], coord[0]])
-          } else if (feature.geometry.type === "Polygon") {
-            locationData.boundary_coordinates = feature.geometry.coordinates[0].map((coord: number[]) => [
-              coord[1],
-              coord[0],
-            ])
-          }
 
-          const { error } = await supabase.from("locations").insert(locationData)
-          if (error) throw error
+            if (feature.geometry.type === "Point") {
+              locationData.coordinates = {
+                lat: feature.geometry.coordinates[1],
+                lng: feature.geometry.coordinates[0],
+              }
+            } else if (feature.geometry.type === "LineString") {
+              locationData.path_coordinates = feature.geometry.coordinates.map((coord: number[]) => [
+                coord[1],
+                coord[0],
+              ])
+            } else if (feature.geometry.type === "Polygon") {
+              locationData.boundary_coordinates = feature.geometry.coordinates[0].map((coord: number[]) => [
+                coord[1],
+                coord[0],
+              ])
+            }
+
+            const { error } = await supabase.from("locations").insert(locationData)
+            if (error) {
+              console.error("[v0] Error creating location:", error)
+              errorCount++
+            } else {
+              successCount++
+            }
+          } catch (err) {
+            console.error("[v0] Error processing feature:", err)
+            errorCount++
+          }
         }
 
-        toast({
-          title: "Success",
-          description: `${previewFeatures.length} location(s) created successfully!`,
-        })
+        if (successCount > 0) {
+          toast({
+            title: "Success",
+            description: `${successCount} location(s) created successfully!${errorCount > 0 ? ` (${errorCount} failed)` : ""}`,
+          })
+        } else {
+          toast({
+            title: "Error",
+            description: "Failed to create any locations",
+            variant: "destructive",
+          })
+        }
       }
 
       sessionStorage.removeItem("geojson-preview")

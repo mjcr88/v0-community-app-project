@@ -59,6 +59,14 @@ interface GoogleMapEditorProps {
   mapCenter?: { lat: number; lng: number } | null
   mapZoom?: number
   initialHighlightLocationId?: string
+  previewFeatures?: Array<{
+    type: "Feature"
+    geometry: {
+      type: string
+      coordinates: any
+    }
+    properties: Record<string, any>
+  }>
 }
 
 function MapClickHandler({
@@ -101,6 +109,7 @@ export function GoogleMapEditor({
   mapCenter: initialMapCenter,
   mapZoom: initialMapZoom,
   initialHighlightLocationId,
+  previewFeatures,
 }: GoogleMapEditorProps) {
   const router = useRouter()
   const { toast } = useToast()
@@ -792,6 +801,74 @@ export function GoogleMapEditor({
                     clickable={false}
                   />
                 )}
+
+                {previewFeatures &&
+                  previewFeatures.map((feature, index) => {
+                    if (feature.geometry.type === "Point") {
+                      const [lng, lat] = feature.geometry.coordinates
+                      return <Marker key={`preview-${index}`} position={{ lat, lng }} />
+                    } else if (feature.geometry.type === "Polygon") {
+                      const paths = feature.geometry.coordinates[0].map(([lng, lat]: [number, number]) => ({
+                        lat,
+                        lng,
+                      }))
+                      return (
+                        <Polygon
+                          key={`preview-${index}`}
+                          paths={paths}
+                          strokeColor="#a855f7"
+                          strokeOpacity={1}
+                          strokeWeight={3}
+                          fillColor="#d8b4fe"
+                          fillOpacity={0.3}
+                          clickable={false}
+                        />
+                      )
+                    } else if (feature.geometry.type === "LineString") {
+                      const path = feature.geometry.coordinates.map(([lng, lat]: [number, number]) => ({ lat, lng }))
+                      return (
+                        <Polyline
+                          key={`preview-${index}`}
+                          path={path}
+                          strokeColor="#f59e0b"
+                          strokeOpacity={1}
+                          strokeWeight={4}
+                          clickable={false}
+                        />
+                      )
+                    } else if (feature.geometry.type === "MultiPolygon") {
+                      return feature.geometry.coordinates.map((polygon: any, polyIndex: number) => {
+                        const paths = polygon[0].map(([lng, lat]: [number, number]) => ({ lat, lng }))
+                        return (
+                          <Polygon
+                            key={`preview-${index}-${polyIndex}`}
+                            paths={paths}
+                            strokeColor="#a855f7"
+                            strokeOpacity={1}
+                            strokeWeight={3}
+                            fillColor="#d8b4fe"
+                            fillOpacity={0.3}
+                            clickable={false}
+                          />
+                        )
+                      })
+                    } else if (feature.geometry.type === "MultiLineString") {
+                      return feature.geometry.coordinates.map((line: any, lineIndex: number) => {
+                        const path = line.map(([lng, lat]: [number, number]) => ({ lat, lng }))
+                        return (
+                          <Polyline
+                            key={`preview-${index}-${lineIndex}`}
+                            path={path}
+                            strokeColor="#f59e0b"
+                            strokeOpacity={1}
+                            strokeWeight={4}
+                            clickable={false}
+                          />
+                        )
+                      })
+                    }
+                    return null
+                  })}
 
                 {filteredLocations.map((location) => {
                   const isEditing = mode === "edit" && editingLocationId === location.id

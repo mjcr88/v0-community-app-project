@@ -29,7 +29,9 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
   const [previewFeatures, setPreviewFeatures] = useState<any[]>([])
   const [mapCenter, setMapCenter] = useState<LatLng>({ lat: 9.9567, lng: -84.5333 })
   const [mapZoom, setMapZoom] = useState(15)
-  const [locationType, setLocationType] = useState<"facility" | "lot" | "walking_path" | "neighborhood">("facility")
+  const [locationType, setLocationType] = useState<"facility" | "lot" | "walking_path" | "neighborhood" | "boundary">(
+    "facility",
+  )
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
 
@@ -338,6 +340,7 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
                 <SelectItem value="lot">Lot</SelectItem>
                 <SelectItem value="neighborhood">Neighborhood</SelectItem>
                 <SelectItem value="walking_path">Walking Path</SelectItem>
+                <SelectItem value="boundary">Boundary</SelectItem>
               </SelectContent>
             </Select>
           </div>

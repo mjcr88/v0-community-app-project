@@ -59,14 +59,6 @@ interface GoogleMapEditorProps {
   mapCenter?: { lat: number; lng: number } | null
   mapZoom?: number
   initialHighlightLocationId?: string
-  previewFeatures?: Array<{
-    type: "Feature"
-    geometry: {
-      type: string
-      coordinates: any
-    }
-    properties: Record<string, any>
-  }>
 }
 
 function MapClickHandler({
@@ -109,7 +101,6 @@ export function GoogleMapEditor({
   mapCenter: initialMapCenter,
   mapZoom: initialMapZoom,
   initialHighlightLocationId,
-  previewFeatures,
 }: GoogleMapEditorProps) {
   const router = useRouter()
   const { toast } = useToast()
@@ -120,6 +111,7 @@ export function GoogleMapEditor({
   const prefilledName = searchParams.get("name")
   const prefilledDescription = searchParams.get("description")
   const editLocationIdFromUrl = searchParams.get("editLocationId")
+  const isPreviewMode = searchParams.get("preview") === "true"
 
   const isEditingLot = !!preselectedLotId
   const isEditingNeighborhood = !!preselectedNeighborhoodId
@@ -136,28 +128,35 @@ export function GoogleMapEditor({
   const [savedLocations, setSavedLocations] = useState<any[]>([])
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
-  const [locationType, setLocationType] = useState<"facility" | "lot" | "walking_path" | "neighborhood">("facility")
+  const [locationType, setLocationType] = useState<"facility" | "lot" | "walking_path" | "neighborhood" | "boundary">(
+    "facility",
+  )
   const [facilityType, setFacilityType] = useState("")
   const [icon, setIcon] = useState("")
   const [selectedLotId, setSelectedLotId] = useState<string>("")
   const [selectedNeighborhoodId, setSelectedNeighborhoodId] = useState<string>("")
 
+  const [previewFeatures, setPreviewFeatures] = useState<any[]>([])
+  const [isImporting, setIsImporting] = useState(false)
+
+  // State for toggling visibility of different location types on the map
   const [showFacilities, setShowFacilities] = useState(true)
   const [showLots, setShowLots] = useState(true)
   const [showWalkingPaths, setShowWalkingPaths] = useState(true)
   const [showNeighborhoods, setShowNeighborhoods] = useState(true)
 
-  const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([])
-  const [uploadingPhoto, setUploadingPhoto] = useState(false)
-
-  const [editingLocationId, setEditingLocationId] = useState<string | null>(null)
-  const [deleting, setDeleting] = useState(false)
-
+  // State for hover and selection
   const [hoveredLocationId, setHoveredLocationId] = useState<string | null>(null)
-  const [highlightedLocationId, setHighlightedLocationId] = useState<string | undefined>(initialHighlightLocationId)
-  const [selectedLocation, setSelectedLocation] = useState<any>(null)
+  const [selectedLocation, setSelectedLocation] = useState<any | null>(null)
+  const [highlightedLocationId, setHighlightedLocationId] = useState<string | undefined>(undefined)
+  const [editingLocationId, setEditingLocationId] = useState<string | null>(null)
 
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""
+  // State for photo uploads
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([])
+
+  // State for deletion
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     if (mode === "view") {
@@ -183,6 +182,48 @@ export function GoogleMapEditor({
     }
     loadLocations()
   }, [tenantId, editLocationIdFromUrl, mode, initialLocations])
+
+  useEffect(() => {
+    if (isPreviewMode) {
+      const previewData = sessionStorage.getItem("geojson-preview")
+      if (previewData) {
+        try {
+          const parsed = JSON.parse(previewData)
+          setPreviewFeatures(parsed.features || [])
+          setIsImporting(true)
+
+          // Center map on first feature
+          if (parsed.features && parsed.features.length > 0) {
+            const firstFeature = parsed.features[0]
+            if (firstFeature.geometry.type === "Point") {
+              setMapCenter({ lat: firstFeature.geometry.coordinates[1], lng: firstFeature.geometry.coordinates[0] })
+              setMapZoom(16)
+            } else if (firstFeature.geometry.type === "LineString" && firstFeature.geometry.coordinates.length > 0) {
+              const firstCoord = firstFeature.geometry.coordinates[0]
+              setMapCenter({ lat: firstCoord[1], lng: firstCoord[0] })
+              setMapZoom(15)
+            } else if (firstFeature.geometry.type === "Polygon" && firstFeature.geometry.coordinates[0].length > 0) {
+              const firstCoord = firstFeature.geometry.coordinates[0][0]
+              setMapCenter({ lat: firstCoord[1], lng: firstCoord[0] })
+              setMapZoom(15)
+            }
+          }
+
+          toast({
+            title: "GeoJSON Loaded",
+            description: `${parsed.features?.length || 0} feature(s) ready to import`,
+          })
+        } catch (error) {
+          console.error("[v0] Error loading preview data:", error)
+          toast({
+            title: "Error",
+            description: "Failed to load preview data",
+            variant: "destructive",
+          })
+        }
+      }
+    }
+  }, [isPreviewMode, toast])
 
   useEffect(() => {
     if (mode === "view" && initialHighlightLocationId) {
@@ -720,6 +761,9 @@ export function GoogleMapEditor({
     }
   }
 
+  // TODO: Get API key from environment variables
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""
+
   if (!apiKey) {
     return (
       <Alert variant="destructive">
@@ -739,6 +783,97 @@ export function GoogleMapEditor({
     if (location.type === "neighborhood") return showNeighborhoods
     return true
   })
+
+  // Handle Save/Cancel for GeoJSON Import
+  const handleSaveImport = async () => {
+    if (!locationType) {
+      toast({
+        title: "Validation Error",
+        description: "Please select a location type",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (previewFeatures.length === 0) {
+      toast({
+        title: "Validation Error",
+        description: "No features to import",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setSaving(true)
+
+    try {
+      const supabase = createBrowserClient()
+      const createdLocations = []
+
+      for (const feature of previewFeatures) {
+        const locationData: any = {
+          tenant_id: tenantId,
+          name: feature.properties?.name || `Imported ${feature.geometry.type}`,
+          type: locationType,
+          description: feature.properties?.description || null,
+        }
+
+        if (feature.geometry.type === "Point") {
+          locationData.coordinates = {
+            lat: feature.geometry.coordinates[1],
+            lng: feature.geometry.coordinates[0],
+          }
+        } else if (feature.geometry.type === "LineString") {
+          locationData.path_coordinates = feature.geometry.coordinates.map((coord: number[]) => [coord[1], coord[0]])
+        } else if (feature.geometry.type === "Polygon") {
+          locationData.boundary_coordinates = feature.geometry.coordinates[0].map((coord: number[]) => [
+            coord[1],
+            coord[0],
+          ])
+        }
+
+        const { data, error } = await supabase.from("locations").insert(locationData).select().single()
+
+        if (error) throw error
+        createdLocations.push(data)
+      }
+
+      toast({
+        title: "Success",
+        description: `${createdLocations.length} location(s) created successfully!`,
+      })
+
+      // Clear preview data
+      sessionStorage.removeItem("geojson-preview")
+      setPreviewFeatures([])
+      setIsImporting(false)
+
+      // Reload locations
+      const { data } = await supabase.from("locations").select("*").eq("tenant_id", tenantId)
+      if (data) {
+        setSavedLocations(data)
+      }
+
+      // Redirect back to map
+      router.push(`/t/${tenantSlug}/admin/map`)
+    } catch (error) {
+      console.error("[v0] Error importing locations:", error)
+      toast({
+        title: "Error",
+        description: "Error importing locations: " + (error instanceof Error ? error.message : "Unknown error"),
+        variant: "destructive",
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleCancelImport = () => {
+    sessionStorage.removeItem("geojson-preview")
+    setPreviewFeatures([])
+    setIsImporting(false)
+    router.push(`/t/${tenantSlug}/admin/map`)
+  }
 
   return (
     <div className={mode === "view" ? "h-full" : "grid gap-6 lg:grid-cols-[1fr_400px]"}>
@@ -802,70 +937,50 @@ export function GoogleMapEditor({
                   />
                 )}
 
-                {previewFeatures &&
+                {isImporting &&
                   previewFeatures.map((feature, index) => {
                     if (feature.geometry.type === "Point") {
-                      const [lng, lat] = feature.geometry.coordinates
-                      return <Marker key={`preview-${index}`} position={{ lat, lng }} />
+                      return (
+                        <Marker
+                          key={`preview-${index}`}
+                          position={{
+                            lat: feature.geometry.coordinates[1],
+                            lng: feature.geometry.coordinates[0],
+                          }}
+                        />
+                      )
+                    } else if (feature.geometry.type === "LineString") {
+                      const path = feature.geometry.coordinates.map((coord: number[]) => ({
+                        lat: coord[1],
+                        lng: coord[0],
+                      }))
+                      return (
+                        <Polyline
+                          key={`preview-${index}`}
+                          path={path}
+                          strokeColor="#a855f7"
+                          strokeOpacity={0.9}
+                          strokeWeight={4}
+                          clickable={false}
+                        />
+                      )
                     } else if (feature.geometry.type === "Polygon") {
-                      const paths = feature.geometry.coordinates[0].map(([lng, lat]: [number, number]) => ({
-                        lat,
-                        lng,
+                      const paths = feature.geometry.coordinates[0].map((coord: number[]) => ({
+                        lat: coord[1],
+                        lng: coord[0],
                       }))
                       return (
                         <Polygon
                           key={`preview-${index}`}
                           paths={paths}
                           strokeColor="#a855f7"
-                          strokeOpacity={1}
+                          strokeOpacity={0.9}
                           strokeWeight={3}
-                          fillColor="#d8b4fe"
+                          fillColor="#a855f7"
                           fillOpacity={0.3}
                           clickable={false}
                         />
                       )
-                    } else if (feature.geometry.type === "LineString") {
-                      const path = feature.geometry.coordinates.map(([lng, lat]: [number, number]) => ({ lat, lng }))
-                      return (
-                        <Polyline
-                          key={`preview-${index}`}
-                          path={path}
-                          strokeColor="#f59e0b"
-                          strokeOpacity={1}
-                          strokeWeight={4}
-                          clickable={false}
-                        />
-                      )
-                    } else if (feature.geometry.type === "MultiPolygon") {
-                      return feature.geometry.coordinates.map((polygon: any, polyIndex: number) => {
-                        const paths = polygon[0].map(([lng, lat]: [number, number]) => ({ lat, lng }))
-                        return (
-                          <Polygon
-                            key={`preview-${index}-${polyIndex}`}
-                            paths={paths}
-                            strokeColor="#a855f7"
-                            strokeOpacity={1}
-                            strokeWeight={3}
-                            fillColor="#d8b4fe"
-                            fillOpacity={0.3}
-                            clickable={false}
-                          />
-                        )
-                      })
-                    } else if (feature.geometry.type === "MultiLineString") {
-                      return feature.geometry.coordinates.map((line: any, lineIndex: number) => {
-                        const path = line.map(([lng, lat]: [number, number]) => ({ lat, lng }))
-                        return (
-                          <Polyline
-                            key={`preview-${index}-${lineIndex}`}
-                            path={path}
-                            strokeColor="#f59e0b"
-                            strokeOpacity={1}
-                            strokeWeight={4}
-                            clickable={false}
-                          />
-                        )
-                      })
                     }
                     return null
                   })}
@@ -1126,7 +1241,7 @@ export function GoogleMapEditor({
 
             {mode === "edit" && (
               <>
-                {!editingLocationId && !prefilledName && (
+                {!editingLocationId && !prefilledName && !isImporting && (
                   <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg border">
                     <p className="text-sm font-medium">Click any location on the map to edit it</p>
                   </div>
@@ -1171,6 +1286,14 @@ export function GoogleMapEditor({
                 {editLocationIdFromUrl && !editingLocationId && (
                   <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg border">
                     <p className="text-sm font-medium">Location highlighted in red - Click it to edit</p>
+                  </div>
+                )}
+
+                {isImporting && (
+                  <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-purple-600 text-white px-4 py-2 rounded-lg shadow-lg border">
+                    <p className="text-sm font-medium">
+                      Previewing {previewFeatures.length} imported feature(s) - Select type and save
+                    </p>
                   </div>
                 )}
               </>
@@ -1287,202 +1410,245 @@ export function GoogleMapEditor({
                 </Alert>
               )}
 
-            <div className="space-y-2">
-              <Label htmlFor="type">Location Type</Label>
-              <Select value={locationType} onValueChange={(v) => setLocationType(v as any)}>
-                <SelectTrigger id="type">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="facility">Facility</SelectItem>
-                  <SelectItem value="lot">Lot</SelectItem>
-                  <SelectItem value="neighborhood">Neighborhood</SelectItem>
-                  <SelectItem value="walking_path">Walking Path</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {locationType === "lot" && (
-              <div className="space-y-2">
-                <Label htmlFor="lot">Select Lot *</Label>
-                <Select value={selectedLotId} onValueChange={setSelectedLotId}>
-                  <SelectTrigger id="lot">
-                    <SelectValue placeholder="Choose a lot..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {lots.map((lot) => (
-                      <SelectItem key={lot.id} value={lot.id}>
-                        {lot.lot_number} {lot.neighborhoods?.name && `(${lot.neighborhoods.name})`}
-                        {lot.address && ` - ${lot.address}`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {locationType === "neighborhood" && (
-              <div className="space-y-2">
-                <Label htmlFor="neighborhood-select">Select Neighborhood *</Label>
-                <Select value={selectedNeighborhoodId} onValueChange={setSelectedNeighborhoodId}>
-                  <SelectTrigger id="neighborhood-select">
-                    <SelectValue placeholder="Choose a neighborhood..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {neighborhoods.map((neighborhood) => (
-                      <SelectItem key={neighborhood.id} value={neighborhood.id}>
-                        {neighborhood.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {(locationType === "facility" || locationType === "walking_path") && neighborhoods.length > 0 && (
-              <div className="space-y-2">
-                <Label htmlFor="neighborhood">Neighborhood (Optional)</Label>
-                <Select value={selectedNeighborhoodId} onValueChange={setSelectedNeighborhoodId}>
-                  <SelectTrigger id="neighborhood">
-                    <SelectValue placeholder="Choose a neighborhood..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {neighborhoods.map((neighborhood) => (
-                      <SelectItem key={neighborhood.id} value={neighborhood.id}>
-                        {neighborhood.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="name">
-                {locationType === "lot"
-                  ? "Lot Number"
-                  : locationType === "neighborhood"
-                    ? "Neighborhood Name"
-                    : "Name *"}
-              </Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder={
-                  locationType === "lot"
-                    ? "Select a lot first"
-                    : locationType === "neighborhood"
-                      ? "Select a neighborhood first"
-                      : "e.g., Community Pool"
-                }
-                disabled={locationType === "lot" || locationType === "neighborhood"}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Optional description"
-                rows={3}
-              />
-            </div>
-
-            {locationType === "facility" && (
+            {isImporting && (
               <>
+                <Alert className="bg-purple-50 border-purple-200">
+                  <AlertCircle className="h-4 w-4 text-purple-600" />
+                  <AlertTitle className="text-purple-900">Importing GeoJSON</AlertTitle>
+                  <AlertDescription className="text-purple-700">
+                    {previewFeatures.length} feature(s) loaded. Select a location type and click "Create Locations" to
+                    save them.
+                  </AlertDescription>
+                </Alert>
+
                 <div className="space-y-2">
-                  <Label htmlFor="facilityType">Facility Type</Label>
-                  <Input
-                    id="facilityType"
-                    value={facilityType}
-                    onChange={(e) => setFacilityType(e.target.value)}
-                    placeholder="e.g., Pool, Gym, Park"
-                  />
+                  <Label htmlFor="import-type">Location Type for All Features *</Label>
+                  <Select value={locationType} onValueChange={(v) => setLocationType(v as any)}>
+                    <SelectTrigger id="import-type">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="facility">Facility</SelectItem>
+                      <SelectItem value="lot">Lot</SelectItem>
+                      <SelectItem value="neighborhood">Neighborhood</SelectItem>
+                      <SelectItem value="walking_path">Walking Path</SelectItem>
+                      <SelectItem value="boundary">Boundary</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="icon">Icon</Label>
-                  <Input
-                    id="icon"
-                    value={icon}
-                    onChange={(e) => setIcon(e.target.value)}
-                    placeholder="e.g., 🏊 or pool"
-                  />
+                <div className="pt-4 space-y-2">
+                  <Button onClick={handleSaveImport} disabled={saving} className="w-full">
+                    {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Create {previewFeatures.length} Location(s)
+                  </Button>
+                  <Button variant="outline" onClick={handleCancelImport} className="w-full bg-transparent">
+                    Cancel Import
+                  </Button>
                 </div>
               </>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="photos">Photos</Label>
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Input
-                    id="photos"
-                    type="file"
-                    accept="image/jpeg,image/jpg,image/png,image/webp"
-                    multiple
-                    onChange={handlePhotoUpload}
-                    disabled={uploadingPhoto}
-                    className="hidden"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => document.getElementById("photos")?.click()}
-                    disabled={uploadingPhoto}
-                    className="w-full"
-                  >
-                    {uploadingPhoto ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Uploading...
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="mr-2 h-4 w-4" />
-                        Upload Photos
-                      </>
-                    )}
-                  </Button>
+            {!isImporting && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="type">Location Type</Label>
+                  <Select value={locationType} onValueChange={(v) => setLocationType(v as any)}>
+                    <SelectTrigger id="type">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="facility">Facility</SelectItem>
+                      <SelectItem value="lot">Lot</SelectItem>
+                      <SelectItem value="neighborhood">Neighborhood</SelectItem>
+                      <SelectItem value="walking_path">Walking Path</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                {uploadedPhotos.length > 0 && (
-                  <div className="grid grid-cols-2 gap-2">
-                    {uploadedPhotos.map((url, index) => (
-                      <div key={url} className="relative group aspect-square rounded-lg overflow-hidden border">
-                        <img
-                          src={url || "/placeholder.svg"}
-                          alt={`Upload ${index + 1}`}
-                          className="w-full h-full object-cover"
-                        />
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="icon"
-                          onClick={() => removePhoto(url)}
-                          className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ))}
+                {locationType === "lot" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="lot">Select Lot *</Label>
+                    <Select value={selectedLotId} onValueChange={setSelectedLotId}>
+                      <SelectTrigger id="lot">
+                        <SelectValue placeholder="Choose a lot..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {lots.map((lot) => (
+                          <SelectItem key={lot.id} value={lot.id}>
+                            {lot.lot_number} {lot.neighborhoods?.name && `(${lot.neighborhoods.name})`}
+                            {lot.address && ` - ${lot.address}`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 )}
 
-                {uploadedPhotos.length === 0 && (
-                  <div className="flex items-center justify-center h-24 border-2 border-dashed rounded-lg text-muted-foreground">
-                    <div className="text-center">
-                      <ImageIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">No photos uploaded</p>
-                    </div>
+                {locationType === "neighborhood" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="neighborhood-select">Select Neighborhood *</Label>
+                    <Select value={selectedNeighborhoodId} onValueChange={setSelectedNeighborhoodId}>
+                      <SelectTrigger id="neighborhood-select">
+                        <SelectValue placeholder="Choose a neighborhood..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {neighborhoods.map((neighborhood) => (
+                          <SelectItem key={neighborhood.id} value={neighborhood.id}>
+                            {neighborhood.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 )}
-              </div>
-            </div>
+
+                {(locationType === "facility" || locationType === "walking_path") && neighborhoods.length > 0 && (
+                  <div className="space-y-2">
+                    <Label htmlFor="neighborhood">Neighborhood (Optional)</Label>
+                    <Select value={selectedNeighborhoodId} onValueChange={setSelectedNeighborhoodId}>
+                      <SelectTrigger id="neighborhood">
+                        <SelectValue placeholder="Choose a neighborhood..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {neighborhoods.map((neighborhood) => (
+                          <SelectItem key={neighborhood.id} value={neighborhood.id}>
+                            {neighborhood.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="name">
+                    {locationType === "lot"
+                      ? "Lot Number"
+                      : locationType === "neighborhood"
+                        ? "Neighborhood Name"
+                        : "Name *"}
+                  </Label>
+                  <Input
+                    id="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder={
+                      locationType === "lot"
+                        ? "Select a lot first"
+                        : locationType === "neighborhood"
+                          ? "Select a neighborhood first"
+                          : "e.g., Community Pool"
+                    }
+                    disabled={locationType === "lot" || locationType === "neighborhood"}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Optional description"
+                    rows={3}
+                  />
+                </div>
+
+                {locationType === "facility" && (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="facilityType">Facility Type</Label>
+                      <Input
+                        id="facilityType"
+                        value={facilityType}
+                        onChange={(e) => setFacilityType(e.target.value)}
+                        placeholder="e.g., Pool, Gym, Park"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="icon">Icon</Label>
+                      <Input
+                        id="icon"
+                        value={icon}
+                        onChange={(e) => setIcon(e.target.value)}
+                        placeholder="e.g., 🏊 or pool"
+                      />
+                    </div>
+                  </>
+                )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="photos">Photos</Label>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id="photos"
+                        type="file"
+                        accept="image/jpeg,image/jpg,image/png,image/webp"
+                        multiple
+                        onChange={handlePhotoUpload}
+                        disabled={uploadingPhoto}
+                        className="hidden"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => document.getElementById("photos")?.click()}
+                        disabled={uploadingPhoto}
+                        className="w-full"
+                      >
+                        {uploadingPhoto ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Uploading...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="mr-2 h-4 w-4" />
+                            Upload Photos
+                          </>
+                        )}
+                      </Button>
+                    </div>
+
+                    {uploadedPhotos.length > 0 && (
+                      <div className="grid grid-cols-2 gap-2">
+                        {uploadedPhotos.map((url, index) => (
+                          <div key={url} className="relative group aspect-square rounded-lg overflow-hidden border">
+                            <img
+                              src={url || "/placeholder.svg"}
+                              alt={`Upload ${index + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="icon"
+                              onClick={() => removePhoto(url)}
+                              className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {uploadedPhotos.length === 0 && (
+                      <div className="flex items-center justify-center h-24 border-2 border-dashed rounded-lg text-muted-foreground">
+                        <div className="text-center">
+                          <ImageIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                          <p className="text-sm">No photos uploaded</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
 
             <div className="pt-4 space-y-2">
               <Button onClick={handleSave} disabled={saving} className="w-full">

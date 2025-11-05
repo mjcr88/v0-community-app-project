@@ -6,10 +6,10 @@ export default async function MapViewerPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>
-  searchParams: Promise<{ locationId?: string }>
+  searchParams: Promise<{ locationId?: string; preview?: string }>
 }) {
   const { slug } = await params
-  const { locationId } = await searchParams
+  const { locationId, preview } = await searchParams
   const supabase = await createServerClient()
 
   const { data: tenant } = await supabase.from("tenants").select("*").eq("slug", slug).single()
@@ -26,12 +26,14 @@ export default async function MapViewerPage({
 
   const communityBoundary = tenant.map_boundary_coordinates || null
 
+  const mode = preview === "true" ? "preview" : "view"
+
   return (
     <div className="h-[100vh] w-full">
       <GoogleMapEditor
         tenantSlug={slug}
         tenantId={tenant.id}
-        mode="view"
+        mode={mode}
         initialLocations={locations || []}
         mapCenter={tenant.map_center_coordinates as { lat: number; lng: number } | null}
         mapZoom={tenant.map_default_zoom || 15}

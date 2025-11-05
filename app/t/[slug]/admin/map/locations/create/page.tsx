@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation"
 import { createServerClient } from "@/lib/supabase/server"
 import { GoogleMapEditorClientWrapper } from "@/components/map/google-map-editor-client"
+import { GeoJSONPreviewMap } from "@/components/map/geojson-preview-map"
 
 export default async function CreateLocationPage({
   params,
@@ -51,7 +52,7 @@ export default async function CreateLocationPage({
     redirect(`/t/${slug}`)
   }
 
-  console.log("[v0] All checks passed, rendering GoogleMapEditor")
+  console.log("[v0] All checks passed, rendering appropriate map component")
 
   const communityBoundary = tenant.map_boundary_coordinates || null
 
@@ -79,14 +80,18 @@ export default async function CreateLocationPage({
             : "Draw a facility, lot boundary, or walking path on the map"}
         </p>
       </div>
-      <GoogleMapEditorClientWrapper
-        tenantSlug={slug}
-        tenantId={tenant.id}
-        communityBoundary={communityBoundary}
-        lots={lots || []}
-        neighborhoods={neighborhoods || []}
-        isPreview={isPreview}
-      />
+      {isPreview ? (
+        <GeoJSONPreviewMap tenantSlug={slug} tenantId={tenant.id} />
+      ) : (
+        <GoogleMapEditorClientWrapper
+          tenantSlug={slug}
+          tenantId={tenant.id}
+          communityBoundary={communityBoundary}
+          lots={lots || []}
+          neighborhoods={neighborhoods || []}
+          isPreview={false}
+        />
+      )}
     </div>
   )
 }

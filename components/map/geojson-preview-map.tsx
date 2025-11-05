@@ -1,99 +1,358 @@
 "use client"
 
-import { APIProvider, Map } from "@vis.gl/react-google-maps"
+import { useState, useEffect } from "react"
+import { APIProvider, Map, Marker } from "@vis.gl/react-google-maps"
+import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Card, CardContent } from "@/components/ui/card"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Loader2, Locate, AlertCircle } from "lucide-react"
 import { Polygon } from "./polygon"
 import { Polyline } from "./polyline"
-import type { ParsedGeoJSON } from "@/lib/geojson-parser"
+import { useRouter } from "next/navigation"
+import { useToast } from "@/hooks/use-toast"
+import { createBrowserClient } from "@/lib/supabase/client"
+import { geolocate } from "@/lib/geolocate"
 
-export function GeoJSONPreviewMap({
-  features,
-  center,
-  zoom = 15,
-}: {
-  features: ParsedGeoJSON["features"]
-  center: { lat: number; lng: number }
-  zoom?: number
-}) {
+type LatLng = { lat: number; lng: number }
+
+interface GeoJSONPreviewMapProps {
+  tenantSlug: string
+  tenantId: string
+}
+
+export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapProps) {
+  const router = useRouter()
+  const { toast } = useToast()
+
+  const [previewFeatures, setPreviewFeatures] = useState<any[]>([])
+  const [mapCenter, setMapCenter] = useState<LatLng>({ lat: 9.9567, lng: -84.5333 })
+  const [mapZoom, setMapZoom] = useState(15)
+  const [locationType, setLocationType] = useState<"facility" | "lot" | "walking_path" | "neighborhood">("facility")
+  const [saving, setSaving] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""
+  const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAP_ID || "DEMO_MAP_ID"
+
+  useEffect(() => {
+    const previewData = sessionStorage.getItem("geojson-preview")
+    if (!previewData) {
+      toast({
+        title: "No Preview Data",
+        description: "Redirecting to map...",
+        variant: "destructive",
+      })
+      router.push(`/t/${tenantSlug}/admin/map`)
+      return
+    }
+
+    try {
+      const parsed = JSON.parse(previewData)
+      setPreviewFeatures(parsed.features || [])
+
+      // Calculate bounds and center
+      if (parsed.features && parsed.features.length > 0) {
+        let minLat = Number.POSITIVE_INFINITY
+        let maxLat = Number.NEGATIVE_INFINITY
+        let minLng = Number.POSITIVE_INFINITY
+        let maxLng = Number.NEGATIVE_INFINITY
+
+        parsed.features.forEach((feature: any) => {
+          const coords = feature.geometry.coordinates
+
+          if (feature.geometry.type === "Point") {
+            const [lng, lat] = coords
+            minLat = Math.min(minLat, lat)
+            maxLat = Math.max(maxLat, lat)
+            minLng = Math.min(minLng, lng)
+            maxLng = Math.max(maxLng, lng)
+          } else if (feature.geometry.type === "LineString") {
+            coords.forEach((coord: number[]) => {
+              const [lng, lat] = coord
+              minLat = Math.min(minLat, lat)
+              maxLat = Math.max(maxLat, lat)
+              minLng = Math.min(minLng, lng)
+              maxLng = Math.max(maxLng, lng)
+            })
+          } else if (feature.geometry.type === "Polygon") {
+            coords[0].forEach((coord: number[]) => {
+              const [lng, lat] = coord
+              minLat = Math.min(minLat, lat)
+              maxLat = Math.max(maxLat, lat)
+              minLng = Math.min(minLng, lng)
+              maxLng = Math.max(maxLng, lng)
+            })
+          }
+        })
+
+        const centerLat = (minLat + maxLat) / 2
+        const centerLng = (minLng + maxLng) / 2
+        setMapCenter({ lat: centerLat, lng: centerLng })
+
+        // Calculate zoom
+        const latDiff = maxLat - minLat
+        const lngDiff = maxLng - minLng
+        const maxDiff = Math.max(latDiff, lngDiff)
+
+        let zoom = 15
+        if (maxDiff > 0.1) zoom = 12
+        if (maxDiff > 0.5) zoom = 10
+        if (maxDiff > 1) zoom = 9
+        if (maxDiff > 5) zoom = 7
+
+        setMapZoom(zoom)
+      }
+
+      setLoading(false)
+    } catch (error) {
+      console.error("Error loading preview data:", error)
+      toast({
+        title: "Error",
+        description: "Failed to load preview data",
+        variant: "destructive",
+      })
+      router.push(`/t/${tenantSlug}/admin/map`)
+    }
+  }, [tenantSlug, router, toast])
+
+  const locateUser = async () => {
+    try {
+      const { lat, lng } = await geolocate()
+      setMapCenter({ lat, lng })
+      setMapZoom(15)
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Could not get your location",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleSave = async () => {
+    if (!locationType) {
+      toast({
+        title: "Validation Error",
+        description: "Please select a location type",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setSaving(true)
+
+    try {
+      const supabase = createBrowserClient()
+
+      for (const feature of previewFeatures) {
+        const locationData: any = {
+          tenant_id: tenantId,
+          name: feature.properties?.name || `Imported ${feature.geometry.type}`,
+          type: locationType,
+          description: feature.properties?.description || null,
+        }
+
+        if (feature.geometry.type === "Point") {
+          locationData.coordinates = {
+            lat: feature.geometry.coordinates[1],
+            lng: feature.geometry.coordinates[0],
+          }
+        } else if (feature.geometry.type === "LineString") {
+          locationData.path_coordinates = feature.geometry.coordinates.map((coord: number[]) => [coord[1], coord[0]])
+        } else if (feature.geometry.type === "Polygon") {
+          locationData.boundary_coordinates = feature.geometry.coordinates[0].map((coord: number[]) => [
+            coord[1],
+            coord[0],
+          ])
+        }
+
+        const { error } = await supabase.from("locations").insert(locationData)
+        if (error) throw error
+      }
+
+      toast({
+        title: "Success",
+        description: `${previewFeatures.length} location(s) created successfully!`,
+      })
+
+      sessionStorage.removeItem("geojson-preview")
+      router.push(`/t/${tenantSlug}/admin/map`)
+    } catch (error) {
+      console.error("Error saving locations:", error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to save locations",
+        variant: "destructive",
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleCancel = () => {
+    sessionStorage.removeItem("geojson-preview")
+    router.push(`/t/${tenantSlug}/admin/map`)
+  }
+
+  if (!apiKey) {
+    return (
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Configuration Error</AlertTitle>
+        <AlertDescription>Google Maps API key is missing.</AlertDescription>
+      </Alert>
+    )
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-[600px]">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
+  }
+
   return (
-    <div className="h-[500px] w-full rounded-lg overflow-hidden border">
-      <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!}>
-        <Map
-          defaultCenter={center}
-          defaultZoom={zoom}
-          gestureHandling="greedy"
-          disableDefaultUI={false}
-          zoomControl={true}
-        >
-          {features.map((feature, index) => {
-            const geometry = feature.geometry
+    <div className="grid gap-6 lg:grid-cols-[1fr_400px]">
+      <Card className="min-h-[600px]">
+        <CardContent className="p-1.5 h-full">
+          <div className="relative h-full w-full overflow-hidden rounded-lg">
+            <APIProvider apiKey={apiKey}>
+              <Map
+                mapId={mapId}
+                center={mapCenter}
+                zoom={mapZoom}
+                mapTypeId="satellite"
+                gestureHandling="greedy"
+                disableDefaultUI={true}
+                clickableIcons={false}
+                onCenterChanged={(e) => setMapCenter(e.detail.center)}
+                onZoomChanged={(e) => setMapZoom(e.detail.zoom)}
+              >
+                {previewFeatures.map((feature, index) => {
+                  if (feature.geometry.type === "Point") {
+                    return (
+                      <Marker
+                        key={`preview-${index}`}
+                        position={{
+                          lat: feature.geometry.coordinates[1],
+                          lng: feature.geometry.coordinates[0],
+                        }}
+                      />
+                    )
+                  } else if (feature.geometry.type === "LineString") {
+                    const path = feature.geometry.coordinates.map((coord: number[]) => ({
+                      lat: coord[1],
+                      lng: coord[0],
+                    }))
+                    return (
+                      <Polyline
+                        key={`preview-${index}`}
+                        path={path}
+                        strokeColor="#a855f7"
+                        strokeOpacity={0.9}
+                        strokeWeight={4}
+                        clickable={false}
+                      />
+                    )
+                  } else if (feature.geometry.type === "Polygon") {
+                    const paths = feature.geometry.coordinates[0].map((coord: number[]) => ({
+                      lat: coord[1],
+                      lng: coord[0],
+                    }))
+                    return (
+                      <Polygon
+                        key={`preview-${index}`}
+                        paths={paths}
+                        strokeColor="#a855f7"
+                        strokeOpacity={0.9}
+                        strokeWeight={2}
+                        fillColor="#a855f7"
+                        fillOpacity={0.3}
+                        clickable={false}
+                      />
+                    )
+                  }
+                  return null
+                })}
+              </Map>
+            </APIProvider>
 
-            if (geometry.type === "Polygon") {
-              const paths = geometry.coordinates.map((ring) => ring.map(([lng, lat]) => ({ lat, lng })))
+            {/* Zoom Controls */}
+            <div className="absolute left-3 top-3 flex flex-col gap-2">
+              <Button
+                variant="secondary"
+                size="icon"
+                onClick={() => setMapZoom(mapZoom + 1)}
+                className="h-10 w-10 shadow-lg"
+              >
+                +
+              </Button>
+              <Button
+                variant="secondary"
+                size="icon"
+                onClick={() => setMapZoom(mapZoom - 1)}
+                className="h-10 w-10 shadow-lg"
+              >
+                −
+              </Button>
+            </div>
 
-              return (
-                <Polygon
-                  key={`polygon-${index}`}
-                  paths={paths[0]}
-                  strokeColor="#9333ea"
-                  strokeOpacity={0.8}
-                  strokeWeight={2}
-                  fillColor="#9333ea"
-                  fillOpacity={0.2}
-                />
-              )
-            }
+            {/* Locate Button */}
+            <div className="absolute bottom-3 right-3">
+              <Button variant="secondary" size="icon" onClick={locateUser} className="h-10 w-10 shadow-lg">
+                <Locate className="h-5 w-5" />
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-            if (geometry.type === "MultiPolygon") {
-              return geometry.coordinates.map((polygon, polyIndex) => {
-                const paths = polygon.map((ring) => ring.map(([lng, lat]) => ({ lat, lng })))
-                return (
-                  <Polygon
-                    key={`multipolygon-${index}-${polyIndex}`}
-                    paths={paths[0]}
-                    strokeColor="#9333ea"
-                    strokeOpacity={0.8}
-                    strokeWeight={2}
-                    fillColor="#9333ea"
-                    fillOpacity={0.2}
-                  />
-                )
-              })
-            }
+      {/* Form */}
+      <Card>
+        <CardContent className="p-6 space-y-4">
+          <div>
+            <h3 className="text-lg font-semibold">Import GeoJSON</h3>
+            <p className="text-sm text-muted-foreground">
+              {previewFeatures.length} feature{previewFeatures.length !== 1 ? "s" : ""} ready to import
+            </p>
+          </div>
 
-            if (geometry.type === "LineString") {
-              const path = geometry.coordinates.map(([lng, lat]) => ({ lat, lng }))
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              All features will be imported as the same location type. You can edit them individually after import.
+            </AlertDescription>
+          </Alert>
 
-              return (
-                <Polyline
-                  key={`linestring-${index}`}
-                  path={path}
-                  strokeColor="#f97316"
-                  strokeOpacity={0.8}
-                  strokeWeight={3}
-                />
-              )
-            }
+          <div className="space-y-2">
+            <Label htmlFor="location-type">Location Type *</Label>
+            <Select value={locationType} onValueChange={(v) => setLocationType(v as any)}>
+              <SelectTrigger id="location-type">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="facility">Facility</SelectItem>
+                <SelectItem value="lot">Lot</SelectItem>
+                <SelectItem value="neighborhood">Neighborhood</SelectItem>
+                <SelectItem value="walking_path">Walking Path</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-            if (geometry.type === "MultiLineString") {
-              return geometry.coordinates.map((line, lineIndex) => {
-                const path = line.map(([lng, lat]) => ({ lat, lng }))
-                return (
-                  <Polyline
-                    key={`multilinestring-${index}-${lineIndex}`}
-                    path={path}
-                    strokeColor="#f97316"
-                    strokeOpacity={0.8}
-                    strokeWeight={3}
-                  />
-                )
-              })
-            }
-
-            // Point rendering would go here if needed
-            return null
-          })}
-        </Map>
-      </APIProvider>
+          <div className="pt-4 space-y-2">
+            <Button onClick={handleSave} disabled={saving} className="w-full">
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Create {previewFeatures.length} Location{previewFeatures.length !== 1 ? "s" : ""}
+            </Button>
+            <Button variant="outline" onClick={handleCancel} disabled={saving} className="w-full bg-transparent">
+              Cancel
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

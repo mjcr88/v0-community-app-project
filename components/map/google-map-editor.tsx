@@ -278,6 +278,7 @@ export function GoogleMapEditor({
       const location = savedLocations.find((loc) => loc.id === initialHighlightLocationId)
       if (location) {
         setSelectedLocation(location)
+        setHighlightedLocationId(initialHighlightLocationId)
 
         // Center map on highlighted location
         if (location.coordinates) {
@@ -365,10 +366,7 @@ export function GoogleMapEditor({
     console.log("[v0] handleLocationClick called", { mode, locationId: location.id, highlightedLocationId })
 
     if (mode === "view") {
-      if (highlightedLocationId && highlightedLocationId !== location.id) {
-        console.log("[v0] Clearing highlight because clicked different location")
-        setHighlightedLocationId(undefined)
-      }
+      setHighlightedLocationId(location.id)
       setSelectedLocation(location)
       return
     }
@@ -811,6 +809,17 @@ export function GoogleMapEditor({
 
   // TODO: Get API key from environment variables
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""
+  const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAP_ID || "DEMO_MAP_ID"
+
+  console.log("[v0] Map configuration:", {
+    apiKey: apiKey ? "✓ Present" : "✗ Missing",
+    mapId,
+    mapCenter,
+    mapZoom,
+    isPreviewMode,
+    isImporting,
+    previewFeaturesCount: previewFeatures.length,
+  })
 
   if (!apiKey) {
     return (
@@ -930,7 +939,8 @@ export function GoogleMapEditor({
           <div className="relative h-full w-full overflow-hidden rounded-lg">
             <APIProvider apiKey={apiKey}>
               <Map
-                mapId={process.env.NEXT_PUBLIC_GOOGLE_MAP_ID || "DEMO_MAP_ID"}
+                key={`map-${isImporting ? "importing" : "normal"}`}
+                mapId={mapId}
                 center={mapCenter}
                 zoom={mapZoom}
                 mapTypeId={mapType}

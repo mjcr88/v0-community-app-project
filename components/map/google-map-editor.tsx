@@ -1153,8 +1153,8 @@ export function GoogleMapEditor({
               <Map
                 key={`map-${isImporting ? "importing" : "normal"}`}
                 mapId={mapId}
-                center={mapCenter}
-                zoom={mapZoom}
+                defaultCenter={mapCenter}
+                defaultZoom={mapZoom}
                 mapTypeId={mapType}
                 gestureHandling="greedy"
                 disableDefaultUI={true}
@@ -1163,14 +1163,6 @@ export function GoogleMapEditor({
                 minZoom={10}
                 maxZoom={22}
                 restriction={undefined}
-                onCenterChanged={(e) => {
-                  console.log("[v0] Center changed to:", e.detail.center)
-                  setMapCenter(e.detail.center)
-                }}
-                onZoomChanged={(e) => {
-                  console.log("[v0] Zoom changed to:", e.detail.zoom)
-                  setMapZoom(e.detail.zoom)
-                }}
               >
                 <MapClickHandler drawingMode={drawingMode} onMapClick={handleMapClick} />
 

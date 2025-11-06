@@ -264,6 +264,7 @@ export function GoogleMapViewer({
           {neighborhoodPolygons.map((location) => {
             const paths = convertCoordinates(location.boundary_coordinates!)
             const isHighlighted = highlightedLocationId === location.id
+            const zIndex = isHighlighted ? 100 : 8
             return (
               <Polygon
                 key={location.id}
@@ -271,87 +272,10 @@ export function GoogleMapViewer({
                 strokeColor={isHighlighted ? "#ef4444" : "#a855f7"}
                 strokeOpacity={isHighlighted ? 1 : 0.7}
                 strokeWeight={isHighlighted ? 3 : 2}
-                fillColor={isHighlighted ? "#fca5a5" : "#c084fc"}
-                fillOpacity={isHighlighted ? 0.5 : 0.25}
+                fillColor={isHighlighted ? "#60a5fa" : "#c084fc"}
+                fillOpacity={isHighlighted ? 0.3 : 0.25}
                 onClick={() => handleLocationClick(location)}
-                zIndex={15}
-              />
-            )
-          })}
-
-          {facilityMarkers.map((location) => (
-            <Marker
-              key={location.id}
-              position={location.coordinates!}
-              onClick={() => handleLocationClick(location)}
-              zIndex={20}
-            />
-          ))}
-
-          {facilityPolygons.map((location) => {
-            const paths = convertCoordinates(location.boundary_coordinates!)
-            const isHighlighted = highlightedLocationId === location.id
-            return (
-              <Polygon
-                key={location.id}
-                paths={paths}
-                strokeColor={isHighlighted ? "#ef4444" : "#fb923c"}
-                strokeOpacity={isHighlighted ? 1 : 0.7}
-                strokeWeight={isHighlighted ? 3 : 2}
-                fillColor={isHighlighted ? "#fca5a5" : "#fdba74"}
-                fillOpacity={isHighlighted ? 0.5 : 0.25}
-                onClick={() => handleLocationClick(location)}
-                zIndex={20}
-              />
-            )
-          })}
-
-          {facilityPolylines.map((location) => {
-            const path = convertCoordinates(location.path_coordinates!)
-            const isHighlighted = highlightedLocationId === location.id
-            return (
-              <Polyline
-                key={location.id}
-                path={path}
-                strokeColor={isHighlighted ? "#ef4444" : "#fb923c"}
-                strokeOpacity={isHighlighted ? 1 : 0.8}
-                strokeWeight={isHighlighted ? 6 : 4}
-                onClick={() => handleLocationClick(location)}
-                zIndex={20}
-              />
-            )
-          })}
-
-          {lotPolygons.map((location) => {
-            const paths = convertCoordinates(location.boundary_coordinates!)
-            const isHighlighted = highlightedLocationId === location.id
-            return (
-              <Polygon
-                key={location.id}
-                paths={paths}
-                strokeColor={isHighlighted ? "#ef4444" : "#60a5fa"}
-                strokeOpacity={isHighlighted ? 1 : 0.7}
-                strokeWeight={isHighlighted ? 3 : 2}
-                fillColor={isHighlighted ? "#fca5a5" : "#93c5fd"}
-                fillOpacity={isHighlighted ? 0.5 : 0.25}
-                onClick={() => handleLocationClick(location)}
-                zIndex={10}
-              />
-            )
-          })}
-
-          {lotPolylines.map((location) => {
-            const path = convertCoordinates(location.path_coordinates!)
-            const isHighlighted = highlightedLocationId === location.id
-            return (
-              <Polyline
-                key={location.id}
-                path={path}
-                strokeColor={isHighlighted ? "#ef4444" : "#60a5fa"}
-                strokeOpacity={isHighlighted ? 1 : 0.8}
-                strokeWeight={isHighlighted ? 6 : 4}
-                onClick={() => handleLocationClick(location)}
-                zIndex={10}
+                zIndex={zIndex}
               />
             )
           })}
@@ -359,6 +283,7 @@ export function GoogleMapViewer({
           {publicStreetPolylines.map((location) => {
             const path = convertCoordinates(location.path_coordinates!)
             const isHighlighted = highlightedLocationId === location.id
+            const zIndex = isHighlighted ? 100 : 15
             return (
               <Polyline
                 key={location.id}
@@ -367,7 +292,7 @@ export function GoogleMapViewer({
                 strokeOpacity={isHighlighted ? 1 : 0.95}
                 strokeWeight={isHighlighted ? 4 : 2}
                 onClick={() => handleLocationClick(location)}
-                zIndex={5}
+                zIndex={zIndex}
               />
             )
           })}
@@ -375,6 +300,7 @@ export function GoogleMapViewer({
           {publicStreetPolygons.map((location) => {
             const paths = convertCoordinates(location.boundary_coordinates!)
             const isHighlighted = highlightedLocationId === location.id
+            const zIndex = isHighlighted ? 100 : 15
             return (
               <Polygon
                 key={location.id}
@@ -382,10 +308,95 @@ export function GoogleMapViewer({
                 strokeColor={isHighlighted ? "#ef4444" : "#fbbf24"}
                 strokeOpacity={isHighlighted ? 1 : 0.95}
                 strokeWeight={isHighlighted ? 3 : 2}
-                fillColor={isHighlighted ? "#fca5a5" : "#d3d3d3"}
-                fillOpacity={isHighlighted ? 0.5 : 0.25}
+                fillColor={isHighlighted ? "#60a5fa" : "#d3d3d3"}
+                fillOpacity={isHighlighted ? 0.3 : 0.25}
                 onClick={() => handleLocationClick(location)}
-                zIndex={5}
+                zIndex={zIndex}
+              />
+            )
+          })}
+
+          {lotPolygons.map((location) => {
+            const paths = convertCoordinates(location.boundary_coordinates!)
+            const isHighlighted = highlightedLocationId === location.id
+            const zIndex = isHighlighted ? 100 : 10
+            return (
+              <Polygon
+                key={location.id}
+                paths={paths}
+                strokeColor={isHighlighted ? "#ef4444" : "#60a5fa"}
+                strokeOpacity={isHighlighted ? 1 : 0.7}
+                strokeWeight={isHighlighted ? 3 : 2}
+                fillColor="#60a5fa"
+                fillOpacity={isHighlighted ? 0.3 : 0.15}
+                onClick={() => handleLocationClick(location)}
+                zIndex={zIndex}
+              />
+            )
+          })}
+
+          {lotPolylines.map((location) => {
+            const path = convertCoordinates(location.path_coordinates!)
+            const isHighlighted = highlightedLocationId === location.id
+            const zIndex = isHighlighted ? 100 : 10
+            return (
+              <Polyline
+                key={location.id}
+                path={path}
+                strokeColor={isHighlighted ? "#ef4444" : "#60a5fa"}
+                strokeOpacity={isHighlighted ? 1 : 0.8}
+                strokeWeight={isHighlighted ? 6 : 4}
+                onClick={() => handleLocationClick(location)}
+                zIndex={zIndex}
+              />
+            )
+          })}
+
+          {facilityMarkers.map((location) => {
+            const isHighlighted = highlightedLocationId === location.id
+            const zIndex = isHighlighted ? 100 : 20
+            return (
+              <Marker
+                key={location.id}
+                position={location.coordinates!}
+                onClick={() => handleLocationClick(location)}
+                zIndex={zIndex}
+              />
+            )
+          })}
+
+          {facilityPolygons.map((location) => {
+            const paths = convertCoordinates(location.boundary_coordinates!)
+            const isHighlighted = highlightedLocationId === location.id
+            const zIndex = isHighlighted ? 100 : 20
+            return (
+              <Polygon
+                key={location.id}
+                paths={paths}
+                strokeColor={isHighlighted ? "#ef4444" : "#fb923c"}
+                strokeOpacity={isHighlighted ? 1 : 0.7}
+                strokeWeight={isHighlighted ? 3 : 2}
+                fillColor={isHighlighted ? "#60a5fa" : "#fdba74"}
+                fillOpacity={isHighlighted ? 0.3 : 0.25}
+                onClick={() => handleLocationClick(location)}
+                zIndex={zIndex}
+              />
+            )
+          })}
+
+          {facilityPolylines.map((location) => {
+            const path = convertCoordinates(location.path_coordinates!)
+            const isHighlighted = highlightedLocationId === location.id
+            const zIndex = isHighlighted ? 100 : 20
+            return (
+              <Polyline
+                key={location.id}
+                path={path}
+                strokeColor={isHighlighted ? "#ef4444" : "#fb923c"}
+                strokeOpacity={isHighlighted ? 1 : 0.8}
+                strokeWeight={isHighlighted ? 6 : 4}
+                onClick={() => handleLocationClick(location)}
+                zIndex={zIndex}
               />
             )
           })}
@@ -393,6 +404,7 @@ export function GoogleMapViewer({
           {walkingPaths.map((location) => {
             const path = convertCoordinates(location.path_coordinates!)
             const isHighlighted = highlightedLocationId === location.id
+            const zIndex = isHighlighted ? 100 : 25
             return (
               <Polyline
                 key={location.id}
@@ -401,7 +413,7 @@ export function GoogleMapViewer({
                 strokeOpacity={isHighlighted ? 1 : 0.8}
                 strokeWeight={isHighlighted ? 4 : 2}
                 onClick={() => handleLocationClick(location)}
-                zIndex={25}
+                zIndex={zIndex}
               />
             )
           })}

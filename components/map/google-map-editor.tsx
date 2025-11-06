@@ -1207,6 +1207,23 @@ export function GoogleMapEditor({
                   const isHighlightedFromUrl = mode === "edit" && editLocationIdFromUrl === location.id
                   const isHighlightedInView = mode === "view" && highlightedLocationId === location.id
 
+                  const isSelected = isHighlightedInView || isHighlightedFromUrl || isEditing
+                  const baseZIndex =
+                    location.type === "boundary"
+                      ? 1
+                      : location.type === "public_street"
+                        ? 15
+                        : location.type === "lot"
+                          ? 10
+                          : location.type === "neighborhood"
+                            ? 8
+                            : location.type === "facility"
+                              ? 20
+                              : location.type === "walking_path"
+                                ? 25
+                                : 5
+                  const zIndex = isSelected ? 100 : baseZIndex
+
                   const isBoundary = location.type === "boundary"
                   const isProtectionZone = location.type === "protection_zone"
                   const isEasement = location.type === "easement"
@@ -1227,7 +1244,7 @@ export function GoogleMapEditor({
                         position={location.coordinates}
                         onClick={() => handleLocationClick(location)}
                         title={location.name}
-                        zIndex={20}
+                        zIndex={zIndex}
                       />
                     )
                   }
@@ -1246,7 +1263,7 @@ export function GoogleMapEditor({
                         onClick={() => handleLocationClick(location)}
                         onMouseOver={() => setHoveredLocationId(location.id)}
                         onMouseOut={() => setHoveredLocationId(null)}
-                        zIndex={20}
+                        zIndex={zIndex}
                       />
                     )
                   }
@@ -1265,78 +1282,56 @@ export function GoogleMapEditor({
                   ) {
                     const paths = convertCoordinates(location.boundary_coordinates)
 
-                    const strokeColor = isBoundary
-                      ? "#ffffff"
-                      : isProtectionZone
-                        ? "#842029"
-                        : isEasement
-                          ? "#198754"
-                          : isPlayground
-                            ? "#0d6efd"
-                            : isPublicStreet
-                              ? "#6c757d"
-                              : isGreenArea
-                                ? "#198754"
-                                : isRecreationalZone
-                                  ? "#0d6efd"
-                                  : isHighlightedFromUrl || isHighlightedInView
-                                    ? "#ef4444"
-                                    : isEditing
-                                      ? "#10b981"
-                                      : location.type === "neighborhood"
-                                        ? "#a855f7"
-                                        : "#fb923c"
+                    let strokeColor = "#6b9b47"
+                    let fillColor = "#6b9b47"
 
-                    const fillColor = isBoundary
-                      ? "#ffffff"
-                      : isProtectionZone
-                        ? "#f8d7da"
-                        : isEasement
-                          ? "#d1e7dd"
-                          : isPlayground
-                            ? "#cfe2ff"
-                            : isPublicStreet
-                              ? "#d3d3d3"
-                              : isGreenArea
-                                ? "#d1e7dd"
-                                : isRecreationalZone
-                                  ? "#cfe2ff"
-                                  : isHighlightedFromUrl || isHighlightedInView
-                                    ? "#fca5a5"
-                                    : isEditing
-                                      ? "#6ee7b7"
-                                      : location.type === "neighborhood"
-                                        ? "#d8b4fe"
-                                        : "#fdba74"
+                    if (location.type === "facility") {
+                      strokeColor = "#fb923c"
+                      fillColor = "#fb923c"
+                    } else if (location.type === "neighborhood") {
+                      strokeColor = "#a855f7"
+                      fillColor = "#a855f7"
+                    } else if (isBoundary) {
+                      strokeColor = "#ffffff"
+                      fillColor = "#ffffff"
+                    } else if (isProtectionZone) {
+                      strokeColor = "#ef4444"
+                      fillColor = "#ef4444"
+                    } else if (isEasement) {
+                      strokeColor = "#f59e0b"
+                      fillColor = "#f59e0b"
+                    } else if (isPlayground) {
+                      strokeColor = "#ec4899"
+                      fillColor = "#ec4899"
+                    } else if (isPublicStreet) {
+                      strokeColor = "#fbbf24"
+                      fillColor = "#fbbf24"
+                    } else if (isGreenArea) {
+                      strokeColor = "#22c55e"
+                      fillColor = "#22c55e"
+                    } else if (isRecreationalZone) {
+                      strokeColor = "#06b6d4"
+                      fillColor = "#06b6d4"
+                    }
 
-                    const zIndex = isBoundary
-                      ? 1
-                      : isPublicStreet
-                        ? 5
-                        : location.type === "neighborhood"
-                          ? 15
-                          : location.type === "facility"
-                            ? 20
-                            : 10
+                    if (isHighlightedFromUrl || isHighlightedInView) {
+                      strokeColor = "#ef4444"
+                      fillColor = "#60a5fa" // Light blue fill when selected
+                    } else if (isEditing) {
+                      strokeColor = "#10b981"
+                      fillColor = "#60a5fa" // Light blue fill when editing
+                    }
 
                     return (
                       <Polygon
                         key={`saved-${location.id}`}
                         paths={paths}
                         strokeColor={strokeColor}
-                        strokeOpacity={isHovered ? 1 : isBoundary ? 0.8 : 0.7}
-                        strokeWeight={
-                          isHighlightedFromUrl || isHighlightedInView || isEditing
-                            ? 3
-                            : isHovered
-                              ? 3
-                              : isBoundary
-                                ? 2
-                                : 2
-                        }
+                        strokeOpacity={isHovered ? 1 : 0.8}
+                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 3 : isHovered ? 3 : 2}
                         fillColor={fillColor}
                         fillOpacity={
-                          isHighlightedFromUrl || isHighlightedInView ? 0.5 : isHovered ? 0.4 : isBoundary ? 0.15 : 0.25
+                          isHighlightedFromUrl || isHighlightedInView || isEditing ? 0.3 : isHovered ? 0.2 : 0.15
                         }
                         onClick={() => handleLocationClick(location)}
                         onMouseOver={() => setHoveredLocationId(location.id)}
@@ -1360,7 +1355,7 @@ export function GoogleMapEditor({
                         onClick={() => handleLocationClick(location)}
                         onMouseOver={() => setHoveredLocationId(location.id)}
                         onMouseOut={() => setHoveredLocationId(null)}
-                        zIndex={10}
+                        zIndex={zIndex}
                       />
                     )
                   }
@@ -1376,14 +1371,14 @@ export function GoogleMapEditor({
                         }
                         strokeOpacity={isHovered ? 1 : 0.7}
                         strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 3 : isHovered ? 3 : 2}
-                        fillColor={
-                          isHighlightedFromUrl || isHighlightedInView ? "#fca5a5" : isEditing ? "#6ee7b7" : "#93c5fd"
+                        fillColor={isHighlightedFromUrl || isHighlightedInView || isEditing ? "#60a5fa" : "#60a5fa"}
+                        fillOpacity={
+                          isHighlightedFromUrl || isHighlightedInView || isEditing ? 0.3 : isHovered ? 0.2 : 0.15
                         }
-                        fillOpacity={isHighlightedFromUrl || isHighlightedInView ? 0.5 : isHovered ? 0.4 : 0.25}
                         onClick={() => handleLocationClick(location)}
                         onMouseOver={() => setHoveredLocationId(location.id)}
                         onMouseOut={() => setHoveredLocationId(null)}
-                        zIndex={10}
+                        zIndex={zIndex}
                       />
                     )
                   }
@@ -1402,7 +1397,7 @@ export function GoogleMapEditor({
                         onClick={() => handleLocationClick(location)}
                         onMouseOver={() => setHoveredLocationId(location.id)}
                         onMouseOut={() => setHoveredLocationId(null)}
-                        zIndex={5}
+                        zIndex={zIndex}
                       />
                     )
                   }
@@ -1421,7 +1416,7 @@ export function GoogleMapEditor({
                         onClick={() => handleLocationClick(location)}
                         onMouseOver={() => setHoveredLocationId(location.id)}
                         onMouseOut={() => setHoveredLocationId(null)}
-                        zIndex={25}
+                        zIndex={zIndex}
                       />
                     )
                   }

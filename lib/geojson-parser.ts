@@ -310,14 +310,11 @@ function preprocessGeometryCollection(data: any): any {
     // Check if all geometries are LineStrings (potential boundary segments)
     const allLineStrings = data.geometries.every((g: any) => g.type === "LineString")
 
-    // Check if geometries have individual names/properties (separate locations)
-    const hasIndividualProperties = data.geometries.some((g: any) => g.properties && g.properties.name)
+    // If all are LineStrings, create a combined preview option
+    if (allLineStrings) {
+      console.log("[v0] Pre-processing: All LineStrings detected, creating combined preview option")
 
-    // If all are LineStrings and no individual properties, create combined version as preview
-    if (allLineStrings && !hasIndividualProperties) {
-      console.log("[v0] Pre-processing: Detected boundary segments, creating combined preview")
-
-      // Combine all LineString coordinates into one Polygon
+      // Combine all LineString coordinates into one Polygon for preview
       const allCoordinates = data.geometries.flatMap((geometry: any) => geometry.coordinates)
 
       const combinedFeature = {
@@ -332,17 +329,16 @@ function preprocessGeometryCollection(data: any): any {
         },
       }
 
+      // Return both combined and original features
       return {
         type: "FeatureCollection",
-        features: [combinedFeature],
-        originalFeatures: originalFeatures,
+        features: [combinedFeature], // Show combined by default in preview
+        originalFeatures: originalFeatures, // Keep originals for user to choose
       }
     }
 
-    // Otherwise, treat as multiple separate locations
-    console.log("[v0] Pre-processing: Converting to", data.geometries.length, "separate features")
-
-    console.log("[v0] Pre-processing: Created", originalFeatures.length, "features from GeometryCollection")
+    // For non-LineString geometries, just return as separate features
+    console.log("[v0] Pre-processing: Converting to", originalFeatures.length, "separate features")
 
     return {
       type: "FeatureCollection",

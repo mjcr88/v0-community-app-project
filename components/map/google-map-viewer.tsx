@@ -348,9 +348,9 @@ export function GoogleMapViewer({
               <Polyline
                 key={location.id}
                 path={path}
-                strokeColor={isHighlighted ? "#ef4444" : "#6c757d"}
-                strokeOpacity={isHighlighted ? 1 : 0.8}
-                strokeWeight={isHighlighted ? 5 : 3}
+                strokeColor={isHighlighted ? "#ef4444" : "#fbbf24"}
+                strokeOpacity={isHighlighted ? 1 : 0.95}
+                strokeWeight={isHighlighted ? 5 : 4}
                 onClick={() => handleLocationClick(location)}
               />
             )
@@ -363,9 +363,9 @@ export function GoogleMapViewer({
               <Polygon
                 key={location.id}
                 paths={paths}
-                strokeColor={isHighlighted ? "#ef4444" : "#6c757d"}
-                strokeOpacity={isHighlighted ? 1 : 0.7}
-                strokeWeight={isHighlighted ? 4 : 2}
+                strokeColor={isHighlighted ? "#ef4444" : "#fbbf24"}
+                strokeOpacity={isHighlighted ? 1 : 0.95}
+                strokeWeight={isHighlighted ? 4 : 3}
                 fillColor={isHighlighted ? "#fca5a5" : "#d3d3d3"}
                 fillOpacity={isHighlighted ? 0.4 : 0.25}
                 onClick={() => handleLocationClick(location)}

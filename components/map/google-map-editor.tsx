@@ -1240,8 +1240,8 @@ export function GoogleMapEditor({
                         strokeColor={
                           isHighlightedFromUrl || isHighlightedInView ? "#ef4444" : isEditing ? "#10b981" : "#fb923c"
                         }
-                        strokeOpacity={isHovered ? 1 : 0.8}
-                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 3 : isHovered ? 3 : 2}
+                        strokeOpacity={isHovered ? 1 : 0.9}
+                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 4 : isHovered ? 4 : 3}
                         onClick={() => handleLocationClick(location)}
                         onMouseOver={() => setHoveredLocationId(location.id)}
                         onMouseOut={() => setHoveredLocationId(null)}
@@ -1312,18 +1312,18 @@ export function GoogleMapEditor({
                         key={`saved-${location.id}`}
                         paths={paths}
                         strokeColor={strokeColor}
-                        strokeOpacity={isBoundary ? 0.8 : isHovered ? 1 : 0.7}
+                        strokeOpacity={isHovered ? 1 : isBoundary ? 0.8 : 0.7}
                         strokeWeight={
-                          isBoundary
+                          isHighlightedFromUrl || isHighlightedInView || isEditing
                             ? 2
-                            : isHighlightedFromUrl || isHighlightedInView || isEditing
+                            : isHovered
                               ? 2
-                              : isHovered
+                              : isBoundary
                                 ? 2
                                 : 1
                         }
                         fillColor={fillColor}
-                        fillOpacity={isBoundary ? 0.15 : isHovered ? 0.3 : 0.2}
+                        fillOpacity={isHovered ? 0.3 : isBoundary ? 0.15 : 0.2}
                         onClick={() => handleLocationClick(location)}
                         onMouseOver={() => setHoveredLocationId(location.id)}
                         onMouseOut={() => setHoveredLocationId(null)}
@@ -1340,8 +1340,8 @@ export function GoogleMapEditor({
                         strokeColor={
                           isHighlightedFromUrl || isHighlightedInView ? "#ef4444" : isEditing ? "#10b981" : "#60a5fa"
                         }
-                        strokeOpacity={isHovered ? 1 : 0.8}
-                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 3 : isHovered ? 3 : 2}
+                        strokeOpacity={isHovered ? 1 : 0.9}
+                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 4 : isHovered ? 4 : 3}
                         onClick={() => handleLocationClick(location)}
                         onMouseOver={() => setHoveredLocationId(location.id)}
                         onMouseOut={() => setHoveredLocationId(null)}
@@ -1378,10 +1378,10 @@ export function GoogleMapEditor({
                         key={`saved-${location.id}`}
                         path={path}
                         strokeColor={
-                          isHighlightedFromUrl || isHighlightedInView ? "#ef4444" : isEditing ? "#10b981" : "#6c757d"
+                          isHighlightedFromUrl || isHighlightedInView ? "#ef4444" : isEditing ? "#10b981" : "#fbbf24"
                         }
-                        strokeOpacity={isHovered ? 1 : 0.8}
-                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 3 : isHovered ? 3 : 2}
+                        strokeOpacity={isHovered ? 1 : 0.95}
+                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 5 : isHovered ? 5 : 4}
                         onClick={() => handleLocationClick(location)}
                         onMouseOver={() => setHoveredLocationId(location.id)}
                         onMouseOut={() => setHoveredLocationId(null)}

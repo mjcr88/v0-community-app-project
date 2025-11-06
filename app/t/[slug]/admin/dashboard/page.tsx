@@ -82,10 +82,9 @@ export default async function TenantAdminDashboard({
     .eq("type", "facility")
 
   const { count: lotsCount } = await supabase
-    .from("locations")
+    .from("lots")
     .select("*", { count: "exact", head: true })
-    .eq("tenant_id", tenant?.id || "")
-    .eq("type", "lot")
+    .eq("neighborhoods.tenant_id", tenant?.id || "")
 
   const { count: walkingPathsCount } = await supabase
     .from("locations")

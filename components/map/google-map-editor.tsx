@@ -18,7 +18,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { createLocation, updateLocation, deleteLocation } from "@/app/actions/locations"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -393,7 +393,7 @@ export function GoogleMapEditor({
         }
       }
     }
-  }, [isPreviewMode, toast])
+  }, []) // Only run once on mount
 
   useEffect(() => {
     if (mode === "view" && initialHighlightLocationId) {
@@ -1111,8 +1111,43 @@ export function GoogleMapEditor({
 
   return (
     <div className={mode === "view" ? "h-full" : "grid gap-6 lg:grid-cols-[1fr_400px]"}>
-      <Card className={mode === "view" ? "h-full" : "min-h-[600px]"}>
-        <CardContent className="p-1.5 h-full">
+      <Card className={mode === "view" ? "h-full" : "min-h-[600px] flex flex-col"}>
+        <CardHeader className="flex-none">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold tracking-tight">Map Editor</h2>
+            <div className="flex items-center space-x-2">
+              {mode === "edit" && !isImporting && (
+                <>
+                  {editingLocationId ? (
+                    <Button variant="outline" onClick={handleCancelEdit}>
+                      Cancel Edit
+                    </Button>
+                  ) : (
+                    <Button variant="outline" onClick={handleNewLocation}>
+                      New Location
+                    </Button>
+                  )}
+                  <Button onClick={handleSave} disabled={saving}>
+                    {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {editingLocationId ? "Update" : "Save"}
+                  </Button>
+                </>
+              )}
+              {isImporting && (
+                <>
+                  <Button variant="outline" onClick={handleCancelImport}>
+                    Cancel Import
+                  </Button>
+                  <Button onClick={handleSaveImport} disabled={saving}>
+                    {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Create {previewFeatures.length} Location(s)
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="flex-1 p-1.5 h-full">
           <div className="relative h-full w-full overflow-hidden rounded-lg">
             <APIProvider apiKey={apiKey}>
               <Map
@@ -1128,7 +1163,10 @@ export function GoogleMapEditor({
                 minZoom={10}
                 maxZoom={22}
                 restriction={undefined}
-                onCenterChanged={(e) => setMapCenter(e.detail.center)}
+                onCenterChanged={(e) => {
+                  console.log("[v0] Center changed to:", e.detail.center)
+                  setMapCenter(e.detail.center)
+                }}
                 onZoomChanged={(e) => {
                   console.log("[v0] Zoom changed to:", e.detail.zoom)
                   setMapZoom(e.detail.zoom)

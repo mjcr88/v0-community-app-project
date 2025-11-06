@@ -704,6 +704,9 @@ export function GoogleMapEditor({
         if (selectedNeighborhoodId && selectedNeighborhoodId !== "none") {
           locationData.neighborhood_id = selectedNeighborhoodId
         }
+        if (selectedLotId && selectedLotId !== "none") {
+          locationData.lot_id = selectedLotId
+        }
       } else if (locationType === "lot") {
         if (polygonPoints.length > 0) {
           locationData.boundary_coordinates = polygonPoints.map((p) => [p.lat, p.lng])
@@ -720,6 +723,9 @@ export function GoogleMapEditor({
         if (selectedNeighborhoodId && selectedNeighborhoodId !== "none") {
           locationData.neighborhood_id = selectedNeighborhoodId
         }
+        if (selectedLotId && selectedLotId !== "none") {
+          locationData.lot_id = selectedLotId
+        }
       } else if (
         locationType === "boundary" ||
         locationType === "protection_zone" ||
@@ -730,6 +736,12 @@ export function GoogleMapEditor({
         locationType === "recreational_zone"
       ) {
         locationData.boundary_coordinates = polygonPoints.map((p) => [p.lat, p.lng])
+        if (selectedNeighborhoodId && selectedNeighborhoodId !== "none") {
+          locationData.neighborhood_id = selectedNeighborhoodId
+        }
+        if (selectedLotId && selectedLotId !== "none") {
+          locationData.lot_id = selectedLotId
+        }
       }
 
       if (editingLocationId) {
@@ -970,6 +982,14 @@ export function GoogleMapEditor({
             coord[1],
             coord[0],
           ])
+        }
+
+        // Added neighborhood and lot linking for imported locations
+        if (selectedNeighborhoodId && selectedNeighborhoodId !== "none") {
+          locationData.neighborhood_id = selectedNeighborhoodId
+        }
+        if (selectedLotId && selectedLotId !== "none") {
+          locationData.lot_id = selectedLotId
         }
 
         const { data, error } = await supabase.from("locations").insert(locationData).select().single()
@@ -1806,6 +1826,41 @@ export function GoogleMapEditor({
                   </Select>
                 </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor="neighborhood-link-import">Link to Neighborhood (Optional)</Label>
+                  <Select value={selectedNeighborhoodId} onValueChange={setSelectedNeighborhoodId}>
+                    <SelectTrigger id="neighborhood-link-import">
+                      <SelectValue placeholder="Choose a neighborhood..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      {neighborhoods.map((neighborhood) => (
+                        <SelectItem key={neighborhood.id} value={neighborhood.id}>
+                          {neighborhood.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="lot-link-import">Link to Lot (Optional)</Label>
+                  <Select value={selectedLotId} onValueChange={setSelectedLotId}>
+                    <SelectTrigger id="lot-link-import">
+                      <SelectValue placeholder="Choose a lot..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      {lots.map((lot) => (
+                        <SelectItem key={lot.id} value={lot.id}>
+                          {lot.lot_number} {lot.neighborhoods?.name && `(${lot.neighborhoods.name})`}
+                          {lot.address && ` - ${lot.address}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div className="pt-4 space-y-2">
                   <Button onClick={handleSaveImport} disabled={saving} className="w-full">
                     {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -1879,9 +1934,10 @@ export function GoogleMapEditor({
                   </div>
                 )}
 
-                {(locationType === "facility" || locationType === "walking_path") && neighborhoods.length > 0 && (
+                {/* Changed to allow linking for all types except lot/neighborhood */}
+                {locationType !== "lot" && locationType !== "neighborhood" && neighborhoods.length > 0 && (
                   <div className="space-y-2">
-                    <Label htmlFor="neighborhood">Neighborhood (Optional)</Label>
+                    <Label htmlFor="neighborhood">Link to Neighborhood (Optional)</Label>
                     <Select value={selectedNeighborhoodId} onValueChange={setSelectedNeighborhoodId}>
                       <SelectTrigger id="neighborhood">
                         <SelectValue placeholder="Choose a neighborhood..." />
@@ -1891,6 +1947,26 @@ export function GoogleMapEditor({
                         {neighborhoods.map((neighborhood) => (
                           <SelectItem key={neighborhood.id} value={neighborhood.id}>
                             {neighborhood.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {locationType !== "lot" && locationType !== "neighborhood" && lots.length > 0 && (
+                  <div className="space-y-2">
+                    <Label htmlFor="lot-link">Link to Lot (Optional)</Label>
+                    <Select value={selectedLotId} onValueChange={setSelectedLotId}>
+                      <SelectTrigger id="lot-link">
+                        <SelectValue placeholder="Choose a lot..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {lots.map((lot) => (
+                          <SelectItem key={lot.id} value={lot.id}>
+                            {lot.lot_number} {lot.neighborhoods?.name && `(${lot.neighborhoods.name})`}
+                            {lot.address && ` - ${lot.address}`}
                           </SelectItem>
                         ))}
                       </SelectContent>

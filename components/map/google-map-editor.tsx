@@ -119,8 +119,66 @@ export function GoogleMapEditor({
   const [drawingMode, setDrawingMode] = useState<DrawingMode>(null)
   const [mapType, setMapType] = useState<"roadmap" | "satellite" | "terrain">("satellite")
   const [saving, setSaving] = useState(false)
-  const [mapCenter, setMapCenter] = useState<LatLng>(initialMapCenter || { lat: 9.9567, lng: -84.5333 })
-  const [mapZoom, setMapZoom] = useState(initialMapZoom || 15)
+  const [mapCenter, setMapCenter] = useState<LatLng>(() => {
+    // Calculate initial center from boundary if available
+    if (mode === "view" && initialLocations.length > 0) {
+      const boundaryLocs = initialLocations.filter((loc) => loc.type === "boundary")
+      if (boundaryLocs.length > 0 && boundaryLocs[0].boundary_coordinates?.length > 0) {
+        const coords = boundaryLocs[0].boundary_coordinates
+        let minLat = Number.POSITIVE_INFINITY
+        let maxLat = Number.NEGATIVE_INFINITY
+        let minLng = Number.POSITIVE_INFINITY
+        let maxLng = Number.NEGATIVE_INFINITY
+
+        coords.forEach((coord: [number, number]) => {
+          const [lat, lng] = coord
+          minLat = Math.min(minLat, lat)
+          maxLat = Math.max(maxLat, lat)
+          minLng = Math.min(minLng, lng)
+          maxLng = Math.max(maxLng, lng)
+        })
+
+        return { lat: (minLat + maxLat) / 2, lng: (minLng + maxLng) / 2 }
+      }
+    }
+    return initialMapCenter || { lat: 9.9567, lng: -84.5333 }
+  })
+
+  const [mapZoom, setMapZoom] = useState(() => {
+    // Calculate initial zoom from boundary if available
+    if (mode === "view" && initialLocations.length > 0) {
+      const boundaryLocs = initialLocations.filter((loc) => loc.type === "boundary")
+      if (boundaryLocs.length > 0 && boundaryLocs[0].boundary_coordinates?.length > 0) {
+        const coords = boundaryLocs[0].boundary_coordinates
+        let minLat = Number.POSITIVE_INFINITY
+        let maxLat = Number.NEGATIVE_INFINITY
+        let minLng = Number.POSITIVE_INFINITY
+        let maxLng = Number.NEGATIVE_INFINITY
+
+        coords.forEach((coord: [number, number]) => {
+          const [lat, lng] = coord
+          minLat = Math.min(minLat, lat)
+          maxLat = Math.max(maxLat, lat)
+          minLng = Math.min(minLng, lng)
+          maxLng = Math.max(maxLng, lng)
+        })
+
+        const latDiff = maxLat - minLat
+        const lngDiff = maxLng - minLng
+        const maxDiff = Math.max(latDiff, lngDiff)
+
+        let zoom = 15
+        if (maxDiff > 0.01) zoom = 14
+        if (maxDiff > 0.05) zoom = 13
+        if (maxDiff > 0.1) zoom = 12
+        if (maxDiff > 0.5) zoom = 10
+        if (maxDiff > 1) zoom = 9
+
+        return zoom
+      }
+    }
+    return initialMapZoom || 15
+  })
 
   const [markerPosition, setMarkerPosition] = useState<LatLng | null>(null)
   const [polygonPoints, setPolygonPoints] = useState<LatLng[]>([])
@@ -178,132 +236,18 @@ export function GoogleMapEditor({
   useEffect(() => {
     if (mode === "view") {
       setSavedLocations(initialLocations)
-      console.log("[v0] View mode - initial locations:", initialLocations)
-      console.log(
-        "[v0] Boundary locations:",
-        initialLocations.filter((loc) => loc.type === "boundary"),
-      )
-      const boundaryLocs = initialLocations.filter((loc) => loc.type === "boundary")
-      if (boundaryLocs.length > 0) {
-        console.log("[v0] First boundary location details:", {
-          id: boundaryLocs[0].id,
-          name: boundaryLocs[0].name,
-          hasCoordinates: !!boundaryLocs[0].boundary_coordinates,
-          coordinateCount: boundaryLocs[0].boundary_coordinates?.length || 0,
-          firstCoord: boundaryLocs[0].boundary_coordinates?.[0],
-        })
-      }
-
-      if (boundaryLocs.length > 0 && !initialMapCenter) {
-        const boundary = boundaryLocs[0]
-        if (boundary.boundary_coordinates && boundary.boundary_coordinates.length > 0) {
-          // Calculate bounds of the boundary
-          let minLat = Number.POSITIVE_INFINITY
-          let maxLat = Number.NEGATIVE_INFINITY
-          let minLng = Number.POSITIVE_INFINITY
-          let maxLng = Number.NEGATIVE_INFINITY
-
-          boundary.boundary_coordinates.forEach((coord: [number, number]) => {
-            const [lat, lng] = coord
-            minLat = Math.min(minLat, lat)
-            maxLat = Math.max(maxLat, lat)
-            minLng = Math.min(minLng, lng)
-            maxLng = Math.max(maxLng, lng)
-          })
-
-          const centerLat = (minLat + maxLat) / 2
-          const centerLng = (minLng + maxLng) / 2
-          setMapCenter({ lat: centerLat, lng: centerLng })
-
-          // Calculate appropriate zoom
-          const latDiff = maxLat - minLat
-          const lngDiff = maxLng - minLng
-          const maxDiff = Math.max(latDiff, lngDiff)
-
-          let zoom = 15
-          if (maxDiff > 0.01) zoom = 14
-          if (maxDiff > 0.05) zoom = 13
-          if (maxDiff > 0.1) zoom = 12
-          if (maxDiff > 0.5) zoom = 10
-          if (maxDiff > 1) zoom = 9
-
-          setMapZoom(zoom)
-          console.log("[v0] Auto-centered map on boundary:", { lat: centerLat, lng: centerLng, zoom })
-        }
-      }
-
       return
     }
 
     const loadLocations = async () => {
       const supabase = createBrowserClient()
       const { data } = await supabase.from("locations").select("*").eq("tenant_id", tenantId)
-      console.log("[v0] Loaded locations:", data)
-      console.log(
-        "[v0] Boundary locations:",
-        data?.filter((loc) => loc.type === "boundary"),
-      )
-      const boundaryLocs = data?.filter((loc) => loc.type === "boundary") || []
-      if (boundaryLocs.length > 0) {
-        console.log("[v0] First boundary location details:", {
-          id: boundaryLocs[0].id,
-          name: boundaryLocs[0].name,
-          hasCoordinates: !!boundaryLocs[0].boundary_coordinates,
-          coordinateCount: boundaryLocs[0].boundary_coordinates?.length || 0,
-          firstCoord: boundaryLocs[0].boundary_coordinates?.[0],
-        })
-
-        if (!initialMapCenter && !editLocationIdFromUrl) {
-          const boundary = boundaryLocs[0]
-          if (boundary.boundary_coordinates && boundary.boundary_coordinates.length > 0) {
-            // Calculate bounds of the boundary
-            let minLat = Number.POSITIVE_INFINITY
-            let maxLat = Number.NEGATIVE_INFINITY
-            let minLng = Number.POSITIVE_INFINITY
-            let maxLng = Number.NEGATIVE_INFINITY
-
-            boundary.boundary_coordinates.forEach((coord: [number, number]) => {
-              const [lat, lng] = coord
-              minLat = Math.min(minLat, lat)
-              maxLat = Math.max(maxLat, lat)
-              minLng = Math.min(minLng, lng)
-              maxLng = Math.max(maxLng, lng)
-            })
-
-            const centerLat = (minLat + maxLat) / 2
-            const centerLng = (minLng + maxLng) / 2
-            setMapCenter({ lat: centerLat, lng: centerLng })
-
-            // Calculate appropriate zoom
-            const latDiff = maxLat - minLat
-            const lngDiff = maxLng - minLng
-            const maxDiff = Math.max(latDiff, lngDiff)
-
-            let zoom = 15
-            if (maxDiff > 0.01) zoom = 14
-            if (maxDiff > 0.05) zoom = 13
-            if (maxDiff > 0.1) zoom = 12
-            if (maxDiff > 0.5) zoom = 10
-            if (maxDiff > 1) zoom = 9
-
-            setMapZoom(zoom)
-            console.log("[v0] Auto-centered map on boundary:", { lat: centerLat, lng: centerLng, zoom })
-          }
-        }
-      }
       if (data) {
         setSavedLocations(data)
-
-        if (editLocationIdFromUrl) {
-          const locationToEdit = data.find((loc) => loc.id === editLocationIdFromUrl)
-          if (locationToEdit) {
-            console.log("[v0] Auto-loading location for editing:", locationToEdit)
-          }
-        }
       }
     }
     loadLocations()
-  }, [tenantId, editLocationIdFromUrl, mode, initialLocations, initialMapCenter])
+  }, [tenantId, mode, initialLocations])
 
   useEffect(() => {
     if (isPreviewMode) {
@@ -311,8 +255,6 @@ export function GoogleMapEditor({
       if (previewData) {
         try {
           const parsed = JSON.parse(previewData)
-          console.log("[v0] Preview data loaded:", parsed)
-
           setPreviewFeatures(parsed.features || [])
           setIsImporting(true)
 
@@ -324,11 +266,8 @@ export function GoogleMapEditor({
 
             parsed.features.forEach((feature: any) => {
               const coords = feature.geometry.coordinates
-              console.log("[v0] Feature geometry:", feature.geometry.type, "coords:", coords)
-
               if (feature.geometry.type === "Point") {
                 const [lng, lat] = coords
-                console.log("[v0] Point coords - lng:", lng, "lat:", lat)
                 minLat = Math.min(minLat, lat)
                 maxLat = Math.max(maxLat, lat)
                 minLng = Math.min(minLng, lng)
@@ -336,7 +275,6 @@ export function GoogleMapEditor({
               } else if (feature.geometry.type === "LineString") {
                 coords.forEach((coord: number[]) => {
                   const [lng, lat] = coord
-                  console.log("[v0] LineString point - lng:", lng, "lat:", lat)
                   minLat = Math.min(minLat, lat)
                   maxLat = Math.max(maxLat, lat)
                   minLng = Math.min(minLng, lng)
@@ -345,7 +283,6 @@ export function GoogleMapEditor({
               } else if (feature.geometry.type === "Polygon") {
                 coords[0].forEach((coord: number[]) => {
                   const [lng, lat] = coord
-                  console.log("[v0] Polygon point - lng:", lng, "lat:", lat)
                   minLat = Math.min(minLat, lat)
                   maxLat = Math.max(maxLat, lat)
                   minLng = Math.min(minLng, lng)
@@ -354,28 +291,21 @@ export function GoogleMapEditor({
               }
             })
 
-            // Calculate center and appropriate zoom
             const centerLat = (minLat + maxLat) / 2
             const centerLng = (minLng + maxLng) / 2
 
-            console.log("[v0] Calculated bounds:", { minLat, maxLat, minLng, maxLng })
-            console.log("[v0] Calculated center:", { lat: centerLat, lng: centerLng })
-
             setMapCenter({ lat: centerLat, lng: centerLng })
 
-            // Calculate zoom based on bounds
             const latDiff = maxLat - minLat
             const lngDiff = maxLng - minLng
             const maxDiff = Math.max(latDiff, lngDiff)
 
-            // Rough zoom calculation (adjust as needed)
             let zoom = 15
             if (maxDiff > 0.1) zoom = 12
             if (maxDiff > 0.5) zoom = 10
             if (maxDiff > 1) zoom = 9
             if (maxDiff > 5) zoom = 7
 
-            console.log("[v0] Setting zoom to:", zoom, "based on maxDiff:", maxDiff)
             setMapZoom(zoom)
           }
 
@@ -384,7 +314,7 @@ export function GoogleMapEditor({
             description: `${parsed.features?.length || 0} feature(s) ready to import`,
           })
         } catch (error) {
-          console.error("[v0] Error loading preview data:", error)
+          console.error("Error loading preview data:", error)
           toast({
             title: "Error",
             description: "Failed to load preview data",
@@ -402,7 +332,6 @@ export function GoogleMapEditor({
         setSelectedLocation(location)
         setHighlightedLocationId(initialHighlightLocationId)
 
-        // Center map on highlighted location
         if (location.coordinates) {
           setMapCenter(location.coordinates)
           setMapZoom(18)
@@ -485,21 +414,6 @@ export function GoogleMapEditor({
   }, [isEditingLot, isEditingNeighborhood])
 
   const handleLocationClick = (location: any) => {
-    console.log("[v0] Location clicked:", location.name, location.id)
-    console.log("[v0] Current mode:", mode)
-    console.log("[v0] Setting highlightedLocationId to:", location.id)
-
-    if (mode === "view") {
-      setHighlightedLocationId(location.id)
-      setSelectedLocation(location)
-    } else if (mode === "edit") {
-      // In edit mode, also highlight the location
-      setHighlightedLocationId(location.id)
-      setSelectedLocation(location)
-    }
-
-    console.log("[v0] handleLocationClick called", { mode, locationId: location.id, highlightedLocationId })
-
     if (mode === "view") {
       setHighlightedLocationId(location.id)
       setSelectedLocation(location)
@@ -553,21 +467,11 @@ export function GoogleMapEditor({
   }
 
   const handleMapClick = (lat: number, lng: number) => {
-    console.log("[v0] Map clicked at:", lat, lng)
-    console.log("[v0] Current highlightedLocationId:", highlightedLocationId)
-
     // Clear selection when clicking on empty space
     setHighlightedLocationId(undefined)
     setSelectedLocation(null)
 
-    console.log("[v0] handleMapClick called", { mode, lat, lng, highlightedLocationId })
-
     if (mode === "view") {
-      if (highlightedLocationId) {
-        console.log("[v0] Clearing highlight because clicked empty space")
-      }
-      setHighlightedLocationId(undefined)
-      setSelectedLocation(null)
       return
     }
 
@@ -661,7 +565,7 @@ export function GoogleMapEditor({
         description: `${urls.length} photo${urls.length > 1 ? "s" : ""} uploaded successfully`,
       })
     } catch (error) {
-      console.error("[v0] Photo upload error:", error)
+      console.error("Photo upload error:", error)
       toast({
         title: "Upload Error",
         description: error instanceof Error ? error.message : "Failed to upload photos",
@@ -698,7 +602,7 @@ export function GoogleMapEditor({
       })
       return
     }
-    if (locationType === "lot" && polygonPoints.length < 3 && location.path_coordinates?.length < 2) {
+    if (locationType === "lot" && polygonPoints.length < 3 && polylinePoints.length < 2) {
       toast({
         title: "Validation Error",
         description: "Please draw a boundary (at least 3 points) or a path (at least 2 points) for the lot",
@@ -793,8 +697,6 @@ export function GoogleMapEditor({
         locationData.boundary_coordinates = polygonPoints.map((p) => [p.lat, p.lng])
       }
 
-      console.log("[v0] Saving location:", locationData)
-
       if (editingLocationId) {
         await updateLocation(editingLocationId, locationData)
         toast({
@@ -842,7 +744,7 @@ export function GoogleMapEditor({
         })
       }
     } catch (error) {
-      console.error("[v0] Error saving location:", error)
+      console.error("Error saving location:", error)
       toast({
         title: "Error",
         description: "Error saving location: " + (error instanceof Error ? error.message : "Unknown error"),
@@ -923,7 +825,7 @@ export function GoogleMapEditor({
 
       handleNewLocation()
     } catch (error) {
-      console.error("[v0] Error deleting location:", error)
+      console.error("Error deleting location:", error)
       toast({
         title: "Error",
         description: "Error deleting location: " + (error instanceof Error ? error.message : "Unknown error"),
@@ -967,31 +869,8 @@ export function GoogleMapEditor({
     }
   }
 
-  // TODO: Get API key from environment variables
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""
   const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAP_ID || "DEMO_MAP_ID"
-
-  console.log("[v0] Map configuration:", {
-    apiKey: apiKey ? "✓ Present" : "✗ Missing",
-    mapId,
-    mapCenter,
-    mapZoom,
-    isPreviewMode,
-    isImporting,
-    previewFeaturesCount: previewFeatures.length,
-  })
-
-  if (!apiKey) {
-    return (
-      <Alert variant="destructive">
-        <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Configuration Error</AlertTitle>
-        <AlertDescription>
-          Google Maps API key is missing. Please add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to your environment variables.
-        </AlertDescription>
-      </Alert>
-    )
-  }
 
   const filteredLocations = savedLocations.filter((location) => {
     if (location.type === "facility") return showFacilities
@@ -1011,7 +890,6 @@ export function GoogleMapEditor({
   const existingLocationTypes = new Set(savedLocations.map((loc) => loc.type))
   const hasType = (type: string) => existingLocationTypes.has(type)
 
-  // Handle Save/Cancel for GeoJSON Import
   const handleSaveImport = async () => {
     if (!locationType) {
       toast({
@@ -1070,21 +948,18 @@ export function GoogleMapEditor({
         description: `${createdLocations.length} location(s) created successfully!`,
       })
 
-      // Clear preview data
       sessionStorage.removeItem("geojson-preview")
       setPreviewFeatures([])
       setIsImporting(false)
 
-      // Reload locations
       const { data } = await supabase.from("locations").select("*").eq("tenant_id", tenantId)
       if (data) {
         setSavedLocations(data)
       }
 
-      // Redirect back to map
       router.push(`/t/${tenantSlug}/admin/map`)
     } catch (error) {
-      console.error("[v0] Error importing locations:", error)
+      console.error("Error importing locations:", error)
       toast({
         title: "Error",
         description: "Error importing locations: " + (error instanceof Error ? error.message : "Unknown error"),
@@ -1151,7 +1026,7 @@ export function GoogleMapEditor({
           <div className="relative h-full w-full overflow-hidden rounded-lg">
             <APIProvider apiKey={apiKey}>
               <Map
-                key={`map-${isImporting ? "importing" : "normal"}`}
+                key={`map-${isImporting ? "importing" : "normal"}-${savedLocations.length}`}
                 mapId={mapId}
                 defaultCenter={mapCenter}
                 defaultZoom={mapZoom}
@@ -1264,13 +1139,6 @@ export function GoogleMapEditor({
                   const isHighlightedFromUrl = mode === "edit" && editLocationIdFromUrl === location.id
                   const isHighlightedInView = highlightedLocationId === location.id
 
-                  console.log("[v0] Rendering location:", location.name, {
-                    isHighlightedInView,
-                    highlightedLocationId,
-                    locationId: location.id,
-                    mode,
-                  })
-
                   const isSelected = isHighlightedInView || isHighlightedFromUrl || isEditing
                   const baseZIndex =
                     location.type === "boundary"
@@ -1297,11 +1165,6 @@ export function GoogleMapEditor({
                   const isRecreationalZone = location.type === "recreational_zone"
 
                   if (location.type === "facility" && location.coordinates) {
-                    console.log("[v0] Rendering facility marker:", {
-                      id: location.id,
-                      name: location.name,
-                      coordinates: location.coordinates,
-                    })
                     return (
                       <Marker
                         key={`saved-${location.id}`}
@@ -1380,10 +1243,10 @@ export function GoogleMapEditor({
 
                     if (isHighlightedFromUrl || isHighlightedInView) {
                       strokeColor = "#ef4444"
-                      fillColor = "#60a5fa" // Light blue fill when selected
+                      fillColor = "#60a5fa"
                     } else if (isEditing) {
                       strokeColor = "#10b981"
-                      fillColor = "#60a5fa" // Light blue fill when editing
+                      fillColor = "#60a5fa"
                     }
 
                     return (
@@ -1440,7 +1303,6 @@ export function GoogleMapEditor({
                           isHighlightedFromUrl || isHighlightedInView || isEditing ? 0.3 : isHovered ? 0.2 : 0.15
                         }
                         onClick={() => {
-                          console.log("[v0] Polygon clicked:", location.name)
                           handleLocationClick(location)
                         }}
                         onMouseOver={() => setHoveredLocationId(location.id)}

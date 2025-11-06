@@ -165,12 +165,16 @@ export function GoogleMapViewer({
   console.log("[v0] Filtered neighborhoods:", neighborhoodPolygons.length)
 
   const handleMapClick = () => {
+    console.log("[v0] Map clicked, clearing selection")
+    console.log("[v0] Previous highlightedLocationId:", highlightedLocationId)
     setHighlightedLocationId(undefined)
     setSelectedLocation(null)
   }
 
   const handleLocationClick = (location: Location) => {
-    setHighlightedLocationId(undefined)
+    console.log("[v0] Location clicked:", location.name, location.id)
+    console.log("[v0] Previous highlightedLocationId:", highlightedLocationId)
+    setHighlightedLocationId(location.id)
     setSelectedLocation(location)
   }
 
@@ -198,8 +202,15 @@ export function GoogleMapViewer({
           mapTypeId={mapType}
           gestureHandling="greedy"
           disableDefaultUI={true}
+          zoomControl={false}
+          minZoom={10}
+          maxZoom={22}
+          restriction={undefined}
           onCenterChanged={(e) => setCenter(e.detail.center)}
-          onZoomChanged={(e) => setZoom(e.detail.zoom)}
+          onZoomChanged={(e) => {
+            console.log("[v0] Zoom changed to:", e.detail.zoom)
+            setZoom(e.detail.zoom)
+          }}
           onClick={handleMapClick}
         >
           {showBoundary && tenantBoundary && (
@@ -218,8 +229,8 @@ export function GoogleMapViewer({
           {boundaryLocations.map((location) => {
             const paths = convertCoordinates(location.boundary_coordinates!)
             console.log("[v0] Rendering boundary location:", location.id, "with", paths.length, "coordinate pairs")
-            console.log("[v0] First path coordinate:", paths[0])
             const isHighlighted = highlightedLocationId === location.id
+            const zIndex = isHighlighted ? 200 : 1
             return (
               <Polygon
                 key={location.id}
@@ -227,25 +238,21 @@ export function GoogleMapViewer({
                 strokeColor={isHighlighted ? "#ef4444" : "#ffffff"}
                 strokeOpacity={isHighlighted ? 1 : 0.8}
                 strokeWeight={isHighlighted ? 3 : 2}
-                fillColor={isHighlighted ? "#fca5a5" : "#ffffff"}
-                fillOpacity={isHighlighted ? 0.5 : 0.15}
-                onClick={() => handleLocationClick(location)}
-                zIndex={1}
+                fillColor={isHighlighted ? "#60a5fa" : "#ffffff"}
+                fillOpacity={isHighlighted ? 0.4 : 0.15}
+                onClick={() => {
+                  console.log("[v0] Boundary polygon clicked:", location.name)
+                  handleLocationClick(location)
+                }}
+                zIndex={zIndex}
               />
             )
           })}
 
           {boundaryLocationsFromTable?.map((location) => {
             const paths = convertCoordinates(location.boundary_coordinates!)
-            console.log(
-              "[v0] Rendering boundary location from table:",
-              location.id,
-              "with",
-              paths.length,
-              "coordinate pairs",
-            )
-            console.log("[v0] First path coordinate from table:", paths[0])
             const isHighlighted = highlightedLocationId === location.id
+            const zIndex = isHighlighted ? 200 : 1
             return (
               <Polygon
                 key={location.id}
@@ -253,10 +260,13 @@ export function GoogleMapViewer({
                 strokeColor={isHighlighted ? "#ef4444" : "#000000"}
                 strokeOpacity={isHighlighted ? 1 : 0.8}
                 strokeWeight={isHighlighted ? 3 : 2}
-                fillColor={isHighlighted ? "#fca5a5" : "#000000"}
-                fillOpacity={isHighlighted ? 0.5 : 0.15}
-                onClick={() => handleLocationClick(location)}
-                zIndex={1}
+                fillColor={isHighlighted ? "#60a5fa" : "#000000"}
+                fillOpacity={isHighlighted ? 0.4 : 0.15}
+                onClick={() => {
+                  console.log("[v0] Boundary polygon from table clicked:", location.name)
+                  handleLocationClick(location)
+                }}
+                zIndex={zIndex}
               />
             )
           })}
@@ -264,7 +274,7 @@ export function GoogleMapViewer({
           {neighborhoodPolygons.map((location) => {
             const paths = convertCoordinates(location.boundary_coordinates!)
             const isHighlighted = highlightedLocationId === location.id
-            const zIndex = isHighlighted ? 100 : 8
+            const zIndex = isHighlighted ? 200 : 8
             return (
               <Polygon
                 key={location.id}
@@ -273,8 +283,11 @@ export function GoogleMapViewer({
                 strokeOpacity={isHighlighted ? 1 : 0.7}
                 strokeWeight={isHighlighted ? 3 : 2}
                 fillColor={isHighlighted ? "#60a5fa" : "#c084fc"}
-                fillOpacity={isHighlighted ? 0.3 : 0.25}
-                onClick={() => handleLocationClick(location)}
+                fillOpacity={isHighlighted ? 0.4 : 0.25}
+                onClick={() => {
+                  console.log("[v0] Neighborhood polygon clicked:", location.name)
+                  handleLocationClick(location)
+                }}
                 zIndex={zIndex}
               />
             )
@@ -283,7 +296,7 @@ export function GoogleMapViewer({
           {publicStreetPolylines.map((location) => {
             const path = convertCoordinates(location.path_coordinates!)
             const isHighlighted = highlightedLocationId === location.id
-            const zIndex = isHighlighted ? 100 : 15
+            const zIndex = isHighlighted ? 200 : 15
             return (
               <Polyline
                 key={location.id}
@@ -291,7 +304,10 @@ export function GoogleMapViewer({
                 strokeColor={isHighlighted ? "#ef4444" : "#fbbf24"}
                 strokeOpacity={isHighlighted ? 1 : 0.95}
                 strokeWeight={isHighlighted ? 4 : 2}
-                onClick={() => handleLocationClick(location)}
+                onClick={() => {
+                  console.log("[v0] Public street polyline clicked:", location.name)
+                  handleLocationClick(location)
+                }}
                 zIndex={zIndex}
               />
             )
@@ -300,7 +316,7 @@ export function GoogleMapViewer({
           {publicStreetPolygons.map((location) => {
             const paths = convertCoordinates(location.boundary_coordinates!)
             const isHighlighted = highlightedLocationId === location.id
-            const zIndex = isHighlighted ? 100 : 15
+            const zIndex = isHighlighted ? 200 : 15
             return (
               <Polygon
                 key={location.id}
@@ -309,8 +325,11 @@ export function GoogleMapViewer({
                 strokeOpacity={isHighlighted ? 1 : 0.95}
                 strokeWeight={isHighlighted ? 3 : 2}
                 fillColor={isHighlighted ? "#60a5fa" : "#d3d3d3"}
-                fillOpacity={isHighlighted ? 0.3 : 0.25}
-                onClick={() => handleLocationClick(location)}
+                fillOpacity={isHighlighted ? 0.4 : 0.25}
+                onClick={() => {
+                  console.log("[v0] Public street polygon clicked:", location.name)
+                  handleLocationClick(location)
+                }}
                 zIndex={zIndex}
               />
             )
@@ -319,7 +338,7 @@ export function GoogleMapViewer({
           {lotPolygons.map((location) => {
             const paths = convertCoordinates(location.boundary_coordinates!)
             const isHighlighted = highlightedLocationId === location.id
-            const zIndex = isHighlighted ? 100 : 10
+            const zIndex = isHighlighted ? 200 : 10
             return (
               <Polygon
                 key={location.id}
@@ -328,8 +347,11 @@ export function GoogleMapViewer({
                 strokeOpacity={isHighlighted ? 1 : 0.7}
                 strokeWeight={isHighlighted ? 3 : 2}
                 fillColor="#60a5fa"
-                fillOpacity={isHighlighted ? 0.3 : 0.15}
-                onClick={() => handleLocationClick(location)}
+                fillOpacity={isHighlighted ? 0.4 : 0.15}
+                onClick={() => {
+                  console.log("[v0] Lot polygon clicked:", location.name)
+                  handleLocationClick(location)
+                }}
                 zIndex={zIndex}
               />
             )
@@ -338,7 +360,7 @@ export function GoogleMapViewer({
           {lotPolylines.map((location) => {
             const path = convertCoordinates(location.path_coordinates!)
             const isHighlighted = highlightedLocationId === location.id
-            const zIndex = isHighlighted ? 100 : 10
+            const zIndex = isHighlighted ? 200 : 10
             return (
               <Polyline
                 key={location.id}
@@ -346,7 +368,10 @@ export function GoogleMapViewer({
                 strokeColor={isHighlighted ? "#ef4444" : "#60a5fa"}
                 strokeOpacity={isHighlighted ? 1 : 0.8}
                 strokeWeight={isHighlighted ? 6 : 4}
-                onClick={() => handleLocationClick(location)}
+                onClick={() => {
+                  console.log("[v0] Lot polyline clicked:", location.name)
+                  handleLocationClick(location)
+                }}
                 zIndex={zIndex}
               />
             )
@@ -354,12 +379,15 @@ export function GoogleMapViewer({
 
           {facilityMarkers.map((location) => {
             const isHighlighted = highlightedLocationId === location.id
-            const zIndex = isHighlighted ? 100 : 20
+            const zIndex = isHighlighted ? 200 : 20
             return (
               <Marker
                 key={location.id}
                 position={location.coordinates!}
-                onClick={() => handleLocationClick(location)}
+                onClick={() => {
+                  console.log("[v0] Facility marker clicked:", location.name)
+                  handleLocationClick(location)
+                }}
                 zIndex={zIndex}
               />
             )
@@ -368,7 +396,7 @@ export function GoogleMapViewer({
           {facilityPolygons.map((location) => {
             const paths = convertCoordinates(location.boundary_coordinates!)
             const isHighlighted = highlightedLocationId === location.id
-            const zIndex = isHighlighted ? 100 : 20
+            const zIndex = isHighlighted ? 200 : 20
             return (
               <Polygon
                 key={location.id}
@@ -377,8 +405,11 @@ export function GoogleMapViewer({
                 strokeOpacity={isHighlighted ? 1 : 0.7}
                 strokeWeight={isHighlighted ? 3 : 2}
                 fillColor={isHighlighted ? "#60a5fa" : "#fdba74"}
-                fillOpacity={isHighlighted ? 0.3 : 0.25}
-                onClick={() => handleLocationClick(location)}
+                fillOpacity={isHighlighted ? 0.4 : 0.25}
+                onClick={() => {
+                  console.log("[v0] Facility polygon clicked:", location.name)
+                  handleLocationClick(location)
+                }}
                 zIndex={zIndex}
               />
             )
@@ -387,7 +418,7 @@ export function GoogleMapViewer({
           {facilityPolylines.map((location) => {
             const path = convertCoordinates(location.path_coordinates!)
             const isHighlighted = highlightedLocationId === location.id
-            const zIndex = isHighlighted ? 100 : 20
+            const zIndex = isHighlighted ? 200 : 20
             return (
               <Polyline
                 key={location.id}
@@ -395,7 +426,10 @@ export function GoogleMapViewer({
                 strokeColor={isHighlighted ? "#ef4444" : "#fb923c"}
                 strokeOpacity={isHighlighted ? 1 : 0.8}
                 strokeWeight={isHighlighted ? 6 : 4}
-                onClick={() => handleLocationClick(location)}
+                onClick={() => {
+                  console.log("[v0] Facility polyline clicked:", location.name)
+                  handleLocationClick(location)
+                }}
                 zIndex={zIndex}
               />
             )
@@ -404,7 +438,7 @@ export function GoogleMapViewer({
           {walkingPaths.map((location) => {
             const path = convertCoordinates(location.path_coordinates!)
             const isHighlighted = highlightedLocationId === location.id
-            const zIndex = isHighlighted ? 100 : 25
+            const zIndex = isHighlighted ? 200 : 25
             return (
               <Polyline
                 key={location.id}
@@ -412,7 +446,10 @@ export function GoogleMapViewer({
                 strokeColor={isHighlighted ? "#ef4444" : "#3b82f6"}
                 strokeOpacity={isHighlighted ? 1 : 0.8}
                 strokeWeight={isHighlighted ? 4 : 2}
-                onClick={() => handleLocationClick(location)}
+                onClick={() => {
+                  console.log("[v0] Walking path clicked:", location.name)
+                  handleLocationClick(location)
+                }}
                 zIndex={zIndex}
               />
             )

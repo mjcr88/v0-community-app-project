@@ -485,6 +485,19 @@ export function GoogleMapEditor({
   }, [isEditingLot, isEditingNeighborhood])
 
   const handleLocationClick = (location: any) => {
+    console.log("[v0] Location clicked:", location.name, location.id)
+    console.log("[v0] Current mode:", mode)
+    console.log("[v0] Setting highlightedLocationId to:", location.id)
+
+    if (mode === "view") {
+      setHighlightedLocationId(location.id)
+      setSelectedLocation(location)
+    } else if (mode === "edit") {
+      // In edit mode, also highlight the location
+      setHighlightedLocationId(location.id)
+      setSelectedLocation(location)
+    }
+
     console.log("[v0] handleLocationClick called", { mode, locationId: location.id, highlightedLocationId })
 
     if (mode === "view") {
@@ -540,6 +553,13 @@ export function GoogleMapEditor({
   }
 
   const handleMapClick = (lat: number, lng: number) => {
+    console.log("[v0] Map clicked at:", lat, lng)
+    console.log("[v0] Current highlightedLocationId:", highlightedLocationId)
+
+    // Clear selection when clicking on empty space
+    setHighlightedLocationId(undefined)
+    setSelectedLocation(null)
+
     console.log("[v0] handleMapClick called", { mode, lat, lng, highlightedLocationId })
 
     if (mode === "view") {
@@ -1104,8 +1124,15 @@ export function GoogleMapEditor({
                 gestureHandling="greedy"
                 disableDefaultUI={true}
                 clickableIcons={false}
+                zoomControl={false}
+                minZoom={10}
+                maxZoom={22}
+                restriction={undefined}
                 onCenterChanged={(e) => setMapCenter(e.detail.center)}
-                onZoomChanged={(e) => setMapZoom(e.detail.zoom)}
+                onZoomChanged={(e) => {
+                  console.log("[v0] Zoom changed to:", e.detail.zoom)
+                  setMapZoom(e.detail.zoom)
+                }}
               >
                 <MapClickHandler drawingMode={drawingMode} onMapClick={handleMapClick} />
 
@@ -1205,7 +1232,14 @@ export function GoogleMapEditor({
                   const isEditing = mode === "edit" && editingLocationId === location.id
                   const isHovered = hoveredLocationId === location.id
                   const isHighlightedFromUrl = mode === "edit" && editLocationIdFromUrl === location.id
-                  const isHighlightedInView = mode === "view" && highlightedLocationId === location.id
+                  const isHighlightedInView = highlightedLocationId === location.id
+
+                  console.log("[v0] Rendering location:", location.name, {
+                    isHighlightedInView,
+                    highlightedLocationId,
+                    locationId: location.id,
+                    mode,
+                  })
 
                   const isSelected = isHighlightedInView || isHighlightedFromUrl || isEditing
                   const baseZIndex =
@@ -1222,7 +1256,7 @@ export function GoogleMapEditor({
                               : location.type === "walking_path"
                                 ? 25
                                 : 5
-                  const zIndex = isSelected ? 100 : baseZIndex
+                  const zIndex = isSelected ? 200 : baseZIndex
 
                   const isBoundary = location.type === "boundary"
                   const isProtectionZone = location.type === "protection_zone"
@@ -1375,7 +1409,10 @@ export function GoogleMapEditor({
                         fillOpacity={
                           isHighlightedFromUrl || isHighlightedInView || isEditing ? 0.3 : isHovered ? 0.2 : 0.15
                         }
-                        onClick={() => handleLocationClick(location)}
+                        onClick={() => {
+                          console.log("[v0] Polygon clicked:", location.name)
+                          handleLocationClick(location)
+                        }}
                         onMouseOver={() => setHoveredLocationId(location.id)}
                         onMouseOut={() => setHoveredLocationId(null)}
                         zIndex={zIndex}

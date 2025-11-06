@@ -243,7 +243,42 @@ export function GoogleMapEditor({
       const supabase = createBrowserClient()
       const { data } = await supabase.from("locations").select("*").eq("tenant_id", tenantId)
       if (data) {
+        console.log("[v0] Loaded locations in edit mode:", data.length)
         setSavedLocations(data)
+
+        const boundaryLoc = data.find((loc) => loc.type === "boundary")
+        if (boundaryLoc?.boundary_coordinates?.length > 0) {
+          const coords = boundaryLoc.boundary_coordinates
+          let minLat = Number.POSITIVE_INFINITY
+          let maxLat = Number.NEGATIVE_INFINITY
+          let minLng = Number.POSITIVE_INFINITY
+          let maxLng = Number.NEGATIVE_INFINITY
+
+          coords.forEach((coord: [number, number]) => {
+            const [lat, lng] = coord
+            minLat = Math.min(minLat, lat)
+            maxLat = Math.max(maxLat, lat)
+            minLng = Math.min(minLng, lng)
+            maxLng = Math.max(maxLng, lng)
+          })
+
+          const center = { lat: (minLat + maxLat) / 2, lng: (minLng + maxLng) / 2 }
+          setMapCenter(center)
+
+          const latDiff = maxLat - minLat
+          const lngDiff = maxLng - minLng
+          const maxDiff = Math.max(latDiff, lngDiff)
+
+          let zoom = 15
+          if (maxDiff > 0.01) zoom = 14
+          if (maxDiff > 0.05) zoom = 13
+          if (maxDiff > 0.1) zoom = 12
+          if (maxDiff > 0.5) zoom = 10
+          if (maxDiff > 1) zoom = 9
+
+          setMapZoom(zoom)
+          console.log("[v0] Set map center and zoom from boundary:", center, zoom)
+        }
       }
     }
     loadLocations()

@@ -211,6 +211,7 @@ export function GoogleMapViewer({
               fillColor="#ffffff"
               fillOpacity={0.15}
               clickable={false}
+              zIndex={1}
             />
           )}
 
@@ -218,16 +219,18 @@ export function GoogleMapViewer({
             const paths = convertCoordinates(location.boundary_coordinates!)
             console.log("[v0] Rendering boundary location:", location.id, "with", paths.length, "coordinate pairs")
             console.log("[v0] First path coordinate:", paths[0])
+            const isHighlighted = highlightedLocationId === location.id
             return (
               <Polygon
                 key={location.id}
                 paths={paths}
-                strokeColor="#ffffff"
-                strokeOpacity={0.8}
-                strokeWeight={2}
-                fillColor="#ffffff"
-                fillOpacity={0.15}
+                strokeColor={isHighlighted ? "#ef4444" : "#ffffff"}
+                strokeOpacity={isHighlighted ? 1 : 0.8}
+                strokeWeight={isHighlighted ? 3 : 2}
+                fillColor={isHighlighted ? "#fca5a5" : "#ffffff"}
+                fillOpacity={isHighlighted ? 0.5 : 0.15}
                 onClick={() => handleLocationClick(location)}
+                zIndex={1}
               />
             )
           })}
@@ -242,16 +245,18 @@ export function GoogleMapViewer({
               "coordinate pairs",
             )
             console.log("[v0] First path coordinate from table:", paths[0])
+            const isHighlighted = highlightedLocationId === location.id
             return (
               <Polygon
                 key={location.id}
                 paths={paths}
-                strokeColor="#000000"
-                strokeOpacity={0.8}
-                strokeWeight={2}
-                fillColor="#000000"
-                fillOpacity={0.15}
+                strokeColor={isHighlighted ? "#ef4444" : "#000000"}
+                strokeOpacity={isHighlighted ? 1 : 0.8}
+                strokeWeight={isHighlighted ? 3 : 2}
+                fillColor={isHighlighted ? "#fca5a5" : "#000000"}
+                fillOpacity={isHighlighted ? 0.5 : 0.15}
                 onClick={() => handleLocationClick(location)}
+                zIndex={1}
               />
             )
           })}
@@ -265,16 +270,22 @@ export function GoogleMapViewer({
                 paths={paths}
                 strokeColor={isHighlighted ? "#ef4444" : "#a855f7"}
                 strokeOpacity={isHighlighted ? 1 : 0.7}
-                strokeWeight={isHighlighted ? 4 : 2}
+                strokeWeight={isHighlighted ? 3 : 2}
                 fillColor={isHighlighted ? "#fca5a5" : "#c084fc"}
-                fillOpacity={isHighlighted ? 0.4 : 0.25}
+                fillOpacity={isHighlighted ? 0.5 : 0.25}
                 onClick={() => handleLocationClick(location)}
+                zIndex={15}
               />
             )
           })}
 
           {facilityMarkers.map((location) => (
-            <Marker key={location.id} position={location.coordinates!} onClick={() => handleLocationClick(location)} />
+            <Marker
+              key={location.id}
+              position={location.coordinates!}
+              onClick={() => handleLocationClick(location)}
+              zIndex={20}
+            />
           ))}
 
           {facilityPolygons.map((location) => {
@@ -286,10 +297,11 @@ export function GoogleMapViewer({
                 paths={paths}
                 strokeColor={isHighlighted ? "#ef4444" : "#fb923c"}
                 strokeOpacity={isHighlighted ? 1 : 0.7}
-                strokeWeight={isHighlighted ? 4 : 2}
+                strokeWeight={isHighlighted ? 3 : 2}
                 fillColor={isHighlighted ? "#fca5a5" : "#fdba74"}
-                fillOpacity={isHighlighted ? 0.4 : 0.25}
+                fillOpacity={isHighlighted ? 0.5 : 0.25}
                 onClick={() => handleLocationClick(location)}
+                zIndex={20}
               />
             )
           })}
@@ -303,8 +315,9 @@ export function GoogleMapViewer({
                 path={path}
                 strokeColor={isHighlighted ? "#ef4444" : "#fb923c"}
                 strokeOpacity={isHighlighted ? 1 : 0.8}
-                strokeWeight={isHighlighted ? 5 : 3}
+                strokeWeight={isHighlighted ? 6 : 4}
                 onClick={() => handleLocationClick(location)}
+                zIndex={20}
               />
             )
           })}
@@ -318,10 +331,11 @@ export function GoogleMapViewer({
                 paths={paths}
                 strokeColor={isHighlighted ? "#ef4444" : "#60a5fa"}
                 strokeOpacity={isHighlighted ? 1 : 0.7}
-                strokeWeight={isHighlighted ? 4 : 2}
+                strokeWeight={isHighlighted ? 3 : 2}
                 fillColor={isHighlighted ? "#fca5a5" : "#93c5fd"}
-                fillOpacity={isHighlighted ? 0.4 : 0.25}
+                fillOpacity={isHighlighted ? 0.5 : 0.25}
                 onClick={() => handleLocationClick(location)}
+                zIndex={10}
               />
             )
           })}
@@ -335,8 +349,9 @@ export function GoogleMapViewer({
                 path={path}
                 strokeColor={isHighlighted ? "#ef4444" : "#60a5fa"}
                 strokeOpacity={isHighlighted ? 1 : 0.8}
-                strokeWeight={isHighlighted ? 5 : 3}
+                strokeWeight={isHighlighted ? 6 : 4}
                 onClick={() => handleLocationClick(location)}
+                zIndex={10}
               />
             )
           })}
@@ -350,8 +365,9 @@ export function GoogleMapViewer({
                 path={path}
                 strokeColor={isHighlighted ? "#ef4444" : "#fbbf24"}
                 strokeOpacity={isHighlighted ? 1 : 0.95}
-                strokeWeight={isHighlighted ? 5 : 4}
+                strokeWeight={isHighlighted ? 4 : 2}
                 onClick={() => handleLocationClick(location)}
+                zIndex={5}
               />
             )
           })}
@@ -365,10 +381,11 @@ export function GoogleMapViewer({
                 paths={paths}
                 strokeColor={isHighlighted ? "#ef4444" : "#fbbf24"}
                 strokeOpacity={isHighlighted ? 1 : 0.95}
-                strokeWeight={isHighlighted ? 4 : 3}
+                strokeWeight={isHighlighted ? 3 : 2}
                 fillColor={isHighlighted ? "#fca5a5" : "#d3d3d3"}
-                fillOpacity={isHighlighted ? 0.4 : 0.25}
+                fillOpacity={isHighlighted ? 0.5 : 0.25}
                 onClick={() => handleLocationClick(location)}
+                zIndex={5}
               />
             )
           })}
@@ -382,8 +399,9 @@ export function GoogleMapViewer({
                 path={path}
                 strokeColor={isHighlighted ? "#ef4444" : "#3b82f6"}
                 strokeOpacity={isHighlighted ? 1 : 0.8}
-                strokeWeight={isHighlighted ? 5 : 3}
+                strokeWeight={isHighlighted ? 4 : 2}
                 onClick={() => handleLocationClick(location)}
+                zIndex={25}
               />
             )
           })}

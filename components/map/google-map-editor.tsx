@@ -1227,6 +1227,7 @@ export function GoogleMapEditor({
                         position={location.coordinates}
                         onClick={() => handleLocationClick(location)}
                         title={location.name}
+                        zIndex={20}
                       />
                     )
                   }
@@ -1241,10 +1242,11 @@ export function GoogleMapEditor({
                           isHighlightedFromUrl || isHighlightedInView ? "#ef4444" : isEditing ? "#10b981" : "#fb923c"
                         }
                         strokeOpacity={isHovered ? 1 : 0.9}
-                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 4 : isHovered ? 4 : 3}
+                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 6 : isHovered ? 5 : 4}
                         onClick={() => handleLocationClick(location)}
                         onMouseOver={() => setHoveredLocationId(location.id)}
                         onMouseOut={() => setHoveredLocationId(null)}
+                        zIndex={20}
                       />
                     )
                   }
@@ -1307,6 +1309,16 @@ export function GoogleMapEditor({
                                         ? "#d8b4fe"
                                         : "#fdba74"
 
+                    const zIndex = isBoundary
+                      ? 1
+                      : isPublicStreet
+                        ? 5
+                        : location.type === "neighborhood"
+                          ? 15
+                          : location.type === "facility"
+                            ? 20
+                            : 10
+
                     return (
                       <Polygon
                         key={`saved-${location.id}`}
@@ -1315,18 +1327,21 @@ export function GoogleMapEditor({
                         strokeOpacity={isHovered ? 1 : isBoundary ? 0.8 : 0.7}
                         strokeWeight={
                           isHighlightedFromUrl || isHighlightedInView || isEditing
-                            ? 2
+                            ? 3
                             : isHovered
-                              ? 2
+                              ? 3
                               : isBoundary
                                 ? 2
-                                : 1
+                                : 2
                         }
                         fillColor={fillColor}
-                        fillOpacity={isHovered ? 0.3 : isBoundary ? 0.15 : 0.2}
+                        fillOpacity={
+                          isHighlightedFromUrl || isHighlightedInView ? 0.5 : isHovered ? 0.4 : isBoundary ? 0.15 : 0.25
+                        }
                         onClick={() => handleLocationClick(location)}
                         onMouseOver={() => setHoveredLocationId(location.id)}
                         onMouseOut={() => setHoveredLocationId(null)}
+                        zIndex={zIndex}
                       />
                     )
                   }
@@ -1341,10 +1356,11 @@ export function GoogleMapEditor({
                           isHighlightedFromUrl || isHighlightedInView ? "#ef4444" : isEditing ? "#10b981" : "#60a5fa"
                         }
                         strokeOpacity={isHovered ? 1 : 0.9}
-                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 4 : isHovered ? 4 : 3}
+                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 6 : isHovered ? 5 : 4}
                         onClick={() => handleLocationClick(location)}
                         onMouseOver={() => setHoveredLocationId(location.id)}
                         onMouseOut={() => setHoveredLocationId(null)}
+                        zIndex={10}
                       />
                     )
                   }
@@ -1359,14 +1375,15 @@ export function GoogleMapEditor({
                           isHighlightedFromUrl || isHighlightedInView ? "#ef4444" : isEditing ? "#10b981" : "#60a5fa"
                         }
                         strokeOpacity={isHovered ? 1 : 0.7}
-                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 2 : isHovered ? 2 : 1}
+                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 3 : isHovered ? 3 : 2}
                         fillColor={
                           isHighlightedFromUrl || isHighlightedInView ? "#fca5a5" : isEditing ? "#6ee7b7" : "#93c5fd"
                         }
-                        fillOpacity={isHovered ? 0.3 : 0.2}
+                        fillOpacity={isHighlightedFromUrl || isHighlightedInView ? 0.5 : isHovered ? 0.4 : 0.25}
                         onClick={() => handleLocationClick(location)}
                         onMouseOver={() => setHoveredLocationId(location.id)}
                         onMouseOut={() => setHoveredLocationId(null)}
+                        zIndex={10}
                       />
                     )
                   }
@@ -1381,10 +1398,11 @@ export function GoogleMapEditor({
                           isHighlightedFromUrl || isHighlightedInView ? "#ef4444" : isEditing ? "#10b981" : "#fbbf24"
                         }
                         strokeOpacity={isHovered ? 1 : 0.95}
-                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 5 : isHovered ? 5 : 4}
+                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 4 : isHovered ? 3 : 2}
                         onClick={() => handleLocationClick(location)}
                         onMouseOver={() => setHoveredLocationId(location.id)}
                         onMouseOut={() => setHoveredLocationId(null)}
+                        zIndex={5}
                       />
                     )
                   }
@@ -1399,12 +1417,11 @@ export function GoogleMapEditor({
                           isHighlightedFromUrl || isHighlightedInView ? "#ef4444" : isEditing ? "#10b981" : "#3b82f6"
                         }
                         strokeOpacity={isHovered ? 1 : 0.8}
-                        strokeWeight={
-                          isHighlightedFromUrl || isHighlightedInView || isEditing ? 3 : isHovered ? 3 : 1.5
-                        }
+                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 4 : isHovered ? 3 : 2}
                         onClick={() => handleLocationClick(location)}
                         onMouseOver={() => setHoveredLocationId(location.id)}
                         onMouseOut={() => setHoveredLocationId(null)}
+                        zIndex={25}
                       />
                     )
                   }

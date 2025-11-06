@@ -33,6 +33,7 @@ export interface ParsedGeoJSON {
   }
   transformed?: boolean
   originalSystem?: string
+  originalFeatures?: GeoJSONFeature[]
 }
 
 export interface ValidationError {
@@ -296,37 +297,7 @@ function preprocessGeometryCollection(data: any): any {
   if (data.type === "GeometryCollection" && Array.isArray(data.geometries)) {
     console.log("[v0] Pre-processing: GeometryCollection with", data.geometries.length, "geometries detected")
 
-    // Check if all geometries are LineStrings (potential boundary segments)
-    const allLineStrings = data.geometries.every((g: any) => g.type === "LineString")
-
-    // Check if geometries have individual names/properties (separate locations)
-    const hasIndividualProperties = data.geometries.some((g: any) => g.properties && g.properties.name)
-
-    // If all are LineStrings and no individual properties, treat as ONE boundary
-    if (allLineStrings && !hasIndividualProperties) {
-      console.log("[v0] Pre-processing: Detected boundary segments, combining into single Polygon")
-
-      // Combine all LineString coordinates into one Polygon
-      const allCoordinates = data.geometries.flatMap((geometry: any) => geometry.coordinates)
-
-      return {
-        type: "Feature",
-        geometry: {
-          type: "Polygon",
-          coordinates: [allCoordinates],
-        },
-        properties: data.properties || {
-          name: "Boundary",
-          source: "GeometryCollection",
-        },
-      }
-    }
-
-    // Otherwise, treat as multiple separate locations
-    console.log("[v0] Pre-processing: Converting to", data.geometries.length, "separate features")
-
-    // Convert each geometry to a separate Feature
-    const features = data.geometries.map((geometry: any, index: number) => ({
+    const originalFeatures = data.geometries.map((geometry: any, index: number) => ({
       type: "Feature",
       geometry: geometry,
       properties: geometry.properties ||
@@ -336,12 +307,47 @@ function preprocessGeometryCollection(data: any): any {
         },
     }))
 
-    console.log("[v0] Pre-processing: Created", features.length, "features from GeometryCollection")
+    // Check if all geometries are LineStrings (potential boundary segments)
+    const allLineStrings = data.geometries.every((g: any) => g.type === "LineString")
 
-    // Return a FeatureCollection
+    // Check if geometries have individual names/properties (separate locations)
+    const hasIndividualProperties = data.geometries.some((g: any) => g.properties && g.properties.name)
+
+    // If all are LineStrings and no individual properties, create combined version as preview
+    if (allLineStrings && !hasIndividualProperties) {
+      console.log("[v0] Pre-processing: Detected boundary segments, creating combined preview")
+
+      // Combine all LineString coordinates into one Polygon
+      const allCoordinates = data.geometries.flatMap((geometry: any) => geometry.coordinates)
+
+      const combinedFeature = {
+        type: "Feature",
+        geometry: {
+          type: "Polygon",
+          coordinates: [allCoordinates],
+        },
+        properties: data.properties || {
+          name: "Combined Location",
+          source: "GeometryCollection",
+        },
+      }
+
+      return {
+        type: "FeatureCollection",
+        features: [combinedFeature],
+        originalFeatures: originalFeatures,
+      }
+    }
+
+    // Otherwise, treat as multiple separate locations
+    console.log("[v0] Pre-processing: Converting to", data.geometries.length, "separate features")
+
+    console.log("[v0] Pre-processing: Created", originalFeatures.length, "features from GeometryCollection")
+
     return {
       type: "FeatureCollection",
-      features: features,
+      features: originalFeatures,
+      originalFeatures: originalFeatures,
     }
   }
 
@@ -353,6 +359,7 @@ export function parseGeoJSON(data: any): ParsedGeoJSON {
 
   // Normalize to FeatureCollection
   let features: GeoJSONFeature[]
+  let originalFeatures: GeoJSONFeature[] | undefined
   let transformed = false
   let originalSystem: string | undefined
 
@@ -395,6 +402,20 @@ export function parseGeoJSON(data: any): ParsedGeoJSON {
       },
     ]
   } else {
+    if (preprocessedData.originalFeatures) {
+      originalFeatures = preprocessedData.originalFeatures.map((feature: any) => {
+        const result = transformGeometry(feature.geometry)
+        if (result.transformed) {
+          transformed = true
+          originalSystem = result.system
+        }
+        return {
+          ...feature,
+          geometry: result.geometry,
+        }
+      })
+    }
+
     features = preprocessedData.features.map((feature: any) => {
       const result = transformGeometry(feature.geometry)
       if (result.transformed) {
@@ -419,6 +440,7 @@ export function parseGeoJSON(data: any): ParsedGeoJSON {
 
   return {
     features,
+    originalFeatures,
     summary: {
       totalFeatures: features.length,
       byType: byType as Record<GeoJSONGeometryType, number>,

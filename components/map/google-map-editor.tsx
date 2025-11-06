@@ -670,18 +670,18 @@ export function GoogleMapEditor({
       return
     }
 
-    if (locationType === "facility" && !markerPosition && polygonPoints.length === 0) {
+    if (locationType === "facility" && !markerPosition && polygonPoints.length === 0 && !polylinePoints.length) {
       toast({
         title: "Validation Error",
-        description: "Please place a marker or draw a boundary for the facility",
+        description: "Please place a marker, draw a boundary, or draw a path for the facility",
         variant: "destructive",
       })
       return
     }
-    if (locationType === "lot" && polygonPoints.length < 3) {
+    if (locationType === "lot" && polygonPoints.length < 3 && location.path_coordinates?.length < 2) {
       toast({
         title: "Validation Error",
-        description: "Please draw a boundary for the lot (at least 3 points)",
+        description: "Please draw a boundary (at least 3 points) or a path (at least 2 points) for the lot",
         variant: "destructive",
       })
       return
@@ -737,13 +737,21 @@ export function GoogleMapEditor({
         if (polygonPoints.length > 0) {
           locationData.boundary_coordinates = polygonPoints.map((p) => [p.lat, p.lng])
         }
+        if (polylinePoints.length > 0) {
+          locationData.path_coordinates = polylinePoints.map((p) => [p.lat, p.lng])
+        }
         if (facilityType) locationData.facility_type = facilityType
         if (icon) locationData.icon = icon
         if (selectedNeighborhoodId && selectedNeighborhoodId !== "none") {
           locationData.neighborhood_id = selectedNeighborhoodId
         }
       } else if (locationType === "lot") {
-        locationData.boundary_coordinates = polygonPoints.map((p) => [p.lat, p.lng])
+        if (polygonPoints.length > 0) {
+          locationData.boundary_coordinates = polygonPoints.map((p) => [p.lat, p.lng])
+        }
+        if (polylinePoints.length > 0) {
+          locationData.path_coordinates = polylinePoints.map((p) => [p.lat, p.lng])
+        }
         locationData.lot_id = selectedLotId
       } else if (locationType === "neighborhood") {
         locationData.boundary_coordinates = polygonPoints.map((p) => [p.lat, p.lng])
@@ -1222,6 +1230,25 @@ export function GoogleMapEditor({
                       />
                     )
                   }
+
+                  if (location.type === "facility" && location.path_coordinates) {
+                    const path = convertCoordinates(location.path_coordinates)
+                    return (
+                      <Polyline
+                        key={`saved-${location.id}`}
+                        path={path}
+                        strokeColor={
+                          isHighlightedFromUrl || isHighlightedInView ? "#ef4444" : isEditing ? "#10b981" : "#fb923c"
+                        }
+                        strokeOpacity={isHovered ? 1 : 0.8}
+                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 3 : isHovered ? 3 : 2}
+                        onClick={() => handleLocationClick(location)}
+                        onMouseOver={() => setHoveredLocationId(location.id)}
+                        onMouseOut={() => setHoveredLocationId(null)}
+                      />
+                    )
+                  }
+
                   if (
                     (location.type === "facility" ||
                       location.type === "neighborhood" ||
@@ -1303,6 +1330,25 @@ export function GoogleMapEditor({
                       />
                     )
                   }
+
+                  if (location.type === "lot" && location.path_coordinates) {
+                    const path = convertCoordinates(location.path_coordinates)
+                    return (
+                      <Polyline
+                        key={`saved-${location.id}`}
+                        path={path}
+                        strokeColor={
+                          isHighlightedFromUrl || isHighlightedInView ? "#ef4444" : isEditing ? "#10b981" : "#60a5fa"
+                        }
+                        strokeOpacity={isHovered ? 1 : 0.8}
+                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 3 : isHovered ? 3 : 2}
+                        onClick={() => handleLocationClick(location)}
+                        onMouseOver={() => setHoveredLocationId(location.id)}
+                        onMouseOut={() => setHoveredLocationId(null)}
+                      />
+                    )
+                  }
+
                   if (location.type === "lot" && location.boundary_coordinates) {
                     const paths = convertCoordinates(location.boundary_coordinates)
                     return (
@@ -1324,6 +1370,25 @@ export function GoogleMapEditor({
                       />
                     )
                   }
+
+                  if (location.type === "public_street" && location.path_coordinates) {
+                    const path = convertCoordinates(location.path_coordinates)
+                    return (
+                      <Polyline
+                        key={`saved-${location.id}`}
+                        path={path}
+                        strokeColor={
+                          isHighlightedFromUrl || isHighlightedInView ? "#ef4444" : isEditing ? "#10b981" : "#6c757d"
+                        }
+                        strokeOpacity={isHovered ? 1 : 0.8}
+                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 3 : isHovered ? 3 : 2}
+                        onClick={() => handleLocationClick(location)}
+                        onMouseOver={() => setHoveredLocationId(location.id)}
+                        onMouseOut={() => setHoveredLocationId(null)}
+                      />
+                    )
+                  }
+
                   if (location.type === "walking_path" && location.path_coordinates) {
                     const path = convertCoordinates(location.path_coordinates)
                     return (

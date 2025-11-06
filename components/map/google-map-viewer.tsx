@@ -22,7 +22,7 @@ import { createBrowserClient } from "@/utils/supabase-client"
 interface Location {
   id: string
   name: string
-  type: "facility" | "lot" | "walking_path" | "neighborhood" | "boundary"
+  type: "facility" | "lot" | "walking_path" | "neighborhood" | "boundary" | "public_street"
   coordinates?: { lat: number; lng: number }
   boundary_coordinates?: Array<[number, number]>
   path_coordinates?: Array<[number, number]>
@@ -143,7 +143,11 @@ export function GoogleMapViewer({
   const facilityPolygons = initialLocations.filter(
     (loc) => showFacilities && loc.type === "facility" && loc.boundary_coordinates,
   )
+  const facilityPolylines = initialLocations.filter(
+    (loc) => showFacilities && loc.type === "facility" && loc.path_coordinates,
+  )
   const lotPolygons = initialLocations.filter((loc) => showLots && loc.type === "lot" && loc.boundary_coordinates)
+  const lotPolylines = initialLocations.filter((loc) => showLots && loc.type === "lot" && loc.path_coordinates)
   const walkingPaths = initialLocations.filter(
     (loc) => showWalkingPaths && loc.type === "walking_path" && loc.path_coordinates,
   )
@@ -152,6 +156,10 @@ export function GoogleMapViewer({
   )
   const boundaryLocations = initialLocations.filter(
     (loc) => showBoundary && loc.type === "boundary" && loc.boundary_coordinates,
+  )
+  const publicStreetPolylines = initialLocations.filter((loc) => loc.type === "public_street" && loc.path_coordinates)
+  const publicStreetPolygons = initialLocations.filter(
+    (loc) => loc.type === "public_street" && loc.boundary_coordinates,
   )
 
   console.log("[v0] Filtered neighborhoods:", neighborhoodPolygons.length)
@@ -286,6 +294,21 @@ export function GoogleMapViewer({
             )
           })}
 
+          {facilityPolylines.map((location) => {
+            const path = convertCoordinates(location.path_coordinates!)
+            const isHighlighted = highlightedLocationId === location.id
+            return (
+              <Polyline
+                key={location.id}
+                path={path}
+                strokeColor={isHighlighted ? "#ef4444" : "#fb923c"}
+                strokeOpacity={isHighlighted ? 1 : 0.8}
+                strokeWeight={isHighlighted ? 5 : 3}
+                onClick={() => handleLocationClick(location)}
+              />
+            )
+          })}
+
           {lotPolygons.map((location) => {
             const paths = convertCoordinates(location.boundary_coordinates!)
             const isHighlighted = highlightedLocationId === location.id
@@ -297,6 +320,53 @@ export function GoogleMapViewer({
                 strokeOpacity={isHighlighted ? 1 : 0.7}
                 strokeWeight={isHighlighted ? 4 : 2}
                 fillColor={isHighlighted ? "#fca5a5" : "#93c5fd"}
+                fillOpacity={isHighlighted ? 0.4 : 0.25}
+                onClick={() => handleLocationClick(location)}
+              />
+            )
+          })}
+
+          {lotPolylines.map((location) => {
+            const path = convertCoordinates(location.path_coordinates!)
+            const isHighlighted = highlightedLocationId === location.id
+            return (
+              <Polyline
+                key={location.id}
+                path={path}
+                strokeColor={isHighlighted ? "#ef4444" : "#60a5fa"}
+                strokeOpacity={isHighlighted ? 1 : 0.8}
+                strokeWeight={isHighlighted ? 5 : 3}
+                onClick={() => handleLocationClick(location)}
+              />
+            )
+          })}
+
+          {publicStreetPolylines.map((location) => {
+            const path = convertCoordinates(location.path_coordinates!)
+            const isHighlighted = highlightedLocationId === location.id
+            return (
+              <Polyline
+                key={location.id}
+                path={path}
+                strokeColor={isHighlighted ? "#ef4444" : "#6c757d"}
+                strokeOpacity={isHighlighted ? 1 : 0.8}
+                strokeWeight={isHighlighted ? 5 : 3}
+                onClick={() => handleLocationClick(location)}
+              />
+            )
+          })}
+
+          {publicStreetPolygons.map((location) => {
+            const paths = convertCoordinates(location.boundary_coordinates!)
+            const isHighlighted = highlightedLocationId === location.id
+            return (
+              <Polygon
+                key={location.id}
+                paths={paths}
+                strokeColor={isHighlighted ? "#ef4444" : "#6c757d"}
+                strokeOpacity={isHighlighted ? 1 : 0.7}
+                strokeWeight={isHighlighted ? 4 : 2}
+                fillColor={isHighlighted ? "#fca5a5" : "#d3d3d3"}
                 fillOpacity={isHighlighted ? 0.4 : 0.25}
                 onClick={() => handleLocationClick(location)}
               />

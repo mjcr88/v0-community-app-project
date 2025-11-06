@@ -980,6 +980,9 @@ export function GoogleMapEditor({
     return true
   })
 
+  const existingLocationTypes = new Set(savedLocations.map((loc) => loc.type))
+  const hasType = (type: string) => existingLocationTypes.has(type)
+
   // Handle Save/Cancel for GeoJSON Import
   const handleSaveImport = async () => {
     if (!locationType) {
@@ -1205,11 +1208,17 @@ export function GoogleMapEditor({
                   const isRecreationalZone = location.type === "recreational_zone"
 
                   if (location.type === "facility" && location.coordinates) {
+                    console.log("[v0] Rendering facility marker:", {
+                      id: location.id,
+                      name: location.name,
+                      coordinates: location.coordinates,
+                    })
                     return (
                       <Marker
                         key={`saved-${location.id}`}
                         position={location.coordinates}
                         onClick={() => handleLocationClick(location)}
+                        title={location.name}
                       />
                     )
                   }
@@ -1449,39 +1458,64 @@ export function GoogleMapEditor({
                 <DropdownMenuContent align="end">
                   <DropdownMenuLabel>Show on Map</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuCheckboxItem checked={showFacilities} onCheckedChange={setShowFacilities}>
-                    Facilities
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem checked={showLots} onCheckedChange={setShowLots}>
-                    Lots
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem checked={showWalkingPaths} onCheckedChange={setShowWalkingPaths}>
-                    Walking Paths
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem checked={showNeighborhoods} onCheckedChange={setShowNeighborhoods}>
-                    Neighborhoods
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem checked={showBoundaries} onCheckedChange={setShowBoundaries}>
-                    Boundaries
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem checked={showProtectionZones} onCheckedChange={setShowProtectionZones}>
-                    Protection Zones
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem checked={showEasements} onCheckedChange={setShowEasements}>
-                    Easements
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem checked={showPlaygrounds} onCheckedChange={setShowPlaygrounds}>
-                    Playgrounds
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem checked={showPublicStreets} onCheckedChange={setShowPublicStreets}>
-                    Public Streets
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem checked={showGreenAreas} onCheckedChange={setShowGreenAreas}>
-                    Green Areas
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem checked={showRecreationalZones} onCheckedChange={setShowRecreationalZones}>
-                    Recreational Zones
-                  </DropdownMenuCheckboxItem>
+                  {hasType("facility") && (
+                    <DropdownMenuCheckboxItem checked={showFacilities} onCheckedChange={setShowFacilities}>
+                      Facilities
+                    </DropdownMenuCheckboxItem>
+                  )}
+                  {hasType("lot") && (
+                    <DropdownMenuCheckboxItem checked={showLots} onCheckedChange={setShowLots}>
+                      Lots
+                    </DropdownMenuCheckboxItem>
+                  )}
+                  {hasType("walking_path") && (
+                    <DropdownMenuCheckboxItem checked={showWalkingPaths} onCheckedChange={setShowWalkingPaths}>
+                      Walking Paths
+                    </DropdownMenuCheckboxItem>
+                  )}
+                  {hasType("neighborhood") && (
+                    <DropdownMenuCheckboxItem checked={showNeighborhoods} onCheckedChange={setShowNeighborhoods}>
+                      Neighborhoods
+                    </DropdownMenuCheckboxItem>
+                  )}
+                  {hasType("boundary") && (
+                    <DropdownMenuCheckboxItem checked={showBoundaries} onCheckedChange={setShowBoundaries}>
+                      Boundaries
+                    </DropdownMenuCheckboxItem>
+                  )}
+                  {hasType("protection_zone") && (
+                    <DropdownMenuCheckboxItem checked={showProtectionZones} onCheckedChange={setShowProtectionZones}>
+                      Protection Zones
+                    </DropdownMenuCheckboxItem>
+                  )}
+                  {hasType("easement") && (
+                    <DropdownMenuCheckboxItem checked={showEasements} onCheckedChange={setShowEasements}>
+                      Easements
+                    </DropdownMenuCheckboxItem>
+                  )}
+                  {hasType("playground") && (
+                    <DropdownMenuCheckboxItem checked={showPlaygrounds} onCheckedChange={setShowPlaygrounds}>
+                      Playgrounds
+                    </DropdownMenuCheckboxItem>
+                  )}
+                  {hasType("public_street") && (
+                    <DropdownMenuCheckboxItem checked={showPublicStreets} onCheckedChange={setShowPublicStreets}>
+                      Public Streets
+                    </DropdownMenuCheckboxItem>
+                  )}
+                  {hasType("green_area") && (
+                    <DropdownMenuCheckboxItem checked={showGreenAreas} onCheckedChange={setShowGreenAreas}>
+                      Green Areas
+                    </DropdownMenuCheckboxItem>
+                  )}
+                  {hasType("recreational_zone") && (
+                    <DropdownMenuCheckboxItem
+                      checked={showRecreationalZones}
+                      onCheckedChange={setShowRecreationalZones}
+                    >
+                      Recreational Zones
+                    </DropdownMenuCheckboxItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
 

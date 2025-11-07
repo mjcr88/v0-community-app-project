@@ -116,6 +116,32 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
   const router = useRouter()
   const supabase = createBrowserClient()
   const [loading, setLoading] = useState(false)
+
+  const defaultFeatures = {
+    neighborhoods: true,
+    interests: true,
+    skills: true,
+    pets: true,
+    families: true,
+    lots: true,
+    journey_stages: true,
+    onboarding: true,
+    map: true,
+    location_types: {
+      facility: true,
+      lot: true,
+      walking_path: true,
+      neighborhood: true,
+      boundary: true,
+      protection_zone: true,
+      easement: true,
+      playground: true,
+      public_street: true,
+      green_area: true,
+      recreational_zone: true,
+    },
+  }
+
   const [features, setFeatures] = useState<{
     neighborhoods?: boolean
     interests?: boolean
@@ -139,32 +165,18 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
       green_area?: boolean
       recreational_zone?: boolean
     }
-  }>(
-    tenant.features || {
-      neighborhoods: true,
-      interests: true,
-      skills: true,
-      pets: true,
-      families: true,
-      lots: true,
-      journey_stages: true,
-      onboarding: true,
-      map: true,
-      location_types: {
-        facility: true,
-        lot: true,
-        walking_path: true,
-        neighborhood: true,
-        boundary: true,
-        protection_zone: true,
-        easement: true,
-        playground: true,
-        public_street: true,
-        green_area: true,
-        recreational_zone: true,
-      },
+  }>({
+    ...defaultFeatures,
+    ...tenant.features,
+    location_types: {
+      ...defaultFeatures.location_types,
+      ...(tenant.features?.location_types || {}),
     },
-  )
+  })
+
+  console.log("[v0] Tenant features from DB:", tenant.features)
+  console.log("[v0] Initialized form state:", features)
+
   const [visibilityScope, setVisibilityScope] = useState<"neighborhood" | "tenant">(
     tenant.resident_visibility_scope || "tenant",
   )

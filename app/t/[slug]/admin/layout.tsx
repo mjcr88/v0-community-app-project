@@ -133,20 +133,29 @@ export default async function TenantAdminLayout({
     }
   }
 
-  const features = (tenant?.features as {
-    neighborhoods?: boolean
-    interests?: boolean
-    families?: boolean
-    lots?: boolean
-    map?: boolean
-    location_types?: Record<string, boolean>
-  }) || {
+  const defaultFeatures = {
     neighborhoods: true,
     interests: true,
     families: true,
     lots: true,
     map: true,
   }
+
+  const features = {
+    ...defaultFeatures,
+    ...(tenant?.features || {}),
+  } as {
+    neighborhoods?: boolean
+    interests?: boolean
+    families?: boolean
+    lots?: boolean
+    map?: boolean
+    location_types?: Record<string, boolean>
+  }
+
+  console.log("[v0] Tenant features from DB (layout):", tenant?.features)
+  console.log("[v0] Merged features (layout):", features)
+  console.log("[v0] Map feature enabled?", features.map)
 
   return (
     <SidebarProvider>

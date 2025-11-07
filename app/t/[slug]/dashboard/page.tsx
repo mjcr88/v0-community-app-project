@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Users, MapPin, Globe, Languages, PawPrint, Home, Map } from "lucide-react"
 import Link from "next/link"
-import { GoogleMapViewer } from "@/components/map/google-map-viewer"
+import { MapPreviewWidget } from "@/components/map/map-preview-widget"
 
 export default async function ResidentDashboardPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
@@ -59,15 +59,33 @@ export default async function ResidentDashboardPage({ params }: { params: Promis
   const { data: tenant } = await supabase.from("tenants").select("*").eq("id", resident.tenant_id).single()
 
   const petsEnabled = tenant?.features?.pets === true
-  const mapEnabled = tenant?.features?.map === true
+  const defaultFeatures = {
+    map: true,
+  }
+  const mergedFeatures = { ...defaultFeatures, ...(tenant?.features || {}) }
+  const mapEnabled = mergedFeatures.map === true
+
+  console.log("[v0] Dashboard map feature check:", {
+    tenantFeatures: tenant?.features,
+    mapEnabled,
+    mergedFeatures,
+  })
 
   let lotLocation = null
   let allLocations = []
   if (mapEnabled && resident.lot_id) {
     const { data: locations } = await supabase.from("locations").select("*").eq("tenant_id", resident.tenant_id)
 
+    console.log("[v0] Dashboard locations query:", { count: locations?.length })
+
     allLocations = locations || []
     lotLocation = locations?.find((loc) => loc.lot_id === resident.lot_id && loc.type === "lot")
+
+    console.log("[v0] Dashboard lot location:", {
+      lotLocation: lotLocation?.name,
+      lotLocationId: lotLocation?.id,
+      residentLotId: resident.lot_id,
+    })
   }
 
   // Get total residents count in neighborhood (or tenant if no neighborhood)
@@ -207,16 +225,12 @@ export default async function ResidentDashboardPage({ params }: { params: Promis
                   <div className="text-2xl font-bold">{resident.lots?.neighborhoods?.name || "Not assigned"}</div>
                   <p className="text-xs text-muted-foreground">Lot #{resident.lots?.lot_number || "N/A"}</p>
                 </div>
-                <div className="h-48 rounded-lg overflow-hidden border bg-muted">
-                  <GoogleMapViewer
-                    tenantSlug={slug}
-                    initialLocations={allLocations}
-                    mapCenter={mapCenter}
-                    mapZoom={17}
-                    isAdmin={false}
-                    highlightLocationId={lotLocation.id}
-                  />
-                </div>
+                <MapPreviewWidget
+                  tenantSlug={slug}
+                  locations={allLocations}
+                  mapCenter={mapCenter}
+                  highlightLocationId={lotLocation.id}
+                />
                 <p className="text-xs text-center text-muted-foreground">Click to view on full map</p>
               </CardContent>
             </Card>
@@ -230,6 +244,9 @@ export default async function ResidentDashboardPage({ params }: { params: Promis
             <CardContent>
               <div className="text-2xl font-bold">{resident.lots?.neighborhoods?.name || "Not assigned"}</div>
               <p className="text-xs text-muted-foreground">Lot #{resident.lots?.lot_number || "N/A"}</p>
+              <p className="text-xs text-muted-foreground mt-2">
+                Map: {mapEnabled ? "enabled" : "disabled"}, Lot: {lotLocation ? "found" : "not found"}
+              </p>
             </CardContent>
           </Card>
         )}

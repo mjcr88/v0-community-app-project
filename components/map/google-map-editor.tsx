@@ -1053,7 +1053,7 @@ export function GoogleMapEditor({
       <Card className={mode === "view" ? "h-full" : "min-h-[600px] flex flex-col"}>
         <CardHeader className="flex-none">
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold tracking-tight">Map Editor</h2>
+            <h2 className="text-xl font-bold tracking-tight">{mode === "view" ? "Community Map" : "Map Editor"}</h2>
             <div className="flex items-center space-x-2">
               {mode === "edit" && !isImporting && (
                 <>

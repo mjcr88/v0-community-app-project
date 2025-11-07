@@ -215,16 +215,30 @@ export function GoogleMapViewer({
           onClick={handleMapClick}
         >
           {showBoundary && tenantBoundary && (
-            <Polygon
-              paths={convertCoordinates(tenantBoundary as any)}
-              strokeColor="transparent"
-              strokeOpacity={0}
-              strokeWeight={0}
-              fillColor="#ffffff"
-              fillOpacity={0.15}
-              clickable={false}
-              zIndex={1}
-            />
+            <>
+              {/* Create a world rectangle with the boundary as a hole to darken the outside */}
+              <Polygon
+                paths={[
+                  // Outer world bounds (large rectangle covering entire map)
+                  [
+                    { lat: -85, lng: -180 },
+                    { lat: -85, lng: 180 },
+                    { lat: 85, lng: 180 },
+                    { lat: 85, lng: -180 },
+                    { lat: -85, lng: -180 },
+                  ],
+                  // Inner hole (boundary shape - this creates the cutout)
+                  convertCoordinates(tenantBoundary as any),
+                ]}
+                strokeColor="transparent"
+                strokeOpacity={0}
+                strokeWeight={0}
+                fillColor="#000000"
+                fillOpacity={0.4}
+                clickable={false}
+                zIndex={1}
+              />
+            </>
           )}
 
           {boundaryLocations.map((location) => {
@@ -232,17 +246,31 @@ export function GoogleMapViewer({
             const isHighlighted = highlightedLocationId === location.id
             const zIndex = isHighlighted ? 200 : 1
             return (
-              <Polygon
-                key={location.id}
-                paths={paths}
-                strokeColor="transparent"
-                strokeOpacity={0}
-                strokeWeight={0}
-                fillColor="#ffffff"
-                fillOpacity={0.15}
-                clickable={false}
-                zIndex={zIndex}
-              />
+              <>
+                {/* Create world rectangle with boundary hole to darken outside */}
+                <Polygon
+                  key={`${location.id}-overlay`}
+                  paths={[
+                    // Outer world bounds
+                    [
+                      { lat: -85, lng: -180 },
+                      { lat: -85, lng: 180 },
+                      { lat: 85, lng: 180 },
+                      { lat: 85, lng: -180 },
+                      { lat: -85, lng: -180 },
+                    ],
+                    // Inner hole (boundary shape)
+                    paths,
+                  ]}
+                  strokeColor="transparent"
+                  strokeOpacity={0}
+                  strokeWeight={0}
+                  fillColor="#000000"
+                  fillOpacity={0.4}
+                  clickable={false}
+                  zIndex={zIndex}
+                />
+              </>
             )
           })}
 
@@ -251,17 +279,31 @@ export function GoogleMapViewer({
             const isHighlighted = highlightedLocationId === location.id
             const zIndex = isHighlighted ? 200 : 1
             return (
-              <Polygon
-                key={location.id}
-                paths={paths}
-                strokeColor="transparent"
-                strokeOpacity={0}
-                strokeWeight={0}
-                fillColor="#ffffff"
-                fillOpacity={0.15}
-                clickable={false}
-                zIndex={zIndex}
-              />
+              <>
+                {/* Create world rectangle with boundary hole to darken outside */}
+                <Polygon
+                  key={`${location.id}-overlay`}
+                  paths={[
+                    // Outer world bounds
+                    [
+                      { lat: -85, lng: -180 },
+                      { lat: -85, lng: 180 },
+                      { lat: 85, lng: 180 },
+                      { lat: 85, lng: -180 },
+                      { lat: -85, lng: -180 },
+                    ],
+                    // Inner hole (boundary shape)
+                    paths,
+                  ]}
+                  strokeColor="transparent"
+                  strokeOpacity={0}
+                  strokeWeight={0}
+                  fillColor="#000000"
+                  fillOpacity={0.4}
+                  clickable={false}
+                  zIndex={zIndex}
+                />
+              </>
             )
           })}
 
@@ -270,20 +312,36 @@ export function GoogleMapViewer({
             const isHighlighted = highlightedLocationId === location.id
             const zIndex = isHighlighted ? 200 : 8
             return (
-              <Polygon
-                key={location.id}
-                paths={paths}
-                strokeColor={isHighlighted ? "#ef4444" : "#c084fc"}
-                strokeOpacity={1}
-                strokeWeight={isHighlighted ? 4 : 1}
-                fillColor={isHighlighted ? "#60a5fa" : "#e9d5ff"}
-                fillOpacity={isHighlighted ? 0.6 : 0.4}
-                onClick={() => {
-                  console.log("[v0] Neighborhood polygon clicked:", location.name)
-                  handleLocationClick(location)
-                }}
-                zIndex={zIndex}
-              />
+              <React.Fragment key={location.id}>
+                {/* Invisible wider border for easier clicking */}
+                <Polygon
+                  paths={paths}
+                  strokeColor="transparent"
+                  strokeOpacity={0}
+                  strokeWeight={8}
+                  fillColor="transparent"
+                  fillOpacity={0}
+                  onClick={() => {
+                    console.log("[v0] Neighborhood polygon clicked:", location.name)
+                    handleLocationClick(location)
+                  }}
+                  zIndex={zIndex}
+                />
+                {/* Visible thin border with fill */}
+                <Polygon
+                  paths={paths}
+                  strokeColor={isHighlighted ? "#ef4444" : "#c084fc"}
+                  strokeOpacity={1}
+                  strokeWeight={isHighlighted ? 3 : 1}
+                  fillColor={isHighlighted ? "#60a5fa" : "#e9d5ff"}
+                  fillOpacity={isHighlighted ? 0.7 : 0.7}
+                  onClick={() => {
+                    console.log("[v0] Neighborhood polygon clicked:", location.name)
+                    handleLocationClick(location)
+                  }}
+                  zIndex={zIndex + 1}
+                />
+              </React.Fragment>
             )
           })}
 
@@ -346,9 +404,9 @@ export function GoogleMapViewer({
                   paths={paths}
                   strokeColor={isHighlighted ? "#ef4444" : "#fbbf24"}
                   strokeOpacity={1}
-                  strokeWeight={isHighlighted ? 4 : 1}
+                  strokeWeight={isHighlighted ? 3 : 1}
                   fillColor={isHighlighted ? "#60a5fa" : "#fef3c7"}
-                  fillOpacity={isHighlighted ? 0.6 : 0.45}
+                  fillOpacity={isHighlighted ? 0.7 : 0.7}
                   onClick={() => {
                     console.log("[v0] Public street polygon clicked:", location.name)
                     handleLocationClick(location)
@@ -384,9 +442,9 @@ export function GoogleMapViewer({
                   paths={paths}
                   strokeColor={isHighlighted ? "#ef4444" : "#60a5fa"}
                   strokeOpacity={1}
-                  strokeWeight={isHighlighted ? 4 : 1}
+                  strokeWeight={isHighlighted ? 3 : 1}
                   fillColor={isHighlighted ? "#60a5fa" : "#bfdbfe"}
-                  fillOpacity={isHighlighted ? 0.6 : 0.35}
+                  fillOpacity={isHighlighted ? 0.7 : 0.7}
                   onClick={() => {
                     console.log("[v0] Lot polygon clicked:", location.name)
                     handleLocationClick(location)
@@ -452,20 +510,36 @@ export function GoogleMapViewer({
             const isHighlighted = highlightedLocationId === location.id
             const zIndex = isHighlighted ? 200 : 20
             return (
-              <Polygon
-                key={location.id}
-                paths={paths}
-                strokeColor={isHighlighted ? "#ef4444" : "#fb923c"}
-                strokeOpacity={1}
-                strokeWeight={isHighlighted ? 4 : 1}
-                fillColor={isHighlighted ? "#60a5fa" : "#fed7aa"}
-                fillOpacity={isHighlighted ? 0.6 : 0.45}
-                onClick={() => {
-                  console.log("[v0] Facility polygon clicked:", location.name)
-                  handleLocationClick(location)
-                }}
-                zIndex={zIndex}
-              />
+              <React.Fragment key={location.id}>
+                {/* Invisible wider border for easier clicking */}
+                <Polygon
+                  paths={paths}
+                  strokeColor="transparent"
+                  strokeOpacity={0}
+                  strokeWeight={8}
+                  fillColor="transparent"
+                  fillOpacity={0}
+                  onClick={() => {
+                    console.log("[v0] Facility polygon clicked:", location.name)
+                    handleLocationClick(location)
+                  }}
+                  zIndex={zIndex}
+                />
+                {/* Visible thin border with fill */}
+                <Polygon
+                  paths={paths}
+                  strokeColor={isHighlighted ? "#ef4444" : "#fb923c"}
+                  strokeOpacity={1}
+                  strokeWeight={isHighlighted ? 3 : 1}
+                  fillColor={isHighlighted ? "#60a5fa" : "#fed7aa"}
+                  fillOpacity={isHighlighted ? 0.7 : 0.75}
+                  onClick={() => {
+                    console.log("[v0] Facility polygon clicked:", location.name)
+                    handleLocationClick(location)
+                  }}
+                  zIndex={zIndex + 1}
+                />
+              </React.Fragment>
             )
           })}
 

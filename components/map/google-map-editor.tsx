@@ -1241,7 +1241,7 @@ export function GoogleMapEditor({
                           isHighlightedFromUrl || isHighlightedInView ? "#ef4444" : isEditing ? "#10b981" : "#fb923c"
                         }
                         strokeOpacity={isHovered ? 1 : 0.9}
-                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 6 : isHovered ? 5 : 4}
+                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 3 : isHovered ? 2 : 1}
                         onClick={() => handleLocationClick(location)}
                         onMouseOver={() => setHoveredLocationId(location.id)}
                         onMouseOut={() => setHoveredLocationId(null)}
@@ -1310,7 +1310,7 @@ export function GoogleMapEditor({
                         paths={paths}
                         strokeColor={strokeColor}
                         strokeOpacity={isHovered ? 1 : 0.8}
-                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 3 : isHovered ? 3 : 2}
+                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 3 : isHovered ? 2 : 1}
                         fillColor={fillColor}
                         fillOpacity={
                           isHighlightedFromUrl || isHighlightedInView || isEditing ? 0.3 : isHovered ? 0.2 : 0.15
@@ -1333,7 +1333,7 @@ export function GoogleMapEditor({
                           isHighlightedFromUrl || isHighlightedInView ? "#ef4444" : isEditing ? "#10b981" : "#60a5fa"
                         }
                         strokeOpacity={isHovered ? 1 : 0.9}
-                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 6 : isHovered ? 5 : 4}
+                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 3 : isHovered ? 2 : 1}
                         onClick={() => handleLocationClick(location)}
                         onMouseOver={() => setHoveredLocationId(location.id)}
                         onMouseOut={() => setHoveredLocationId(null)}
@@ -1352,7 +1352,7 @@ export function GoogleMapEditor({
                           isHighlightedFromUrl || isHighlightedInView ? "#ef4444" : isEditing ? "#10b981" : "#60a5fa"
                         }
                         strokeOpacity={isHovered ? 1 : 0.7}
-                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 3 : isHovered ? 3 : 2}
+                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 3 : isHovered ? 2 : 1}
                         fillColor={isHighlightedFromUrl || isHighlightedInView || isEditing ? "#60a5fa" : "#60a5fa"}
                         fillOpacity={
                           isHighlightedFromUrl || isHighlightedInView || isEditing ? 0.3 : isHovered ? 0.2 : 0.15
@@ -1377,7 +1377,7 @@ export function GoogleMapEditor({
                           isHighlightedFromUrl || isHighlightedInView ? "#ef4444" : isEditing ? "#10b981" : "#fbbf24"
                         }
                         strokeOpacity={isHovered ? 1 : 0.95}
-                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 4 : isHovered ? 3 : 2}
+                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 3 : isHovered ? 2 : 1}
                         onClick={() => handleLocationClick(location)}
                         onMouseOver={() => setHoveredLocationId(location.id)}
                         onMouseOut={() => setHoveredLocationId(null)}
@@ -1396,7 +1396,7 @@ export function GoogleMapEditor({
                           isHighlightedFromUrl || isHighlightedInView ? "#ef4444" : isEditing ? "#10b981" : "#3b82f6"
                         }
                         strokeOpacity={isHovered ? 1 : 0.8}
-                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 4 : isHovered ? 3 : 2}
+                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 3 : isHovered ? 2 : 1}
                         onClick={() => handleLocationClick(location)}
                         onMouseOver={() => setHoveredLocationId(location.id)}
                         onMouseOut={() => setHoveredLocationId(null)}

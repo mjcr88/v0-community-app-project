@@ -138,6 +138,7 @@ export default async function TenantAdminLayout({
     interests: true,
     families: true,
     lots: true,
+    map: true,
   }
 
   return (
@@ -171,14 +172,16 @@ export default async function TenantAdminLayout({
             <SidebarGroupLabel>Administration</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <Link href={`/t/${slug}/admin/map`}>
-                      <Map />
-                      <span>Community Map</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                {features.map && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link href={`/t/${slug}/admin/map`}>
+                        <Map />
+                        <span>Community Map</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
                 {features.neighborhoods && (
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>

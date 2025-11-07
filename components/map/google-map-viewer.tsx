@@ -237,7 +237,7 @@ export function GoogleMapViewer({
                 paths={paths}
                 strokeColor={isHighlighted ? "#ef4444" : "#ffffff"}
                 strokeOpacity={isHighlighted ? 1 : 0.8}
-                strokeWeight={isHighlighted ? 4 : 2}
+                strokeWeight={isHighlighted ? 3 : 1}
                 fillColor={isHighlighted ? "#60a5fa" : "#ffffff"}
                 fillOpacity={isHighlighted ? 0.4 : 0.15}
                 onClick={() => {
@@ -259,7 +259,7 @@ export function GoogleMapViewer({
                 paths={paths}
                 strokeColor={isHighlighted ? "#ef4444" : "#000000"}
                 strokeOpacity={isHighlighted ? 1 : 0.8}
-                strokeWeight={isHighlighted ? 4 : 2}
+                strokeWeight={isHighlighted ? 3 : 1}
                 fillColor={isHighlighted ? "#60a5fa" : "#000000"}
                 fillOpacity={isHighlighted ? 0.4 : 0.15}
                 onClick={() => {
@@ -281,7 +281,7 @@ export function GoogleMapViewer({
                 paths={paths}
                 strokeColor={isHighlighted ? "#ef4444" : "#a855f7"}
                 strokeOpacity={isHighlighted ? 1 : 0.7}
-                strokeWeight={isHighlighted ? 4 : 2}
+                strokeWeight={isHighlighted ? 3 : 1}
                 fillColor={isHighlighted ? "#60a5fa" : "#c084fc"}
                 fillOpacity={isHighlighted ? 0.4 : 0.25}
                 onClick={() => {
@@ -303,7 +303,7 @@ export function GoogleMapViewer({
                 path={path}
                 strokeColor={isHighlighted ? "#ef4444" : "#fbbf24"}
                 strokeOpacity={isHighlighted ? 1 : 0.95}
-                strokeWeight={isHighlighted ? 5 : 2}
+                strokeWeight={isHighlighted ? 3 : 1}
                 onClick={() => {
                   console.log("[v0] Public street polyline clicked:", location.name)
                   handleLocationClick(location)
@@ -323,7 +323,7 @@ export function GoogleMapViewer({
                 paths={paths}
                 strokeColor={isHighlighted ? "#ef4444" : "#fbbf24"}
                 strokeOpacity={isHighlighted ? 1 : 0.95}
-                strokeWeight={isHighlighted ? 4 : 2}
+                strokeWeight={isHighlighted ? 3 : 1}
                 fillColor={isHighlighted ? "#60a5fa" : "#d3d3d3"}
                 fillOpacity={isHighlighted ? 0.4 : 0.25}
                 onClick={() => {
@@ -345,7 +345,7 @@ export function GoogleMapViewer({
                 paths={paths}
                 strokeColor={isHighlighted ? "#ef4444" : "#60a5fa"}
                 strokeOpacity={isHighlighted ? 1 : 0.7}
-                strokeWeight={isHighlighted ? 4 : 2}
+                strokeWeight={isHighlighted ? 3 : 1}
                 fillColor={isHighlighted ? "#60a5fa" : "#60a5fa"}
                 fillOpacity={isHighlighted ? 0.4 : 0.15}
                 onClick={() => {
@@ -367,7 +367,7 @@ export function GoogleMapViewer({
                 path={path}
                 strokeColor={isHighlighted ? "#ef4444" : "#60a5fa"}
                 strokeOpacity={isHighlighted ? 1 : 0.8}
-                strokeWeight={isHighlighted ? 7 : 4}
+                strokeWeight={isHighlighted ? 3 : 1}
                 onClick={() => {
                   console.log("[v0] Lot polyline clicked:", location.name)
                   handleLocationClick(location)
@@ -403,7 +403,7 @@ export function GoogleMapViewer({
                 paths={paths}
                 strokeColor={isHighlighted ? "#ef4444" : "#fb923c"}
                 strokeOpacity={isHighlighted ? 1 : 0.7}
-                strokeWeight={isHighlighted ? 4 : 2}
+                strokeWeight={isHighlighted ? 3 : 1}
                 fillColor={isHighlighted ? "#60a5fa" : "#fdba74"}
                 fillOpacity={isHighlighted ? 0.4 : 0.25}
                 onClick={() => {
@@ -425,7 +425,7 @@ export function GoogleMapViewer({
                 path={path}
                 strokeColor={isHighlighted ? "#ef4444" : "#fb923c"}
                 strokeOpacity={isHighlighted ? 1 : 0.8}
-                strokeWeight={isHighlighted ? 7 : 4}
+                strokeWeight={isHighlighted ? 3 : 1}
                 onClick={() => {
                   console.log("[v0] Facility polyline clicked:", location.name)
                   handleLocationClick(location)
@@ -445,7 +445,7 @@ export function GoogleMapViewer({
                 path={path}
                 strokeColor={isHighlighted ? "#ef4444" : "#3b82f6"}
                 strokeOpacity={isHighlighted ? 1 : 0.8}
-                strokeWeight={isHighlighted ? 5 : 2}
+                strokeWeight={isHighlighted ? 3 : 1}
                 onClick={() => {
                   console.log("[v0] Walking path clicked:", location.name)
                   handleLocationClick(location)

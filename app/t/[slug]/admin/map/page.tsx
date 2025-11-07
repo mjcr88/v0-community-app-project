@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Plus } from "lucide-react"
 import { LocationsTable } from "@/components/map/locations-table"
 import { GeoJSONUploadButton } from "@/components/map/geojson-upload-button"
+import { redirect } from "next/navigation"
 
 export default async function MapManagementPage({ params }: { params: Promise<{ slug: string }> }) {
   console.log("[v0] Map page rendering started")
@@ -19,6 +20,11 @@ export default async function MapManagementPage({ params }: { params: Promise<{ 
   if (!tenant) {
     console.log("[v0] Tenant not found")
     return <div>Tenant not found</div>
+  }
+
+  const features = tenant.features as { map?: boolean } | null
+  if (features?.map === false) {
+    redirect(`/t/${slug}/admin/dashboard`)
   }
 
   const { count: facilitiesCount } = await supabase

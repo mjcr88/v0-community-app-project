@@ -133,7 +133,14 @@ export default async function TenantAdminLayout({
     }
   }
 
-  const features = (tenant?.features as Record<string, boolean>) || {
+  const features = (tenant?.features as {
+    neighborhoods?: boolean
+    interests?: boolean
+    families?: boolean
+    lots?: boolean
+    map?: boolean
+    location_types?: Record<string, boolean>
+  }) || {
     neighborhoods: true,
     interests: true,
     families: true,

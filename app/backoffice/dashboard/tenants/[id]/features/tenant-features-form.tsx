@@ -116,7 +116,30 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
   const router = useRouter()
   const supabase = createBrowserClient()
   const [loading, setLoading] = useState(false)
-  const [features, setFeatures] = useState(
+  const [features, setFeatures] = useState<{
+    neighborhoods?: boolean
+    interests?: boolean
+    skills?: boolean
+    pets?: boolean
+    families?: boolean
+    lots?: boolean
+    journey_stages?: boolean
+    onboarding?: boolean
+    map?: boolean
+    location_types?: {
+      facility?: boolean
+      lot?: boolean
+      walking_path?: boolean
+      neighborhood?: boolean
+      boundary?: boolean
+      protection_zone?: boolean
+      easement?: boolean
+      playground?: boolean
+      public_street?: boolean
+      green_area?: boolean
+      recreational_zone?: boolean
+    }
+  }>(
     tenant.features || {
       neighborhoods: true,
       interests: true,

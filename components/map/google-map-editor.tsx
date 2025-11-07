@@ -47,6 +47,7 @@ import { useToast } from "@/hooks/use-toast"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { geolocate } from "@/lib/geolocate"
 import { Badge } from "@/components/ui/badge"
+import { LocationInfoCard } from "./location-info-card"
 
 type DrawingMode = "marker" | "polygon" | "polyline" | null
 type LatLng = { lat: number; lng: number }
@@ -1741,76 +1742,8 @@ export function GoogleMapEditor({
             )}
 
             {mode === "view" && selectedLocation && (
-              <div className="absolute bottom-20 left-3 right-3 md:left-auto md:right-3 md:w-80 bg-background/95 backdrop-blur-sm rounded-lg shadow-lg border p-4">
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className="font-semibold text-lg">{selectedLocation.name}</h3>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setSelectedLocation(null)}
-                    className="h-6 w-6 -mt-1 -mr-1"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-                {selectedLocation.description && (
-                  <p className="text-sm text-muted-foreground mb-2">{selectedLocation.description}</p>
-                )}
-                <div className="flex items-center gap-2 text-sm mb-2">
-                  <Badge variant="secondary">
-                    {selectedLocation.type === "facility"
-                      ? "Facility"
-                      : selectedLocation.type === "lot"
-                        ? "Lot"
-                        : selectedLocation.type === "walking_path"
-                          ? "Walking Path"
-                          : selectedLocation.type === "neighborhood"
-                            ? "Neighborhood"
-                            : selectedLocation.type === "boundary"
-                              ? "Boundary"
-                              : selectedLocation.type === "protection_zone"
-                                ? "Protection Zone"
-                                : selectedLocation.type === "easement"
-                                  ? "Easement"
-                                  : selectedLocation.type === "playground"
-                                    ? "Playground"
-                                    : selectedLocation.type === "public_street"
-                                      ? "Public Street"
-                                      : selectedLocation.type === "green_area"
-                                        ? "Green Area"
-                                        : selectedLocation.type === "recreational_zone"
-                                          ? "Recreational Zone"
-                                          : "Unknown"}
-                  </Badge>
-                  {selectedLocation.facility_type && <Badge variant="outline">{selectedLocation.facility_type}</Badge>}
-                </div>
-                {selectedLocation.neighborhood_id && (
-                  <div className="flex items-center gap-2 text-sm mb-2">
-                    <Badge variant="outline">
-                      Neighborhood:{" "}
-                      {neighborhoods.find((n) => n.id === selectedLocation.neighborhood_id)?.name || "N/A"}
-                    </Badge>
-                  </div>
-                )}
-                {selectedLocation.lot_id && (
-                  <div className="flex items-center gap-2 text-sm mb-2">
-                    <Badge variant="outline">
-                      Lot: {lots.find((l) => l.id === selectedLocation.lot_id)?.lot_number || "N/A"}
-                    </Badge>
-                  </div>
-                )}
-                {selectedLocation.photos && selectedLocation.photos.length > 0 && (
-                  <div className="mt-3 grid grid-cols-2 gap-2">
-                    {selectedLocation.photos.map((url: string, index: number) => (
-                      <img
-                        key={url}
-                        src={url || "/placeholder.svg"}
-                        alt={`${selectedLocation.name} ${index + 1}`}
-                        className="w-full h-24 object-cover rounded"
-                      />
-                    ))}
-                  </div>
-                )}
+              <div className="absolute bottom-20 left-3 right-3 md:left-auto md:right-3 md:w-80">
+                <LocationInfoCard location={selectedLocation} onClose={() => setSelectedLocation(null)} />
               </div>
             )}
           </div>

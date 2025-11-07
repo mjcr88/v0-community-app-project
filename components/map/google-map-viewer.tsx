@@ -17,7 +17,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu"
-import { createBrowserClient } from "@/utils/supabase-client"
+import { createBrowserClient } from "@/lib/supabase/client"
 import React from "react"
 
 interface Location {

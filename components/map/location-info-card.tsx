@@ -1,9 +1,11 @@
 "use client"
 
-import { X } from "lucide-react"
+import { X, MapPin, Home, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { useEffect, useState } from "react"
+import { createBrowserClient } from "@/lib/supabase/client"
 
 interface LocationInfoCardProps {
   location: {
@@ -14,11 +16,55 @@ interface LocationInfoCardProps {
     facility_type?: string | null
     icon?: string | null
     photos?: string[] | null
+    neighborhood_id?: string | null
+    lot_id?: string | null
   }
   onClose: () => void
 }
 
 export function LocationInfoCard({ location, onClose }: LocationInfoCardProps) {
+  const [neighborhood, setNeighborhood] = useState<{ id: string; name: string } | null>(null)
+  const [lot, setLot] = useState<{ id: string; lot_number: string } | null>(null)
+  const [residents, setResidents] = useState<Array<{ id: string; first_name: string; last_name: string }>>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchRelatedData = async () => {
+      setLoading(true)
+      const supabase = createBrowserClient()
+
+      // Fetch neighborhood if linked
+      if (location.neighborhood_id) {
+        const { data } = await supabase
+          .from("neighborhoods")
+          .select("id, name")
+          .eq("id", location.neighborhood_id)
+          .single()
+        if (data) setNeighborhood(data)
+      }
+
+      // Fetch lot if linked
+      if (location.lot_id) {
+        const { data } = await supabase.from("lots").select("id, lot_number").eq("id", location.lot_id).single()
+        if (data) setLot(data)
+      }
+
+      // Fetch residents if this is a lot location
+      if (location.type === "lot" && location.lot_id) {
+        const { data } = await supabase
+          .from("users")
+          .select("id, first_name, last_name")
+          .eq("lot_id", location.lot_id)
+          .eq("role", "resident")
+        if (data) setResidents(data)
+      }
+
+      setLoading(false)
+    }
+
+    fetchRelatedData()
+  }, [location.id, location.neighborhood_id, location.lot_id, location.type])
+
   const getTypeLabel = (type: string) => {
     switch (type) {
       case "facility":
@@ -81,6 +127,42 @@ export function LocationInfoCard({ location, onClose }: LocationInfoCardProps) {
           </div>
         )}
 
+        {neighborhood && (
+          <div className="flex items-center gap-2 p-2 bg-purple-50 border border-purple-200 rounded-lg">
+            <MapPin className="h-4 w-4 text-purple-600 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-purple-700 font-medium">Neighborhood</p>
+              <p className="text-sm text-purple-900 truncate">{neighborhood.name}</p>
+            </div>
+          </div>
+        )}
+
+        {lot && (
+          <div className="flex items-center gap-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+            <Home className="h-4 w-4 text-blue-600 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-blue-700 font-medium">Lot</p>
+              <p className="text-sm text-blue-900 truncate">Lot #{lot.lot_number}</p>
+            </div>
+          </div>
+        )}
+
+        {residents.length > 0 && (
+          <div className="p-2 bg-green-50 border border-green-200 rounded-lg space-y-1">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-green-600 shrink-0" />
+              <p className="text-xs text-green-700 font-medium">Residents ({residents.length})</p>
+            </div>
+            <div className="pl-6 space-y-0.5">
+              {residents.map((resident) => (
+                <p key={resident.id} className="text-sm text-green-900">
+                  {resident.first_name} {resident.last_name}
+                </p>
+              ))}
+            </div>
+          </div>
+        )}
+
         {location.photos && location.photos.length > 0 && (
           <div className="space-y-2">
             <h4 className="text-sm font-medium">Photos</h4>
@@ -99,9 +181,13 @@ export function LocationInfoCard({ location, onClose }: LocationInfoCardProps) {
           </div>
         )}
 
-        {!location.description && (!location.photos || location.photos.length === 0) && (
-          <p className="text-sm text-muted-foreground italic">No additional information available</p>
-        )}
+        {!location.description &&
+          (!location.photos || location.photos.length === 0) &&
+          !neighborhood &&
+          !lot &&
+          residents.length === 0 && (
+            <p className="text-sm text-muted-foreground italic">No additional information available</p>
+          )}
       </CardContent>
     </Card>
   )

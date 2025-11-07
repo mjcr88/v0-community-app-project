@@ -284,7 +284,7 @@ export function GoogleMapEditor({
       }
     }
     loadLocations()
-  }, [tenantId, mode, initialLocations])
+  }, [tenantId, mode])
 
   useEffect(() => {
     if (isPreviewMode) {
@@ -1756,7 +1756,7 @@ export function GoogleMapEditor({
                 {selectedLocation.description && (
                   <p className="text-sm text-muted-foreground mb-2">{selectedLocation.description}</p>
                 )}
-                <div className="flex items-center gap-2 text-sm">
+                <div className="flex items-center gap-2 text-sm mb-2">
                   <Badge variant="secondary">
                     {selectedLocation.type === "facility"
                       ? "Facility"
@@ -1784,6 +1784,21 @@ export function GoogleMapEditor({
                   </Badge>
                   {selectedLocation.facility_type && <Badge variant="outline">{selectedLocation.facility_type}</Badge>}
                 </div>
+                {selectedLocation.neighborhood_id && (
+                  <div className="flex items-center gap-2 text-sm mb-2">
+                    <Badge variant="outline">
+                      Neighborhood:{" "}
+                      {neighborhoods.find((n) => n.id === selectedLocation.neighborhood_id)?.name || "N/A"}
+                    </Badge>
+                  </div>
+                )}
+                {selectedLocation.lot_id && (
+                  <div className="flex items-center gap-2 text-sm mb-2">
+                    <Badge variant="outline">
+                      Lot: {lots.find((l) => l.id === selectedLocation.lot_id)?.lot_number || "N/A"}
+                    </Badge>
+                  </div>
+                )}
                 {selectedLocation.photos && selectedLocation.photos.length > 0 && (
                   <div className="mt-3 grid grid-cols-2 gap-2">
                     {selectedLocation.photos.map((url: string, index: number) => (

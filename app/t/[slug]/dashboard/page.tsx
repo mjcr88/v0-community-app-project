@@ -1,8 +1,9 @@
 import { createClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Users, MapPin, Globe, Languages, PawPrint, Home } from "lucide-react"
+import { Users, MapPin, Globe, Languages, PawPrint, Home, Map } from "lucide-react"
 import Link from "next/link"
+import { GoogleMapViewer } from "@/components/map/google-map-viewer"
 
 export default async function ResidentDashboardPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
@@ -58,6 +59,16 @@ export default async function ResidentDashboardPage({ params }: { params: Promis
   const { data: tenant } = await supabase.from("tenants").select("*").eq("id", resident.tenant_id).single()
 
   const petsEnabled = tenant?.features?.pets === true
+  const mapEnabled = tenant?.features?.map === true
+
+  let lotLocation = null
+  let allLocations = []
+  if (mapEnabled && resident.lot_id) {
+    const { data: locations } = await supabase.from("locations").select("*").eq("tenant_id", resident.tenant_id)
+
+    allLocations = locations || []
+    lotLocation = locations?.find((loc) => loc.lot_id === resident.lot_id && loc.type === "lot")
+  }
 
   // Get total residents count in neighborhood (or tenant if no neighborhood)
   const neighborhoodId = resident.lots?.neighborhoods?.id
@@ -141,6 +152,10 @@ export default async function ResidentDashboardPage({ params }: { params: Promis
 
   console.log("[v0] Dashboard family data:", { familyUnitId, familyMembersCount, familyName })
 
+  const mapCenter = tenant?.map_center_coordinates
+    ? { lat: tenant.map_center_coordinates.lat, lng: tenant.map_center_coordinates.lng }
+    : null
+
   return (
     <div className="space-y-6">
       <div>
@@ -165,20 +180,59 @@ export default async function ResidentDashboardPage({ params }: { params: Promis
           <Button asChild variant="outline">
             <Link href={`/t/${slug}/dashboard/neighbours`}>Browse Neighbours</Link>
           </Button>
+          {mapEnabled && (
+            <Button asChild variant="outline">
+              <Link href={`/t/${slug}/dashboard/map`}>
+                <Map className="h-4 w-4 mr-2" />
+                View Community Map
+              </Link>
+            </Button>
+          )}
         </CardContent>
       </Card>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Your Neighborhood</CardTitle>
-            <MapPin className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{resident.lots?.neighborhoods?.name || "Not assigned"}</div>
-            <p className="text-xs text-muted-foreground">Lot #{resident.lots?.lot_number || "N/A"}</p>
-          </CardContent>
-        </Card>
+        {mapEnabled && lotLocation ? (
+          <Link
+            href={`/t/${slug}/dashboard/map?highlightLot=${resident.lot_id}`}
+            className="md:col-span-2 lg:col-span-2 block transition-transform hover:scale-[1.02]"
+          >
+            <Card className="h-full cursor-pointer hover:shadow-lg transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Your Neighborhood</CardTitle>
+                <MapPin className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div>
+                  <div className="text-2xl font-bold">{resident.lots?.neighborhoods?.name || "Not assigned"}</div>
+                  <p className="text-xs text-muted-foreground">Lot #{resident.lots?.lot_number || "N/A"}</p>
+                </div>
+                <div className="h-48 rounded-lg overflow-hidden border bg-muted">
+                  <GoogleMapViewer
+                    tenantSlug={slug}
+                    initialLocations={allLocations}
+                    mapCenter={mapCenter}
+                    mapZoom={17}
+                    isAdmin={false}
+                    highlightLocationId={lotLocation.id}
+                  />
+                </div>
+                <p className="text-xs text-center text-muted-foreground">Click to view on full map</p>
+              </CardContent>
+            </Card>
+          </Link>
+        ) : (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Your Neighborhood</CardTitle>
+              <MapPin className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{resident.lots?.neighborhoods?.name || "Not assigned"}</div>
+              <p className="text-xs text-muted-foreground">Lot #{resident.lots?.lot_number || "N/A"}</p>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

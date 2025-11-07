@@ -18,6 +18,7 @@ import {
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu"
 import { createBrowserClient } from "@/utils/supabase-client"
+import React from "react"
 
 interface Location {
   id: string
@@ -216,11 +217,11 @@ export function GoogleMapViewer({
           {showBoundary && tenantBoundary && (
             <Polygon
               paths={convertCoordinates(tenantBoundary as any)}
-              strokeColor="#000000"
+              strokeColor="transparent"
               strokeOpacity={0}
-              strokeWeight={1}
-              fillColor="#000000"
-              fillOpacity={0.1}
+              strokeWeight={0}
+              fillColor="#ffffff"
+              fillOpacity={0.15}
               clickable={false}
               zIndex={1}
             />
@@ -234,11 +235,11 @@ export function GoogleMapViewer({
               <Polygon
                 key={location.id}
                 paths={paths}
-                strokeColor="#000000"
+                strokeColor="transparent"
                 strokeOpacity={0}
-                strokeWeight={1}
-                fillColor="#000000"
-                fillOpacity={0.1}
+                strokeWeight={0}
+                fillColor="#ffffff"
+                fillOpacity={0.15}
                 clickable={false}
                 zIndex={zIndex}
               />
@@ -253,11 +254,11 @@ export function GoogleMapViewer({
               <Polygon
                 key={location.id}
                 paths={paths}
-                strokeColor="#000000"
+                strokeColor="transparent"
                 strokeOpacity={0}
-                strokeWeight={1}
-                fillColor="#000000"
-                fillOpacity={0.1}
+                strokeWeight={0}
+                fillColor="#ffffff"
+                fillOpacity={0.15}
                 clickable={false}
                 zIndex={zIndex}
               />
@@ -272,11 +273,11 @@ export function GoogleMapViewer({
               <Polygon
                 key={location.id}
                 paths={paths}
-                strokeColor={isHighlighted ? "#ef4444" : "#a855f7"}
-                strokeOpacity={isHighlighted ? 1 : 0.7}
-                strokeWeight={isHighlighted ? 3 : 1}
-                fillColor={isHighlighted ? "#60a5fa" : "#c084fc"}
-                fillOpacity={isHighlighted ? 0.4 : 0.3}
+                strokeColor={isHighlighted ? "#ef4444" : "#c084fc"}
+                strokeOpacity={1}
+                strokeWeight={isHighlighted ? 4 : 1}
+                fillColor={isHighlighted ? "#60a5fa" : "#e9d5ff"}
+                fillOpacity={isHighlighted ? 0.6 : 0.4}
                 onClick={() => {
                   console.log("[v0] Neighborhood polygon clicked:", location.name)
                   handleLocationClick(location)
@@ -291,18 +292,32 @@ export function GoogleMapViewer({
             const isHighlighted = highlightedLocationId === location.id
             const zIndex = isHighlighted ? 200 : 15
             return (
-              <Polyline
-                key={location.id}
-                path={path}
-                strokeColor={isHighlighted ? "#ef4444" : "#fbbf24"}
-                strokeOpacity={isHighlighted ? 1 : 0.95}
-                strokeWeight={isHighlighted ? 3 : 1}
-                onClick={() => {
-                  console.log("[v0] Public street polyline clicked:", location.name)
-                  handleLocationClick(location)
-                }}
-                zIndex={zIndex}
-              />
+              <React.Fragment key={location.id}>
+                {/* Invisible wider line for easier clicking */}
+                <Polyline
+                  path={path}
+                  strokeColor="transparent"
+                  strokeOpacity={0}
+                  strokeWeight={8}
+                  onClick={() => {
+                    console.log("[v0] Public street polyline clicked:", location.name)
+                    handleLocationClick(location)
+                  }}
+                  zIndex={zIndex}
+                />
+                {/* Visible thin line */}
+                <Polyline
+                  path={path}
+                  strokeColor={isHighlighted ? "#ef4444" : "#fbbf24"}
+                  strokeOpacity={1}
+                  strokeWeight={isHighlighted ? 4 : 1}
+                  onClick={() => {
+                    console.log("[v0] Public street polyline clicked:", location.name)
+                    handleLocationClick(location)
+                  }}
+                  zIndex={zIndex + 1}
+                />
+              </React.Fragment>
             )
           })}
 
@@ -311,20 +326,36 @@ export function GoogleMapViewer({
             const isHighlighted = highlightedLocationId === location.id
             const zIndex = isHighlighted ? 200 : 15
             return (
-              <Polygon
-                key={location.id}
-                paths={paths}
-                strokeColor={isHighlighted ? "#ef4444" : "#fbbf24"}
-                strokeOpacity={isHighlighted ? 1 : 0.95}
-                strokeWeight={isHighlighted ? 3 : 1}
-                fillColor={isHighlighted ? "#60a5fa" : "#d3d3d3"}
-                fillOpacity={isHighlighted ? 0.4 : 0.25}
-                onClick={() => {
-                  console.log("[v0] Public street polygon clicked:", location.name)
-                  handleLocationClick(location)
-                }}
-                zIndex={zIndex}
-              />
+              <React.Fragment key={location.id}>
+                {/* Invisible wider border for easier clicking */}
+                <Polygon
+                  paths={paths}
+                  strokeColor="transparent"
+                  strokeOpacity={0}
+                  strokeWeight={8}
+                  fillColor="transparent"
+                  fillOpacity={0}
+                  onClick={() => {
+                    console.log("[v0] Public street polygon clicked:", location.name)
+                    handleLocationClick(location)
+                  }}
+                  zIndex={zIndex}
+                />
+                {/* Visible thin border with fill */}
+                <Polygon
+                  paths={paths}
+                  strokeColor={isHighlighted ? "#ef4444" : "#fbbf24"}
+                  strokeOpacity={1}
+                  strokeWeight={isHighlighted ? 4 : 1}
+                  fillColor={isHighlighted ? "#60a5fa" : "#fef3c7"}
+                  fillOpacity={isHighlighted ? 0.6 : 0.45}
+                  onClick={() => {
+                    console.log("[v0] Public street polygon clicked:", location.name)
+                    handleLocationClick(location)
+                  }}
+                  zIndex={zIndex + 1}
+                />
+              </React.Fragment>
             )
           })}
 
@@ -333,20 +364,36 @@ export function GoogleMapViewer({
             const isHighlighted = highlightedLocationId === location.id
             const zIndex = isHighlighted ? 200 : 10
             return (
-              <Polygon
-                key={location.id}
-                paths={paths}
-                strokeColor={isHighlighted ? "#ef4444" : "#60a5fa"}
-                strokeOpacity={isHighlighted ? 1 : 0.7}
-                strokeWeight={isHighlighted ? 3 : 1}
-                fillColor={isHighlighted ? "#60a5fa" : "#60a5fa"}
-                fillOpacity={isHighlighted ? 0.4 : 0.25}
-                onClick={() => {
-                  console.log("[v0] Lot polygon clicked:", location.name)
-                  handleLocationClick(location)
-                }}
-                zIndex={zIndex}
-              />
+              <React.Fragment key={location.id}>
+                {/* Invisible wider border for easier clicking */}
+                <Polygon
+                  paths={paths}
+                  strokeColor="transparent"
+                  strokeOpacity={0}
+                  strokeWeight={8}
+                  fillColor="transparent"
+                  fillOpacity={0}
+                  onClick={() => {
+                    console.log("[v0] Lot polygon clicked:", location.name)
+                    handleLocationClick(location)
+                  }}
+                  zIndex={zIndex}
+                />
+                {/* Visible thin border with fill */}
+                <Polygon
+                  paths={paths}
+                  strokeColor={isHighlighted ? "#ef4444" : "#60a5fa"}
+                  strokeOpacity={1}
+                  strokeWeight={isHighlighted ? 4 : 1}
+                  fillColor={isHighlighted ? "#60a5fa" : "#bfdbfe"}
+                  fillOpacity={isHighlighted ? 0.6 : 0.35}
+                  onClick={() => {
+                    console.log("[v0] Lot polygon clicked:", location.name)
+                    handleLocationClick(location)
+                  }}
+                  zIndex={zIndex + 1}
+                />
+              </React.Fragment>
             )
           })}
 
@@ -355,18 +402,32 @@ export function GoogleMapViewer({
             const isHighlighted = highlightedLocationId === location.id
             const zIndex = isHighlighted ? 200 : 10
             return (
-              <Polyline
-                key={location.id}
-                path={path}
-                strokeColor={isHighlighted ? "#ef4444" : "#60a5fa"}
-                strokeOpacity={isHighlighted ? 1 : 0.8}
-                strokeWeight={isHighlighted ? 3 : 1}
-                onClick={() => {
-                  console.log("[v0] Lot polyline clicked:", location.name)
-                  handleLocationClick(location)
-                }}
-                zIndex={zIndex}
-              />
+              <React.Fragment key={location.id}>
+                {/* Invisible wider line for easier clicking */}
+                <Polyline
+                  path={path}
+                  strokeColor="transparent"
+                  strokeOpacity={0}
+                  strokeWeight={8}
+                  onClick={() => {
+                    console.log("[v0] Lot polyline clicked:", location.name)
+                    handleLocationClick(location)
+                  }}
+                  zIndex={zIndex}
+                />
+                {/* Visible thin line */}
+                <Polyline
+                  path={path}
+                  strokeColor={isHighlighted ? "#ef4444" : "#60a5fa"}
+                  strokeOpacity={1}
+                  strokeWeight={isHighlighted ? 4 : 1}
+                  onClick={() => {
+                    console.log("[v0] Lot polyline clicked:", location.name)
+                    handleLocationClick(location)
+                  }}
+                  zIndex={zIndex + 1}
+                />
+              </React.Fragment>
             )
           })}
 
@@ -395,10 +456,10 @@ export function GoogleMapViewer({
                 key={location.id}
                 paths={paths}
                 strokeColor={isHighlighted ? "#ef4444" : "#fb923c"}
-                strokeOpacity={isHighlighted ? 1 : 0.7}
-                strokeWeight={isHighlighted ? 3 : 1}
-                fillColor={isHighlighted ? "#60a5fa" : "#fdba74"}
-                fillOpacity={isHighlighted ? 0.4 : 0.3}
+                strokeOpacity={1}
+                strokeWeight={isHighlighted ? 4 : 1}
+                fillColor={isHighlighted ? "#60a5fa" : "#fed7aa"}
+                fillOpacity={isHighlighted ? 0.6 : 0.45}
                 onClick={() => {
                   console.log("[v0] Facility polygon clicked:", location.name)
                   handleLocationClick(location)
@@ -413,18 +474,32 @@ export function GoogleMapViewer({
             const isHighlighted = highlightedLocationId === location.id
             const zIndex = isHighlighted ? 200 : 20
             return (
-              <Polyline
-                key={location.id}
-                path={path}
-                strokeColor={isHighlighted ? "#ef4444" : "#fb923c"}
-                strokeOpacity={isHighlighted ? 1 : 0.8}
-                strokeWeight={isHighlighted ? 3 : 1}
-                onClick={() => {
-                  console.log("[v0] Facility polyline clicked:", location.name)
-                  handleLocationClick(location)
-                }}
-                zIndex={zIndex}
-              />
+              <React.Fragment key={location.id}>
+                {/* Invisible wider line for easier clicking */}
+                <Polyline
+                  path={path}
+                  strokeColor="transparent"
+                  strokeOpacity={0}
+                  strokeWeight={8}
+                  onClick={() => {
+                    console.log("[v0] Facility polyline clicked:", location.name)
+                    handleLocationClick(location)
+                  }}
+                  zIndex={zIndex}
+                />
+                {/* Visible thin line */}
+                <Polyline
+                  path={path}
+                  strokeColor={isHighlighted ? "#ef4444" : "#fb923c"}
+                  strokeOpacity={1}
+                  strokeWeight={isHighlighted ? 4 : 1}
+                  onClick={() => {
+                    console.log("[v0] Facility polyline clicked:", location.name)
+                    handleLocationClick(location)
+                  }}
+                  zIndex={zIndex + 1}
+                />
+              </React.Fragment>
             )
           })}
 
@@ -433,18 +508,32 @@ export function GoogleMapViewer({
             const isHighlighted = highlightedLocationId === location.id
             const zIndex = isHighlighted ? 200 : 25
             return (
-              <Polyline
-                key={location.id}
-                path={path}
-                strokeColor={isHighlighted ? "#ef4444" : "#3b82f6"}
-                strokeOpacity={isHighlighted ? 1 : 0.8}
-                strokeWeight={isHighlighted ? 3 : 1}
-                onClick={() => {
-                  console.log("[v0] Walking path clicked:", location.name)
-                  handleLocationClick(location)
-                }}
-                zIndex={zIndex}
-              />
+              <React.Fragment key={location.id}>
+                {/* Invisible wider line for easier clicking */}
+                <Polyline
+                  path={path}
+                  strokeColor="transparent"
+                  strokeOpacity={0}
+                  strokeWeight={8}
+                  onClick={() => {
+                    console.log("[v0] Walking path clicked:", location.name)
+                    handleLocationClick(location)
+                  }}
+                  zIndex={zIndex}
+                />
+                {/* Visible thin line */}
+                <Polyline
+                  path={path}
+                  strokeColor={isHighlighted ? "#ef4444" : "#3b82f6"}
+                  strokeOpacity={1}
+                  strokeWeight={isHighlighted ? 4 : 1}
+                  onClick={() => {
+                    console.log("[v0] Walking path clicked:", location.name)
+                    handleLocationClick(location)
+                  }}
+                  zIndex={zIndex + 1}
+                />
+              </React.Fragment>
             )
           })}
         </Map>

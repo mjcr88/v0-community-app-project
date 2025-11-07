@@ -1,6 +1,8 @@
 "use client"
 
-import type React from "react"
+import React from "react"
+
+// import type React from "react" // Removed to fix redeclaration error
 
 import { useState, useEffect } from "react"
 import { APIProvider, Map, Marker, useMap } from "@vis.gl/react-google-maps"
@@ -868,6 +870,9 @@ export function GoogleMapEditor({
 
       if (data) {
         setSavedLocations(data)
+        // Force map to re-render by updating a state that affects the key
+        setIsImporting((prev) => !prev)
+        setTimeout(() => setIsImporting((prev) => !prev), 0)
       }
 
       handleNewLocation()
@@ -934,8 +939,10 @@ export function GoogleMapEditor({
     return true
   })
 
-  const existingLocationTypes = new Set(savedLocations.map((loc) => loc.type))
-  const hasType = (type: string) => existingLocationTypes.has(type)
+  const hasType = (type: string) => {
+    const existingLocationTypes = new Set(savedLocations.map((loc) => loc.type))
+    return existingLocationTypes.has(type)
+  }
 
   const handleSaveImport = async () => {
     if (!locationType) {
@@ -1038,6 +1045,8 @@ export function GoogleMapEditor({
       lng: coord[1],
     }))
   }
+
+  const boundaryLocation = savedLocations.find((loc) => loc.type === "boundary")
 
   return (
     <div className={mode === "view" ? "h-full" : "grid gap-6 lg:grid-cols-[1fr_400px]"}>
@@ -1188,6 +1197,19 @@ export function GoogleMapEditor({
                     return null
                   })}
 
+                {boundaryLocation && boundaryLocation.boundary_coordinates && (
+                  <Polygon
+                    paths={convertCoordinates(boundaryLocation.boundary_coordinates)}
+                    strokeColor="transparent"
+                    strokeOpacity={0}
+                    strokeWeight={0}
+                    fillColor="#ffffff"
+                    fillOpacity={0.15}
+                    clickable={false}
+                    zIndex={1}
+                  />
+                )}
+
                 {filteredLocations.map((location) => {
                   const isEditing = mode === "edit" && editingLocationId === location.id
                   const isHovered = hoveredLocationId === location.id
@@ -1327,47 +1349,93 @@ export function GoogleMapEditor({
                     )
                   }
 
+                  // Lot polylines with increased opacity and invisible wider line for easier clicking
                   if (location.type === "lot" && location.path_coordinates) {
                     const path = convertCoordinates(location.path_coordinates)
+                    const isEditing = editingLocationId === location.id
+                    const isHovered = hoveredLocationId === location.id
+                    const isHighlightedFromUrl = editLocationIdFromUrl === location.id
+                    const isHighlightedInView = highlightedLocationId === location.id
+
+                    const zIndex = isHighlightedFromUrl || isHighlightedInView || isEditing ? 100 : 3
+
                     return (
-                      <Polyline
-                        key={`saved-${location.id}`}
-                        path={path}
-                        strokeColor={
-                          isHighlightedFromUrl || isHighlightedInView ? "#ef4444" : isEditing ? "#10b981" : "#60a5fa"
-                        }
-                        strokeOpacity={isHovered ? 1 : 0.9}
-                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 3 : isHovered ? 2 : 1}
-                        onClick={() => handleLocationClick(location)}
-                        onMouseOver={() => setHoveredLocationId(location.id)}
-                        onMouseOut={() => setHoveredLocationId(null)}
-                        zIndex={zIndex}
-                      />
+                      <React.Fragment key={`saved-${location.id}`}>
+                        {/* Invisible wider line for easier clicking */}
+                        <Polyline
+                          path={path}
+                          strokeColor="transparent"
+                          strokeOpacity={0}
+                          strokeWeight={8}
+                          onClick={() => handleLocationClick(location)}
+                          onMouseOver={() => setHoveredLocationId(location.id)}
+                          onMouseOut={() => setHoveredLocationId(null)}
+                          zIndex={zIndex}
+                        />
+                        {/* Visible thin line */}
+                        <Polyline
+                          path={path}
+                          strokeColor={
+                            isHighlightedFromUrl || isHighlightedInView ? "#ef4444" : isEditing ? "#10b981" : "#60a5fa"
+                          }
+                          strokeOpacity={isHovered ? 1 : 0.9}
+                          strokeWeight={
+                            isHighlightedFromUrl || isHighlightedInView || isEditing ? 3 : isHovered ? 2 : 1
+                          }
+                          onClick={() => handleLocationClick(location)}
+                          onMouseOver={() => setHoveredLocationId(location.id)}
+                          onMouseOut={() => setHoveredLocationId(null)}
+                          zIndex={zIndex + 1}
+                        />
+                      </React.Fragment>
                     )
                   }
 
+                  // Lot polygons with lighter blue fill and invisible wider border for easier clicking
                   if (location.type === "lot" && location.boundary_coordinates) {
                     const paths = convertCoordinates(location.boundary_coordinates)
+                    const isEditing = editingLocationId === location.id
+                    const isHovered = hoveredLocationId === location.id
+                    const isHighlightedFromUrl = editLocationIdFromUrl === location.id
+                    const isHighlightedInView = highlightedLocationId === location.id
+
+                    const zIndex = isHighlightedFromUrl || isHighlightedInView || isEditing ? 100 : 3
+
                     return (
-                      <Polygon
-                        key={`saved-${location.id}`}
-                        paths={paths}
-                        strokeColor={
-                          isHighlightedFromUrl || isHighlightedInView ? "#ef4444" : isEditing ? "#10b981" : "#60a5fa"
-                        }
-                        strokeOpacity={isHovered ? 1 : 0.7}
-                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 3 : isHovered ? 2 : 1}
-                        fillColor={isHighlightedFromUrl || isHighlightedInView || isEditing ? "#60a5fa" : "#60a5fa"}
-                        fillOpacity={
-                          isHighlightedFromUrl || isHighlightedInView || isEditing ? 0.3 : isHovered ? 0.2 : 0.15
-                        }
-                        onClick={() => {
-                          handleLocationClick(location)
-                        }}
-                        onMouseOver={() => setHoveredLocationId(location.id)}
-                        onMouseOut={() => setHoveredLocationId(null)}
-                        zIndex={zIndex}
-                      />
+                      <React.Fragment key={`saved-${location.id}`}>
+                        {/* Invisible wider border for easier clicking */}
+                        <Polygon
+                          paths={paths}
+                          strokeColor="transparent"
+                          strokeOpacity={0}
+                          strokeWeight={8}
+                          fillColor="transparent"
+                          fillOpacity={0}
+                          onClick={() => handleLocationClick(location)}
+                          onMouseOver={() => setHoveredLocationId(location.id)}
+                          onMouseOut={() => setHoveredLocationId(null)}
+                          zIndex={zIndex}
+                        />
+                        {/* Visible thin border with fill */}
+                        <Polygon
+                          paths={paths}
+                          strokeColor={
+                            isHighlightedFromUrl || isHighlightedInView ? "#ef4444" : isEditing ? "#10b981" : "#60a5fa"
+                          }
+                          strokeOpacity={isHovered ? 1 : 0.7}
+                          strokeWeight={
+                            isHighlightedFromUrl || isHighlightedInView || isEditing ? 3 : isHovered ? 2 : 1
+                          }
+                          fillColor={isHighlightedFromUrl || isHighlightedInView || isEditing ? "#bfdbfe" : "#bfdbfe"}
+                          fillOpacity={
+                            isHighlightedFromUrl || isHighlightedInView || isEditing ? 0.5 : isHovered ? 0.4 : 0.35
+                          }
+                          onClick={() => handleLocationClick(location)}
+                          onMouseOver={() => setHoveredLocationId(location.id)}
+                          onMouseOut={() => setHoveredLocationId(null)}
+                          zIndex={zIndex + 1}
+                        />
+                      </React.Fragment>
                     )
                   }
 

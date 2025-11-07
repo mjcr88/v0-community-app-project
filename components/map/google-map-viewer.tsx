@@ -216,11 +216,11 @@ export function GoogleMapViewer({
           {showBoundary && tenantBoundary && (
             <Polygon
               paths={convertCoordinates(tenantBoundary as any)}
-              strokeColor="#ffffff"
-              strokeOpacity={0.8}
-              strokeWeight={2}
-              fillColor="#ffffff"
-              fillOpacity={0.15}
+              strokeColor="#000000"
+              strokeOpacity={0}
+              strokeWeight={1}
+              fillColor="#000000"
+              fillOpacity={0.1}
               clickable={false}
               zIndex={1}
             />
@@ -228,22 +228,18 @@ export function GoogleMapViewer({
 
           {boundaryLocations.map((location) => {
             const paths = convertCoordinates(location.boundary_coordinates!)
-            console.log("[v0] Rendering boundary location:", location.id, "with", paths.length, "coordinate pairs")
             const isHighlighted = highlightedLocationId === location.id
             const zIndex = isHighlighted ? 200 : 1
             return (
               <Polygon
                 key={location.id}
                 paths={paths}
-                strokeColor={isHighlighted ? "#ef4444" : "#ffffff"}
-                strokeOpacity={isHighlighted ? 1 : 0.8}
-                strokeWeight={isHighlighted ? 3 : 1}
-                fillColor={isHighlighted ? "#60a5fa" : "#ffffff"}
-                fillOpacity={isHighlighted ? 0.4 : 0.15}
-                onClick={() => {
-                  console.log("[v0] Boundary polygon clicked:", location.name)
-                  handleLocationClick(location)
-                }}
+                strokeColor="#000000"
+                strokeOpacity={0}
+                strokeWeight={1}
+                fillColor="#000000"
+                fillOpacity={0.1}
+                clickable={false}
                 zIndex={zIndex}
               />
             )
@@ -257,15 +253,12 @@ export function GoogleMapViewer({
               <Polygon
                 key={location.id}
                 paths={paths}
-                strokeColor={isHighlighted ? "#ef4444" : "#000000"}
-                strokeOpacity={isHighlighted ? 1 : 0.8}
-                strokeWeight={isHighlighted ? 3 : 1}
-                fillColor={isHighlighted ? "#60a5fa" : "#000000"}
-                fillOpacity={isHighlighted ? 0.4 : 0.15}
-                onClick={() => {
-                  console.log("[v0] Boundary polygon from table clicked:", location.name)
-                  handleLocationClick(location)
-                }}
+                strokeColor="#000000"
+                strokeOpacity={0}
+                strokeWeight={1}
+                fillColor="#000000"
+                fillOpacity={0.1}
+                clickable={false}
                 zIndex={zIndex}
               />
             )
@@ -283,7 +276,7 @@ export function GoogleMapViewer({
                 strokeOpacity={isHighlighted ? 1 : 0.7}
                 strokeWeight={isHighlighted ? 3 : 1}
                 fillColor={isHighlighted ? "#60a5fa" : "#c084fc"}
-                fillOpacity={isHighlighted ? 0.4 : 0.25}
+                fillOpacity={isHighlighted ? 0.4 : 0.3}
                 onClick={() => {
                   console.log("[v0] Neighborhood polygon clicked:", location.name)
                   handleLocationClick(location)
@@ -347,7 +340,7 @@ export function GoogleMapViewer({
                 strokeOpacity={isHighlighted ? 1 : 0.7}
                 strokeWeight={isHighlighted ? 3 : 1}
                 fillColor={isHighlighted ? "#60a5fa" : "#60a5fa"}
-                fillOpacity={isHighlighted ? 0.4 : 0.15}
+                fillOpacity={isHighlighted ? 0.4 : 0.25}
                 onClick={() => {
                   console.log("[v0] Lot polygon clicked:", location.name)
                   handleLocationClick(location)
@@ -405,7 +398,7 @@ export function GoogleMapViewer({
                 strokeOpacity={isHighlighted ? 1 : 0.7}
                 strokeWeight={isHighlighted ? 3 : 1}
                 fillColor={isHighlighted ? "#60a5fa" : "#fdba74"}
-                fillOpacity={isHighlighted ? 0.4 : 0.25}
+                fillOpacity={isHighlighted ? 0.4 : 0.3}
                 onClick={() => {
                   console.log("[v0] Facility polygon clicked:", location.name)
                   handleLocationClick(location)

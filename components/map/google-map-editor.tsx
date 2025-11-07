@@ -1218,6 +1218,7 @@ export function GoogleMapEditor({
                   const isPublicStreet = location.type === "public_street"
                   const isGreenArea = location.type === "green_area"
                   const isRecreationalZone = location.type === "recreational_zone"
+                  const isNeighborhood = location.type === "neighborhood"
 
                   if (location.type === "facility" && location.coordinates) {
                     return (
@@ -1252,7 +1253,7 @@ export function GoogleMapEditor({
 
                   if (
                     (location.type === "facility" ||
-                      location.type === "neighborhood" ||
+                      isNeighborhood ||
                       isBoundary ||
                       isProtectionZone ||
                       isEasement ||
@@ -1274,8 +1275,8 @@ export function GoogleMapEditor({
                       strokeColor = "#a855f7"
                       fillColor = "#a855f7"
                     } else if (isBoundary) {
-                      strokeColor = "#ffffff"
-                      fillColor = "#ffffff"
+                      strokeColor = "#000000" // Changed from white to transparent/invisible
+                      fillColor = "#000000"
                     } else if (isProtectionZone) {
                       strokeColor = "#ef4444"
                       fillColor = "#ef4444"
@@ -1304,20 +1305,23 @@ export function GoogleMapEditor({
                       fillColor = "#60a5fa"
                     }
 
+                    const isClickable = !isBoundary
+                    const strokeOpacityValue = isBoundary ? 0 : isHovered ? 1 : 0.8
+
                     return (
                       <Polygon
                         key={`saved-${location.id}`}
                         paths={paths}
                         strokeColor={strokeColor}
-                        strokeOpacity={isHovered ? 1 : 0.8}
+                        strokeOpacity={strokeOpacityValue}
                         strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 3 : isHovered ? 2 : 1}
                         fillColor={fillColor}
                         fillOpacity={
-                          isHighlightedFromUrl || isHighlightedInView || isEditing ? 0.3 : isHovered ? 0.2 : 0.15
+                          isHighlightedFromUrl || isHighlightedInView || isEditing ? 0.4 : isHovered ? 0.3 : 0.25
                         }
-                        onClick={() => handleLocationClick(location)}
-                        onMouseOver={() => setHoveredLocationId(location.id)}
-                        onMouseOut={() => setHoveredLocationId(null)}
+                        onClick={isClickable ? () => handleLocationClick(location) : undefined}
+                        onMouseOver={isClickable ? () => setHoveredLocationId(location.id) : undefined}
+                        onMouseOut={isClickable ? () => setHoveredLocationId(null) : undefined}
                         zIndex={zIndex}
                       />
                     )

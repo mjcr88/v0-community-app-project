@@ -779,6 +779,7 @@ export function GoogleMapEditor({
       setDrawingMode(null)
       setUploadedPhotos([])
       setEditingLocationId(null)
+      setSaving(false) // Reset saving state immediately after form reset
 
       if (locationType === "neighborhood" && prefilledName) {
         toast({
@@ -799,7 +800,6 @@ export function GoogleMapEditor({
         description: "Error saving location: " + (error instanceof Error ? error.message : "Unknown error"),
         variant: "destructive",
       })
-    } finally {
       setSaving(false)
     }
   }
@@ -816,6 +816,8 @@ export function GoogleMapEditor({
     setSelectedLotId("")
     setSelectedNeighborhoodId("")
     setUploadedPhotos([])
+    setDrawingMode(null)
+    setSaving(false)
     toast({
       description: "Edit cancelled",
     })
@@ -876,6 +878,7 @@ export function GoogleMapEditor({
       }
 
       handleNewLocation()
+      setDeleting(false)
     } catch (error) {
       console.error("Error deleting location:", error)
       toast({
@@ -883,7 +886,6 @@ export function GoogleMapEditor({
         description: "Error deleting location: " + (error instanceof Error ? error.message : "Unknown error"),
         variant: "destructive",
       })
-    } finally {
       setDeleting(false)
     }
   }

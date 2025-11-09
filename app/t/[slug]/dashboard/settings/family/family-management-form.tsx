@@ -63,7 +63,7 @@ export function FamilyManagementForm({
     name: familyUnit?.name || "",
     description: familyUnit?.description || "",
     photos: familyUnit?.photos || [],
-    heroPhoto: familyUnit?.photos?.[familyUnit?.hero_photo_index ?? 0] || null,
+    heroPhoto: familyUnit?.hero_photo || familyUnit?.profile_picture_url || null,
   })
 
   useEffect(() => {
@@ -76,7 +76,7 @@ export function FamilyManagementForm({
       name: familyUnit?.name || "",
       description: familyUnit?.description || "",
       photos: familyUnit?.photos || [],
-      heroPhoto: familyUnit?.photos?.[familyUnit?.hero_photo_index ?? 0] || null,
+      heroPhoto: familyUnit?.hero_photo || familyUnit?.profile_picture_url || null,
     })
   }, [initialFamilyMembers, initialRelationships, initialPets, familyUnit])
 
@@ -191,17 +191,17 @@ export function FamilyManagementForm({
 
     const supabase = createClient()
     try {
-      const heroIndex = photos.indexOf(familyProfile.heroPhoto || "")
-      const validHeroIndex = heroIndex >= 0 ? heroIndex : 0
+      const updateData: any = {
+        photos: photos,
+      }
 
-      const { error } = await supabase
-        .from("family_units")
-        .update({
-          photos: photos,
-          hero_photo_index: validHeroIndex,
-          profile_picture_url: photos[validHeroIndex] || null,
-        })
-        .eq("id", familyUnit.id)
+      if (familyProfile.heroPhoto && !photos.includes(familyProfile.heroPhoto)) {
+        updateData.hero_photo = photos[0] || null
+        updateData.profile_picture_url = photos[0] || null
+        setFamilyProfile({ ...familyProfile, photos, heroPhoto: photos[0] || null })
+      }
+
+      const { error } = await supabase.from("family_units").update(updateData).eq("id", familyUnit.id)
 
       if (error) throw error
 
@@ -225,12 +225,10 @@ export function FamilyManagementForm({
 
     const supabase = createClient()
     try {
-      const heroIndex = heroPhoto ? familyProfile.photos.indexOf(heroPhoto) : 0
-
       const { error } = await supabase
         .from("family_units")
         .update({
-          hero_photo_index: heroIndex >= 0 ? heroIndex : 0,
+          hero_photo: heroPhoto,
           profile_picture_url: heroPhoto,
         })
         .eq("id", familyUnit.id)
@@ -250,33 +248,31 @@ export function FamilyManagementForm({
 
   const handlePetPhotosChange = async (petId: string, photos: string[]) => {
     const pet = pets.find((p) => p.id === petId)
-    const currentHeroPhoto = pet?.photos?.[pet?.hero_photo_index ?? 0] || null
+    const currentHeroPhoto = pet?.hero_photo || pet?.profile_picture_url || null
 
     const supabase = createClient()
     try {
-      const heroIndex = currentHeroPhoto ? photos.indexOf(currentHeroPhoto) : 0
-      const validHeroIndex = heroIndex >= 0 ? heroIndex : 0
+      const updateData: any = {
+        photos: photos,
+      }
 
-      const { error } = await supabase
-        .from("pets")
-        .update({
-          photos: photos,
-          hero_photo_index: validHeroIndex,
-          profile_picture_url: photos[validHeroIndex] || null,
-        })
-        .eq("id", petId)
+      if (currentHeroPhoto && !photos.includes(currentHeroPhoto)) {
+        updateData.hero_photo = photos[0] || null
+        updateData.profile_picture_url = photos[0] || null
+      }
+
+      const { error } = await supabase.from("pets").update(updateData).eq("id", petId)
 
       if (error) throw error
 
-      // Update local state
       setPets(
         pets.map((p) =>
           p.id === petId
             ? {
                 ...p,
                 photos,
-                hero_photo_index: validHeroIndex,
-                profile_picture_url: photos[validHeroIndex] || null,
+                hero_photo: updateData.hero_photo || currentHeroPhoto,
+                profile_picture_url: updateData.profile_picture_url || currentHeroPhoto,
               }
             : p,
         ),
@@ -300,27 +296,22 @@ export function FamilyManagementForm({
   const handlePetHeroPhotoChange = async (petId: string, heroPhoto: string | null) => {
     const supabase = createClient()
     try {
-      const pet = pets.find((p) => p.id === petId)
-      const photos = pet?.photos || []
-      const heroIndex = heroPhoto ? photos.indexOf(heroPhoto) : 0
-
       const { error } = await supabase
         .from("pets")
         .update({
-          hero_photo_index: heroIndex >= 0 ? heroIndex : 0,
+          hero_photo: heroPhoto,
           profile_picture_url: heroPhoto,
         })
         .eq("id", petId)
 
       if (error) throw error
 
-      // Update local state
       setPets(
         pets.map((p) =>
           p.id === petId
             ? {
                 ...p,
-                hero_photo_index: heroIndex >= 0 ? heroIndex : 0,
+                hero_photo: heroPhoto,
                 profile_picture_url: heroPhoto,
               }
             : p,
@@ -569,7 +560,7 @@ export function FamilyManagementForm({
                       .slice(0, 2)
 
                     const petPhotos = pet.photos || []
-                    const petHeroPhoto = petPhotos[pet.hero_photo_index ?? 0] || null
+                    const petHeroPhoto = pet.hero_photo || pet.profile_picture_url || null
 
                     return (
                       <Card key={pet.id}>

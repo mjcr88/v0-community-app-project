@@ -51,6 +51,8 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
   const [boundaryExists, setBoundaryExists] = useState(false)
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""
+  const DEMO_MAP_ID = "DEMO_MAP_ID"
+  const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAP_ID || DEMO_MAP_ID
 
   useEffect(() => {
     const loadData = async () => {
@@ -395,6 +397,7 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
                 clickableIcons={false}
                 onCenterChanged={(e) => setMapCenter(e.detail.center)}
                 onZoomChanged={(e) => setMapZoom(e.detail.zoom)}
+                {...(mapId ? { mapId } : {})}
               >
                 {previewFeatures.map((feature, index) => {
                   if (feature.geometry.type === "Point") {

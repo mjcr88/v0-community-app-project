@@ -927,6 +927,8 @@ export function GoogleMapEditor({
   }
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""
+  const DEMO_MAP_ID = "DEMO_MAP_ID"
+  const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAP_ID || DEMO_MAP_ID
 
   const filteredLocations = savedLocations.filter((location) => {
     if (location.type === "facility") return showFacilities
@@ -1069,6 +1071,7 @@ export function GoogleMapEditor({
                 onClick={handleMapClick}
                 onCenterChanged={(e) => setMapCenter(e.detail.center)}
                 onZoomChanged={(e) => setMapZoom(e.detail.zoom)}
+                {...(mapId ? { mapId } : {})}
               >
                 <MapClickHandler drawingMode={drawingMode} onMapClick={handleMapClick} />
 

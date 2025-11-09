@@ -1,3 +1,5 @@
+"use client"
+
 import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -173,6 +175,8 @@ export function LocationsTable({ locations, tenantSlug, tenantId, initialTypeFil
               <TableHead className="font-semibold">Name</TableHead>
               <TableHead className="font-semibold">Type</TableHead>
               <TableHead className="font-semibold">Neighborhood</TableHead>
+              <TableHead className="font-semibold">Lot ID</TableHead>
+              <TableHead className="font-semibold">Residents</TableHead>
               <TableHead className="font-semibold">Description</TableHead>
               <TableHead className="text-right font-semibold">Actions</TableHead>
             </TableRow>
@@ -221,6 +225,8 @@ export function LocationsTable({ locations, tenantSlug, tenantId, initialTypeFil
                   </SelectContent>
                 </Select>
               </TableCell>
+              <TableCell />
+              <TableCell />
               <TableCell>
                 <Input
                   placeholder="Filter description..."
@@ -235,7 +241,7 @@ export function LocationsTable({ locations, tenantSlug, tenantId, initialTypeFil
           <TableBody>
             {visibleLocations.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                   No locations found matching your filters
                 </TableCell>
               </TableRow>
@@ -251,6 +257,14 @@ export function LocationsTable({ locations, tenantSlug, tenantId, initialTypeFil
                   <TableCell className="font-medium">{location.name || "—"}</TableCell>
                   <TableCell>{typeLabels[location.type] || location.type}</TableCell>
                   <TableCell>{location.neighborhoods?.name || "—"}</TableCell>
+                  <TableCell>{location.lots?.lot_number || "—"}</TableCell>
+                  <TableCell>
+                    {location.users && location.users.length > 0 ? (
+                      <span className="text-sm text-muted-foreground">{location.users.length} resident(s)</span>
+                    ) : (
+                      "—"
+                    )}
+                  </TableCell>
                   <TableCell className="text-muted-foreground">
                     {location.description ? <span className="line-clamp-1">{location.description}</span> : "—"}
                   </TableCell>

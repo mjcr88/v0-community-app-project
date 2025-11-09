@@ -110,7 +110,12 @@ export default async function ResidentCommunityMapPage({
 
   const { data: locations } = await supabase
     .from("locations")
-    .select("*, neighborhoods!locations_neighborhood_id_fkey(name)")
+    .select(`
+      *, 
+      neighborhoods!locations_neighborhood_id_fkey(name),
+      lots!locations_lot_id_fkey(id, lot_number),
+      users!users_lot_id_fkey(id, first_name, last_name, profile_picture_url)
+    `)
     .eq("tenant_id", tenant.id)
     .order("created_at", { ascending: false })
 

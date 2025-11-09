@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useEffect, useState } from "react"
 import { createBrowserClient } from "@/lib/supabase/client"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import Link from "next/link"
 
 interface LocationInfoCardProps {
   location: {
@@ -22,16 +24,34 @@ interface LocationInfoCardProps {
   onClose: () => void
 }
 
+interface Resident {
+  id: string
+  first_name: string
+  last_name: string
+  profile_picture_url?: string | null
+}
+
 export function LocationInfoCard({ location, onClose }: LocationInfoCardProps) {
   const [neighborhood, setNeighborhood] = useState<{ id: string; name: string } | null>(null)
   const [lot, setLot] = useState<{ id: string; lot_number: string } | null>(null)
-  const [residents, setResidents] = useState<Array<{ id: string; first_name: string; last_name: string }>>([])
+  const [residents, setResidents] = useState<Resident[]>([])
+  const [tenantSlug, setTenantSlug] = useState<string>("")
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchRelatedData = async () => {
       setLoading(true)
       const supabase = createBrowserClient()
+
+      // Get tenant slug
+      const { data: userData } = await supabase.auth.getUser()
+      if (userData.user) {
+        const { data: user } = await supabase.from("users").select("tenant_id").eq("id", userData.user.id).single()
+        if (user?.tenant_id) {
+          const { data: tenant } = await supabase.from("tenants").select("slug").eq("id", user.tenant_id).single()
+          if (tenant) setTenantSlug(tenant.slug)
+        }
+      }
 
       // Fetch neighborhood if linked
       if (location.neighborhood_id) {
@@ -53,7 +73,7 @@ export function LocationInfoCard({ location, onClose }: LocationInfoCardProps) {
       if (location.type === "lot" && location.lot_id) {
         const { data } = await supabase
           .from("users")
-          .select("id, first_name, last_name")
+          .select("id, first_name, last_name, profile_picture_url")
           .eq("lot_id", location.lot_id)
           .eq("role", "resident")
         if (data) setResidents(data)
@@ -148,16 +168,32 @@ export function LocationInfoCard({ location, onClose }: LocationInfoCardProps) {
         )}
 
         {residents.length > 0 && (
-          <div className="p-2 bg-green-50 border border-green-200 rounded-lg space-y-1">
+          <div className="p-3 bg-green-50 border border-green-200 rounded-lg space-y-2">
             <div className="flex items-center gap-2">
               <Users className="h-4 w-4 text-green-600 shrink-0" />
               <p className="text-xs text-green-700 font-medium">Residents ({residents.length})</p>
             </div>
-            <div className="pl-6 space-y-0.5">
+            <div className="space-y-2">
               {residents.map((resident) => (
-                <p key={resident.id} className="text-sm text-green-900">
-                  {resident.first_name} {resident.last_name}
-                </p>
+                <Link
+                  key={resident.id}
+                  href={`/t/${tenantSlug}/dashboard/neighbours/${resident.id}`}
+                  className="flex items-center gap-3 p-2 bg-white rounded-lg border border-green-200 hover:bg-green-50 hover:border-green-300 transition-colors"
+                >
+                  <Avatar className="h-10 w-10 shrink-0">
+                    <AvatarImage src={resident.profile_picture_url || undefined} alt={resident.first_name} />
+                    <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                      {resident.first_name?.[0]}
+                      {resident.last_name?.[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {resident.first_name} {resident.last_name}
+                    </p>
+                    <p className="text-xs text-gray-500">View profile →</p>
+                  </div>
+                </Link>
               ))}
             </div>
           </div>

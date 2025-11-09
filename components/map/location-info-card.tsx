@@ -237,6 +237,18 @@ export function LocationInfoCard({ location, onClose, minimal = false }: Locatio
         </div>
       </CardHeader>
       <CardContent className={`${spacing} overflow-y-auto`}>
+        {location.photos && location.photos.length > 0 && (
+          <div className="relative w-full rounded-lg overflow-hidden border bg-muted cursor-pointer group -mt-1 mb-3">
+            <img
+              src={location.photos[0] || "/placeholder.svg"}
+              alt={location.name}
+              className="w-full aspect-[2/1] object-cover hover:scale-105 transition-transform"
+              onClick={() => window.open(location.photos[0], "_blank")}
+            />
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+          </div>
+        )}
+
         {location.description && (
           <div>
             <p className={`${textSize} text-muted-foreground leading-relaxed`}>{location.description}</p>
@@ -372,15 +384,15 @@ export function LocationInfoCard({ location, onClose, minimal = false }: Locatio
           </div>
         )}
 
-        {location.photos && location.photos.length > 0 && (
+        {location.photos && location.photos.length > 1 && (
           <div className="space-y-2">
-            <h4 className="text-sm font-medium">Photos</h4>
+            <h4 className="text-sm font-medium">Additional Photos</h4>
             <div className="grid grid-cols-2 gap-2">
-              {location.photos.map((photo, index) => (
+              {location.photos.slice(1).map((photo, index) => (
                 <div key={photo} className="aspect-square rounded-lg overflow-hidden border bg-muted">
                   <img
                     src={photo || "/placeholder.svg"}
-                    alt={`${location.name} - Photo ${index + 1}`}
+                    alt={`${location.name} - Photo ${index + 2}`}
                     className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
                     onClick={() => window.open(photo, "_blank")}
                   />

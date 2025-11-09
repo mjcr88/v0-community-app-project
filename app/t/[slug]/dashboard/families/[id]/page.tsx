@@ -251,36 +251,43 @@ export default async function FamilyProfilePage({ params }: { params: Promise<{ 
           </Card>
 
           {familyUnit.pets && familyUnit.pets.length > 0 && (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {familyUnit.pets.map((pet: any) => {
-                const petInitials = pet.name
-                  .split(" ")
-                  .map((word: string) => word[0])
-                  .join("")
-                  .toUpperCase()
-                  .slice(0, 2)
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span>🐾</span>
+                  Family Pets ({familyUnit.pets.length})
+                </CardTitle>
+                <CardDescription>Beloved members of the family</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {familyUnit.pets.map((pet: any) => {
+                    const petInitials = pet.name
+                      .split(" ")
+                      .map((word: string) => word[0])
+                      .join("")
+                      .toUpperCase()
+                      .slice(0, 2)
 
-                return (
-                  <Card key={pet.id}>
-                    <CardContent className="pt-6">
-                      <div className="flex flex-col items-center gap-3 text-center">
-                        <Avatar className="h-16 w-16">
+                    return (
+                      <div key={pet.id} className="flex items-center gap-3 p-3 rounded-lg border bg-card">
+                        <Avatar className="h-12 w-12">
                           <AvatarImage src={pet.profile_picture_url || "/placeholder.svg"} alt={pet.name} />
                           <AvatarFallback>{petInitials}</AvatarFallback>
                         </Avatar>
-                        <div>
-                          <p className="font-semibold">{pet.name}</p>
-                          <p className="text-sm text-muted-foreground">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold truncate">{pet.name}</p>
+                          <p className="text-sm text-muted-foreground truncate">
                             {pet.species}
                             {pet.breed && ` • ${pet.breed}`}
                           </p>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                )
-              })}
-            </div>
+                    )
+                  })}
+                </div>
+              </CardContent>
+            </Card>
           )}
         </div>
       </div>

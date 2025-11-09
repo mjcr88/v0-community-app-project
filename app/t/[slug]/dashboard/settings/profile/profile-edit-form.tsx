@@ -49,7 +49,7 @@ export function ProfileEditForm({
     languages: resident.languages || [],
     preferredLanguage: resident.preferred_language || "",
     photos: resident.photos || [],
-    heroPhotoIndex: resident.hero_photo_index ?? 0,
+    heroPhoto: resident.hero_photo || (resident.photos && resident.photos.length > 0 ? resident.photos[0] : null),
     journeyStage: resident.journey_stage || "",
     estimatedMoveInDate: resident.estimated_move_in_date || "",
     selectedInterests: resident.user_interests?.map((ui: any) => ui.interest_id) || [],
@@ -90,8 +90,8 @@ export function ProfileEditForm({
           languages: formData.languages,
           preferred_language: formData.preferredLanguage || null,
           photos: formData.photos,
-          hero_photo_index: formData.heroPhotoIndex,
-          profile_picture_url: formData.photos[formData.heroPhotoIndex] || null,
+          hero_photo: formData.heroPhoto,
+          profile_picture_url: formData.heroPhoto || null,
           journey_stage: formData.journeyStage || null,
           estimated_move_in_date: formData.estimatedMoveInDate || null,
         })
@@ -191,8 +191,12 @@ export function ProfileEditForm({
     }
   }
 
-  const handlePhotosChange = (photos: string[], heroIndex: number) => {
-    setFormData({ ...formData, photos, heroPhotoIndex: heroIndex })
+  const handlePhotosChange = (photos: string[]) => {
+    setFormData({ ...formData, photos })
+  }
+
+  const handleHeroPhotoChange = (heroPhoto: string | null) => {
+    setFormData({ ...formData, heroPhoto })
   }
 
   const addLanguage = (language: string) => {
@@ -288,16 +292,18 @@ export function ProfileEditForm({
         <CardContent className="space-y-6">
           <div className="flex flex-col items-center gap-4">
             <Avatar className="h-24 w-24">
-              <AvatarImage src={formData.photos[formData.heroPhotoIndex] || "/placeholder.svg"} alt={initials} />
+              <AvatarImage src={formData.heroPhoto || "/placeholder.svg"} alt={initials} />
               <AvatarFallback className="text-2xl">{initials || "?"}</AvatarFallback>
             </Avatar>
           </div>
 
           <PhotoManager
             photos={formData.photos}
-            heroPhotoIndex={formData.heroPhotoIndex}
+            heroPhoto={formData.heroPhoto}
             onPhotosChange={handlePhotosChange}
+            onHeroPhotoChange={handleHeroPhotoChange}
             maxPhotos={10}
+            entityType="user"
           />
 
           <div className="grid gap-4 sm:grid-cols-2">

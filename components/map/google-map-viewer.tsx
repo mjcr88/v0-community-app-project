@@ -50,7 +50,7 @@ export function GoogleMapViewer({
   mapZoom = 15,
   isAdmin = false,
   highlightLocationId,
-  minimal = false, // Add minimal prop with default value
+  minimal = false,
 }: GoogleMapViewerProps) {
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null)
   const [initialHighlightId, setInitialHighlightId] = useState<string | undefined>(highlightLocationId)
@@ -68,6 +68,7 @@ export function GoogleMapViewer({
   const [boundaryLocationsFromTable, setBoundaryLocationsFromTable] = useState<Location[] | null>(null)
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""
+  const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAP_ID
 
   const activeHighlightId = dynamicHighlightId || initialHighlightId
 
@@ -200,6 +201,7 @@ export function GoogleMapViewer({
           center={center}
           zoom={zoom}
           mapTypeId={mapType}
+          {...(mapId ? { mapId } : {})}
           gestureHandling="greedy"
           disableDefaultUI={true}
           zoomControl={false}

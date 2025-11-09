@@ -79,12 +79,13 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
     console.log("[v0] Dashboard locations query:", { count: locations?.length })
 
     allLocations = locations || []
-    lotLocation = locations?.find((loc) => loc.lot_id === resident.lot_id && loc.type === "lot")
+    lotLocation = locations?.find((loc) => loc.lot_id === resident.lot_id && loc.type === "lot" && loc.lot_id !== null)
 
     console.log("[v0] Dashboard lot location:", {
       lotLocation: lotLocation?.name,
       lotLocationId: lotLocation?.id,
       residentLotId: resident.lot_id,
+      locationHasLotId: lotLocation?.lot_id !== null,
     })
   }
 

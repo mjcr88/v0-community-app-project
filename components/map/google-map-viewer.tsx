@@ -31,6 +31,7 @@ interface Location {
   icon?: string | null
   facility_type?: string | null
   photos?: string[] | null
+  lot_id?: string // New property added for lot_id
 }
 
 interface GoogleMapViewerProps {
@@ -85,9 +86,10 @@ export function GoogleMapViewer({
     if (initialHighlightId) {
       const location = initialLocations.find((loc) => loc.id === initialHighlightId)
       if (location) {
-        console.log("[v0] Auto-selecting initial highlight:", location.name)
+        const hasLotId = location.type === "lot" && location.lot_id
+        console.log("[v0] Auto-selecting initial highlight:", location.name, "has lot_id:", hasLotId)
 
-        if (!minimal) {
+        if (!minimal && hasLotId) {
           setSelectedLocation(location)
         }
 

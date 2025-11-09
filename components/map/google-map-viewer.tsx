@@ -53,7 +53,7 @@ export function GoogleMapViewer({
   minimal = false, // Add minimal prop with default value
 }: GoogleMapViewerProps) {
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null)
-  const [highlightedLocationId, setHighlightedLocationId] = useState<string | undefined>(highlightLocationId)
+  const [highlightedLocationId, setHighlightedLocationId] = useState<string | undefined>(undefined)
   const [center, setCenter] = useState<{ lat: number; lng: number }>(mapCenter || { lat: 9.9567, lng: -84.5333 })
   const [zoom, setZoom] = useState(mapZoom)
   const [mapType, setMapType] = useState<"roadmap" | "satellite" | "terrain">("satellite")
@@ -73,15 +73,17 @@ export function GoogleMapViewer({
     "[v0] Location types:",
     initialLocations.map((l) => l.type),
   )
-  console.log("[v0] GoogleMapViewer highlightLocationId:", highlightLocationId)
+  console.log("[v0] GoogleMapViewer highlightLocationId prop:", highlightLocationId)
 
   useEffect(() => {
-    if (highlightLocationId && !minimal) {
+    if (highlightLocationId) {
       setHighlightedLocationId(highlightLocationId)
       const location = initialLocations.find((loc) => loc.id === highlightLocationId)
       if (location) {
         console.log("[v0] Auto-selecting highlighted location:", location.name)
-        setSelectedLocation(location)
+        if (!minimal) {
+          setSelectedLocation(location)
+        }
 
         if (location.coordinates) {
           setCenter(location.coordinates)
@@ -98,22 +100,6 @@ export function GoogleMapViewer({
           setZoom(17)
         }
       }
-    } else if (highlightLocationId && minimal) {
-      setHighlightedLocationId(highlightLocationId)
-      const location = initialLocations.find((loc) => loc.id === highlightLocationId)
-      if (location) {
-        if (location.coordinates) {
-          setCenter(location.coordinates)
-          setZoom(17)
-        } else if (location.boundary_coordinates && location.boundary_coordinates.length > 0) {
-          const lats = location.boundary_coordinates.map((c) => c[0])
-          const lngs = location.boundary_coordinates.map((c) => c[1])
-          const centerLat = lats.reduce((a, b) => a + b, 0) / lats.length
-          const centerLng = lngs.reduce((a, b) => a + b, 0) / lngs.length
-          setCenter({ lat: centerLat, lng: centerLng })
-          setZoom(17)
-        }
-      }
     }
   }, []) // Only run once on mount
 
@@ -127,13 +113,9 @@ export function GoogleMapViewer({
         .single()
 
       console.log("[v0] Tenant boundary data:", tenant)
-      console.log("[v0] Tenant boundary coordinates:", tenant?.map_boundary_coordinates)
 
       if (tenant?.map_boundary_coordinates) {
         setTenantBoundary(tenant.map_boundary_coordinates as Array<{ lat: number; lng: number }>)
-        console.log("[v0] Tenant boundary set:", tenant.map_boundary_coordinates)
-      } else {
-        console.log("[v0] No tenant boundary found")
       }
 
       const { data: boundaryLocations } = await supabase
@@ -143,15 +125,6 @@ export function GoogleMapViewer({
         .eq("tenant_id", tenant?.id || "")
 
       console.log("[v0] Boundary locations from table:", boundaryLocations?.length || 0)
-      if (boundaryLocations && boundaryLocations.length > 0) {
-        console.log("[v0] First boundary location:", {
-          id: boundaryLocations[0].id,
-          name: boundaryLocations[0].name,
-          hasCoordinates: !!boundaryLocations[0].boundary_coordinates,
-          coordinateCount: boundaryLocations[0].boundary_coordinates?.length || 0,
-          firstCoord: boundaryLocations[0].boundary_coordinates?.[0],
-        })
-      }
       setBoundaryLocationsFromTable(boundaryLocations)
     }
 
@@ -184,17 +157,20 @@ export function GoogleMapViewer({
   console.log("[v0] Filtered neighborhoods:", neighborhoodPolygons.length)
 
   const handleMapClick = () => {
-    console.log("[v0] Map clicked, clearing selection")
-    console.log("[v0] Previous highlightedLocationId:", highlightedLocationId)
-    setHighlightedLocationId(undefined)
-    setSelectedLocation(null)
+    if (!minimal) {
+      console.log("[v0] Map clicked, clearing selection and highlight")
+      setHighlightedLocationId(undefined)
+      setSelectedLocation(null)
+    }
   }
 
   const handleLocationClick = (location: Location) => {
-    console.log("[v0] Location clicked:", location.name, location.id)
-    console.log("[v0] Previous highlightedLocationId:", highlightedLocationId)
-    setHighlightedLocationId(location.id)
-    setSelectedLocation(location)
+    if (!minimal) {
+      console.log("[v0] Location clicked:", location.name, location.id)
+      console.log("[v0] Setting new highlight:", location.id)
+      setHighlightedLocationId(location.id)
+      setSelectedLocation(location)
+    }
   }
 
   const convertCoordinates = (coords: [number, number][]) => {

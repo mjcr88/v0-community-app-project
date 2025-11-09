@@ -22,6 +22,7 @@ interface LocationInfoCardProps {
     lot_id?: string | null
   }
   onClose: () => void
+  minimal?: boolean // Added minimal prop
 }
 
 interface Resident {
@@ -47,7 +48,7 @@ interface Pet {
   profile_picture_url?: string | null
 }
 
-export function LocationInfoCard({ location, onClose }: LocationInfoCardProps) {
+export function LocationInfoCard({ location, onClose, minimal = false }: LocationInfoCardProps) {
   console.log("[v0] LocationInfoCard rendering for location:", location.name, location.id)
   console.log("[v0] Location data:", {
     type: location.type,
@@ -196,12 +197,19 @@ export function LocationInfoCard({ location, onClose }: LocationInfoCardProps) {
     }
   }
 
+  const cardClasses = minimal ? "w-80 max-h-[400px]" : "w-80 max-h-[600px]"
+  const avatarSize = minimal ? "h-8 w-8" : "h-10 w-10"
+  const titleSize = minimal ? "text-sm" : "text-base"
+  const textSize = minimal ? "text-xs" : "text-sm"
+  const spacing = minimal ? "space-y-2" : "space-y-3"
+  const padding = minimal ? "p-2" : "p-3"
+
   return (
-    <Card className="w-80 max-h-[600px] flex flex-col shadow-xl border-2">
+    <Card className={`${cardClasses} flex flex-col shadow-xl border-2`}>
       <CardHeader className="pb-3 shrink-0">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <CardTitle className="text-lg flex items-center gap-2">
+            <CardTitle className={`${titleSize} flex items-center gap-2`}>
               {location.icon && <span className="text-xl">{location.icon}</span>}
               <span className="truncate">{location.name}</span>
             </CardTitle>
@@ -221,29 +229,29 @@ export function LocationInfoCard({ location, onClose }: LocationInfoCardProps) {
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="space-y-3 overflow-y-auto">
+      <CardContent className={`${spacing} overflow-y-auto`}>
         {location.description && (
           <div>
-            <p className="text-sm text-muted-foreground leading-relaxed">{location.description}</p>
+            <p className={`${textSize} text-muted-foreground leading-relaxed`}>{location.description}</p>
           </div>
         )}
 
         {neighborhood && (
-          <div className="flex items-center gap-2 p-2 bg-purple-50 border border-purple-200 rounded-lg">
+          <div className={`flex items-center gap-2 ${padding} bg-purple-50 border border-purple-200 rounded-lg`}>
             <MapPin className="h-4 w-4 text-purple-600 shrink-0" />
             <div className="min-w-0 flex-1">
-              <p className="text-xs text-purple-700 font-medium">Neighborhood</p>
-              <p className="text-sm text-purple-900 truncate">{neighborhood.name}</p>
+              <p className={`${textSize} text-purple-700 font-medium`}>Neighborhood</p>
+              <p className={`${titleSize} text-purple-900 truncate`}>{neighborhood.name}</p>
             </div>
           </div>
         )}
 
         {lot && (
-          <div className="flex items-center gap-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className={`flex items-center gap-2 ${padding} bg-blue-50 border border-blue-200 rounded-lg`}>
             <Home className="h-4 w-4 text-blue-600 shrink-0" />
             <div className="min-w-0 flex-1">
-              <p className="text-xs text-blue-700 font-medium">Lot</p>
-              <p className="text-sm text-blue-900 truncate">Lot #{lot.lot_number}</p>
+              <p className={`${textSize} text-blue-700 font-medium`}>Lot</p>
+              <p className={`${titleSize} text-blue-900 truncate`}>Lot #{lot.lot_number}</p>
             </div>
           </div>
         )}
@@ -251,16 +259,16 @@ export function LocationInfoCard({ location, onClose }: LocationInfoCardProps) {
         {familyUnit && (
           <Link
             href={`/t/${tenantSlug}/dashboard/families/${familyUnit.id}`}
-            className="block p-3 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 hover:border-amber-300 transition-colors"
+            className={`block ${padding} bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 hover:border-amber-300 transition-colors`}
           >
             <div className="flex items-center gap-3">
-              <Avatar className="h-12 w-12 shrink-0">
+              <Avatar className={avatarSize}>
                 <AvatarImage
                   src={familyUnit.profile_picture_url || undefined}
                   alt={familyUnit.name}
                   className="object-cover"
                 />
-                <AvatarFallback className="bg-amber-200 text-amber-900 text-sm font-semibold">
+                <AvatarFallback className={`bg-amber-200 text-amber-900 ${textSize} font-semibold`}>
                   {familyUnit.name
                     ?.split(" ")
                     .map((n) => n[0])
@@ -270,47 +278,47 @@ export function LocationInfoCard({ location, onClose }: LocationInfoCardProps) {
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-amber-900 truncate">{familyUnit.name}</p>
-                <p className="text-xs text-amber-700">
+                <p className={`${titleSize} font-semibold text-amber-900 truncate`}>{familyUnit.name}</p>
+                <p className={`${textSize} text-amber-700`}>
                   {residents.length} member{residents.length !== 1 ? "s" : ""}
                 </p>
-                <p className="text-xs text-amber-600 mt-1">View family profile →</p>
+                <p className={`${textSize} text-amber-600 mt-1`}>View family profile →</p>
               </div>
             </div>
           </Link>
         )}
 
         {residents.length > 0 && (
-          <div className="p-3 bg-green-50 border border-green-200 rounded-lg space-y-2">
+          <div className={`${padding} bg-green-50 border border-green-200 rounded-lg ${spacing}`}>
             <div className="flex items-center gap-2">
               <Users className="h-4 w-4 text-green-600 shrink-0" />
-              <p className="text-xs text-green-700 font-medium">
+              <p className={`${textSize} text-green-700 font-medium`}>
                 {familyUnit ? "Family Members" : `Residents (${residents.length})`}
               </p>
             </div>
-            <div className="space-y-2">
+            <div className={spacing}>
               {residents.map((resident) => (
                 <Link
                   key={resident.id}
                   href={`/t/${tenantSlug}/dashboard/neighbours/${resident.id}`}
-                  className="flex items-center gap-3 p-2 bg-white rounded-lg border border-green-200 hover:bg-green-50 hover:border-green-300 transition-colors"
+                  className={`flex items-center gap-3 ${padding} bg-white rounded-lg border border-green-200 hover:bg-green-50 hover:border-green-300 transition-colors`}
                 >
-                  <Avatar className="h-10 w-10 shrink-0">
+                  <Avatar className={avatarSize}>
                     <AvatarImage
                       src={resident.profile_picture_url || undefined}
                       alt={resident.first_name}
                       className="object-cover"
                     />
-                    <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                    <AvatarFallback className={`bg-primary/10 text-primary ${textSize}`}>
                       {resident.first_name?.[0]}
                       {resident.last_name?.[0]}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">
+                    <p className={`${titleSize} font-medium text-gray-900 truncate`}>
                       {resident.first_name} {resident.last_name}
                     </p>
-                    <p className="text-xs text-gray-500">View profile →</p>
+                    <p className={`${textSize} text-gray-500`}>View profile →</p>
                   </div>
                 </Link>
               ))}
@@ -319,12 +327,12 @@ export function LocationInfoCard({ location, onClose }: LocationInfoCardProps) {
         )}
 
         {pets.length > 0 && (
-          <div className="p-3 bg-pink-50 border border-pink-200 rounded-lg space-y-2">
+          <div className={`${padding} bg-pink-50 border border-pink-200 rounded-lg ${spacing}`}>
             <div className="flex items-center gap-2">
               <span className="text-base">🐾</span>
-              <p className="text-xs text-pink-700 font-medium">Family Pets ({pets.length})</p>
+              <p className={`${textSize} text-pink-700 font-medium`}>Family Pets ({pets.length})</p>
             </div>
-            <div className="space-y-2">
+            <div className={spacing}>
               {pets.map((pet) => {
                 const petInitials = pet.name
                   .split(" ")
@@ -334,18 +342,21 @@ export function LocationInfoCard({ location, onClose }: LocationInfoCardProps) {
                   .slice(0, 2)
 
                 return (
-                  <div key={pet.id} className="flex items-center gap-3 p-2 bg-white rounded-lg border border-pink-200">
-                    <Avatar className="h-10 w-10 shrink-0">
+                  <div
+                    key={pet.id}
+                    className={`flex items-center gap-3 ${padding} bg-white rounded-lg border border-pink-200`}
+                  >
+                    <Avatar className={avatarSize}>
                       <AvatarImage
                         src={pet.profile_picture_url || "/placeholder.svg"}
                         alt={pet.name}
                         className="object-cover"
                       />
-                      <AvatarFallback className="bg-pink-100 text-pink-700 text-xs">{petInitials}</AvatarFallback>
+                      <AvatarFallback className={`bg-pink-100 text-pink-700 ${textSize}`}>{petInitials}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{pet.name}</p>
-                      <p className="text-xs text-gray-500 truncate">{pet.species}</p>
+                      <p className={`${titleSize} font-medium text-gray-900 truncate`}>{pet.name}</p>
+                      <p className={`${textSize} text-gray-500 truncate`}>{pet.species}</p>
                     </div>
                   </div>
                 )

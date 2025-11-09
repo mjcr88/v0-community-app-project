@@ -158,6 +158,11 @@ export default async function ResidentCommunityMapPage({
     }
   }
 
+  const userLotLocation = resident?.lot_id && locations ? locations.find((loc) => loc.lot_id === resident.lot_id) : null
+
+  // Only pass highlightLocationId if location has valid lot_id
+  const highlightLocationId = userLotLocation?.lot_id ? userLotLocation.id : undefined
+
   return (
     <div className="space-y-8">
       <div>
@@ -183,10 +188,11 @@ export default async function ResidentCommunityMapPage({
         <CardContent>
           <div className="h-[400px] rounded-lg overflow-hidden border">
             <GoogleMapViewer
-              tenantSlug={slug}
-              initialLocations={locations || []}
+              locations={locations || []}
+              tenantId={tenant.id}
               mapCenter={mapCenter}
               mapZoom={14}
+              highlightLocationId={highlightLocationId}
               minimal={false}
             />
           </div>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { APIProvider, Map, Marker } from "@vis.gl/react-google-maps"
 import { Button } from "@/components/ui/button"
 import { Plus, Locate, Layers, Filter } from "lucide-react"
@@ -31,22 +31,24 @@ interface Location {
   icon?: string | null
   facility_type?: string | null
   photos?: string[] | null
-  lot_id?: string // New property added for lot_id
+  lot_id?: string | null
+  neighborhood_id?: string | null
+  tenant_id?: string
 }
 
 interface GoogleMapViewerProps {
-  tenantSlug: string
-  initialLocations: Location[]
+  locations: Location[]
+  tenantId: string
   mapCenter?: { lat: number; lng: number } | null
   mapZoom?: number
   isAdmin?: boolean
   highlightLocationId?: string
-  minimal?: boolean // Add minimal prop for preview mode
+  minimal?: boolean
 }
 
-export function GoogleMapViewer({
-  tenantSlug,
-  initialLocations,
+export const GoogleMapViewer = React.memo(function GoogleMapViewer({
+  locations: initialLocations,
+  tenantId,
   mapCenter,
   mapZoom = 15,
   isAdmin = false,
@@ -54,7 +56,7 @@ export function GoogleMapViewer({
   minimal = false,
 }: GoogleMapViewerProps) {
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null)
-  const [initialHighlightId, setInitialHighlightId] = useState<string | undefined>(highlightLocationId)
+  const [initialHighlightId] = useState<string | undefined>(highlightLocationId)
   const [dynamicHighlightId, setDynamicHighlightId] = useState<string | undefined>(undefined)
   const [center, setCenter] = useState<{ lat: number; lng: number }>(mapCenter || { lat: 9.9567, lng: -84.5333 })
   const [zoom, setZoom] = useState(mapZoom)
@@ -69,18 +71,16 @@ export function GoogleMapViewer({
   const [boundaryLocationsFromTable, setBoundaryLocationsFromTable] = useState<Location[] | null>(null)
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""
-  // const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAP_ID
 
   const activeHighlightId = dynamicHighlightId || initialHighlightId
 
-  console.log("[v0] GoogleMapViewer received locations:", initialLocations.length)
-  console.log(
-    "[v0] Location types:",
-    initialLocations.map((l) => l.type),
-  )
-  console.log("[v0] Initial highlight from prop:", highlightLocationId)
-  console.log("[v0] Dynamic highlight state:", dynamicHighlightId)
-  console.log("[v0] Active highlight:", activeHighlightId)
+  useEffect(() => {
+    console.log("[v0] GoogleMapViewer mounted with:", {
+      locationsCount: initialLocations.length,
+      highlightLocationId,
+      minimal,
+    })
+  }, [])
 
   useEffect(() => {
     if (initialHighlightId) {
@@ -116,11 +116,9 @@ export function GoogleMapViewer({
       const supabase = createBrowserClient()
       const { data: tenant } = await supabase
         .from("tenants")
-        .select("map_boundary_coordinates, id")
-        .eq("slug", tenantSlug)
+        .select("map_boundary_coordinates")
+        .eq("id", tenantId)
         .single()
-
-      console.log("[v0] Tenant boundary data:", tenant)
 
       if (tenant?.map_boundary_coordinates) {
         setTenantBoundary(tenant.map_boundary_coordinates as Array<{ lat: number; lng: number }>)
@@ -130,63 +128,80 @@ export function GoogleMapViewer({
         .from("locations")
         .select("*")
         .eq("type", "boundary")
-        .eq("tenant_id", tenant?.id || "")
+        .eq("tenant_id", tenantId)
 
-      console.log("[v0] Boundary locations from table:", boundaryLocations?.length || 0)
       setBoundaryLocationsFromTable(boundaryLocations)
     }
 
     loadTenantBoundary()
-  }, [tenantSlug])
+  }, [tenantId])
 
-  const facilityMarkers = initialLocations.filter((loc) => showFacilities && loc.type === "facility" && loc.coordinates)
-  const facilityPolygons = initialLocations.filter(
-    (loc) => showFacilities && loc.type === "facility" && loc.boundary_coordinates,
+  const facilityMarkers = useMemo(
+    () => initialLocations.filter((loc) => showFacilities && loc.type === "facility" && loc.coordinates),
+    [initialLocations, showFacilities],
   )
-  const facilityPolylines = initialLocations.filter(
-    (loc) => showFacilities && loc.type === "facility" && loc.path_coordinates,
+  const facilityPolygons = useMemo(
+    () => initialLocations.filter((loc) => showFacilities && loc.type === "facility" && loc.boundary_coordinates),
+    [initialLocations, showFacilities],
   )
-  const lotPolygons = initialLocations.filter((loc) => showLots && loc.type === "lot" && loc.boundary_coordinates)
-  const lotPolylines = initialLocations.filter((loc) => showLots && loc.type === "lot" && loc.path_coordinates)
-  const walkingPaths = initialLocations.filter(
-    (loc) => showWalkingPaths && loc.type === "walking_path" && loc.path_coordinates,
+  const facilityPolylines = useMemo(
+    () => initialLocations.filter((loc) => showFacilities && loc.type === "facility" && loc.path_coordinates),
+    [initialLocations, showFacilities],
   )
-  const neighborhoodPolygons = initialLocations.filter(
-    (loc) => showNeighborhoods && loc.type === "neighborhood" && loc.boundary_coordinates,
+  const lotPolygons = useMemo(
+    () => initialLocations.filter((loc) => showLots && loc.type === "lot" && loc.boundary_coordinates),
+    [initialLocations, showLots],
   )
-  const boundaryLocations = initialLocations.filter(
-    (loc) => showBoundary && loc.type === "boundary" && loc.boundary_coordinates,
+  const lotPolylines = useMemo(
+    () => initialLocations.filter((loc) => showLots && loc.type === "lot" && loc.path_coordinates),
+    [initialLocations, showLots],
   )
-  const publicStreetPolylines = initialLocations.filter((loc) => loc.type === "public_street" && loc.path_coordinates)
-  const publicStreetPolygons = initialLocations.filter(
-    (loc) => loc.type === "public_street" && loc.boundary_coordinates,
+  const walkingPaths = useMemo(
+    () => initialLocations.filter((loc) => showWalkingPaths && loc.type === "walking_path" && loc.path_coordinates),
+    [initialLocations, showWalkingPaths],
+  )
+  const neighborhoodPolygons = useMemo(
+    () =>
+      initialLocations.filter((loc) => showNeighborhoods && loc.type === "neighborhood" && loc.boundary_coordinates),
+    [initialLocations, showNeighborhoods],
+  )
+  const boundaryLocations = useMemo(
+    () => initialLocations.filter((loc) => showBoundary && loc.type === "boundary" && loc.boundary_coordinates),
+    [initialLocations, showBoundary],
+  )
+  const publicStreetPolylines = useMemo(
+    () => initialLocations.filter((loc) => loc.type === "public_street" && loc.path_coordinates),
+    [initialLocations],
+  )
+  const publicStreetPolygons = useMemo(
+    () => initialLocations.filter((loc) => loc.type === "public_street" && loc.boundary_coordinates),
+    [initialLocations],
   )
 
-  console.log("[v0] Filtered neighborhoods:", neighborhoodPolygons.length)
-
-  const handleMapClick = () => {
+  const handleMapClick = useCallback(() => {
     if (!minimal) {
-      console.log("[v0] Map clicked, clearing dynamic highlight")
       setDynamicHighlightId(undefined)
       setSelectedLocation(null)
     }
-  }
+  }, [minimal])
 
-  const handleLocationClick = (location: Location) => {
-    if (!minimal) {
-      console.log("[v0] Location clicked:", location.name, location.id)
-      console.log("[v0] Setting dynamic highlight to:", location.id)
-      setDynamicHighlightId(location.id)
-      setSelectedLocation(location)
-    }
-  }
+  const handleLocationClick = useCallback(
+    (location: Location) => {
+      if (!minimal) {
+        console.log("[v0] Location clicked:", location.name, location.id)
+        setDynamicHighlightId(location.id)
+        setSelectedLocation(location)
+      }
+    },
+    [minimal],
+  )
 
-  const convertCoordinates = (coords: [number, number][]) => {
+  const convertCoordinates = useCallback((coords: [number, number][]) => {
     return coords.map((coord) => ({
       lat: coord[0],
       lng: coord[1],
     }))
-  }
+  }, [])
 
   if (!apiKey) {
     return (
@@ -211,10 +226,7 @@ export function GoogleMapViewer({
           restriction={undefined}
           mapId={undefined}
           onCenterChanged={(e) => setCenter(e.detail.center)}
-          onZoomChanged={(e) => {
-            console.log("[v0] Zoom changed to:", e.detail.zoom)
-            setZoom(e.detail.zoom)
-          }}
+          onZoomChanged={(e) => setZoom(e.detail.zoom)}
           onClick={handleMapClick}
         >
           {showBoundary && tenantBoundary && (
@@ -593,7 +605,7 @@ export function GoogleMapViewer({
 
       {selectedLocation && !minimal && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
-          <LocationInfoCard location={selectedLocation} onClose={() => setSelectedLocation(null)} />
+          <LocationInfoCard location={selectedLocation} onClose={() => setSelectedLocation(null)} minimal={minimal} />
         </div>
       )}
 
@@ -621,7 +633,7 @@ export function GoogleMapViewer({
       {isAdmin && (
         <div className="absolute bottom-3 left-3 z-10">
           <Button asChild size="icon" className="shadow-lg h-10 w-10">
-            <Link href={`/t/${tenantSlug}/admin/map/locations/create`}>
+            <Link href={`/t/${tenantId}/admin/map/locations/create`}>
               <Plus className="h-5 w-5" />
             </Link>
           </Button>
@@ -677,4 +689,4 @@ export function GoogleMapViewer({
       </div>
     </div>
   )
-}
+})

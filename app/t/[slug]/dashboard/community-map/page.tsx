@@ -146,46 +146,50 @@ export default async function ResidentCommunityMapPage({
         <p className="text-muted-foreground">Explore locations and facilities in your community</p>
       </div>
 
-      <Link href={`/t/${slug}/dashboard/map`}>
-        <Card className="cursor-pointer hover:bg-accent/50 transition-colors">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Interactive Community Map</CardTitle>
-                <CardDescription>Click to view the full interactive map</CardDescription>
-              </div>
-              <Map className="h-5 w-5 text-muted-foreground" />
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Interactive Community Map</CardTitle>
+              <CardDescription>Zoom, click locations, and explore the map below</CardDescription>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[400px] rounded-lg overflow-hidden border" onClick={(e) => e.preventDefault()}>
-              <GoogleMapViewer
-                tenantSlug={slug}
-                initialLocations={locations || []}
-                mapCenter={mapCenter}
-                mapZoom={14}
-                minimal={true}
-              />
-            </div>
-          </CardContent>
-        </Card>
-      </Link>
+            <Link href={`/t/${slug}/dashboard/map`}>
+              <button className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors">
+                <Map className="h-4 w-4" />
+                View Full Map
+              </button>
+            </Link>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[400px] rounded-lg overflow-hidden border">
+            <GoogleMapViewer
+              tenantSlug={slug}
+              initialLocations={locations || []}
+              mapCenter={mapCenter}
+              mapZoom={14}
+              minimal={false}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Location Type Cards with client-side filtering */}
-      <CommunityMapClient
-        counts={{
-          facilities: facilitiesCount || 0,
-          lots: lotsCount || 0,
-          neighborhoods: neighborhoodsCount || 0,
-          walkingPaths: pathsCount || 0,
-          protectionZones: protectionZonesCount || 0,
-          easements: easementsCount || 0,
-          playgrounds: playgroundsCount || 0,
-          publicStreets: publicStreetsCount || 0,
-          greenAreas: greenAreasCount || 0,
-          recreationalZones: recreationalZonesCount || 0,
-        }}
-      />
+      <div className="pt-4">
+        <CommunityMapClient
+          counts={{
+            facilities: facilitiesCount || 0,
+            lots: lotsCount || 0,
+            neighborhoods: neighborhoodsCount || 0,
+            walkingPaths: pathsCount || 0,
+            protectionZones: protectionZonesCount || 0,
+            easements: easementsCount || 0,
+            playgrounds: playgroundsCount || 0,
+            publicStreets: publicStreetsCount || 0,
+            greenAreas: greenAreasCount || 0,
+            recreationalZones: recreationalZonesCount || 0,
+          }}
+        />
+      </div>
 
       {/* Locations Table */}
       <ResidentLocationsTable locations={locations || []} tenantSlug={slug} initialTypeFilter={initialTypeFilter} />

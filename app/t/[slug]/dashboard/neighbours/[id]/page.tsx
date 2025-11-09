@@ -147,6 +147,8 @@ export default async function PublicProfilePage({
     show_phone: filteredResident.show_phone,
   })
 
+  const { data: pets } = await supabase.from("pets").select("*").eq("family_unit_id", resident.family_unit_id)
+
   const initials = [filteredResident.first_name, filteredResident.last_name]
     .filter(Boolean)
     .map((n) => n![0])
@@ -379,6 +381,43 @@ export default async function PublicProfilePage({
                       )}
                     </div>
                   ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {pets && pets.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Family Pets</CardTitle>
+                <CardDescription>
+                  {pets.length} pet{pets.length === 1 ? "" : "s"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {pets.map((pet) => {
+                    const petInitials = pet.name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")
+                      .toUpperCase()
+
+                    return (
+                      <div key={pet.id} className="flex items-center gap-3 rounded-lg border p-3">
+                        <Avatar className="h-12 w-12">
+                          <AvatarImage src={pet.profile_picture_url || undefined} alt={pet.name} />
+                          <AvatarFallback>{petInitials}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{pet.name}</p>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {pet.breed ? `${pet.species} • ${pet.breed}` : pet.species}
+                          </p>
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               </CardContent>
             </Card>

@@ -176,6 +176,7 @@ export function ResidentLocationsTable({ locations, tenantSlug, initialTypeFilte
                   </SelectContent>
                 </Select>
               </TableCell>
+              <TableCell />
               <TableCell>
                 <Input
                   placeholder="Filter description..."

@@ -88,7 +88,7 @@ export default async function ResidentMapPage({
     }
   }
 
-  let calculatedZoom = 15
+  let calculatedZoom = 12
   if (boundaryLocation?.boundary_coordinates && boundaryLocation.boundary_coordinates.length > 0) {
     const lats = boundaryLocation.boundary_coordinates.map((c) => c[0])
     const lngs = boundaryLocation.boundary_coordinates.map((c) => c[1])
@@ -96,10 +96,10 @@ export default async function ResidentMapPage({
     const lngDiff = Math.max(...lngs) - Math.min(...lngs)
     const maxDiff = Math.max(latDiff, lngDiff)
 
-    // Calculate zoom based on coordinate span
-    if (maxDiff > 0.01) calculatedZoom = 13
-    else if (maxDiff > 0.005) calculatedZoom = 14
-    else calculatedZoom = 15
+    // Calculate zoom based on coordinate span - lower zoom for wider view
+    if (maxDiff > 0.01) calculatedZoom = 12
+    else if (maxDiff > 0.005) calculatedZoom = 13
+    else calculatedZoom = 14
   }
 
   return (

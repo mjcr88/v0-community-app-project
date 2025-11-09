@@ -49,6 +49,8 @@ export function FamilyManagementForm({
   const [isLoading, setIsLoading] = useState(false)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const [uploadingPetPhoto, setUploadingPetPhoto] = useState<string | null>(null)
+  const [pendingFamilyPhoto, setPendingFamilyPhoto] = useState<string | null>(null)
+  const [pendingPetPhotos, setPendingPetPhotos] = useState<Record<string, string>>({})
   const [familyMembers, setFamilyMembers] = useState(initialFamilyMembers)
   const [relationships, setRelationships] = useState<Record<string, string>>(
     initialRelationships.reduce((acc, rel) => ({ ...acc, [rel.related_user_id]: rel.relationship_type }), {}),
@@ -192,16 +194,8 @@ export function FamilyManagementForm({
 
         const { url } = await response.json()
 
-        const supabase = createClient()
-        const { error } = await supabase
-          .from("family_units")
-          .update({ profile_picture_url: url })
-          .eq("id", familyUnit.id)
-
-        if (error) throw error
-
+        setPendingFamilyPhoto(url)
         setFamilyProfile({ ...familyProfile, profilePictureUrl: url })
-        router.refresh()
       } catch (error) {
         console.error("[v0] Error uploading family photo:", error)
         alert("Failed to upload photo. Please try again.")
@@ -212,22 +206,24 @@ export function FamilyManagementForm({
     input.click()
   }
 
-  const handleUpdateFamilyDescription = async () => {
-    setIsLoading(true)
-    const supabase = createClient()
+  const handleSaveFamilyPhoto = async () => {
+    if (!pendingFamilyPhoto) return
 
+    setIsLoading(true)
     try {
+      const supabase = createClient()
       const { error } = await supabase
         .from("family_units")
-        .update({ description: familyProfile.description })
+        .update({ profile_picture_url: pendingFamilyPhoto })
         .eq("id", familyUnit.id)
 
       if (error) throw error
 
+      setPendingFamilyPhoto(null)
       router.refresh()
     } catch (error) {
-      console.error("[v0] Error updating family description:", error)
-      alert("Failed to update family description. Please try again.")
+      console.error("[v0] Error saving family photo:", error)
+      alert("Failed to save photo. Please try again.")
     } finally {
       setIsLoading(false)
     }
@@ -255,13 +251,8 @@ export function FamilyManagementForm({
 
         const { url } = await response.json()
 
-        const supabase = createClient()
-        const { error } = await supabase.from("pets").update({ profile_picture_url: url }).eq("id", petId)
-
-        if (error) throw error
-
+        setPendingPetPhotos({ ...pendingPetPhotos, [petId]: url })
         setPets(pets.map((p) => (p.id === petId ? { ...p, profile_picture_url: url } : p)))
-        router.refresh()
       } catch (error) {
         console.error("[v0] Error uploading pet photo:", error)
         alert("Failed to upload photo. Please try again.")
@@ -270,6 +261,29 @@ export function FamilyManagementForm({
       }
     }
     input.click()
+  }
+
+  const handleSavePetPhoto = async (petId: string) => {
+    const photoUrl = pendingPetPhotos[petId]
+    if (!photoUrl) return
+
+    setIsLoading(true)
+    try {
+      const supabase = createClient()
+      const { error } = await supabase.from("pets").update({ profile_picture_url: photoUrl }).eq("id", petId)
+
+      if (error) throw error
+
+      const newPending = { ...pendingPetPhotos }
+      delete newPending[petId]
+      setPendingPetPhotos(newPending)
+      router.refresh()
+    } catch (error) {
+      console.error("[v0] Error saving pet photo:", error)
+      alert("Failed to save photo. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const availableLotResidents = lotResidents.filter((r) => !familyMembers.some((fm) => fm.id === r.id))
@@ -281,6 +295,27 @@ export function FamilyManagementForm({
       .join("")
       .toUpperCase()
       .slice(0, 2) || "?"
+
+  const handleUpdateFamilyDescription = async () => {
+    setIsLoading(true)
+    const supabase = createClient()
+
+    try {
+      const { error } = await supabase
+        .from("family_units")
+        .update({ description: familyProfile.description })
+        .eq("id", familyUnit.id)
+
+      if (error) throw error
+
+      router.refresh()
+    } catch (error) {
+      console.error("[v0] Error updating family description:", error)
+      alert("Failed to update description. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -299,25 +334,39 @@ export function FamilyManagementForm({
                 <AvatarImage src={familyProfile.profilePictureUrl || "/placeholder.svg"} alt={familyInitials} />
                 <AvatarFallback className="text-2xl">{familyInitials}</AvatarFallback>
               </Avatar>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleFamilyPhotoUpload}
-                disabled={uploadingPhoto}
-              >
-                {uploadingPhoto ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Uploading...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="mr-2 h-4 w-4" />
-                    Upload Family Photo
-                  </>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleFamilyPhotoUpload}
+                  disabled={uploadingPhoto}
+                >
+                  {uploadingPhoto ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Upload Photo
+                    </>
+                  )}
+                </Button>
+                {pendingFamilyPhoto && (
+                  <Button type="button" size="sm" onClick={handleSaveFamilyPhoto} disabled={isLoading}>
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      "Save Photo"
+                    )}
+                  </Button>
                 )}
-              </Button>
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -507,34 +556,53 @@ export function FamilyManagementForm({
                               {pet.breed && ` • ${pet.breed}`}
                             </p>
                           </div>
-                          <div className="flex gap-2 w-full">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handlePetPhotoUpload(pet.id)}
-                              disabled={uploadingPetPhoto === pet.id}
-                              className="flex-1"
-                            >
-                              {uploadingPetPhoto === pet.id ? (
-                                <>
-                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                  Uploading...
-                                </>
-                              ) : (
-                                <>
-                                  <Upload className="mr-2 h-4 w-4" />
-                                  Photo
-                                </>
-                              )}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeletePet(pet.id)}
-                              disabled={isLoading}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                          <div className="flex flex-col gap-2 w-full">
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handlePetPhotoUpload(pet.id)}
+                                disabled={uploadingPetPhoto === pet.id}
+                                className="flex-1"
+                              >
+                                {uploadingPetPhoto === pet.id ? (
+                                  <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Uploading...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Upload className="mr-2 h-4 w-4" />
+                                    Upload Photo
+                                  </>
+                                )}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeletePet(pet.id)}
+                                disabled={isLoading}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            {pendingPetPhotos[pet.id] && (
+                              <Button
+                                size="sm"
+                                onClick={() => handleSavePetPhoto(pet.id)}
+                                disabled={isLoading}
+                                className="w-full"
+                              >
+                                {isLoading ? (
+                                  <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Saving...
+                                  </>
+                                ) : (
+                                  "Save Photo"
+                                )}
+                              </Button>
+                            )}
                           </div>
                         </div>
                       </CardContent>

@@ -178,6 +178,16 @@ export function NeighboursTable({
     sortDirection,
   ])
 
+  console.log(
+    "[v0] NeighboursTable residents with lots:",
+    residents.map((r) => ({
+      name: `${r.first_name} ${r.last_name}`,
+      lotId: r.lots?.id,
+      lotNumber: r.lots?.lot_number,
+      hasLot: !!r.lots?.id,
+    })),
+  )
+
   return (
     <div className="space-y-4">
       <div className="relative">

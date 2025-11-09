@@ -53,7 +53,8 @@ export function GoogleMapViewer({
   minimal = false, // Add minimal prop with default value
 }: GoogleMapViewerProps) {
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null)
-  const [highlightedLocationId, setHighlightedLocationId] = useState<string | undefined>(undefined)
+  const [initialHighlightId, setInitialHighlightId] = useState<string | undefined>(highlightLocationId)
+  const [dynamicHighlightId, setDynamicHighlightId] = useState<string | undefined>(undefined)
   const [center, setCenter] = useState<{ lat: number; lng: number }>(mapCenter || { lat: 9.9567, lng: -84.5333 })
   const [zoom, setZoom] = useState(mapZoom)
   const [mapType, setMapType] = useState<"roadmap" | "satellite" | "terrain">("satellite")
@@ -68,19 +69,22 @@ export function GoogleMapViewer({
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""
 
+  const activeHighlightId = dynamicHighlightId || initialHighlightId
+
   console.log("[v0] GoogleMapViewer received locations:", initialLocations.length)
   console.log(
     "[v0] Location types:",
     initialLocations.map((l) => l.type),
   )
-  console.log("[v0] GoogleMapViewer highlightLocationId prop:", highlightLocationId)
+  console.log("[v0] Initial highlight from prop:", highlightLocationId)
+  console.log("[v0] Dynamic highlight state:", dynamicHighlightId)
+  console.log("[v0] Active highlight:", activeHighlightId)
 
   useEffect(() => {
-    if (highlightLocationId) {
-      setHighlightedLocationId(highlightLocationId)
-      const location = initialLocations.find((loc) => loc.id === highlightLocationId)
+    if (initialHighlightId) {
+      const location = initialLocations.find((loc) => loc.id === initialHighlightId)
       if (location) {
-        console.log("[v0] Auto-selecting highlighted location:", location.name)
+        console.log("[v0] Auto-selecting initial highlight:", location.name)
         if (!minimal) {
           setSelectedLocation(location)
         }
@@ -101,7 +105,7 @@ export function GoogleMapViewer({
         }
       }
     }
-  }, []) // Only run once on mount
+  }, [initialHighlightId, minimal, initialLocations])
 
   useEffect(() => {
     const loadTenantBoundary = async () => {
@@ -158,8 +162,8 @@ export function GoogleMapViewer({
 
   const handleMapClick = () => {
     if (!minimal) {
-      console.log("[v0] Map clicked, clearing selection and highlight")
-      setHighlightedLocationId(undefined)
+      console.log("[v0] Map clicked, clearing dynamic highlight")
+      setDynamicHighlightId(undefined)
       setSelectedLocation(null)
     }
   }
@@ -167,8 +171,8 @@ export function GoogleMapViewer({
   const handleLocationClick = (location: Location) => {
     if (!minimal) {
       console.log("[v0] Location clicked:", location.name, location.id)
-      console.log("[v0] Setting new highlight:", location.id)
-      setHighlightedLocationId(location.id)
+      console.log("[v0] Setting dynamic highlight to:", location.id)
+      setDynamicHighlightId(location.id)
       setSelectedLocation(location)
     }
   }
@@ -234,7 +238,7 @@ export function GoogleMapViewer({
 
           {boundaryLocations.map((location) => {
             const paths = convertCoordinates(location.boundary_coordinates!)
-            const isHighlighted = highlightedLocationId === location.id
+            const isHighlighted = activeHighlightId === location.id
             const zIndex = isHighlighted ? 200 : 1
             return (
               <>
@@ -264,7 +268,7 @@ export function GoogleMapViewer({
 
           {boundaryLocationsFromTable?.map((location) => {
             const paths = convertCoordinates(location.boundary_coordinates!)
-            const isHighlighted = highlightedLocationId === location.id
+            const isHighlighted = activeHighlightId === location.id
             const zIndex = isHighlighted ? 200 : 1
             return (
               <>
@@ -294,11 +298,10 @@ export function GoogleMapViewer({
 
           {neighborhoodPolygons.map((location) => {
             const paths = convertCoordinates(location.boundary_coordinates!)
-            const isHighlighted = highlightedLocationId === location.id
+            const isHighlighted = activeHighlightId === location.id
             const zIndex = isHighlighted ? 200 : 8
             return (
               <React.Fragment key={location.id}>
-                {/* Invisible wider border for easier clicking */}
                 <Polygon
                   paths={paths}
                   strokeColor="transparent"
@@ -312,7 +315,6 @@ export function GoogleMapViewer({
                   }}
                   zIndex={zIndex}
                 />
-                {/* Visible thin border with fill */}
                 <Polygon
                   paths={paths}
                   strokeColor={isHighlighted ? "#ef4444" : "#c084fc"}
@@ -332,11 +334,10 @@ export function GoogleMapViewer({
 
           {publicStreetPolylines.map((location) => {
             const path = convertCoordinates(location.path_coordinates!)
-            const isHighlighted = highlightedLocationId === location.id
+            const isHighlighted = activeHighlightId === location.id
             const zIndex = isHighlighted ? 200 : 15
             return (
               <React.Fragment key={location.id}>
-                {/* Invisible wider line for easier clicking */}
                 <Polyline
                   path={path}
                   strokeColor="transparent"
@@ -348,7 +349,6 @@ export function GoogleMapViewer({
                   }}
                   zIndex={zIndex}
                 />
-                {/* Visible thin line */}
                 <Polyline
                   path={path}
                   strokeColor={isHighlighted ? "#ef4444" : "#fbbf24"}
@@ -366,11 +366,10 @@ export function GoogleMapViewer({
 
           {publicStreetPolygons.map((location) => {
             const paths = convertCoordinates(location.boundary_coordinates!)
-            const isHighlighted = highlightedLocationId === location.id
+            const isHighlighted = activeHighlightId === location.id
             const zIndex = isHighlighted ? 200 : 15
             return (
               <React.Fragment key={location.id}>
-                {/* Invisible wider border for easier clicking */}
                 <Polygon
                   paths={paths}
                   strokeColor="transparent"
@@ -384,7 +383,6 @@ export function GoogleMapViewer({
                   }}
                   zIndex={zIndex}
                 />
-                {/* Visible thin border with fill */}
                 <Polygon
                   paths={paths}
                   strokeColor={isHighlighted ? "#ef4444" : "#fbbf24"}
@@ -404,11 +402,10 @@ export function GoogleMapViewer({
 
           {lotPolygons.map((location) => {
             const paths = convertCoordinates(location.boundary_coordinates!)
-            const isHighlighted = highlightedLocationId === location.id
+            const isHighlighted = activeHighlightId === location.id
             const zIndex = isHighlighted ? 200 : 10
             return (
               <React.Fragment key={location.id}>
-                {/* Invisible wider border for easier clicking */}
                 <Polygon
                   paths={paths}
                   strokeColor="transparent"
@@ -422,7 +419,6 @@ export function GoogleMapViewer({
                   }}
                   zIndex={zIndex}
                 />
-                {/* Visible thin border with fill */}
                 <Polygon
                   paths={paths}
                   strokeColor={isHighlighted ? "#ef4444" : "#60a5fa"}
@@ -442,11 +438,10 @@ export function GoogleMapViewer({
 
           {lotPolylines.map((location) => {
             const path = convertCoordinates(location.path_coordinates!)
-            const isHighlighted = highlightedLocationId === location.id
+            const isHighlighted = activeHighlightId === location.id
             const zIndex = isHighlighted ? 200 : 10
             return (
               <React.Fragment key={location.id}>
-                {/* Invisible wider line for easier clicking */}
                 <Polyline
                   path={path}
                   strokeColor="transparent"
@@ -458,7 +453,6 @@ export function GoogleMapViewer({
                   }}
                   zIndex={zIndex}
                 />
-                {/* Visible thin line */}
                 <Polyline
                   path={path}
                   strokeColor={isHighlighted ? "#ef4444" : "#60a5fa"}
@@ -475,7 +469,7 @@ export function GoogleMapViewer({
           })}
 
           {facilityMarkers.map((location) => {
-            const isHighlighted = highlightedLocationId === location.id
+            const isHighlighted = activeHighlightId === location.id
             const zIndex = isHighlighted ? 200 : 20
             return (
               <Marker
@@ -492,11 +486,10 @@ export function GoogleMapViewer({
 
           {facilityPolygons.map((location) => {
             const paths = convertCoordinates(location.boundary_coordinates!)
-            const isHighlighted = highlightedLocationId === location.id
+            const isHighlighted = activeHighlightId === location.id
             const zIndex = isHighlighted ? 200 : 20
             return (
               <React.Fragment key={location.id}>
-                {/* Invisible wider border for easier clicking */}
                 <Polygon
                   paths={paths}
                   strokeColor="transparent"
@@ -510,7 +503,6 @@ export function GoogleMapViewer({
                   }}
                   zIndex={zIndex}
                 />
-                {/* Visible thin border with fill */}
                 <Polygon
                   paths={paths}
                   strokeColor={isHighlighted ? "#ef4444" : "#fb923c"}
@@ -530,11 +522,10 @@ export function GoogleMapViewer({
 
           {facilityPolylines.map((location) => {
             const path = convertCoordinates(location.path_coordinates!)
-            const isHighlighted = highlightedLocationId === location.id
+            const isHighlighted = activeHighlightId === location.id
             const zIndex = isHighlighted ? 200 : 20
             return (
               <React.Fragment key={location.id}>
-                {/* Invisible wider line for easier clicking */}
                 <Polyline
                   path={path}
                   strokeColor="transparent"
@@ -546,7 +537,6 @@ export function GoogleMapViewer({
                   }}
                   zIndex={zIndex}
                 />
-                {/* Visible thin line */}
                 <Polyline
                   path={path}
                   strokeColor={isHighlighted ? "#ef4444" : "#fb923c"}
@@ -564,11 +554,10 @@ export function GoogleMapViewer({
 
           {walkingPaths.map((location) => {
             const path = convertCoordinates(location.path_coordinates!)
-            const isHighlighted = highlightedLocationId === location.id
+            const isHighlighted = activeHighlightId === location.id
             const zIndex = isHighlighted ? 200 : 25
             return (
               <React.Fragment key={location.id}>
-                {/* Invisible wider line for easier clicking */}
                 <Polyline
                   path={path}
                   strokeColor="transparent"
@@ -580,7 +569,6 @@ export function GoogleMapViewer({
                   }}
                   zIndex={zIndex}
                 />
-                {/* Visible thin line */}
                 <Polyline
                   path={path}
                   strokeColor={isHighlighted ? "#ef4444" : "#3b82f6"}

@@ -17,6 +17,7 @@ import { COUNTRIES, LANGUAGES } from "@/lib/data/countries-languages"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Switch } from "@/components/ui/switch"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { createClient } from "@/lib/supabase/client"
 
 interface ProfileEditFormProps {
   resident: any
@@ -85,11 +86,113 @@ export function ProfileEditForm({
     setIsLoading(true)
 
     try {
-      // TODO: Implement profile update with server action
       console.log("[v0] Updating profile:", formData)
+
+      const supabase = createClient()
+
+      // Update user profile data
+      const { error: userError } = await supabase
+        .from("users")
+        .update({
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          phone: formData.phone,
+          birthday: formData.birthday || null,
+          birth_country: formData.birthCountry || null,
+          current_country: formData.currentCountry || null,
+          languages: formData.languages,
+          preferred_language: formData.preferredLanguage || null,
+          profile_picture_url: formData.profilePicture || null,
+          journey_stage: formData.journeyStage || null,
+          estimated_move_in_date: formData.estimatedMoveInDate || null,
+        })
+        .eq("id", resident.id)
+
+      if (userError) {
+        console.error("[v0] Error updating profile:", userError)
+        alert("Failed to update profile. Please try again.")
+        return
+      }
+
+      // Delete existing interests
+      const { error: deleteInterestsError } = await supabase.from("user_interests").delete().eq("user_id", resident.id)
+
+      if (deleteInterestsError) {
+        console.error("[v0] Error deleting interests:", deleteInterestsError)
+      }
+
+      // Insert new interests
+      if (formData.selectedInterests.length > 0) {
+        const { error: insertInterestsError } = await supabase.from("user_interests").insert(
+          formData.selectedInterests.map((interestId) => ({
+            user_id: resident.id,
+            interest_id: interestId,
+            tenant_id: resident.tenant_id,
+          })),
+        )
+
+        if (insertInterestsError) {
+          console.error("[v0] Error inserting interests:", insertInterestsError)
+        }
+      }
+
+      // Delete existing skills
+      const { error: deleteSkillsError } = await supabase.from("user_skills").delete().eq("user_id", resident.id)
+
+      if (deleteSkillsError) {
+        console.error("[v0] Error deleting skills:", deleteSkillsError)
+      }
+
+      // Insert new skills
+      if (formData.skills.length > 0) {
+        const skillsToInsert = []
+
+        for (const skill of formData.skills) {
+          if (skill.skill_id) {
+            // Existing skill from database
+            skillsToInsert.push({
+              user_id: resident.id,
+              skill_id: skill.skill_id,
+              open_to_requests: skill.open_to_requests,
+              tenant_id: resident.tenant_id,
+            })
+          } else {
+            // New custom skill - create it first
+            const { data: newSkillData, error: createSkillError } = await supabase
+              .from("skills")
+              .insert({
+                name: skill.skill_name,
+                tenant_id: resident.tenant_id,
+              })
+              .select()
+              .single()
+
+            if (!createSkillError && newSkillData) {
+              skillsToInsert.push({
+                user_id: resident.id,
+                skill_id: newSkillData.id,
+                open_to_requests: skill.open_to_requests,
+                tenant_id: resident.tenant_id,
+              })
+            }
+          }
+        }
+
+        if (skillsToInsert.length > 0) {
+          const { error: insertSkillsError } = await supabase.from("user_skills").insert(skillsToInsert)
+
+          if (insertSkillsError) {
+            console.error("[v0] Error inserting skills:", insertSkillsError)
+          }
+        }
+      }
+
+      console.log("[v0] Profile updated successfully")
       router.refresh()
+      alert("Profile updated successfully!")
     } catch (error) {
       console.error("[v0] Error updating profile:", error)
+      alert("An error occurred while updating your profile. Please try again.")
     } finally {
       setIsLoading(false)
     }

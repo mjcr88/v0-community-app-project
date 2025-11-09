@@ -53,6 +53,7 @@ export default async function NeighboursPage({ params }: { params: Promise<{ slu
       birthday,
       family_unit_id,
       lots (
+        id,
         lot_number,
         neighborhoods (
           name

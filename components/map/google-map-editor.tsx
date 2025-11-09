@@ -4,7 +4,7 @@ import React from "react"
 
 // import type React from "react" // Removed to fix redeclaration error
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { APIProvider, Map, Marker, useMap } from "@vis.gl/react-google-maps"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,7 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { createLocation, updateLocation, deleteLocation } from "@/app/actions/locations"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -235,6 +235,8 @@ export function GoogleMapEditor({
 
   // State for deletion
   const [deleting, setDeleting] = useState(false)
+
+  const mapRef = useRef(null)
 
   useEffect(() => {
     if (mode === "view") {
@@ -925,7 +927,6 @@ export function GoogleMapEditor({
   }
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""
-  const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAP_ID || "DEMO_MAP_ID"
 
   const filteredLocations = savedLocations.filter((location) => {
     if (location.type === "facility") return showFacilities
@@ -1052,59 +1053,22 @@ export function GoogleMapEditor({
   const boundaryLocation = savedLocations.find((loc) => loc.type === "boundary")
 
   return (
-    <div className={mode === "view" ? "h-full" : "grid gap-6 lg:grid-cols-[1fr_400px]"}>
-      <Card className={mode === "view" ? "h-full" : "min-h-[600px] flex flex-col"}>
-        <CardHeader className="flex-none">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold tracking-tight">{mode === "view" ? "Community Map" : "Map Editor"}</h2>
-            <div className="flex items-center space-x-2">
-              {mode === "edit" && !isImporting && (
-                <>
-                  {editingLocationId ? (
-                    <Button variant="outline" onClick={handleCancelEdit}>
-                      Cancel Edit
-                    </Button>
-                  ) : (
-                    <Button variant="outline" onClick={handleNewLocation}>
-                      New Location
-                    </Button>
-                  )}
-                  <Button onClick={handleSave} disabled={saving}>
-                    {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {editingLocationId ? "Update" : "Save"}
-                  </Button>
-                </>
-              )}
-              {isImporting && (
-                <>
-                  <Button variant="outline" onClick={handleCancelImport}>
-                    Cancel Import
-                  </Button>
-                  <Button onClick={handleSaveImport} disabled={saving}>
-                    {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Create {previewFeatures.length} Location(s)
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="flex-1 p-1.5 h-full">
-          <div className="relative h-full w-full overflow-hidden rounded-lg">
+    <div className="grid gap-6 lg:grid-cols-[1fr_400px]">
+      <Card>
+        <CardContent className="p-1.5">
+          <div className="relative h-[600px] w-full overflow-hidden rounded-lg">
             <APIProvider apiKey={apiKey}>
               <Map
-                key={`map-${isImporting ? "importing" : "normal"}-${savedLocations.length}`}
-                mapId={mapId}
-                defaultCenter={mapCenter}
-                defaultZoom={mapZoom}
-                mapTypeId={mapType}
+                ref={mapRef}
+                center={mapCenter}
+                zoom={mapZoom}
+                mapTypeId="satellite"
                 gestureHandling="greedy"
                 disableDefaultUI={true}
                 clickableIcons={false}
-                zoomControl={false}
-                minZoom={10}
-                maxZoom={22}
-                restriction={undefined}
+                onClick={handleMapClick}
+                onCenterChanged={(e) => setMapCenter(e.detail.center)}
+                onZoomChanged={(e) => setMapZoom(e.detail.zoom)}
               >
                 <MapClickHandler drawingMode={drawingMode} onMapClick={handleMapClick} />
 
@@ -1490,7 +1454,7 @@ export function GoogleMapEditor({
                   <Button
                     variant="secondary"
                     size="icon"
-                    onClick={() => setMapZoom(mapZoom + 1)}
+                    onClick={() => setMapZoom((prev) => prev + 1)}
                     className="h-10 w-10 shadow-lg"
                     title="Zoom In"
                   >
@@ -1499,7 +1463,7 @@ export function GoogleMapEditor({
                   <Button
                     variant="secondary"
                     size="icon"
-                    onClick={() => setMapZoom(mapZoom - 1)}
+                    onClick={() => setMapZoom((prev) => prev - 1)}
                     className="h-10 w-10 shadow-lg"
                     title="Zoom Out"
                   >

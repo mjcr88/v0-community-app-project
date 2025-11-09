@@ -51,7 +51,6 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
   const [boundaryExists, setBoundaryExists] = useState(false)
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""
-  const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAP_ID || "DEMO_MAP_ID"
 
   useEffect(() => {
     const loadData = async () => {
@@ -388,7 +387,6 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
           <div className="relative h-full w-full overflow-hidden rounded-lg">
             <APIProvider apiKey={apiKey}>
               <Map
-                mapId={mapId}
                 center={mapCenter}
                 zoom={mapZoom}
                 mapTypeId="satellite"

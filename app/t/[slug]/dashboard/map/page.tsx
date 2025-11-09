@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
-import { FullMapClient } from "./full-map-client"
 
 export default async function ResidentMapPage({
   params,
@@ -63,48 +62,18 @@ export default async function ResidentMapPage({
     redirect(`/t/${slug}/dashboard`)
   }
 
-  const { data: locations } = await supabase
-    .from("locations")
-    .select(`
-      *,
-      lotsObject:lots!left(
-        id,
-        lot_number,
-        users!left(
-          id,
-          first_name,
-          last_name,
-          profile_picture_url,
-          family_unit_id,
-          family_units(id, name, profile_picture_url)
-        )
-      )
-    `)
-    .eq("tenant_id", tenant.id)
+  // Get all locations for the tenant
+  const { data: locations } = await supabase.from("locations").select("*").eq("tenant_id", tenant.id)
 
   console.log("[v0] ResidentMapPage - Locations count:", locations?.length)
-
-  const mappedLocations = locations?.map((loc: any) => ({
-    ...loc,
-    lot_id: loc.lotsObject?.id || loc.lot_id,
-    lotNumber: loc.lotsObject?.lot_number || loc.lotNumber,
-  }))
-
-  const sampleLocation = mappedLocations?.find((l: any) => l.name === "D-001")
-  if (sampleLocation) {
-    const locationJson = JSON.stringify(sampleLocation)
-    console.log("[v0] Sample location D-001 data:", locationJson.substring(0, Math.min(500, locationJson.length)))
-  } else {
-    console.log("[v0] Sample location D-001 not found")
-  }
 
   let calculatedCenter = tenant.map_center_coordinates
     ? { lat: tenant.map_center_coordinates.lat, lng: tenant.map_center_coordinates.lng }
     : null
 
-  if (!calculatedCenter && mappedLocations) {
-    const boundaryLocations = mappedLocations.filter((loc) => loc.type === "boundary" && loc.boundary_coordinates)
-    if (boundaryLocations.length > 0) {
+  if (!calculatedCenter) {
+    const boundaryLocations = locations?.filter((loc) => loc.type === "boundary" && loc.boundary_coordinates)
+    if (boundaryLocations && boundaryLocations.length > 0) {
       const allCoords: Array<[number, number]> = []
       boundaryLocations.forEach((loc) => {
         if (loc.boundary_coordinates) {
@@ -126,7 +95,7 @@ export default async function ResidentMapPage({
   // Find highlighted location if highlightLot is provided
   let highlightLocationId: string | undefined
   if (highlightLot) {
-    const lotLocation = mappedLocations?.find((loc) => loc.lot_id === highlightLot && loc.type === "lot")
+    const lotLocation = locations?.find((loc) => loc.lot_id === highlightLot && loc.type === "lot")
     if (lotLocation) {
       highlightLocationId = lotLocation.id
       console.log("[v0] ResidentMapPage - Highlighting lot:", lotLocation.name, lotLocation.id)
@@ -136,12 +105,9 @@ export default async function ResidentMapPage({
   console.log("[v0] ResidentMapPage - Rendering map viewer")
 
   return (
-    <FullMapClient
-      locations={mappedLocations || []}
-      tenantId={tenant.id}
-      mapCenter={calculatedCenter}
-      tenantSlug={slug}
-      highlightLocationId={highlightLocationId}
-    />
+    <div className="p-8">
+      <h1 className="text-2xl font-bold mb-4">Community Map</h1>
+      <p className="text-muted-foreground">Map view coming soon. Map components need to be recreated.</p>
+    </div>
   )
 }

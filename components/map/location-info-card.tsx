@@ -39,11 +39,20 @@ interface FamilyUnit {
   profile_picture_url?: string | null
 }
 
+interface Pet {
+  id: string
+  name: string
+  species: string
+  breed?: string | null
+  profile_picture_url?: string | null
+}
+
 export function LocationInfoCard({ location, onClose }: LocationInfoCardProps) {
   const [neighborhood, setNeighborhood] = useState<{ id: string; name: string } | null>(null)
   const [lot, setLot] = useState<{ id: string; lot_number: string } | null>(null)
   const [residents, setResidents] = useState<Resident[]>([])
   const [familyUnit, setFamilyUnit] = useState<FamilyUnit | null>(null)
+  const [pets, setPets] = useState<Pet[]>([])
   const [tenantSlug, setTenantSlug] = useState<string>("")
   const [loading, setLoading] = useState(true)
 
@@ -87,7 +96,16 @@ export function LocationInfoCard({ location, onClose }: LocationInfoCardProps) {
         if (data) {
           setResidents(data)
           const family = data.find((resident: any) => resident.family_units)?.family_units
-          if (family) setFamilyUnit(family)
+          if (family) {
+            setFamilyUnit(family)
+
+            const { data: petsData } = await supabase
+              .from("pets")
+              .select("id, name, species, breed, profile_picture_url")
+              .eq("family_unit_id", family.id)
+
+            if (petsData) setPets(petsData)
+          }
         }
       }
 
@@ -207,6 +225,41 @@ export function LocationInfoCard({ location, onClose }: LocationInfoCardProps) {
           </Link>
         )}
 
+        {pets.length > 0 && (
+          <div className="p-3 bg-pink-50 border border-pink-200 rounded-lg space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-base">🐾</span>
+              <p className="text-xs text-pink-700 font-medium">Family Pets ({pets.length})</p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {pets.map((pet) => {
+                const petInitials = pet.name
+                  .split(" ")
+                  .map((word: string) => word[0])
+                  .join("")
+                  .toUpperCase()
+                  .slice(0, 2)
+
+                return (
+                  <div
+                    key={pet.id}
+                    className="flex flex-col items-center gap-2 p-2 bg-white rounded-lg border border-pink-200"
+                  >
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={pet.profile_picture_url || "/placeholder.svg"} alt={pet.name} />
+                      <AvatarFallback className="bg-pink-100 text-pink-700 text-xs">{petInitials}</AvatarFallback>
+                    </Avatar>
+                    <div className="text-center">
+                      <p className="text-xs font-medium text-gray-900 truncate w-full">{pet.name}</p>
+                      <p className="text-xs text-gray-500 truncate w-full">{pet.species}</p>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         {residents.length > 0 && (
           <div className="p-3 bg-green-50 border border-green-200 rounded-lg space-y-2">
             <div className="flex items-center gap-2">
@@ -263,7 +316,8 @@ export function LocationInfoCard({ location, onClose }: LocationInfoCardProps) {
           (!location.photos || location.photos.length === 0) &&
           !neighborhood &&
           !lot &&
-          residents.length === 0 && (
+          residents.length === 0 &&
+          pets.length === 0 && (
             <p className="text-sm text-muted-foreground italic">No additional information available</p>
           )}
       </CardContent>

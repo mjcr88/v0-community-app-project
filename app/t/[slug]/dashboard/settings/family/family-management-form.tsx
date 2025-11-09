@@ -48,6 +48,7 @@ export function FamilyManagementForm({
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [uploadingPetPhoto, setUploadingPetPhoto] = useState<string | null>(null)
   const [familyMembers, setFamilyMembers] = useState(initialFamilyMembers)
   const [relationships, setRelationships] = useState<Record<string, string>>(
     initialRelationships.reduce((acc, rel) => ({ ...acc, [rel.related_user_id]: rel.relationship_type }), {}),
@@ -232,6 +233,45 @@ export function FamilyManagementForm({
     }
   }
 
+  const handlePetPhotoUpload = async (petId: string) => {
+    const input = document.createElement("input")
+    input.type = "file"
+    input.accept = "image/jpeg,image/png,image/webp"
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (!file) return
+
+      setUploadingPetPhoto(petId)
+      try {
+        const formData = new FormData()
+        formData.append("file", file)
+
+        const response = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        })
+
+        if (!response.ok) throw new Error("Upload failed")
+
+        const { url } = await response.json()
+
+        const supabase = createClient()
+        const { error } = await supabase.from("pets").update({ profile_picture_url: url }).eq("id", petId)
+
+        if (error) throw error
+
+        setPets(pets.map((p) => (p.id === petId ? { ...p, profile_picture_url: url } : p)))
+        router.refresh()
+      } catch (error) {
+        console.error("[v0] Error uploading pet photo:", error)
+        alert("Failed to upload photo. Please try again.")
+      } finally {
+        setUploadingPetPhoto(null)
+      }
+    }
+    input.click()
+  }
+
   const availableLotResidents = lotResidents.filter((r) => !familyMembers.some((fm) => fm.id === r.id))
 
   const familyInitials =
@@ -283,6 +323,12 @@ export function FamilyManagementForm({
                     </>
                   )}
                 </Button>
+              )}
+              {!isPrimaryContact && (
+                <p className="text-sm text-muted-foreground text-center">
+                  Contact {familyUnit.primary_contact_id === resident.id ? "your administrator" : "the primary contact"}{" "}
+                  to upload a family photo
+                </p>
               )}
             </div>
 
@@ -452,21 +498,64 @@ export function FamilyManagementForm({
                 </Button>
               </div>
             ) : (
-              <div className="space-y-3">
-                {pets.map((pet) => (
-                  <div key={pet.id} className="flex items-center justify-between rounded-lg border p-3">
-                    <div>
-                      <p className="font-medium">{pet.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {pet.species}
-                        {pet.breed && ` • ${pet.breed}`}
-                      </p>
-                    </div>
-                    <Button variant="ghost" size="sm" onClick={() => handleDeletePet(pet.id)} disabled={isLoading}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
+              <div className="grid gap-4 sm:grid-cols-2">
+                {pets.map((pet) => {
+                  const petInitials = pet.name
+                    .split(" ")
+                    .map((word: string) => word[0])
+                    .join("")
+                    .toUpperCase()
+                    .slice(0, 2)
+
+                  return (
+                    <Card key={pet.id}>
+                      <CardContent className="pt-6">
+                        <div className="flex flex-col items-center gap-3">
+                          <Avatar className="h-20 w-20">
+                            <AvatarImage src={pet.profile_picture_url || "/placeholder.svg"} alt={pet.name} />
+                            <AvatarFallback>{petInitials}</AvatarFallback>
+                          </Avatar>
+                          <div className="text-center">
+                            <p className="font-semibold">{pet.name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {pet.species}
+                              {pet.breed && ` • ${pet.breed}`}
+                            </p>
+                          </div>
+                          <div className="flex gap-2 w-full">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handlePetPhotoUpload(pet.id)}
+                              disabled={uploadingPetPhoto === pet.id}
+                              className="flex-1"
+                            >
+                              {uploadingPetPhoto === pet.id ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  Uploading...
+                                </>
+                              ) : (
+                                <>
+                                  <Upload className="mr-2 h-4 w-4" />
+                                  Photo
+                                </>
+                              )}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeletePet(pet.id)}
+                              disabled={isLoading}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
               </div>
             )}
 

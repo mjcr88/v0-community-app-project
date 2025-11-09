@@ -291,11 +291,7 @@ export function FamilyManagementForm({
               <Home className="h-5 w-5" />
               Family Profile
             </CardTitle>
-            <CardDescription>
-              {isPrimaryContact
-                ? "Manage your family's public profile"
-                : "Only the primary contact can edit the family profile"}
-            </CardDescription>
+            <CardDescription>Manage your family's public profile</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex flex-col items-center gap-4">
@@ -303,33 +299,25 @@ export function FamilyManagementForm({
                 <AvatarImage src={familyProfile.profilePictureUrl || "/placeholder.svg"} alt={familyInitials} />
                 <AvatarFallback className="text-2xl">{familyInitials}</AvatarFallback>
               </Avatar>
-              {isPrimaryContact && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleFamilyPhotoUpload}
-                  disabled={uploadingPhoto}
-                >
-                  {uploadingPhoto ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="mr-2 h-4 w-4" />
-                      Upload Family Photo
-                    </>
-                  )}
-                </Button>
-              )}
-              {!isPrimaryContact && (
-                <p className="text-sm text-muted-foreground text-center">
-                  Contact {familyUnit.primary_contact_id === resident.id ? "your administrator" : "the primary contact"}{" "}
-                  to upload a family photo
-                </p>
-              )}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleFamilyPhotoUpload}
+                disabled={uploadingPhoto}
+              >
+                {uploadingPhoto ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Upload Family Photo
+                  </>
+                )}
+              </Button>
             </div>
 
             <div className="space-y-2">
@@ -345,21 +333,18 @@ export function FamilyManagementForm({
                 placeholder="Tell your neighbours about your family..."
                 value={familyProfile.description}
                 onChange={(e) => setFamilyProfile({ ...familyProfile, description: e.target.value })}
-                disabled={!isPrimaryContact}
                 rows={4}
               />
-              {isPrimaryContact && (
-                <Button
-                  type="button"
-                  onClick={handleUpdateFamilyDescription}
-                  disabled={isLoading}
-                  size="sm"
-                  className="mt-2"
-                >
-                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Save Description
-                </Button>
-              )}
+              <Button
+                type="button"
+                onClick={handleUpdateFamilyDescription}
+                disabled={isLoading}
+                size="sm"
+                className="mt-2"
+              >
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save Description
+              </Button>
             </div>
           </CardContent>
         </Card>

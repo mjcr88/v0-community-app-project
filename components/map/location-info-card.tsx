@@ -231,7 +231,7 @@ export function LocationInfoCard({ location, onClose }: LocationInfoCardProps) {
               <span className="text-base">🐾</span>
               <p className="text-xs text-pink-700 font-medium">Family Pets ({pets.length})</p>
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-2">
               {pets.map((pet) => {
                 const petInitials = pet.name
                   .split(" ")
@@ -241,17 +241,14 @@ export function LocationInfoCard({ location, onClose }: LocationInfoCardProps) {
                   .slice(0, 2)
 
                 return (
-                  <div
-                    key={pet.id}
-                    className="flex flex-col items-center gap-2 p-2 bg-white rounded-lg border border-pink-200"
-                  >
-                    <Avatar className="h-12 w-12">
+                  <div key={pet.id} className="flex items-center gap-3 p-2 bg-white rounded-lg border border-pink-200">
+                    <Avatar className="h-10 w-10 shrink-0">
                       <AvatarImage src={pet.profile_picture_url || "/placeholder.svg"} alt={pet.name} />
                       <AvatarFallback className="bg-pink-100 text-pink-700 text-xs">{petInitials}</AvatarFallback>
                     </Avatar>
-                    <div className="text-center">
-                      <p className="text-xs font-medium text-gray-900 truncate w-full">{pet.name}</p>
-                      <p className="text-xs text-gray-500 truncate w-full">{pet.species}</p>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{pet.name}</p>
+                      <p className="text-xs text-gray-500 truncate">{pet.species}</p>
                     </div>
                   </div>
                 )
@@ -312,7 +309,8 @@ export function LocationInfoCard({ location, onClose }: LocationInfoCardProps) {
           </div>
         )}
 
-        {!location.description &&
+        {!loading &&
+          !location.description &&
           (!location.photos || location.photos.length === 0) &&
           !neighborhood &&
           !lot &&
@@ -320,6 +318,12 @@ export function LocationInfoCard({ location, onClose }: LocationInfoCardProps) {
           pets.length === 0 && (
             <p className="text-sm text-muted-foreground italic">No additional information available</p>
           )}
+
+        {loading && (
+          <div className="flex items-center justify-center py-4">
+            <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
+          </div>
+        )}
       </CardContent>
     </Card>
   )

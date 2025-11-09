@@ -78,6 +78,20 @@ export function ResidentLocationsTable({ locations, tenantSlug, initialTypeFilte
 
   const visibleLocations = filteredLocations.slice(0, displayLimit)
 
+  useEffect(() => {
+    const sampleLocation = locations.find((l) => l.lots?.lot_number === "D-001")
+    if (sampleLocation) {
+      console.log("[v0] Sample location D-001 data:", {
+        name: sampleLocation.name,
+        lotNumber: sampleLocation.lots?.lot_number,
+        lotsObject: sampleLocation.lots,
+        hasUsers: !!sampleLocation.lots?.users,
+        usersCount: sampleLocation.lots?.users?.length,
+        users: sampleLocation.lots?.users,
+      })
+    }
+  }, [locations])
+
   return (
     <div className="space-y-4" id="locations-table">
       <div>
@@ -102,7 +116,6 @@ export function ResidentLocationsTable({ locations, tenantSlug, initialTypeFilte
               <TableHead className="font-semibold">Name</TableHead>
               <TableHead className="font-semibold">Type</TableHead>
               <TableHead className="font-semibold">Neighborhood</TableHead>
-              <TableHead className="font-semibold">Lot ID</TableHead>
               <TableHead className="font-semibold">Residents</TableHead>
               <TableHead className="font-semibold">Description</TableHead>
               <TableHead className="text-right font-semibold">Actions</TableHead>
@@ -151,8 +164,6 @@ export function ResidentLocationsTable({ locations, tenantSlug, initialTypeFilte
                   </SelectContent>
                 </Select>
               </TableCell>
-              <TableCell />
-              <TableCell />
               <TableCell>
                 <Input
                   placeholder="Filter description..."
@@ -167,7 +178,7 @@ export function ResidentLocationsTable({ locations, tenantSlug, initialTypeFilte
           <TableBody>
             {visibleLocations.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                   No locations found matching your filters
                 </TableCell>
               </TableRow>
@@ -177,10 +188,9 @@ export function ResidentLocationsTable({ locations, tenantSlug, initialTypeFilte
                   <TableCell className="font-medium">{location.name || "—"}</TableCell>
                   <TableCell>{typeLabels[location.type] || location.type}</TableCell>
                   <TableCell>{location.neighborhoods?.name || "—"}</TableCell>
-                  <TableCell>{location.lots?.lot_number || "—"}</TableCell>
                   <TableCell>
-                    {location.users && location.users.length > 0 ? (
-                      <span className="text-sm text-muted-foreground">{location.users.length} resident(s)</span>
+                    {location.lots?.users && location.lots.users.length > 0 ? (
+                      <span className="text-sm text-muted-foreground">{location.lots.users.length} resident(s)</span>
                     ) : (
                       "—"
                     )}

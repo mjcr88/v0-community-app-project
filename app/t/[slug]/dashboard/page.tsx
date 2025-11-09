@@ -211,32 +211,27 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {mapEnabled && lotLocation ? (
-          <Link
-            href={`/t/${slug}/dashboard/map?highlightLot=${resident.lot_id}`}
-            className="md:col-span-2 lg:col-span-2"
-          >
-            <Card className="h-full cursor-pointer hover:bg-accent/50 transition-colors">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Your Neighborhood</CardTitle>
-                <MapPin className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div>
-                  <div className="text-2xl font-bold">{resident.lots?.neighborhoods?.name || "Not assigned"}</div>
-                  <p className="text-xs text-muted-foreground">Lot #{resident.lots?.lot_number || "N/A"}</p>
-                </div>
-                <div onClick={(e) => e.preventDefault()}>
-                  <MapPreviewWidget
-                    tenantSlug={slug}
-                    locations={allLocations}
-                    mapCenter={mapCenter}
-                    highlightLocationId={lotLocation.id}
-                  />
-                </div>
-                <p className="text-xs text-center text-muted-foreground">Click card to view on full map</p>
-              </CardContent>
-            </Card>
-          </Link>
+          <Card className="md:col-span-2 lg:col-span-2">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Your Neighborhood</CardTitle>
+              <MapPin className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div>
+                <div className="text-2xl font-bold">{resident.lots?.neighborhoods?.name || "Not assigned"}</div>
+                <p className="text-xs text-muted-foreground">Lot #{resident.lots?.lot_number || "N/A"}</p>
+              </div>
+              <MapPreviewWidget
+                tenantSlug={slug}
+                locations={allLocations}
+                mapCenter={mapCenter}
+                highlightLocationId={lotLocation.id}
+              />
+              <p className="text-xs text-center text-muted-foreground">
+                Interact with map or click expand button to view full map
+              </p>
+            </CardContent>
+          </Card>
         ) : (
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

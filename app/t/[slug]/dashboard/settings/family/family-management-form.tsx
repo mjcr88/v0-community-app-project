@@ -71,6 +71,11 @@ export function FamilyManagementForm({
   })
 
   useEffect(() => {
+    console.log("[v0] Family form useEffect triggered")
+    console.log("[v0] familyUnit:", familyUnit)
+    console.log("[v0] familyUnit.profile_picture_url:", familyUnit?.profile_picture_url)
+    console.log("[v0] initialPets:", initialPets)
+
     setFamilyMembers(initialFamilyMembers)
     setRelationships(
       initialRelationships.reduce((acc, rel) => ({ ...acc, [rel.related_user_id]: rel.relationship_type }), {}),
@@ -81,6 +86,8 @@ export function FamilyManagementForm({
       description: familyUnit?.description || "",
       profilePictureUrl: familyUnit?.profile_picture_url || "",
     })
+
+    console.log("[v0] State updated - familyProfile.profilePictureUrl:", familyUnit?.profile_picture_url || "")
   }, [initialFamilyMembers, initialRelationships, initialPets, familyUnit])
 
   const handleRelationshipChange = async (relatedUserId: string, relationshipType: string) => {
@@ -372,6 +379,15 @@ export function FamilyManagementForm({
 
   const displayFamilyPhoto = pendingFamilyPhoto || familyProfile.profilePictureUrl
 
+  console.log(
+    "[v0] Rendering family photo - pending:",
+    pendingFamilyPhoto,
+    "saved:",
+    familyProfile.profilePictureUrl,
+    "display:",
+    displayFamilyPhoto,
+  )
+
   return (
     <div className="space-y-6">
       {familyUnit && (
@@ -575,9 +591,9 @@ export function FamilyManagementForm({
                 <PawPrint className="mx-auto h-12 w-12 text-muted-foreground" />
                 <h3 className="mt-4 text-lg font-semibold">No pets yet</h3>
                 <p className="mt-2 text-sm text-muted-foreground">Add your family pets to your profile</p>
-                <Button variant="default" size="sm" className="mt-4" onClick={() => setShowAddPet(true)}>
+                <Button variant="outline" size="sm" className="mt-4 bg-transparent" onClick={() => setShowAddPet(true)}>
                   <Plus className="mr-2 h-4 w-4" />
-                  Add Pet
+                  Add Another Pet
                 </Button>
               </div>
             ) : (
@@ -592,6 +608,17 @@ export function FamilyManagementForm({
                       .slice(0, 2)
 
                     const displayPetPhoto = pendingPetPhotos[pet.id] || pet.profile_picture_url
+
+                    console.log(
+                      "[v0] Rendering pet photo for",
+                      pet.name,
+                      "- pending:",
+                      pendingPetPhotos[pet.id],
+                      "saved:",
+                      pet.profile_picture_url,
+                      "display:",
+                      displayPetPhoto,
+                    )
 
                     return (
                       <Card key={pet.id}>

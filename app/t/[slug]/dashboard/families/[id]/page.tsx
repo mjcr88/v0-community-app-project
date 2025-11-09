@@ -71,9 +71,6 @@ export default async function FamilyProfilePage({ params }: { params: Promise<{ 
         species,
         breed,
         profile_picture_url
-      ),
-      photos (
-        url
       )
     `,
     )
@@ -120,10 +117,14 @@ export default async function FamilyProfilePage({ params }: { params: Promise<{ 
     .toUpperCase()
     .slice(0, 2)
 
-  const familyPhotos = Array.isArray(familyUnit.photos) ? familyUnit.photos : []
+  const familyPhotos = Array.isArray(familyUnit.photos)
+    ? familyUnit.photos
+        .filter((p: any) => (typeof p === "string" ? p : p?.url))
+        .map((p: any) => (typeof p === "string" ? p : p?.url))
+    : []
   const familyHeroPhoto =
     familyUnit.hero_photo || familyUnit.profile_picture_url || (familyPhotos.length > 0 ? familyPhotos[0] : null)
-  const otherFamilyPhotos = familyHeroPhoto ? familyPhotos.filter((p) => p !== familyHeroPhoto) : familyPhotos
+  const otherFamilyPhotos = familyHeroPhoto ? familyPhotos.filter((p: string) => p !== familyHeroPhoto) : familyPhotos
 
   return (
     <div className="space-y-6">

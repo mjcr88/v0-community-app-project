@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { NeighboursTable } from "./neighbours-table"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { FamiliesTable } from "./families-table"
 
 export default async function NeighboursPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
@@ -115,6 +117,39 @@ export default async function NeighboursPage({ params }: { params: Promise<{ slu
       : null,
   })
 
+  const { data: families, error: familiesError } = await supabase
+    .from("family_units")
+    .select(
+      `
+      id,
+      name,
+      profile_picture_url,
+      primary_contact_id,
+      users!users_family_unit_id_fkey (
+        id,
+        first_name,
+        last_name,
+        lots (
+          id,
+          lot_number,
+          neighborhoods (
+            name
+          )
+        )
+      ),
+      pets (
+        id
+      )
+    `,
+    )
+    .eq("tenant_id", currentResident.tenant_id)
+    .order("name")
+
+  console.log("[v0] Families query result:", {
+    count: families?.length || 0,
+    error: familiesError,
+  })
+
   // Get all interests for filtering
   const { data: allInterests } = await supabase
     .from("interests")
@@ -136,13 +171,31 @@ export default async function NeighboursPage({ params }: { params: Promise<{ slu
         <p className="text-muted-foreground">Connect with other residents in your community</p>
       </div>
 
-      <NeighboursTable
-        residents={residents || []}
-        allInterests={allInterests || []}
-        neighborhoods={neighborhoods || []}
-        tenantSlug={slug}
-        currentUserFamilyId={currentResidentFull?.family_unit_id || null}
-      />
+      <Tabs defaultValue="residents" className="w-full">
+        <TabsList>
+          <TabsTrigger value="residents">Residents ({residents?.length || 0})</TabsTrigger>
+          <TabsTrigger value="families">Families ({families?.length || 0})</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="residents" className="mt-6">
+          <NeighboursTable
+            residents={residents || []}
+            allInterests={allInterests || []}
+            neighborhoods={neighborhoods || []}
+            tenantSlug={slug}
+            currentUserFamilyId={currentResidentFull?.family_unit_id || null}
+          />
+        </TabsContent>
+
+        <TabsContent value="families" className="mt-6">
+          <FamiliesTable
+            families={families || []}
+            neighborhoods={neighborhoods || []}
+            tenantSlug={slug}
+            currentUserFamilyId={currentResidentFull?.family_unit_id || null}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

@@ -1,6 +1,6 @@
 "use client"
 
-import { X, MapPin, Home, Users, ExternalLink } from "lucide-react"
+import { X, MapPin, Home, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -282,6 +282,12 @@ export function LocationInfoCard({ location, onClose, minimal = false }: Locatio
             <X className="h-4 w-4" />
           </Button>
         </div>
+        <Button asChild className="w-full mt-3" size="sm" variant="default">
+          <Link href={`/t/${tenantSlug}/dashboard/locations/${location.id}`}>
+            <ExternalLink className="h-4 w-4 mr-2" />
+            View Full Details
+          </Link>
+        </Button>
       </CardHeader>
       <CardContent className={`${spacing} overflow-y-auto flex-1`}>
         {location.photos && location.photos.length > 0 && (
@@ -388,8 +394,11 @@ export function LocationInfoCard({ location, onClose, minimal = false }: Locatio
           </div>
         )}
 
-        {familyUnit && (
-          <div className={`flex items-center gap-2 ${padding} bg-amber-50 border border-amber-200 rounded-lg`}>
+        {familyUnit && tenantSlug && (
+          <Link
+            href={`/t/${tenantSlug}/dashboard/families/${familyUnit.id}`}
+            className={`flex items-center gap-2 ${padding} bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 transition-colors cursor-pointer`}
+          >
             <Avatar className={avatarSize}>
               <AvatarImage
                 src={familyUnit.profile_picture_url || undefined}
@@ -411,17 +420,37 @@ export function LocationInfoCard({ location, onClose, minimal = false }: Locatio
                 {residents.length} member{residents.length !== 1 ? "s" : ""}
               </p>
             </div>
-          </div>
+          </Link>
         )}
 
-        {!familyUnit && residents.length > 0 && (
-          <div className={`flex items-center gap-2 ${padding} bg-green-50 border border-green-200 rounded-lg`}>
-            <Users className="h-4 w-4 text-green-600 shrink-0" />
-            <div className="min-w-0 flex-1">
-              <p className={`${textSize} text-green-900 font-medium`}>
-                {residents.length} resident{residents.length !== 1 ? "s" : ""}
-              </p>
-            </div>
+        {residents.length > 0 && tenantSlug && (
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase">Residents</p>
+            {residents.map((resident) => (
+              <Link
+                key={resident.id}
+                href={`/t/${tenantSlug}/dashboard/neighbours/${resident.id}`}
+                className={`flex items-center gap-2 ${padding} bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-colors cursor-pointer`}
+              >
+                <Avatar className={avatarSize}>
+                  <AvatarImage
+                    src={resident.profile_picture_url || undefined}
+                    alt={`${resident.first_name} ${resident.last_name}`}
+                    className="object-cover"
+                  />
+                  <AvatarFallback className={`bg-green-200 text-green-900 ${textSize} font-semibold`}>
+                    {resident.first_name?.[0]}
+                    {resident.last_name?.[0]}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className={`${titleSize} font-semibold text-green-900 truncate`}>
+                    {resident.first_name} {resident.last_name}
+                  </p>
+                  <p className={`${textSize} text-green-700`}>View profile</p>
+                </div>
+              </Link>
+            ))}
           </div>
         )}
 
@@ -435,13 +464,6 @@ export function LocationInfoCard({ location, onClose, minimal = false }: Locatio
             </div>
           </div>
         )}
-
-        <Button asChild className="w-full" size={minimal ? "sm" : "default"}>
-          <Link href={`/t/${tenantSlug}/dashboard/locations/${location.id}`}>
-            <ExternalLink className="h-4 w-4 mr-2" />
-            View Full Details
-          </Link>
-        </Button>
 
         {!loading &&
           !location.description &&
@@ -458,8 +480,6 @@ export function LocationInfoCard({ location, onClose, minimal = false }: Locatio
             <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
           </div>
         )}
-
-        <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-background to-transparent pointer-events-none" />
       </CardContent>
     </Card>
   )

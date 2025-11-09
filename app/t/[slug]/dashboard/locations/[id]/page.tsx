@@ -9,8 +9,8 @@ import { Button } from "@/components/ui/button"
 import { MapPin, Users, ArrowLeft, Home, MapIcon, Calendar } from "lucide-react"
 import Link from "next/link"
 
-export default async function LocationDetailsPage({ params }: { params: { slug: string; id: string } }) {
-  const { slug, id } = params
+export default async function LocationDetailsPage({ params }: { params: Promise<{ slug: string; id: string }> }) {
+  const { slug, id } = await params
   const supabase = await createClient()
 
   const {

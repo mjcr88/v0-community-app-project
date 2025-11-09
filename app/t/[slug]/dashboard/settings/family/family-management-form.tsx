@@ -250,33 +250,47 @@ export function FamilyManagementForm({
     const pet = pets.find((p) => p.id === petId)
     const currentHeroPhoto = pet?.hero_photo || pet?.profile_picture_url || null
 
+    // Immediately update local state for responsive UI
+    setPets(
+      pets.map((p) =>
+        p.id === petId
+          ? {
+              ...p,
+              photos,
+            }
+          : p,
+      ),
+    )
+
     const supabase = createClient()
     try {
       const updateData: any = {
         photos: photos,
       }
 
+      // If hero photo was deleted, set first photo as new hero
       if (currentHeroPhoto && !photos.includes(currentHeroPhoto)) {
         updateData.hero_photo = photos[0] || null
         updateData.profile_picture_url = photos[0] || null
+
+        // Update local state with new hero photo
+        setPets(
+          pets.map((p) =>
+            p.id === petId
+              ? {
+                  ...p,
+                  photos,
+                  hero_photo: photos[0] || null,
+                  profile_picture_url: photos[0] || null,
+                }
+              : p,
+          ),
+        )
       }
 
       const { error } = await supabase.from("pets").update(updateData).eq("id", petId)
 
       if (error) throw error
-
-      setPets(
-        pets.map((p) =>
-          p.id === petId
-            ? {
-                ...p,
-                photos,
-                hero_photo: updateData.hero_photo || currentHeroPhoto,
-                profile_picture_url: updateData.profile_picture_url || currentHeroPhoto,
-              }
-            : p,
-        ),
-      )
 
       toast({
         title: "Success",
@@ -290,10 +304,37 @@ export function FamilyManagementForm({
         description: "Failed to save photos. Please try again.",
         variant: "destructive",
       })
+
+      // Revert state on error
+      setPets(
+        pets.map((p) =>
+          p.id === petId
+            ? {
+                ...p,
+                photos: pet?.photos || [],
+              }
+            : p,
+        ),
+      )
     }
   }
 
   const handlePetHeroPhotoChange = async (petId: string, heroPhoto: string | null) => {
+    const pet = pets.find((p) => p.id === petId)
+
+    // Immediately update local state for responsive UI
+    setPets(
+      pets.map((p) =>
+        p.id === petId
+          ? {
+              ...p,
+              hero_photo: heroPhoto,
+              profile_picture_url: heroPhoto,
+            }
+          : p,
+      ),
+    )
+
     const supabase = createClient()
     try {
       const { error } = await supabase
@@ -306,18 +347,9 @@ export function FamilyManagementForm({
 
       if (error) throw error
 
-      setPets(
-        pets.map((p) =>
-          p.id === petId
-            ? {
-                ...p,
-                hero_photo: heroPhoto,
-                profile_picture_url: heroPhoto,
-              }
-            : p,
-        ),
-      )
-
+      toast({
+        description: "Pet hero photo updated",
+      })
       router.refresh()
     } catch (error) {
       console.error("[v0] Error saving pet hero photo:", error)
@@ -326,6 +358,19 @@ export function FamilyManagementForm({
         description: "Failed to save hero photo. Please try again.",
         variant: "destructive",
       })
+
+      // Revert state on error
+      setPets(
+        pets.map((p) =>
+          p.id === petId
+            ? {
+                ...p,
+                hero_photo: pet?.hero_photo,
+                profile_picture_url: pet?.profile_picture_url,
+              }
+            : p,
+        ),
+      )
     }
   }
 
@@ -559,11 +604,11 @@ export function FamilyManagementForm({
                       .toUpperCase()
                       .slice(0, 2)
 
-                    const petPhotos = pet.photos || []
+                    const petPhotos = Array.isArray(pet.photos) ? pet.photos : []
                     const petHeroPhoto = pet.hero_photo || pet.profile_picture_url || null
 
                     return (
-                      <Card key={pet.id}>
+                      <Card key={pet.id} className="border-2">
                         <CardContent className="pt-6 space-y-4">
                           <div className="flex items-center gap-4">
                             <Avatar className="h-16 w-16">
@@ -587,14 +632,17 @@ export function FamilyManagementForm({
                             </Button>
                           </div>
 
-                          <PhotoManager
-                            photos={petPhotos}
-                            heroPhoto={petHeroPhoto}
-                            onPhotosChange={(photos) => handlePetPhotosChange(pet.id, photos)}
-                            onHeroPhotoChange={(heroPhoto) => handlePetHeroPhotoChange(pet.id, heroPhoto)}
-                            maxPhotos={10}
-                            entityType="pet"
-                          />
+                          <div className="rounded-lg bg-muted/30 p-4 space-y-2">
+                            <Label className="text-sm font-semibold">{pet.name}'s Photos</Label>
+                            <PhotoManager
+                              photos={petPhotos}
+                              heroPhoto={petHeroPhoto}
+                              onPhotosChange={(photos) => handlePetPhotosChange(pet.id, photos)}
+                              onHeroPhotoChange={(heroPhoto) => handlePetHeroPhotoChange(pet.id, heroPhoto)}
+                              maxPhotos={10}
+                              entityType="pet"
+                            />
+                          </div>
                         </CardContent>
                       </Card>
                     )
@@ -606,6 +654,49 @@ export function FamilyManagementForm({
                     <Plus className="mr-2 h-4 w-4" />
                     Add Another Pet
                   </Button>
+                )}
+
+                {showAddPet && (
+                  <Card className="border-2 border-dashed">
+                    <CardContent className="pt-6 space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="pet-name">Pet Name *</Label>
+                        <Input
+                          id="pet-name"
+                          value={newPet.name}
+                          onChange={(e) => setNewPet({ ...newPet, name: e.target.value })}
+                          placeholder="e.g., Max, Luna"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="pet-species">Species *</Label>
+                        <Input
+                          id="pet-species"
+                          value={newPet.species}
+                          onChange={(e) => setNewPet({ ...newPet, species: e.target.value })}
+                          placeholder="e.g., Dog, Cat"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="pet-breed">Breed (Optional)</Label>
+                        <Input
+                          id="pet-breed"
+                          value={newPet.breed}
+                          onChange={(e) => setNewPet({ ...newPet, breed: e.target.value })}
+                          placeholder="e.g., Golden Retriever"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button onClick={handleAddPet} disabled={isLoading || !newPet.name || !newPet.species}>
+                          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          Add Pet
+                        </Button>
+                        <Button variant="outline" onClick={() => setShowAddPet(false)}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
                 )}
               </>
             )}

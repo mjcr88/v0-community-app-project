@@ -232,7 +232,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
               fillColor="#ffffff"
               fillOpacity={0.1}
               clickable={false}
-              zIndex={2}
+              zIndex={1}
             />
           )}
 
@@ -247,12 +247,9 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                 strokeColor={isHighlighted ? "#ef4444" : "#3b82f6"}
                 strokeOpacity={isHighlighted ? 1 : 0.8}
                 strokeWeight={isHighlighted ? 3 : 2}
-                fillColor="#ffffff"
-                fillOpacity={0.1}
-                onClick={() => {
-                  console.log("[v0] Boundary location clicked:", location.name)
-                  handleLocationClick(location)
-                }}
+                fillColor="transparent"
+                fillOpacity={0}
+                clickable={false}
                 zIndex={zIndex}
               />
             )
@@ -269,12 +266,9 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                 strokeColor={isHighlighted ? "#ef4444" : "#3b82f6"}
                 strokeOpacity={isHighlighted ? 1 : 0.8}
                 strokeWeight={isHighlighted ? 3 : 2}
-                fillColor="#ffffff"
-                fillOpacity={0.1}
-                onClick={() => {
-                  console.log("[v0] Boundary location clicked:", location.name)
-                  handleLocationClick(location)
-                }}
+                fillColor="transparent"
+                fillOpacity={0}
+                clickable={false}
                 zIndex={zIndex}
               />
             )

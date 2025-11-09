@@ -85,6 +85,7 @@ export function GoogleMapViewer({
       const location = initialLocations.find((loc) => loc.id === initialHighlightId)
       if (location) {
         console.log("[v0] Auto-selecting initial highlight:", location.name)
+
         if (!minimal) {
           setSelectedLocation(location)
         }

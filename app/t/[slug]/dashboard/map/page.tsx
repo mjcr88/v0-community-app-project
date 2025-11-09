@@ -68,6 +68,31 @@ export default async function ResidentMapPage({
 
   console.log("[v0] ResidentMapPage - Locations count:", locations?.length)
 
+  let calculatedCenter = tenant.map_center_coordinates
+    ? { lat: tenant.map_center_coordinates.lat, lng: tenant.map_center_coordinates.lng }
+    : null
+
+  if (!calculatedCenter) {
+    const boundaryLocations = locations?.filter((loc) => loc.type === "boundary" && loc.boundary_coordinates)
+    if (boundaryLocations && boundaryLocations.length > 0) {
+      const allCoords: Array<[number, number]> = []
+      boundaryLocations.forEach((loc) => {
+        if (loc.boundary_coordinates) {
+          allCoords.push(...loc.boundary_coordinates)
+        }
+      })
+
+      if (allCoords.length > 0) {
+        const lats = allCoords.map((c) => c[0])
+        const lngs = allCoords.map((c) => c[1])
+        const centerLat = lats.reduce((a, b) => a + b, 0) / lats.length
+        const centerLng = lngs.reduce((a, b) => a + b, 0) / lngs.length
+        calculatedCenter = { lat: centerLat, lng: centerLng }
+        console.log("[v0] ResidentMapPage - Calculated center from boundaries:", calculatedCenter)
+      }
+    }
+  }
+
   // Find highlighted location if highlightLot is provided
   let highlightLocationId: string | undefined
   if (highlightLot) {
@@ -78,10 +103,6 @@ export default async function ResidentMapPage({
     }
   }
 
-  const mapCenter = tenant.map_center_coordinates
-    ? { lat: tenant.map_center_coordinates.lat, lng: tenant.map_center_coordinates.lng }
-    : null
-
   console.log("[v0] ResidentMapPage - Rendering map viewer")
 
   return (
@@ -89,7 +110,7 @@ export default async function ResidentMapPage({
       <GoogleMapViewer
         tenantSlug={slug}
         initialLocations={locations || []}
-        mapCenter={mapCenter}
+        mapCenter={calculatedCenter}
         mapZoom={tenant.map_default_zoom || 15}
         isAdmin={false}
         highlightLocationId={highlightLocationId}

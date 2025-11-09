@@ -31,7 +31,7 @@ export function MapPreviewWidget({ tenantSlug, locations, mapCenter, highlightLo
             mapZoom={17}
             isAdmin={false}
             highlightLocationId={highlightLocationId}
-            minimal={false}
+            minimal={true}
           />
 
           <Link href={`/t/${tenantSlug}/dashboard/map`}>

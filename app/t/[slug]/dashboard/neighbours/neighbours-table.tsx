@@ -19,7 +19,7 @@ interface NeighboursTableProps {
   currentUserFamilyId: string | null
 }
 
-type SortField = "name" | "neighborhood" | "lot" | null
+type SortField = "name" | "neighborhood" | "lot" | "family" | null
 type SortDirection = "asc" | "desc"
 
 export function NeighboursTable({
@@ -154,6 +154,10 @@ export function NeighboursTable({
             aValue = a.lots?.lot_number || ""
             bValue = b.lots?.lot_number || ""
             break
+          case "family":
+            aValue = a.family_units?.name || ""
+            bValue = b.family_units?.name || ""
+            break
         }
 
         if (sortDirection === "asc") {
@@ -210,6 +214,7 @@ export function NeighboursTable({
                   {getSortIcon("name")}
                 </Button>
               </TableHead>
+              <TableHead className="font-semibold">Family</TableHead>
               <TableHead>
                 <Button variant="ghost" onClick={() => handleSort("neighborhood")} className="h-8 px-2 font-semibold">
                   Neighborhood
@@ -235,6 +240,7 @@ export function NeighboursTable({
                   className="h-8"
                 />
               </TableCell>
+              <TableCell />
               <TableCell>
                 <Select value={neighborhoodFilter} onValueChange={setNeighborhoodFilter}>
                   <SelectTrigger className="h-8">
@@ -294,7 +300,7 @@ export function NeighboursTable({
           <TableBody>
             {filteredAndSortedResidents.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                   No residents found matching your filters
                 </TableCell>
               </TableRow>
@@ -327,6 +333,18 @@ export function NeighboursTable({
                           {filteredData.first_name} {filteredData.last_name}
                         </div>
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      {resident.family_units && (isFamily || privacySettings?.show_family !== false) ? (
+                        <Link
+                          href={`/t/${tenantSlug}/dashboard/families/${resident.family_units.id}`}
+                          className="text-primary hover:underline"
+                        >
+                          {resident.family_units.name}
+                        </Link>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">-</span>
+                      )}
                     </TableCell>
                     <TableCell>{resident.lots?.neighborhoods?.name || "Not assigned"}</TableCell>
                     <TableCell>{resident.lots?.lot_number || "Not assigned"}</TableCell>

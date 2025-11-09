@@ -67,6 +67,12 @@ export function LocationInfoCard({ location, onClose, minimal = false }: Locatio
   useEffect(() => {
     console.log("[v0] LocationInfoCard useEffect triggered for location:", location.id)
 
+    setNeighborhood(null)
+    setLot(null)
+    setResidents([])
+    setFamilyUnit(null)
+    setPets([])
+
     const fetchRelatedData = async () => {
       setLoading(true)
       console.log("[v0] Starting to fetch related data...")
@@ -118,12 +124,13 @@ export function LocationInfoCard({ location, onClose, minimal = false }: Locatio
 
         console.log("[v0] Residents query result:", { count: data?.length || 0, error })
 
-        if (data) {
+        if (data && data.length > 0) {
           console.log(
             "[v0] Residents found:",
             data.map((r) => `${r.first_name} ${r.last_name}`),
           )
           setResidents(data)
+
           const family = data.find((resident: any) => resident.family_units)?.family_units
           if (family) {
             console.log("[v0] Family unit found:", family.name)

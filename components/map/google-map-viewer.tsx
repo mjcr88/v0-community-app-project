@@ -189,7 +189,15 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
   }, [])
 
   const handleLocationClick = useCallback((location: Location) => {
-    console.log("[v0] Location clicked:", location.name, location.id)
+    console.log("[v0] Location clicked:", location.name, location.id, "type:", location.type)
+
+    if (location.type === "boundary") {
+      console.log("[v0] Boundary location clicked - highlighting but not showing info card")
+      setDynamicHighlightId(location.id)
+      setSelectedLocation(null)
+      return
+    }
+
     setDynamicHighlightId(location.id)
     setSelectedLocation(location)
   }, [])

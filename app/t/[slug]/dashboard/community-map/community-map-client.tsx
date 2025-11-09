@@ -3,10 +3,6 @@
 import { LocationTypeCards } from "@/components/map/location-type-cards"
 import { MapPreviewWidget } from "@/components/map/map-preview-widget"
 import { ResidentLocationsTable } from "@/components/map/resident-locations-table"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import Link from "next/link"
-import { Map } from "lucide-react"
-import { Button } from "@/components/ui/button"
 
 interface CommunityMapClientProps {
   slug: string
@@ -25,6 +21,8 @@ interface CommunityMapClientProps {
   }
   locations: any[]
   mapCenter: { lat: number; lng: number } | null
+  boundaryLocationId?: string
+  mapZoom?: number
   initialTypeFilter?: string
 }
 
@@ -34,6 +32,8 @@ export function CommunityMapClient({
   counts,
   locations,
   mapCenter,
+  boundaryLocationId,
+  mapZoom = 14,
   initialTypeFilter,
 }: CommunityMapClientProps) {
   const handleCardClick = (type: string) => {
@@ -54,27 +54,18 @@ export function CommunityMapClient({
           <h1 className="text-2xl font-bold">Community Map</h1>
           <p className="text-muted-foreground">Explore locations and facilities in your community</p>
         </div>
-        <Button asChild>
-          <Link href={`/t/${slug}/dashboard/map`}>
-            <Map className="h-4 w-4 mr-2" />
-            Full Screen Map
-          </Link>
-        </Button>
       </div>
 
-      <LocationTypeCards counts={counts} clickable={true} onCardClick={handleCardClick} />
+      <MapPreviewWidget
+        tenantSlug={slug}
+        tenantId={tenantId}
+        locations={locations}
+        mapCenter={mapCenter}
+        highlightLocationId={boundaryLocationId}
+        mapZoom={mapZoom}
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Interactive Map Preview</CardTitle>
-          <CardDescription>
-            Click any location to view details, or open full screen map for better navigation
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <MapPreviewWidget tenantSlug={slug} tenantId={tenantId} locations={locations} mapCenter={mapCenter} />
-        </CardContent>
-      </Card>
+      <LocationTypeCards counts={counts} clickable={true} onCardClick={handleCardClick} />
 
       <ResidentLocationsTable locations={locations} tenantSlug={slug} initialTypeFilter={initialTypeFilter} />
     </div>

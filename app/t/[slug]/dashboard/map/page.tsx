@@ -58,6 +58,12 @@ export default async function ResidentMapPage({
     enrichWithPets: true,
   })
 
+  const boundaryLocation = locations.find(
+    (loc) =>
+      loc.type === "boundary" &&
+      (loc.name.toLowerCase().includes("boundary") || loc.name.toLowerCase().includes("community")),
+  )
+
   let calculatedCenter = tenant.map_center_coordinates
     ? { lat: tenant.map_center_coordinates.lat, lng: tenant.map_center_coordinates.lng }
     : null
@@ -82,15 +88,29 @@ export default async function ResidentMapPage({
     }
   }
 
+  let calculatedZoom = 15
+  if (boundaryLocation?.boundary_coordinates && boundaryLocation.boundary_coordinates.length > 0) {
+    const lats = boundaryLocation.boundary_coordinates.map((c) => c[0])
+    const lngs = boundaryLocation.boundary_coordinates.map((c) => c[1])
+    const latDiff = Math.max(...lats) - Math.min(...lats)
+    const lngDiff = Math.max(...lngs) - Math.min(...lngs)
+    const maxDiff = Math.max(latDiff, lngDiff)
+
+    // Calculate zoom based on coordinate span
+    if (maxDiff > 0.01) calculatedZoom = 13
+    else if (maxDiff > 0.005) calculatedZoom = 14
+    else calculatedZoom = 15
+  }
+
   return (
     <div className="h-[calc(100vh-8rem)]">
       <GoogleMapViewer
         locations={locations}
         tenantId={tenant.id}
         mapCenter={calculatedCenter}
-        mapZoom={15}
+        mapZoom={calculatedZoom}
         isAdmin={false}
-        highlightLocationId={highlightLocation}
+        highlightLocationId={highlightLocation ?? boundaryLocation?.id}
         minimal={false}
       />
     </div>

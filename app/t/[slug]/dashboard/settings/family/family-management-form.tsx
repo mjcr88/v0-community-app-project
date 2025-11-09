@@ -244,10 +244,19 @@ export function FamilyManagementForm({
     setSavingFamilyPhoto(true)
     try {
       const supabase = createClient()
-      const { error } = await supabase
+
+      console.log("[v0] Attempting to save family photo:", {
+        familyUnitId: familyUnit.id,
+        photoUrl: pendingFamilyPhoto,
+      })
+
+      const { data, error } = await supabase
         .from("family_units")
         .update({ profile_picture_url: pendingFamilyPhoto })
         .eq("id", familyUnit.id)
+        .select()
+
+      console.log("[v0] Save family photo result:", { data, error })
 
       if (error) throw error
 

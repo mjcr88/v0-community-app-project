@@ -114,10 +114,10 @@ export function LocationInfoCard({ location, onClose, minimal = false }: Locatio
         }
 
         setLoading(false)
+        console.log("[v0] Finished loading from embedded data")
         return
       }
 
-      // Otherwise fetch data as usual
       const supabase = createBrowserClient()
 
       if (location.neighborhood_id) {
@@ -154,12 +154,13 @@ export function LocationInfoCard({ location, onClose, minimal = false }: Locatio
 
         console.log("[v0] Residents query result:", { count: data?.length || 0, error })
 
-        if (data) {
+        if (data && data.length > 0) {
           console.log(
             "[v0] Residents found:",
             data.map((r) => `${r.first_name} ${r.last_name}`),
           )
           setResidents(data)
+
           const family = data.find((resident: any) => resident.family_units)?.family_units
           if (family) {
             console.log("[v0] Family unit found:", family.name)
@@ -182,17 +183,19 @@ export function LocationInfoCard({ location, onClose, minimal = false }: Locatio
           } else {
             console.log("[v0] No family unit found for residents")
           }
+        } else {
+          console.log("[v0] No residents found for lot_id:", location.lot_id)
         }
       } else {
         console.log("[v0] Skipping residents fetch - not a lot or no lot_id")
       }
 
       setLoading(false)
-      console.log("[v0] Finished fetching related data, loading set to false")
+      console.log("[v0] Finished fetching related data")
     }
 
     fetchRelatedData()
-  }, [location]) // Updated dependencies to include the entire location object
+  }, [location]) // Updated to depend on the entire location object
 
   console.log("[v0] LocationInfoCard render state:", {
     loading,

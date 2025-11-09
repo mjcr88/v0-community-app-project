@@ -40,6 +40,7 @@ interface GoogleMapViewerProps {
   mapZoom?: number
   isAdmin?: boolean
   highlightLocationId?: string
+  minimal?: boolean // Add minimal prop for preview mode
 }
 
 export function GoogleMapViewer({
@@ -49,6 +50,7 @@ export function GoogleMapViewer({
   mapZoom = 15,
   isAdmin = false,
   highlightLocationId,
+  minimal = false, // Add minimal prop with default value
 }: GoogleMapViewerProps) {
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null)
   const [highlightedLocationId, setHighlightedLocationId] = useState<string | undefined>(highlightLocationId)
@@ -74,7 +76,7 @@ export function GoogleMapViewer({
   console.log("[v0] GoogleMapViewer highlightLocationId:", highlightLocationId)
 
   useEffect(() => {
-    if (highlightLocationId) {
+    if (highlightLocationId && !minimal) {
       setHighlightedLocationId(highlightLocationId)
       const location = initialLocations.find((loc) => loc.id === highlightLocationId)
       if (location) {
@@ -613,7 +615,7 @@ export function GoogleMapViewer({
         </Map>
       </APIProvider>
 
-      {selectedLocation && (
+      {selectedLocation && !minimal && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
           <LocationInfoCard location={selectedLocation} onClose={() => setSelectedLocation(null)} />
         </div>

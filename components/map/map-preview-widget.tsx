@@ -18,7 +18,7 @@ export function MapPreviewWidget({ tenantSlug, locations, mapCenter, highlightLo
   })
 
   return (
-    <div className="h-48 rounded-lg overflow-hidden border bg-muted">
+    <div className="h-48 rounded-lg overflow-hidden border bg-muted pointer-events-auto">
       <GoogleMapViewer
         tenantSlug={tenantSlug}
         initialLocations={locations}
@@ -26,6 +26,7 @@ export function MapPreviewWidget({ tenantSlug, locations, mapCenter, highlightLo
         mapZoom={17}
         isAdmin={false}
         highlightLocationId={highlightLocationId}
+        minimal={true}
       />
     </div>
   )

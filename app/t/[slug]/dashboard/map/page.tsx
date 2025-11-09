@@ -1,90 +1,98 @@
-"use client"
-
-import { useState, useEffect } from "react"
+import { createClient } from "@/lib/supabase/server"
 import { GoogleMapViewer } from "@/components/map/google-map-viewer"
-import { createBrowserClient } from "@/lib/supabase/client"
-import { useParams, useSearchParams } from "next/navigation"
+import { redirect } from "next/navigation"
 
-export default function ResidentMapPage() {
-  const params = useParams()
-  const searchParams = useSearchParams()
-  const slug = params.slug as string
-  const highlightLot = searchParams.get("highlightLot")
+export default async function ResidentMapPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>
+  searchParams: Promise<{ highlightLot?: string }>
+}) {
+  const { slug } = await params
+  const { highlightLot } = await searchParams
+  const supabase = await createClient()
 
-  const [highlightedLocationId, setHighlightedLocationId] = useState<string | null>(null)
-  const [locations, setLocations] = useState<any[]>([])
-  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null)
-  const [mapZoom, setMapZoom] = useState(15)
-  const [loading, setLoading] = useState(true)
+  console.log("[v0] ResidentMapPage - Starting, slug:", slug, "highlightLot:", highlightLot)
 
-  useEffect(() => {
-    const loadMapData = async () => {
-      const supabase = createBrowserClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
+  console.log("[v0] ResidentMapPage - Auth user:", user?.id)
 
-      if (!user) return
+  if (!user) {
+    console.log("[v0] ResidentMapPage - No user, redirecting to login")
+    redirect(`/t/${slug}/login`)
+  }
 
-      const { data: resident } = await supabase
-        .from("users")
-        .select("*, tenant_id")
-        .eq("id", user.id)
-        .eq("role", "resident")
-        .single()
+  // Get resident and tenant
+  const { data: resident } = await supabase
+    .from("users")
+    .select("*, tenant_id")
+    .eq("id", user.id)
+    .eq("role", "resident")
+    .single()
 
-      if (!resident) return
+  console.log("[v0] ResidentMapPage - Resident data:", resident?.id)
 
-      const { data: tenant } = await supabase.from("tenants").select("*").eq("id", resident.tenant_id).single()
+  if (!resident) {
+    console.log("[v0] ResidentMapPage - No resident found, redirecting to dashboard")
+    redirect(`/t/${slug}/dashboard`)
+  }
 
-      if (!tenant) return
+  // Get tenant for map configuration
+  const { data: tenant } = await supabase.from("tenants").select("*").eq("id", resident.tenant_id).single()
 
-      const { data: locationData } = await supabase.from("locations").select("*").eq("tenant_id", tenant.id)
+  console.log("[v0] ResidentMapPage - Tenant data:", tenant?.id)
 
-      setLocations(locationData || [])
-      setMapCenter(
-        tenant.map_center_coordinates
-          ? { lat: tenant.map_center_coordinates.lat, lng: tenant.map_center_coordinates.lng }
-          : null,
-      )
-      setMapZoom(tenant.map_default_zoom || 15)
+  if (!tenant) {
+    console.log("[v0] ResidentMapPage - No tenant found, redirecting to dashboard")
+    redirect(`/t/${slug}/dashboard`)
+  }
 
-      if (highlightLot) {
-        const lotLocation = locationData?.find((loc: any) => loc.lot_id === highlightLot && loc.type === "lot")
-        if (lotLocation) {
-          setHighlightedLocationId(lotLocation.id)
-        }
-      }
+  // Check if maps feature is enabled
+  const defaultFeatures = { map: true }
+  const mergedFeatures = { ...defaultFeatures, ...(tenant?.features || {}) }
+  const mapEnabled = mergedFeatures.map === true
 
-      setLoading(false)
+  console.log("[v0] ResidentMapPage - Map enabled:", mapEnabled)
+
+  if (!mapEnabled) {
+    console.log("[v0] ResidentMapPage - Map not enabled, redirecting to dashboard")
+    redirect(`/t/${slug}/dashboard`)
+  }
+
+  // Get all locations for the tenant
+  const { data: locations } = await supabase.from("locations").select("*").eq("tenant_id", tenant.id)
+
+  console.log("[v0] ResidentMapPage - Locations count:", locations?.length)
+
+  // Find highlighted location if highlightLot is provided
+  let highlightLocationId: string | undefined
+  if (highlightLot) {
+    const lotLocation = locations?.find((loc) => loc.lot_id === highlightLot && loc.type === "lot")
+    if (lotLocation) {
+      highlightLocationId = lotLocation.id
+      console.log("[v0] ResidentMapPage - Highlighting lot:", lotLocation.name, lotLocation.id)
     }
-
-    loadMapData()
-  }, [highlightLot])
-
-  const handleLocationClick = (locationId: string | null) => {
-    setHighlightedLocationId(locationId)
   }
 
-  if (loading) {
-    return (
-      <div className="h-[calc(100vh-8rem)] flex items-center justify-center">
-        <p className="text-muted-foreground">Loading map...</p>
-      </div>
-    )
-  }
+  const mapCenter = tenant.map_center_coordinates
+    ? { lat: tenant.map_center_coordinates.lat, lng: tenant.map_center_coordinates.lng }
+    : null
+
+  console.log("[v0] ResidentMapPage - Rendering map viewer")
 
   return (
     <div className="h-[calc(100vh-8rem)]">
       <GoogleMapViewer
         tenantSlug={slug}
-        initialLocations={locations}
+        initialLocations={locations || []}
         mapCenter={mapCenter}
-        mapZoom={mapZoom}
+        mapZoom={tenant.map_default_zoom || 15}
         isAdmin={false}
-        highlightedLocationId={highlightedLocationId || undefined}
-        onLocationClick={handleLocationClick}
+        highlightLocationId={highlightLocationId}
       />
     </div>
   )

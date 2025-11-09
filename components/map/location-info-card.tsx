@@ -20,6 +20,7 @@ interface LocationInfoCardProps {
     photos?: string[] | null
     neighborhood_id?: string | null
     lot_id?: string | null
+    lotsObject?: any // Added lotsObject prop
   }
   onClose: () => void
   minimal?: boolean // Added minimal prop
@@ -54,6 +55,7 @@ export function LocationInfoCard({ location, onClose, minimal = false }: Locatio
     type: location.type,
     lot_id: location.lot_id,
     neighborhood_id: location.neighborhood_id,
+    hasLotsObject: !!(location as any).lotsObject,
   })
 
   const [neighborhood, setNeighborhood] = useState<{ id: string; name: string } | null>(null)
@@ -70,19 +72,53 @@ export function LocationInfoCard({ location, onClose, minimal = false }: Locatio
     const fetchRelatedData = async () => {
       setLoading(true)
       console.log("[v0] Starting to fetch related data...")
-      const supabase = createBrowserClient()
 
-      const { data: userData } = await supabase.auth.getUser()
-      if (userData.user) {
-        const { data: user } = await supabase.from("users").select("tenant_id").eq("id", userData.user.id).single()
-        if (user?.tenant_id) {
-          const { data: tenant } = await supabase.from("tenants").select("slug").eq("id", user.tenant_id).single()
-          if (tenant) {
-            console.log("[v0] Tenant slug set:", tenant.slug)
-            setTenantSlug(tenant.slug)
+      const locationWithData = location as any
+      if (locationWithData.lotsObject?.users && locationWithData.lotsObject.users.length > 0) {
+        console.log("[v0] Using embedded lotsObject data instead of fetching")
+        const embeddedResidents = locationWithData.lotsObject.users
+        setResidents(embeddedResidents)
+
+        const family = embeddedResidents.find((resident: any) => resident.family_units)?.family_units
+        if (family) {
+          console.log("[v0] Family unit found in embedded data:", family.name)
+          setFamilyUnit(family)
+
+          // Still need to fetch pets separately
+          const supabase = createBrowserClient()
+          const { data: petsData } = await supabase
+            .from("pets")
+            .select("id, name, species, breed, profile_picture_url")
+            .eq("family_unit_id", family.id)
+
+          if (petsData) {
+            console.log(
+              "[v0] Pets found:",
+              petsData.map((p) => p.name),
+            )
+            setPets(petsData)
           }
         }
+
+        // Get tenant slug for links
+        const supabase = createBrowserClient()
+        const { data: userData } = await supabase.auth.getUser()
+        if (userData.user) {
+          const { data: user } = await supabase.from("users").select("tenant_id").eq("id", userData.user.id).single()
+          if (user?.tenant_id) {
+            const { data: tenant } = await supabase.from("tenants").select("slug").eq("id", user.tenant_id).single()
+            if (tenant) {
+              setTenantSlug(tenant.slug)
+            }
+          }
+        }
+
+        setLoading(false)
+        return
       }
+
+      // Otherwise fetch data as usual
+      const supabase = createBrowserClient()
 
       if (location.neighborhood_id) {
         console.log("[v0] Fetching neighborhood for id:", location.neighborhood_id)
@@ -156,7 +192,7 @@ export function LocationInfoCard({ location, onClose, minimal = false }: Locatio
     }
 
     fetchRelatedData()
-  }, [location.id, location.neighborhood_id, location.lot_id, location.type])
+  }, [location]) // Updated dependencies to include the entire location object
 
   console.log("[v0] LocationInfoCard render state:", {
     loading,
@@ -350,7 +386,8 @@ export function LocationInfoCard({ location, onClose, minimal = false }: Locatio
                       <AvatarImage
                         src={pet.profile_picture_url || "/placeholder.svg"}
                         alt={pet.name}
-                        className="object-cover"
+                        className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
+                        onClick={() => window.open(pet.profile_picture_url || "/placeholder.svg", "_blank")}
                       />
                       <AvatarFallback className={`bg-pink-100 text-pink-700 ${textSize}`}>{petInitials}</AvatarFallback>
                     </Avatar>

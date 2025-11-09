@@ -64,16 +64,44 @@ export default async function ResidentMapPage({
   }
 
   // Get all locations for the tenant
-  const { data: locations } = await supabase.from("locations").select("*").eq("tenant_id", tenant.id)
+  const { data: locations } = await supabase
+    .from("locations")
+    .select(`
+      *,
+      lotsObject:lots(
+        id,
+        lot_number,
+        users!inner(
+          id,
+          first_name,
+          last_name,
+          profile_picture_url,
+          family_unit_id,
+          family_units(id, name, profile_picture_url)
+        )
+      )
+    `)
+    .eq("tenant_id", tenant.id)
 
   console.log("[v0] ResidentMapPage - Locations count:", locations?.length)
+
+  const mappedLocations = locations?.map((loc: any) => ({
+    ...loc,
+    lot_id: loc.lotsObject?.id || loc.lot_id,
+    lotNumber: loc.lotsObject?.lot_number || loc.lotNumber,
+  }))
+
+  console.log(
+    "[v0] Sample location D-001 data:",
+    JSON.stringify(mappedLocations?.find((l: any) => l.name === "D-001")).substring(0, 500),
+  )
 
   let calculatedCenter = tenant.map_center_coordinates
     ? { lat: tenant.map_center_coordinates.lat, lng: tenant.map_center_coordinates.lng }
     : null
 
   if (!calculatedCenter) {
-    const boundaryLocations = locations?.filter((loc) => loc.type === "boundary" && loc.boundary_coordinates)
+    const boundaryLocations = mappedLocations?.filter((loc) => loc.type === "boundary" && loc.boundary_coordinates)
     if (boundaryLocations && boundaryLocations.length > 0) {
       const allCoords: Array<[number, number]> = []
       boundaryLocations.forEach((loc) => {
@@ -96,7 +124,7 @@ export default async function ResidentMapPage({
   // Find highlighted location if highlightLot is provided
   let highlightLocationId: string | undefined
   if (highlightLot) {
-    const lotLocation = locations?.find((loc) => loc.lot_id === highlightLot && loc.type === "lot")
+    const lotLocation = mappedLocations?.find((loc) => loc.lot_id === highlightLot && loc.type === "lot")
     if (lotLocation) {
       highlightLocationId = lotLocation.id
       console.log("[v0] ResidentMapPage - Highlighting lot:", lotLocation.name, lotLocation.id)
@@ -107,7 +135,7 @@ export default async function ResidentMapPage({
 
   return (
     <FullMapClient
-      locations={locations || []}
+      locations={mappedLocations || []}
       tenantId={tenant.id}
       mapCenter={calculatedCenter}
       tenantSlug={slug}

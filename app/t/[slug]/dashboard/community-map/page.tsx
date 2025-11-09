@@ -133,13 +133,20 @@ export default async function ResidentCommunityMapPage({
     .eq("tenant_id", tenant.id)
     .order("created_at", { ascending: false })
 
+  const mappedLocations = locations?.map((loc: any) => ({
+    ...loc,
+    lot_id: loc.lots?.id || loc.lot_id,
+    lotNumber: loc.lots?.lot_number || loc.lotNumber,
+    lotsObject: loc.lots, // Keep lots data as lotsObject for embedded data usage
+  }))
+
   let mapCenter = tenant?.map_center_coordinates
     ? { lat: tenant.map_center_coordinates.lat, lng: tenant.map_center_coordinates.lng }
     : null
 
   // If no manual center is set, calculate from boundary locations
-  if (!mapCenter && locations) {
-    const boundaryLocations = locations.filter((loc) => loc.type === "boundary")
+  if (!mapCenter && mappedLocations) {
+    const boundaryLocations = mappedLocations.filter((loc) => loc.type === "boundary")
     if (boundaryLocations.length > 0) {
       const allCoords: Array<{ lat: number; lng: number }> = []
       boundaryLocations.forEach((loc) => {
@@ -183,7 +190,7 @@ export default async function ResidentCommunityMapPage({
         <CardContent>
           <div className="h-[400px] rounded-lg overflow-hidden border">
             <GoogleMapViewer
-              locations={locations || []}
+              locations={mappedLocations || []}
               tenantId={tenant.id}
               mapCenter={mapCenter}
               mapZoom={15}
@@ -211,7 +218,11 @@ export default async function ResidentCommunityMapPage({
       </div>
 
       {/* Locations Table */}
-      <ResidentLocationsTable locations={locations || []} tenantSlug={slug} initialTypeFilter={initialTypeFilter} />
+      <ResidentLocationsTable
+        locations={mappedLocations || []}
+        tenantSlug={slug}
+        initialTypeFilter={initialTypeFilter}
+      />
     </div>
   )
 }

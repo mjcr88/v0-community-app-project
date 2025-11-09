@@ -239,7 +239,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                 strokeOpacity={0}
                 strokeWeight={0}
                 fillColor="#000000"
-                fillOpacity={0.25}
+                fillOpacity={0.4}
                 clickable={false}
                 zIndex={1}
               />
@@ -268,7 +268,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeOpacity={0}
                   strokeWeight={0}
                   fillColor="#000000"
-                  fillOpacity={0.25}
+                  fillOpacity={0.4}
                   clickable={false}
                   zIndex={zIndex}
                 />
@@ -298,7 +298,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeOpacity={0}
                   strokeWeight={0}
                   fillColor="#000000"
-                  fillOpacity={0.25}
+                  fillOpacity={0.4}
                   clickable={false}
                   zIndex={zIndex}
                 />
@@ -309,7 +309,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
           {neighborhoodPolygons.map((location) => {
             const paths = convertCoordinates(location.boundary_coordinates!)
             const isHighlighted = activeHighlightId === location.id
-            const zIndex = isHighlighted ? 200 : 8
+            const zIndex = isHighlighted ? 200 : 50
             return (
               <React.Fragment key={location.id}>
                 <Polygon
@@ -331,7 +331,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeOpacity={1}
                   strokeWeight={isHighlighted ? 3 : 1}
                   fillColor={isHighlighted ? "#60a5fa" : "#e9d5ff"}
-                  fillOpacity={isHighlighted ? 0.7 : 0.7}
+                  fillOpacity={isHighlighted ? 0.5 : 0.3}
                   onClick={() => {
                     console.log("[v0] Neighborhood polygon clicked:", location.name)
                     handleLocationClick(location)
@@ -345,7 +345,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
           {publicStreetPolylines.map((location) => {
             const path = convertCoordinates(location.path_coordinates!)
             const isHighlighted = activeHighlightId === location.id
-            const zIndex = isHighlighted ? 200 : 15
+            const zIndex = isHighlighted ? 200 : 60
             return (
               <React.Fragment key={location.id}>
                 <Polyline
@@ -377,7 +377,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
           {publicStreetPolygons.map((location) => {
             const paths = convertCoordinates(location.boundary_coordinates!)
             const isHighlighted = activeHighlightId === location.id
-            const zIndex = isHighlighted ? 200 : 15
+            const zIndex = isHighlighted ? 200 : 60
             return (
               <React.Fragment key={location.id}>
                 <Polygon
@@ -399,7 +399,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeOpacity={1}
                   strokeWeight={isHighlighted ? 3 : 1}
                   fillColor={isHighlighted ? "#60a5fa" : "#fef3c7"}
-                  fillOpacity={isHighlighted ? 0.7 : 0.7}
+                  fillOpacity={isHighlighted ? 0.5 : 0.3}
                   onClick={() => {
                     console.log("[v0] Public street polygon clicked:", location.name)
                     handleLocationClick(location)
@@ -413,7 +413,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
           {lotPolygons.map((location) => {
             const paths = convertCoordinates(location.boundary_coordinates!)
             const isHighlighted = activeHighlightId === location.id
-            const zIndex = isHighlighted ? 200 : 10
+            const zIndex = isHighlighted ? 200 : 70
             return (
               <React.Fragment key={location.id}>
                 <Polygon
@@ -435,7 +435,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeOpacity={1}
                   strokeWeight={isHighlighted ? 3 : 1}
                   fillColor={isHighlighted ? "#60a5fa" : "#bfdbfe"}
-                  fillOpacity={isHighlighted ? 0.7 : 0.7}
+                  fillOpacity={isHighlighted ? 0.5 : 0.25}
                   onClick={() => {
                     console.log("[v0] Lot polygon clicked:", location.name)
                     handleLocationClick(location)
@@ -449,7 +449,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
           {lotPolylines.map((location) => {
             const path = convertCoordinates(location.path_coordinates!)
             const isHighlighted = activeHighlightId === location.id
-            const zIndex = isHighlighted ? 200 : 10
+            const zIndex = isHighlighted ? 200 : 70
             return (
               <React.Fragment key={location.id}>
                 <Polyline
@@ -480,7 +480,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
 
           {facilityMarkers.map((location) => {
             const isHighlighted = activeHighlightId === location.id
-            const zIndex = isHighlighted ? 200 : 20
+            const zIndex = isHighlighted ? 200 : 80
             return (
               <Marker
                 key={location.id}
@@ -497,7 +497,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
           {facilityPolygons.map((location) => {
             const paths = convertCoordinates(location.boundary_coordinates!)
             const isHighlighted = activeHighlightId === location.id
-            const zIndex = isHighlighted ? 200 : 20
+            const zIndex = isHighlighted ? 200 : 80
             return (
               <React.Fragment key={location.id}>
                 <Polygon
@@ -519,7 +519,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeOpacity={1}
                   strokeWeight={isHighlighted ? 3 : 1}
                   fillColor={isHighlighted ? "#60a5fa" : "#fed7aa"}
-                  fillOpacity={isHighlighted ? 0.7 : 0.75}
+                  fillOpacity={isHighlighted ? 0.5 : 0.35}
                   onClick={() => {
                     console.log("[v0] Facility polygon clicked:", location.name)
                     handleLocationClick(location)
@@ -533,7 +533,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
           {facilityPolylines.map((location) => {
             const path = convertCoordinates(location.path_coordinates!)
             const isHighlighted = activeHighlightId === location.id
-            const zIndex = isHighlighted ? 200 : 20
+            const zIndex = isHighlighted ? 200 : 80
             return (
               <React.Fragment key={location.id}>
                 <Polyline
@@ -565,7 +565,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
           {walkingPaths.map((location) => {
             const path = convertCoordinates(location.path_coordinates!)
             const isHighlighted = activeHighlightId === location.id
-            const zIndex = isHighlighted ? 200 : 25
+            const zIndex = isHighlighted ? 200 : 90
             return (
               <React.Fragment key={location.id}>
                 <Polyline

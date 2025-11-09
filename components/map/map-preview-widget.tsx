@@ -7,14 +7,22 @@ import { Maximize2 } from "lucide-react"
 
 interface MapPreviewWidgetProps {
   tenantSlug: string
+  tenantId: string
   locations: any[]
   mapCenter: { lat: number; lng: number } | null
-  highlightLocationId: string
+  highlightLocationId?: string
 }
 
-export function MapPreviewWidget({ tenantSlug, locations, mapCenter, highlightLocationId }: MapPreviewWidgetProps) {
+export function MapPreviewWidget({
+  tenantSlug,
+  tenantId,
+  locations,
+  mapCenter,
+  highlightLocationId,
+}: MapPreviewWidgetProps) {
   console.log("[v0] MapPreviewWidget rendering:", {
     tenantSlug,
+    tenantId,
     locationsCount: locations.length,
     mapCenter,
     highlightLocationId,
@@ -25,8 +33,8 @@ export function MapPreviewWidget({ tenantSlug, locations, mapCenter, highlightLo
       <CardContent className="p-0">
         <div className="h-48 rounded-lg overflow-hidden border bg-muted relative">
           <GoogleMapViewer
-            tenantSlug={tenantSlug}
-            initialLocations={locations}
+            locations={locations}
+            tenantId={tenantId}
             mapCenter={mapCenter}
             mapZoom={17}
             isAdmin={false}

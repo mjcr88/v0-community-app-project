@@ -158,10 +158,7 @@ export default async function ResidentCommunityMapPage({
     }
   }
 
-  const userLotLocation = resident?.lot_id && locations ? locations.find((loc) => loc.lot_id === resident.lot_id) : null
-
-  // Only pass highlightLocationId if location has valid lot_id
-  const highlightLocationId = userLotLocation?.lot_id ? userLotLocation.id : undefined
+  const highlightLocationId = undefined
 
   return (
     <div className="space-y-8">
@@ -192,7 +189,7 @@ export default async function ResidentCommunityMapPage({
               tenantId={tenant.id}
               mapCenter={mapCenter}
               mapZoom={14}
-              highlightLocationId={highlightLocationId}
+              highlightLocationId={undefined}
               minimal={false}
             />
           </div>

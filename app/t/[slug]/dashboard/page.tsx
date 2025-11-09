@@ -224,6 +224,7 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
               </div>
               <MapPreviewWidget
                 tenantSlug={slug}
+                tenantId={resident.tenant_id}
                 locations={allLocations}
                 mapCenter={mapCenter}
                 highlightLocationId={lotLocation?.lot_id ? lotLocation.id : undefined}

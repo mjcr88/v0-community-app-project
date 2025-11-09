@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -69,6 +69,19 @@ export function FamilyManagementForm({
     description: familyUnit?.description || "",
     profilePictureUrl: familyUnit?.profile_picture_url || "",
   })
+
+  useEffect(() => {
+    setFamilyMembers(initialFamilyMembers)
+    setRelationships(
+      initialRelationships.reduce((acc, rel) => ({ ...acc, [rel.related_user_id]: rel.relationship_type }), {}),
+    )
+    setPets(initialPets)
+    setFamilyProfile({
+      name: familyUnit?.name || "",
+      description: familyUnit?.description || "",
+      profilePictureUrl: familyUnit?.profile_picture_url || "",
+    })
+  }, [initialFamilyMembers, initialRelationships, initialPets, familyUnit])
 
   const handleRelationshipChange = async (relatedUserId: string, relationshipType: string) => {
     setRelationships({ ...relationships, [relatedUserId]: relationshipType })
@@ -357,7 +370,7 @@ export function FamilyManagementForm({
     }
   }
 
-  const displayFamilyPhoto = pendingFamilyPhoto || familyUnit?.profile_picture_url
+  const displayFamilyPhoto = pendingFamilyPhoto || familyProfile.profilePictureUrl
 
   return (
     <div className="space-y-6">
@@ -568,125 +581,93 @@ export function FamilyManagementForm({
                 </Button>
               </div>
             ) : (
-              <div className="grid gap-4 sm:grid-cols-2">
-                {pets.map((pet) => {
-                  const petInitials = pet.name
-                    .split(" ")
-                    .map((word: string) => word[0])
-                    .join("")
-                    .toUpperCase()
-                    .slice(0, 2)
+              <>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {pets.map((pet) => {
+                    const petInitials = pet.name
+                      .split(" ")
+                      .map((word: string) => word[0])
+                      .join("")
+                      .toUpperCase()
+                      .slice(0, 2)
 
-                  const displayPetPhoto = pendingPetPhotos[pet.id] || pet.profile_picture_url
+                    const displayPetPhoto = pendingPetPhotos[pet.id] || pet.profile_picture_url
 
-                  return (
-                    <Card key={pet.id}>
-                      <CardContent className="pt-6">
-                        <div className="flex flex-col items-center gap-3">
-                          <Avatar className="h-20 w-20">
-                            <AvatarImage src={displayPetPhoto || "/placeholder.svg"} alt={pet.name} />
-                            <AvatarFallback>{petInitials}</AvatarFallback>
-                          </Avatar>
-                          <div className="text-center">
-                            <p className="font-semibold">{pet.name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {pet.species}
-                              {pet.breed && ` • ${pet.breed}`}
-                            </p>
-                          </div>
-                          <div className="flex gap-2 w-full">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handlePetPhotoUpload(pet.id)}
-                              disabled={uploadingPetPhoto === pet.id}
-                              className="flex-1"
-                            >
-                              {uploadingPetPhoto === pet.id ? (
-                                <>
-                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                  Uploading...
-                                </>
-                              ) : (
-                                <>
-                                  <Upload className="mr-2 h-4 w-4" />
-                                  Upload Photo
-                                </>
-                              )}
-                            </Button>
-                            {pendingPetPhotos[pet.id] && (
+                    return (
+                      <Card key={pet.id}>
+                        <CardContent className="pt-6">
+                          <div className="flex flex-col items-center gap-3">
+                            <Avatar className="h-20 w-20">
+                              <AvatarImage src={displayPetPhoto || "/placeholder.svg"} alt={pet.name} />
+                              <AvatarFallback>{petInitials}</AvatarFallback>
+                            </Avatar>
+                            <div className="text-center">
+                              <p className="font-semibold">{pet.name}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {pet.species}
+                                {pet.breed && ` • ${pet.breed}`}
+                              </p>
+                            </div>
+                            <div className="flex gap-2 w-full">
                               <Button
+                                variant="outline"
                                 size="sm"
-                                onClick={() => handleSavePetPhoto(pet.id)}
-                                disabled={savingPetPhoto === pet.id}
+                                onClick={() => handlePetPhotoUpload(pet.id)}
+                                disabled={uploadingPetPhoto === pet.id}
                                 className="flex-1"
                               >
-                                {savingPetPhoto === pet.id ? (
+                                {uploadingPetPhoto === pet.id ? (
                                   <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Saving...
+                                    Uploading...
                                   </>
                                 ) : (
-                                  "Save Photo"
+                                  <>
+                                    <Upload className="mr-2 h-4 w-4" />
+                                    Upload Photo
+                                  </>
                                 )}
                               </Button>
-                            )}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeletePet(pet.id)}
-                              disabled={isLoading}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                              {pendingPetPhotos[pet.id] && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleSavePetPhoto(pet.id)}
+                                  disabled={savingPetPhoto === pet.id}
+                                  className="flex-1"
+                                >
+                                  {savingPetPhoto === pet.id ? (
+                                    <>
+                                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                      Saving...
+                                    </>
+                                  ) : (
+                                    "Save Photo"
+                                  )}
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeletePet(pet.id)}
+                                disabled={isLoading}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )
-                })}
-              </div>
-            )}
+                        </CardContent>
+                      </Card>
+                    )
+                  })}
+                </div>
 
-            {showAddPet && (
-              <div className="space-y-3 rounded-lg border p-4">
-                <div className="space-y-2">
-                  <Label htmlFor="pet-name">Pet Name *</Label>
-                  <Input
-                    id="pet-name"
-                    value={newPet.name}
-                    onChange={(e) => setNewPet({ ...newPet, name: e.target.value })}
-                    placeholder="e.g., Max"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="pet-species">Species *</Label>
-                  <Input
-                    id="pet-species"
-                    value={newPet.species}
-                    onChange={(e) => setNewPet({ ...newPet, species: e.target.value })}
-                    placeholder="e.g., Dog, Cat"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="pet-breed">Breed (Optional)</Label>
-                  <Input
-                    id="pet-breed"
-                    value={newPet.breed}
-                    onChange={(e) => setNewPet({ ...newPet, breed: e.target.value })}
-                    placeholder="e.g., Golden Retriever"
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button onClick={handleAddPet} disabled={isLoading || !newPet.name || !newPet.species}>
-                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Add Pet
+                {!showAddPet && (
+                  <Button variant="outline" size="sm" onClick={() => setShowAddPet(true)} className="w-full">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Another Pet
                   </Button>
-                  <Button variant="outline" onClick={() => setShowAddPet(false)}>
-                    Cancel
-                  </Button>
-                </div>
-              </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>

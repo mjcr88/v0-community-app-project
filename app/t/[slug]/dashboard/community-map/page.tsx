@@ -113,10 +113,10 @@ export default async function ResidentCommunityMapPage({
     .select(`
       *, 
       neighborhoods!locations_neighborhood_id_fkey(name),
-      lotsObject:lots(
+      lotsObject:lots!left(
         id, 
         lot_number,
-        users(
+        users!left(
           id, 
           first_name, 
           last_name, 
@@ -189,9 +189,8 @@ export default async function ResidentCommunityMapPage({
           <MapPreviewWidget
             tenantSlug={slug}
             tenantId={tenant.id}
-            initialLocations={mappedLocations || []}
+            locations={mappedLocations || []}
             mapCenter={mapCenter}
-            mapZoom={15}
           />
         </CardContent>
       </Card>

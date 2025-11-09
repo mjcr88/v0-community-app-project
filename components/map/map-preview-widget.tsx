@@ -36,7 +36,7 @@ export function MapPreviewWidget({
             locations={locations}
             tenantId={tenantId}
             mapCenter={mapCenter}
-            mapZoom={17}
+            mapZoom={15}
             isAdmin={false}
             highlightLocationId={highlightLocationId}
             minimal={true}

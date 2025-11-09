@@ -67,10 +67,10 @@ export default async function ResidentMapPage({
     .from("locations")
     .select(`
       *,
-      lotsObject:lots(
+      lotsObject:lots!left(
         id,
         lot_number,
-        users(
+        users!left(
           id,
           first_name,
           last_name,

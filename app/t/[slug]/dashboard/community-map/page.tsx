@@ -1,3 +1,5 @@
+"use client"
+
 import { createClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import Link from "next/link"
@@ -114,18 +116,38 @@ export default async function ResidentCommunityMapPage({
     .eq("tenant_id", tenant.id)
     .order("created_at", { ascending: false })
 
-  const mapCenter = tenant?.map_center_coordinates
+  let mapCenter = tenant?.map_center_coordinates
     ? { lat: tenant.map_center_coordinates.lat, lng: tenant.map_center_coordinates.lng }
     : null
 
+  // If no manual center is set, calculate from boundary locations
+  if (!mapCenter && locations) {
+    const boundaryLocations = locations.filter((loc) => loc.type === "boundary")
+    if (boundaryLocations.length > 0) {
+      const allCoords: Array<{ lat: number; lng: number }> = []
+      boundaryLocations.forEach((loc) => {
+        if (loc.boundary_coordinates) {
+          loc.boundary_coordinates.forEach((coord: [number, number]) => {
+            allCoords.push({ lat: coord[0], lng: coord[1] })
+          })
+        }
+      })
+
+      if (allCoords.length > 0) {
+        const avgLat = allCoords.reduce((sum, coord) => sum + coord.lat, 0) / allCoords.length
+        const avgLng = allCoords.reduce((sum, coord) => sum + coord.lng, 0) / allCoords.length
+        mapCenter = { lat: avgLat, lng: avgLng }
+      }
+    }
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold">Community Map</h1>
         <p className="text-muted-foreground">Explore locations and facilities in your community</p>
       </div>
 
-      {/* Map Preview Card */}
       <Link href={`/t/${slug}/dashboard/map`}>
         <Card className="cursor-pointer hover:bg-accent/50 transition-colors">
           <CardHeader>
@@ -143,6 +165,7 @@ export default async function ResidentCommunityMapPage({
                 tenantSlug={slug}
                 initialLocations={locations || []}
                 mapCenter={mapCenter}
+                mapZoom={14}
                 minimal={true}
               />
             </div>

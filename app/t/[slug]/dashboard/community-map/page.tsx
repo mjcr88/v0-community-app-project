@@ -4,7 +4,7 @@ import Link from "next/link"
 import { Map } from "lucide-react"
 import { CommunityMapClient } from "./community-map-client"
 import { ResidentLocationsTable } from "@/components/map/resident-locations-table"
-import { GoogleMapViewer } from "@/components/map/google-map-viewer"
+import { MapPreviewWidget } from "@/components/map/map-preview-widget"
 import { redirect } from "next/navigation"
 
 export default async function ResidentCommunityMapPage({
@@ -143,23 +143,22 @@ export default async function ResidentCommunityMapPage({
     ? { lat: tenant.map_center_coordinates.lat, lng: tenant.map_center_coordinates.lng }
     : null
 
-  // If no manual center is set, calculate from boundary locations
   if (!mapCenter && mappedLocations) {
-    const boundaryLocations = mappedLocations.filter((loc) => loc.type === "boundary")
+    const boundaryLocations = mappedLocations.filter((loc) => loc.type === "boundary" && loc.boundary_coordinates)
     if (boundaryLocations.length > 0) {
-      const allCoords: Array<{ lat: number; lng: number }> = []
+      const allCoords: Array<[number, number]> = []
       boundaryLocations.forEach((loc) => {
         if (loc.boundary_coordinates) {
-          loc.boundary_coordinates.forEach((coord: [number, number]) => {
-            allCoords.push({ lat: coord[0], lng: coord[1] })
-          })
+          allCoords.push(...loc.boundary_coordinates)
         }
       })
 
       if (allCoords.length > 0) {
-        const avgLat = allCoords.reduce((sum, coord) => sum + coord.lat, 0) / allCoords.length
-        const avgLng = allCoords.reduce((sum, coord) => sum + coord.lng, 0) / allCoords.length
-        mapCenter = { lat: avgLat, lng: avgLng }
+        const lats = allCoords.map((c) => c[0])
+        const lngs = allCoords.map((c) => c[1])
+        const centerLat = lats.reduce((a, b) => a + b, 0) / lats.length
+        const centerLng = lngs.reduce((a, b) => a + b, 0) / lngs.length
+        mapCenter = { lat: centerLat, lng: centerLng }
       }
     }
   }
@@ -187,15 +186,13 @@ export default async function ResidentCommunityMapPage({
           </div>
         </CardHeader>
         <CardContent>
-          <div className="h-[400px] rounded-lg overflow-hidden border">
-            <GoogleMapViewer
-              locations={mappedLocations || []}
-              tenantId={tenant.id}
-              mapCenter={mapCenter}
-              mapZoom={15}
-              minimal={false}
-            />
-          </div>
+          <MapPreviewWidget
+            tenantSlug={slug}
+            tenantId={tenant.id}
+            initialLocations={mappedLocations || []}
+            mapCenter={mapCenter}
+            mapZoom={15}
+          />
         </CardContent>
       </Card>
 

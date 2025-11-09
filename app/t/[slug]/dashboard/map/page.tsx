@@ -102,9 +102,9 @@ export default async function ResidentMapPage({
     ? { lat: tenant.map_center_coordinates.lat, lng: tenant.map_center_coordinates.lng }
     : null
 
-  if (!calculatedCenter) {
-    const boundaryLocations = mappedLocations?.filter((loc) => loc.type === "boundary" && loc.boundary_coordinates)
-    if (boundaryLocations && boundaryLocations.length > 0) {
+  if (!calculatedCenter && mappedLocations) {
+    const boundaryLocations = mappedLocations.filter((loc) => loc.type === "boundary" && loc.boundary_coordinates)
+    if (boundaryLocations.length > 0) {
       const allCoords: Array<[number, number]> = []
       boundaryLocations.forEach((loc) => {
         if (loc.boundary_coordinates) {

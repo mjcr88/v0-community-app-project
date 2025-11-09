@@ -1,34 +1,54 @@
 "use client"
 
-import { GoogleMapViewer } from "./google-map-viewer"
+import { GoogleMapViewer } from "@/components/map/google-map-viewer"
+import { Card, CardContent } from "@/components/ui/card"
+import Link from "next/link"
+import { Maximize2 } from "lucide-react"
 
 interface MapPreviewWidgetProps {
+  tenantSlug: string
   tenantId: string
   locations: any[]
-  mapCenter?: { lat: number; lng: number }
-  mapZoom?: number
+  mapCenter: { lat: number; lng: number } | null
   highlightLocationId?: string
-  minimal?: boolean
 }
 
 export function MapPreviewWidget({
+  tenantSlug,
   tenantId,
   locations,
   mapCenter,
-  mapZoom = 17,
   highlightLocationId,
-  minimal = true,
 }: MapPreviewWidgetProps) {
+  console.log("[v0] MapPreviewWidget rendering:", {
+    tenantSlug,
+    tenantId,
+    locationsCount: locations.length,
+    mapCenter,
+    highlightLocationId,
+  })
+
   return (
-    <div className="h-[600px] w-full overflow-hidden rounded-lg border">
-      <GoogleMapViewer
-        locations={locations}
-        tenantId={tenantId}
-        mapCenter={mapCenter}
-        mapZoom={mapZoom}
-        highlightLocationId={highlightLocationId}
-        minimal={minimal}
-      />
-    </div>
+    <Card className="relative group">
+      <CardContent className="p-0">
+        <div className="h-48 rounded-lg overflow-hidden border bg-muted relative">
+          <GoogleMapViewer
+            locations={locations}
+            tenantId={tenantId}
+            mapCenter={mapCenter}
+            mapZoom={17}
+            isAdmin={false}
+            highlightLocationId={highlightLocationId}
+            minimal={true}
+          />
+
+          <Link href={`/t/${tenantSlug}/dashboard/map`}>
+            <button className="absolute bottom-4 right-4 p-2 bg-white/90 hover:bg-white shadow-lg rounded-md transition-all opacity-0 group-hover:opacity-100 z-10">
+              <Maximize2 className="h-4 w-4" />
+            </button>
+          </Link>
+        </div>
+      </CardContent>
+    </Card>
   )
 }

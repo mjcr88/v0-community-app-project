@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Loader2, Plus, Trash2, Users, PawPrint, Upload, Home } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
+import { useToast } from "@/hooks/use-toast"
 
 interface FamilyManagementFormProps {
   resident: any
@@ -46,9 +47,14 @@ export function FamilyManagementForm({
   isPrimaryContact,
 }: FamilyManagementFormProps) {
   const router = useRouter()
+  const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [savingFamilyPhoto, setSavingFamilyPhoto] = useState(false)
   const [uploadingPetPhoto, setUploadingPetPhoto] = useState<string | null>(null)
+  const [savingPetPhoto, setSavingPetPhoto] = useState<string | null>(null)
+  const [pendingFamilyPhoto, setPendingFamilyPhoto] = useState<string | null>(null)
+  const [pendingPetPhotos, setPendingPetPhotos] = useState<Record<string, string>>({})
   const [familyMembers, setFamilyMembers] = useState(initialFamilyMembers)
   const [relationships, setRelationships] = useState<Record<string, string>>(
     initialRelationships.reduce((acc, rel) => ({ ...acc, [rel.related_user_id]: rel.relationship_type }), {}),
@@ -192,23 +198,55 @@ export function FamilyManagementForm({
 
         const { url } = await response.json()
 
-        const supabase = createClient()
-        const { error } = await supabase
-          .from("family_units")
-          .update({ profile_picture_url: url })
-          .eq("id", familyUnit.id)
+        setPendingFamilyPhoto(url)
 
-        if (error) throw error
-
-        router.refresh()
+        toast({
+          title: "Photo uploaded",
+          description: "Click 'Save Photo' to save your family photo",
+        })
       } catch (error) {
         console.error("[v0] Error uploading family photo:", error)
-        alert("Failed to upload photo. Please try again.")
+        toast({
+          title: "Upload failed",
+          description: "Failed to upload photo. Please try again.",
+          variant: "destructive",
+        })
       } finally {
         setUploadingPhoto(false)
       }
     }
     input.click()
+  }
+
+  const handleSaveFamilyPhoto = async () => {
+    if (!pendingFamilyPhoto) return
+
+    setSavingFamilyPhoto(true)
+    try {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from("family_units")
+        .update({ profile_picture_url: pendingFamilyPhoto })
+        .eq("id", familyUnit.id)
+
+      if (error) throw error
+
+      setPendingFamilyPhoto(null)
+      toast({
+        title: "Success",
+        description: "Family photo saved successfully",
+      })
+      router.refresh()
+    } catch (error) {
+      console.error("[v0] Error saving family photo:", error)
+      toast({
+        title: "Save failed",
+        description: "Failed to save photo. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setSavingFamilyPhoto(false)
+    }
   }
 
   const handlePetPhotoUpload = async (petId: string) => {
@@ -233,20 +271,55 @@ export function FamilyManagementForm({
 
         const { url } = await response.json()
 
-        const supabase = createClient()
-        const { error } = await supabase.from("pets").update({ profile_picture_url: url }).eq("id", petId)
+        setPendingPetPhotos({ ...pendingPetPhotos, [petId]: url })
 
-        if (error) throw error
-
-        router.refresh()
+        toast({
+          title: "Photo uploaded",
+          description: "Click 'Save Photo' to save your pet photo",
+        })
       } catch (error) {
         console.error("[v0] Error uploading pet photo:", error)
-        alert("Failed to upload photo. Please try again.")
+        toast({
+          title: "Upload failed",
+          description: "Failed to upload photo. Please try again.",
+          variant: "destructive",
+        })
       } finally {
         setUploadingPetPhoto(null)
       }
     }
     input.click()
+  }
+
+  const handleSavePetPhoto = async (petId: string) => {
+    const pendingUrl = pendingPetPhotos[petId]
+    if (!pendingUrl) return
+
+    setSavingPetPhoto(petId)
+    try {
+      const supabase = createClient()
+      const { error } = await supabase.from("pets").update({ profile_picture_url: pendingUrl }).eq("id", petId)
+
+      if (error) throw error
+
+      const { [petId]: _, ...rest } = pendingPetPhotos
+      setPendingPetPhotos(rest)
+
+      toast({
+        title: "Success",
+        description: "Pet photo saved successfully",
+      })
+      router.refresh()
+    } catch (error) {
+      console.error("[v0] Error saving pet photo:", error)
+      toast({
+        title: "Save failed",
+        description: "Failed to save photo. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setSavingPetPhoto(null)
+    }
   }
 
   const availableLotResidents = lotResidents.filter((r) => !familyMembers.some((fm) => fm.id === r.id))
@@ -274,11 +347,17 @@ export function FamilyManagementForm({
       router.refresh()
     } catch (error) {
       console.error("[v0] Error updating family description:", error)
-      alert("Failed to update description. Please try again.")
+      toast({
+        title: "Save failed",
+        description: "Failed to update description. Please try again.",
+        variant: "destructive",
+      })
     } finally {
       setIsLoading(false)
     }
   }
+
+  const displayFamilyPhoto = pendingFamilyPhoto || familyUnit?.profile_picture_url
 
   return (
     <div className="space-y-6">
@@ -294,28 +373,42 @@ export function FamilyManagementForm({
           <CardContent className="space-y-6">
             <div className="flex flex-col items-center gap-4">
               <Avatar className="h-24 w-24">
-                <AvatarImage src={familyUnit.profile_picture_url || "/placeholder.svg"} alt={familyInitials} />
+                <AvatarImage src={displayFamilyPhoto || "/placeholder.svg"} alt={familyInitials} />
                 <AvatarFallback className="text-2xl">{familyInitials}</AvatarFallback>
               </Avatar>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleFamilyPhotoUpload}
-                disabled={uploadingPhoto}
-              >
-                {uploadingPhoto ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Uploading...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="mr-2 h-4 w-4" />
-                    Upload Photo
-                  </>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleFamilyPhotoUpload}
+                  disabled={uploadingPhoto}
+                >
+                  {uploadingPhoto ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Upload Photo
+                    </>
+                  )}
+                </Button>
+                {pendingFamilyPhoto && (
+                  <Button type="button" size="sm" onClick={handleSaveFamilyPhoto} disabled={savingFamilyPhoto}>
+                    {savingFamilyPhoto ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      "Save Photo"
+                    )}
+                  </Button>
                 )}
-              </Button>
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -461,12 +554,6 @@ export function FamilyManagementForm({
                 </CardTitle>
                 <CardDescription>Manage your family pets</CardDescription>
               </div>
-              {pets.length > 0 && !showAddPet && (
-                <Button variant="default" size="sm" onClick={() => setShowAddPet(true)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Pet
-                </Button>
-              )}
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -490,12 +577,14 @@ export function FamilyManagementForm({
                     .toUpperCase()
                     .slice(0, 2)
 
+                  const displayPetPhoto = pendingPetPhotos[pet.id] || pet.profile_picture_url
+
                   return (
                     <Card key={pet.id}>
                       <CardContent className="pt-6">
                         <div className="flex flex-col items-center gap-3">
                           <Avatar className="h-20 w-20">
-                            <AvatarImage src={pet.profile_picture_url || "/placeholder.svg"} alt={pet.name} />
+                            <AvatarImage src={displayPetPhoto || "/placeholder.svg"} alt={pet.name} />
                             <AvatarFallback>{petInitials}</AvatarFallback>
                           </Avatar>
                           <div className="text-center">
@@ -525,6 +614,23 @@ export function FamilyManagementForm({
                                 </>
                               )}
                             </Button>
+                            {pendingPetPhotos[pet.id] && (
+                              <Button
+                                size="sm"
+                                onClick={() => handleSavePetPhoto(pet.id)}
+                                disabled={savingPetPhoto === pet.id}
+                                className="flex-1"
+                              >
+                                {savingPetPhoto === pet.id ? (
+                                  <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Saving...
+                                  </>
+                                ) : (
+                                  "Save Photo"
+                                )}
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="sm"

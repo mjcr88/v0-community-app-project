@@ -1,6 +1,6 @@
 "use client"
 
-import { X, MapPin, Home, Users } from "lucide-react"
+import { X, MapPin, Home, Users, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -250,7 +250,7 @@ export function LocationInfoCard({ location, onClose, minimal = false }: Locatio
     )
   }
 
-  const cardClasses = minimal ? "w-80 max-h-[400px]" : "w-80 max-h-[600px]"
+  const cardClasses = minimal ? "w-80 max-h-[450px]" : "w-80 max-h-[500px]"
   const avatarSize = minimal ? "h-8 w-8" : "h-10 w-10"
   const titleSize = minimal ? "text-sm" : "text-base"
   const textSize = minimal ? "text-xs" : "text-sm"
@@ -258,7 +258,7 @@ export function LocationInfoCard({ location, onClose, minimal = false }: Locatio
   const padding = minimal ? "p-2" : "p-3"
 
   return (
-    <Card className={`${cardClasses} flex flex-col shadow-xl border-2`}>
+    <Card className={`${cardClasses} flex flex-col shadow-xl border-2 relative`}>
       <CardHeader className="pb-3 shrink-0">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
@@ -283,7 +283,7 @@ export function LocationInfoCard({ location, onClose, minimal = false }: Locatio
           </Button>
         </div>
       </CardHeader>
-      <CardContent className={`${spacing} overflow-y-auto`}>
+      <CardContent className={`${spacing} overflow-y-auto flex-1`}>
         {location.photos && location.photos.length > 0 && (
           <div className="relative w-full rounded-lg overflow-hidden border bg-muted cursor-pointer group -mt-1 mb-3">
             <img
@@ -298,163 +298,83 @@ export function LocationInfoCard({ location, onClose, minimal = false }: Locatio
 
         {location.description && (
           <div>
-            <p className={`${textSize} text-muted-foreground leading-relaxed`}>{location.description}</p>
+            <p className={`${textSize} text-muted-foreground leading-relaxed line-clamp-3`}>{location.description}</p>
           </div>
         )}
 
-        {location.type === "facility" &&
-          (location.capacity ||
-            location.max_occupancy ||
-            location.amenities?.length ||
-            location.hours ||
-            location.parking_spaces !== undefined ||
-            location.accessibility_features ||
-            location.rules) && (
-            <div className="space-y-3 pt-2">
-              <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                <div className="h-px flex-1 bg-border" />
-                <span>Details</span>
-                <div className="h-px flex-1 bg-border" />
+        {location.type === "facility" && (
+          <div className="space-y-2 pt-2">
+            {(location.capacity || location.hours || location.amenities?.length) && (
+              <div className="space-y-2 text-sm">
+                {location.capacity && (
+                  <div className="flex items-center gap-2">
+                    <span>👥</span>
+                    <span className="text-muted-foreground">Capacity: {location.capacity}</span>
+                  </div>
+                )}
+                {location.hours && (
+                  <div className="flex items-center gap-2">
+                    <span>🕐</span>
+                    <span className="text-muted-foreground line-clamp-1">{location.hours.split("\n")[0]}</span>
+                  </div>
+                )}
+                {location.amenities && location.amenities.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <span>✨</span>
+                    <span className="text-muted-foreground">{location.amenities.length} amenities</span>
+                  </div>
+                )}
+                {location.parking_spaces !== undefined && location.parking_spaces !== null && (
+                  <div className="flex items-center gap-2">
+                    <span>🅿️</span>
+                    <span className="text-muted-foreground">
+                      {location.parking_spaces > 0 ? `${location.parking_spaces} spaces` : "No parking"}
+                    </span>
+                  </div>
+                )}
+                {location.accessibility_features && (
+                  <div className="flex items-center gap-2">
+                    <span>♿</span>
+                    <span className="text-muted-foreground">Accessible</span>
+                  </div>
+                )}
               </div>
+            )}
+          </div>
+        )}
 
-              {(location.capacity || location.max_occupancy) && (
-                <div className="flex items-start gap-2 text-sm">
-                  <span className="text-base">👥</span>
-                  <div className="flex-1">
-                    {location.capacity && <span className="font-medium">Capacity: {location.capacity} people</span>}
-                    {location.max_occupancy && (
-                      <span className="text-muted-foreground"> | Max: {location.max_occupancy}</span>
-                    )}
+        {location.type === "walking_path" && (
+          <div className="space-y-2 pt-2">
+            {(location.path_difficulty || location.path_length || location.path_surface) && (
+              <div className="space-y-2 text-sm">
+                {location.path_difficulty && (
+                  <div className="flex items-center gap-2">
+                    <span>📈</span>
+                    <span className="text-muted-foreground">{location.path_difficulty}</span>
                   </div>
-                </div>
-              )}
-
-              {location.hours && (
-                <div className="flex items-start gap-2 text-sm">
-                  <span className="text-base">🕐</span>
-                  <div className="flex-1">
-                    <div className="font-medium mb-1">Hours:</div>
-                    <div className="text-muted-foreground whitespace-pre-line">{location.hours}</div>
-                  </div>
-                </div>
-              )}
-
-              {location.amenities && location.amenities.length > 0 && (
-                <div className="flex items-start gap-2 text-sm">
-                  <span className="text-base">✨</span>
-                  <div className="flex-1">
-                    <div className="font-medium mb-1">Amenities:</div>
-                    <div className="flex flex-wrap gap-1">
-                      {location.amenities.map((amenity) => (
-                        <Badge key={amenity} variant="secondary" className="text-xs">
-                          {amenity}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {location.parking_spaces !== undefined && location.parking_spaces !== null && (
-                <div className="flex items-start gap-2 text-sm">
-                  <span className="text-base">🅿️</span>
-                  <div className="flex-1">
-                    {location.parking_spaces > 0 ? (
-                      <span className="font-medium">{location.parking_spaces} parking spaces available</span>
-                    ) : (
-                      <span className="font-medium text-muted-foreground">No parking available</span>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {location.accessibility_features && (
-                <div className="flex items-start gap-2 text-sm">
-                  <span className="text-base">♿</span>
-                  <div className="flex-1">
-                    <div className="font-medium mb-1">Accessibility:</div>
-                    <div className="text-muted-foreground whitespace-pre-line">
-                      {location.accessibility_features.split(" | ").map((feature, idx) => (
-                        <div key={idx}>• {feature}</div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {location.rules && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                    <div className="h-px flex-1 bg-border" />
-                    <span>Rules & Guidelines</span>
-                    <div className="h-px flex-1 bg-border" />
-                  </div>
-                  <div
-                    className="prose prose-sm max-w-none text-sm text-muted-foreground"
-                    dangerouslySetInnerHTML={{ __html: location.rules }}
-                  />
-                </div>
-              )}
-            </div>
-          )}
-
-        {location.type === "walking_path" &&
-          (location.path_difficulty || location.path_surface || location.path_length || location.elevation_gain) && (
-            <div className="space-y-3 pt-2">
-              <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                <div className="h-px flex-1 bg-border" />
-                <span>Path Details</span>
-                <div className="h-px flex-1 bg-border" />
-              </div>
-
-              {location.path_difficulty && (
-                <div className="flex items-start gap-2 text-sm">
-                  <span className="text-base">📈</span>
-                  <div className="flex-1">
-                    <span className="font-medium">Difficulty: </span>
-                    {getDifficultyBadge(location.path_difficulty)}
-                  </div>
-                </div>
-              )}
-
-              {location.path_surface && (
-                <div className="flex items-start gap-2 text-sm">
-                  <span className="text-base">🛤️</span>
-                  <div className="flex-1">
-                    <span className="font-medium">Surface: </span>
+                )}
+                {location.path_surface && (
+                  <div className="flex items-center gap-2">
+                    <span>🛤️</span>
                     <span className="text-muted-foreground capitalize">{location.path_surface}</span>
                   </div>
-                </div>
-              )}
-
-              {location.path_length && (
-                <div className="flex items-start gap-2 text-sm">
-                  <span className="text-base">📏</span>
-                  <div className="flex-1">
-                    <span className="font-medium">Length: </span>
+                )}
+                {location.path_length && (
+                  <div className="flex items-center gap-2">
+                    <span>📏</span>
                     <span className="text-muted-foreground">{location.path_length}</span>
                   </div>
-                </div>
-              )}
-
-              {location.elevation_gain && (
-                <div className="flex items-start gap-2 text-sm">
-                  <span className="text-base">⛰️</span>
-                  <div className="flex-1">
-                    <span className="font-medium">Elevation Gain: </span>
-                    <span className="text-muted-foreground">{location.elevation_gain}</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {neighborhood && (
           <div className={`flex items-center gap-2 ${padding} bg-purple-50 border border-purple-200 rounded-lg`}>
             <MapPin className="h-4 w-4 text-purple-600 shrink-0" />
             <div className="min-w-0 flex-1">
-              <p className={`${textSize} text-purple-700 font-medium`}>Neighborhood</p>
-              <p className={`${titleSize} text-purple-900 truncate`}>{neighborhood.name}</p>
+              <p className={`${textSize} text-purple-900 truncate font-medium`}>{neighborhood.name}</p>
             </div>
           </div>
         )}
@@ -463,138 +383,65 @@ export function LocationInfoCard({ location, onClose, minimal = false }: Locatio
           <div className={`flex items-center gap-2 ${padding} bg-blue-50 border border-blue-200 rounded-lg`}>
             <Home className="h-4 w-4 text-blue-600 shrink-0" />
             <div className="min-w-0 flex-1">
-              <p className={`${textSize} text-blue-700 font-medium`}>Lot</p>
-              <p className={`${titleSize} text-blue-900 truncate`}>Lot #{lot.lot_number}</p>
+              <p className={`${textSize} text-blue-900 truncate font-medium`}>Lot #{lot.lot_number}</p>
             </div>
           </div>
         )}
 
         {familyUnit && (
-          <Link
-            href={`/t/${tenantSlug}/dashboard/families/${familyUnit.id}`}
-            className={`block ${padding} bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 hover:border-amber-300 transition-colors`}
-          >
-            <div className="flex items-center gap-3">
-              <Avatar className={avatarSize}>
-                <AvatarImage
-                  src={familyUnit.profile_picture_url || undefined}
-                  alt={familyUnit.name}
-                  className="object-cover"
-                />
-                <AvatarFallback className={`bg-amber-200 text-amber-900 ${textSize} font-semibold`}>
-                  {familyUnit.name
-                    ?.split(" ")
-                    .map((n) => n[0])
-                    .join("")
-                    .substring(0, 2)
-                    .toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <p className={`${titleSize} font-semibold text-amber-900 truncate`}>{familyUnit.name}</p>
-                <p className={`${textSize} text-amber-700`}>
-                  {residents.length} member{residents.length !== 1 ? "s" : ""}
-                </p>
-                <p className={`${textSize} text-amber-600 mt-1`}>View family profile →</p>
-              </div>
-            </div>
-          </Link>
-        )}
-
-        {residents.length > 0 && (
-          <div className={`${padding} bg-green-50 border border-green-200 rounded-lg ${spacing}`}>
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-green-600 shrink-0" />
-              <p className={`${titleSize} font-medium text-green-700 truncate`}>
-                {familyUnit ? "Family Members" : `Residents (${residents.length})`}
+          <div className={`flex items-center gap-2 ${padding} bg-amber-50 border border-amber-200 rounded-lg`}>
+            <Avatar className={avatarSize}>
+              <AvatarImage
+                src={familyUnit.profile_picture_url || undefined}
+                alt={familyUnit.name}
+                className="object-cover"
+              />
+              <AvatarFallback className={`bg-amber-200 text-amber-900 ${textSize} font-semibold`}>
+                {familyUnit.name
+                  ?.split(" ")
+                  .map((n) => n[0])
+                  .join("")
+                  .substring(0, 2)
+                  .toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <p className={`${titleSize} font-semibold text-amber-900 truncate`}>{familyUnit.name}</p>
+              <p className={`${textSize} text-amber-700`}>
+                {residents.length} member{residents.length !== 1 ? "s" : ""}
               </p>
             </div>
-            <div className={spacing}>
-              {residents.map((resident) => (
-                <Link
-                  key={resident.id}
-                  href={`/t/${tenantSlug}/dashboard/neighbours/${resident.id}`}
-                  className={`flex items-center gap-3 ${padding} bg-white rounded-lg border border-green-200 hover:bg-green-50 hover:border-green-300 transition-colors`}
-                >
-                  <Avatar className={avatarSize}>
-                    <AvatarImage
-                      src={resident.profile_picture_url || undefined}
-                      alt={resident.first_name}
-                      className="object-cover"
-                    />
-                    <AvatarFallback className={`bg-primary/10 text-primary ${textSize}`}>
-                      {resident.first_name?.[0]}
-                      {resident.last_name?.[0]}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <p className={`${titleSize} font-medium text-gray-900 truncate`}>
-                      {resident.first_name} {resident.last_name}
-                    </p>
-                    <p className={`${textSize} text-gray-500`}>View profile →</p>
-                  </div>
-                </Link>
-              ))}
+          </div>
+        )}
+
+        {!familyUnit && residents.length > 0 && (
+          <div className={`flex items-center gap-2 ${padding} bg-green-50 border border-green-200 rounded-lg`}>
+            <Users className="h-4 w-4 text-green-600 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className={`${textSize} text-green-900 font-medium`}>
+                {residents.length} resident{residents.length !== 1 ? "s" : ""}
+              </p>
             </div>
           </div>
         )}
 
         {pets.length > 0 && (
-          <div className={`${padding} bg-pink-50 border border-pink-200 rounded-lg ${spacing}`}>
-            <div className="flex items-center gap-2">
-              <span className="text-base">🐾</span>
-              <p className={`${textSize} text-pink-700 font-medium`}>Family Pets ({pets.length})</p>
-            </div>
-            <div className={spacing}>
-              {pets.map((pet) => {
-                const petInitials = pet.name
-                  .split(" ")
-                  .map((word: string) => word[0])
-                  .join("")
-                  .toUpperCase()
-                  .slice(0, 2)
-
-                return (
-                  <div
-                    key={pet.id}
-                    className={`flex items-center gap-3 ${padding} bg-white rounded-lg border border-pink-200`}
-                  >
-                    <Avatar className={avatarSize}>
-                      <AvatarImage
-                        src={pet.profile_picture_url || "/placeholder.svg"}
-                        alt={pet.name}
-                        className="object-cover"
-                      />
-                      <AvatarFallback className={`bg-pink-100 text-pink-700 ${textSize}`}>{petInitials}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className={`${titleSize} font-medium text-gray-900 truncate`}>{pet.name}</p>
-                      <p className={`${textSize} text-gray-500 truncate`}>{pet.species}</p>
-                    </div>
-                  </div>
-                )
-              })}
+          <div className={`flex items-center gap-2 ${padding} bg-pink-50 border border-pink-200 rounded-lg`}>
+            <span className="text-base">🐾</span>
+            <div className="min-w-0 flex-1">
+              <p className={`${textSize} text-pink-900 font-medium`}>
+                {pets.length} pet{pets.length !== 1 ? "s" : ""}
+              </p>
             </div>
           </div>
         )}
 
-        {location.photos && location.photos.length > 1 && (
-          <div className="space-y-2">
-            <h4 className="text-sm font-medium">Additional Photos</h4>
-            <div className="grid grid-cols-2 gap-2">
-              {location.photos.slice(1).map((photo, index) => (
-                <div key={photo} className="aspect-square rounded-lg overflow-hidden border bg-muted">
-                  <img
-                    src={photo || "/placeholder.svg"}
-                    alt={`${location.name} - Photo ${index + 2}`}
-                    className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
-                    onClick={() => window.open(photo, "_blank")}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        <Button asChild className="w-full" size={minimal ? "sm" : "default"}>
+          <Link href={`/t/${tenantSlug}/dashboard/locations/${location.id}`}>
+            <ExternalLink className="h-4 w-4 mr-2" />
+            View Full Details
+          </Link>
+        </Button>
 
         {!loading &&
           !location.description &&
@@ -603,7 +450,7 @@ export function LocationInfoCard({ location, onClose, minimal = false }: Locatio
           !lot &&
           residents.length === 0 &&
           pets.length === 0 && (
-            <p className="text-sm text-muted-foreground italic">No additional information available</p>
+            <p className="text-sm text-muted-foreground italic text-center py-2">No additional information available</p>
           )}
 
         {loading && (
@@ -611,6 +458,8 @@ export function LocationInfoCard({ location, onClose, minimal = false }: Locatio
             <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
           </div>
         )}
+
+        <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-background to-transparent pointer-events-none" />
       </CardContent>
     </Card>
   )

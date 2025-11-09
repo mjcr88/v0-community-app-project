@@ -290,10 +290,13 @@ export function LocationsTable({ locations, tenantSlug, tenantId, initialTypeFil
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex gap-2 justify-end">
+                        <Button asChild variant="default" size="sm">
+                          <Link href={`/t/${tenantSlug}/admin/locations/${location.id}`}>View Details</Link>
+                        </Button>
                         <Button asChild variant="ghost" size="sm">
                           <Link href={`/t/${tenantSlug}/admin/map/viewer?highlightLocation=${location.id}`}>
                             <Map className="h-4 w-4 mr-1" />
-                            View on Map
+                            Map
                           </Link>
                         </Button>
                         <Button asChild variant="ghost" size="sm">

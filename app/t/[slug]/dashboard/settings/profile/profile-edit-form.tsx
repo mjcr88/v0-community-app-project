@@ -191,12 +191,72 @@ export function ProfileEditForm({
     }
   }
 
-  const handlePhotosChange = (photos: string[]) => {
+  const handlePhotosChange = async (photos: string[]) => {
     setFormData({ ...formData, photos })
+
+    const supabase = createClient()
+    try {
+      const updateData: any = {
+        photos: photos,
+      }
+
+      // If hero photo was deleted, set first photo as new hero
+      if (formData.heroPhoto && !photos.includes(formData.heroPhoto)) {
+        const newHero = photos[0] || null
+        updateData.hero_photo = newHero
+        updateData.profile_picture_url = newHero
+        setFormData({ ...formData, photos, heroPhoto: newHero })
+      }
+
+      const { error } = await supabase.from("users").update(updateData).eq("id", resident.id)
+
+      if (error) throw error
+
+      toast({
+        description: "Photos updated successfully",
+      })
+      router.refresh()
+    } catch (error) {
+      console.error("[v0] Error saving photos:", error)
+      toast({
+        title: "Save failed",
+        description: "Failed to save photos. Please try again.",
+        variant: "destructive",
+      })
+      // Revert on error
+      setFormData({ ...formData, photos: resident.photos || [] })
+    }
   }
 
-  const handleHeroPhotoChange = (heroPhoto: string | null) => {
+  const handleHeroPhotoChange = async (heroPhoto: string | null) => {
     setFormData({ ...formData, heroPhoto })
+
+    const supabase = createClient()
+    try {
+      const { error } = await supabase
+        .from("users")
+        .update({
+          hero_photo: heroPhoto,
+          profile_picture_url: heroPhoto,
+        })
+        .eq("id", resident.id)
+
+      if (error) throw error
+
+      toast({
+        description: "Hero photo updated",
+      })
+      router.refresh()
+    } catch (error) {
+      console.error("[v0] Error saving hero photo:", error)
+      toast({
+        title: "Save failed",
+        description: "Failed to save hero photo. Please try again.",
+        variant: "destructive",
+      })
+      // Revert on error
+      setFormData({ ...formData, heroPhoto: resident.hero_photo || null })
+    }
   }
 
   const addLanguage = (language: string) => {

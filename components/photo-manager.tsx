@@ -30,6 +30,7 @@ export function PhotoManager({
   entityType = "location",
 }: PhotoManagerProps) {
   const [uploading, setUploading] = useState(false)
+  const [deleting, setDeleting] = useState<string | null>(null)
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
@@ -67,6 +68,7 @@ export function PhotoManager({
 
       const urls = await Promise.all(uploadPromises)
       const newPhotos = [...photos, ...urls]
+
       onPhotosChange(newPhotos)
 
       // If this is the first photo and no hero is set, set it as hero
@@ -91,18 +93,33 @@ export function PhotoManager({
     }
   }
 
-  const removePhoto = (urlToRemove: string) => {
-    const newPhotos = photos.filter((url) => url !== urlToRemove)
-    onPhotosChange(newPhotos)
+  const removePhoto = async (urlToRemove: string) => {
+    setDeleting(urlToRemove)
 
-    // If removing the hero photo, set a new hero if photos remain
-    if (heroPhoto === urlToRemove) {
-      onHeroPhotoChange(newPhotos.length > 0 ? newPhotos[0] : null)
+    try {
+      const newPhotos = photos.filter((url) => url !== urlToRemove)
+
+      onPhotosChange(newPhotos)
+
+      // If removing the hero photo, set a new hero if photos remain
+      if (heroPhoto === urlToRemove) {
+        const newHero = newPhotos.length > 0 ? newPhotos[0] : null
+        onHeroPhotoChange(newHero)
+      }
+
+      toast({
+        description: "Photo removed",
+      })
+    } catch (error) {
+      console.error("[v0] Photo delete error:", error)
+      toast({
+        title: "Delete Error",
+        description: "Failed to remove photo",
+        variant: "destructive",
+      })
+    } finally {
+      setDeleting(null)
     }
-
-    toast({
-      description: "Photo removed",
-    })
   }
 
   const setAsHero = (url: string) => {
@@ -139,7 +156,7 @@ export function PhotoManager({
       {/* Upload Button */}
       <div>
         <Input
-          id="photo-upload"
+          id={`photo-upload-${entityType}`}
           type="file"
           accept="image/jpeg,image/jpg,image/png,image/webp"
           multiple
@@ -150,7 +167,7 @@ export function PhotoManager({
         <Button
           type="button"
           variant="outline"
-          onClick={() => document.getElementById("photo-upload")?.click()}
+          onClick={() => document.getElementById(`photo-upload-${entityType}`)?.click()}
           disabled={uploading || photos.length >= maxPhotos}
           className="w-full"
         >
@@ -173,6 +190,7 @@ export function PhotoManager({
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {photos.map((url) => {
             const isHero = url === heroPhoto
+            const isDeleting = deleting === url
 
             return (
               <Card
@@ -180,6 +198,7 @@ export function PhotoManager({
                 className={cn(
                   "relative group aspect-square overflow-hidden",
                   isHero && "ring-2 ring-primary ring-offset-2",
+                  isDeleting && "opacity-50",
                 )}
               >
                 <img src={url || "/placeholder.svg"} alt="Upload" className="w-full h-full object-cover" />
@@ -202,6 +221,7 @@ export function PhotoManager({
                       onClick={() => setAsHero(url)}
                       className="h-8 w-8 shadow-lg"
                       title="Set as hero photo"
+                      disabled={isDeleting}
                     >
                       <Star className="h-4 w-4" />
                     </Button>
@@ -213,8 +233,9 @@ export function PhotoManager({
                     onClick={() => removePhoto(url)}
                     className="h-8 w-8 shadow-lg"
                     title="Remove photo"
+                    disabled={isDeleting}
                   >
-                    <X className="h-4 w-4" />
+                    {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
                   </Button>
                 </div>
               </Card>

@@ -96,10 +96,9 @@ export default async function ResidentMapPage({
     const lngDiff = Math.max(...lngs) - Math.min(...lngs)
     const maxDiff = Math.max(latDiff, lngDiff)
 
-    // Calculate zoom based on coordinate span - lower zoom for wider view
-    if (maxDiff > 0.01) calculatedZoom = 12
-    else if (maxDiff > 0.005) calculatedZoom = 13
-    else calculatedZoom = 14
+    if (maxDiff > 0.01) calculatedZoom = 11
+    else if (maxDiff > 0.005) calculatedZoom = 12
+    else calculatedZoom = 13
   }
 
   return (

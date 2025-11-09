@@ -90,10 +90,9 @@ export default async function ResidentCommunityMapPage({
     const lngDiff = Math.max(...lngs) - Math.min(...lngs)
     const maxDiff = Math.max(latDiff, lngDiff)
 
-    // Lower zoom for wider view to show entire boundary
-    if (maxDiff > 0.01) calculatedZoom = 12
-    else if (maxDiff > 0.005) calculatedZoom = 13
-    else calculatedZoom = 14
+    if (maxDiff > 0.01) calculatedZoom = 11
+    else if (maxDiff > 0.005) calculatedZoom = 12
+    else calculatedZoom = 13
   }
 
   return (

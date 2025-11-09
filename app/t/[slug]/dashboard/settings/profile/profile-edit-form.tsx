@@ -59,6 +59,10 @@ export function ProfileEditForm({
         skill_name: us.skills?.name || "",
         open_to_requests: us.open_to_requests || false,
       })) || [],
+    interestSearch: "",
+    skillSearch: "",
+    newSkill: "",
+    languageSearch: "",
   })
 
   const initials = [formData.firstName, formData.lastName]

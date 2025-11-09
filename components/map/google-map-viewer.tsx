@@ -71,6 +71,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
   const [boundaryLocationsFromTable, setBoundaryLocationsFromTable] = useState<Location[] | null>(null)
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""
+  const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAP_ID
 
   const activeHighlightId = dynamicHighlightId || initialHighlightId
 
@@ -218,7 +219,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
           minZoom={10}
           maxZoom={22}
           restriction={undefined}
-          mapId={process.env.NEXT_PUBLIC_GOOGLE_MAP_ID || "DEMO_MAP_ID"}
+          {...(mapId ? { mapId } : {})}
           onCenterChanged={(e) => setCenter(e.detail.center)}
           onZoomChanged={(e) => setZoom(e.detail.zoom)}
           onClick={handleMapClick}

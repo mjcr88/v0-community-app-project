@@ -218,7 +218,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
           minZoom={10}
           maxZoom={22}
           restriction={undefined}
-          mapId={undefined}
+          mapId={process.env.NEXT_PUBLIC_GOOGLE_MAP_ID || "DEMO_MAP_ID"}
           onCenterChanged={(e) => setCenter(e.detail.center)}
           onZoomChanged={(e) => setZoom(e.detail.zoom)}
           onClick={handleMapClick}
@@ -231,7 +231,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
               strokeOpacity={0.8}
               strokeWeight={2}
               fillColor="#ffffff"
-              fillOpacity={0.1}
+              fillOpacity={0.25}
               clickable={false}
               zIndex={1}
             />
@@ -247,10 +247,11 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                 paths={paths}
                 strokeColor={isHighlighted ? "#ef4444" : "#3b82f6"}
                 strokeOpacity={isHighlighted ? 1 : 0.8}
-                strokeWeight={isHighlighted ? 3 : 2}
+                strokeWeight={isHighlighted ? 4 : 2}
                 fillColor="transparent"
                 fillOpacity={0}
-                clickable={false}
+                clickable={!isHighlighted}
+                onClick={isHighlighted ? undefined : () => handleLocationClick(location)}
                 zIndex={zIndex}
               />
             )
@@ -266,10 +267,11 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                 paths={paths}
                 strokeColor={isHighlighted ? "#ef4444" : "#3b82f6"}
                 strokeOpacity={isHighlighted ? 1 : 0.8}
-                strokeWeight={isHighlighted ? 3 : 2}
+                strokeWeight={isHighlighted ? 4 : 2}
                 fillColor="transparent"
                 fillOpacity={0}
-                clickable={false}
+                clickable={!isHighlighted}
+                onClick={isHighlighted ? undefined : () => handleLocationClick(location)}
                 zIndex={zIndex}
               />
             )
@@ -298,9 +300,9 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   paths={paths}
                   strokeColor={isHighlighted ? "#ef4444" : "#c084fc"}
                   strokeOpacity={1}
-                  strokeWeight={isHighlighted ? 3 : 1}
+                  strokeWeight={isHighlighted ? 4 : 1}
                   fillColor={isHighlighted ? "#60a5fa" : "#e9d5ff"}
-                  fillOpacity={isHighlighted ? 0.6 : 0.4}
+                  fillOpacity={isHighlighted ? 0.8 : 0.6}
                   onClick={() => {
                     console.log("[v0] Neighborhood polygon clicked:", location.name)
                     handleLocationClick(location)
@@ -402,9 +404,9 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   paths={paths}
                   strokeColor={isHighlighted ? "#ef4444" : "#60a5fa"}
                   strokeOpacity={1}
-                  strokeWeight={isHighlighted ? 3 : 1}
+                  strokeWeight={isHighlighted ? 4 : 1}
                   fillColor={isHighlighted ? "#60a5fa" : "#bfdbfe"}
-                  fillOpacity={isHighlighted ? 0.6 : 0.4}
+                  fillOpacity={isHighlighted ? 0.8 : 0.6}
                   onClick={() => {
                     console.log("[v0] Lot polygon clicked:", location.name)
                     handleLocationClick(location)
@@ -486,9 +488,9 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   paths={paths}
                   strokeColor={isHighlighted ? "#ef4444" : "#fb923c"}
                   strokeOpacity={1}
-                  strokeWeight={isHighlighted ? 3 : 1}
+                  strokeWeight={isHighlighted ? 4 : 1}
                   fillColor={isHighlighted ? "#60a5fa" : "#fed7aa"}
-                  fillOpacity={isHighlighted ? 0.6 : 0.5}
+                  fillOpacity={isHighlighted ? 0.8 : 0.7}
                   onClick={() => {
                     console.log("[v0] Facility polygon clicked:", location.name)
                     handleLocationClick(location)

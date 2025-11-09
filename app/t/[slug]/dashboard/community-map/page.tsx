@@ -116,7 +116,18 @@ export default async function ResidentCommunityMapPage({
       lots!locations_lot_id_fkey(
         id, 
         lot_number,
-        users!users_lot_id_fkey(id, first_name, last_name, profile_picture_url)
+        users!users_lot_id_fkey(
+          id, 
+          first_name, 
+          last_name, 
+          profile_picture_url,
+          family_units!users_family_unit_id_fkey(
+            id,
+            name,
+            profile_picture_url,
+            description
+          )
+        )
       )
     `)
     .eq("tenant_id", tenant.id)

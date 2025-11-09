@@ -9,9 +9,10 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Loader2, Plus, Trash2, Users, PawPrint, Upload, Home } from "lucide-react"
+import { Loader2, Plus, Trash2, Users, PawPrint, Home } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
+import { PhotoManager } from "@/components/photo-manager"
 
 interface FamilyManagementFormProps {
   resident: any
@@ -49,12 +50,6 @@ export function FamilyManagementForm({
   const router = useRouter()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
-  const [uploadingPhoto, setUploadingPhoto] = useState(false)
-  const [savingFamilyPhoto, setSavingFamilyPhoto] = useState(false)
-  const [uploadingPetPhoto, setUploadingPetPhoto] = useState<string | null>(null)
-  const [savingPetPhoto, setSavingPetPhoto] = useState<string | null>(null)
-  const [pendingFamilyPhoto, setPendingFamilyPhoto] = useState<string | null>(null)
-  const [pendingPetPhotos, setPendingPetPhotos] = useState<Record<string, string>>({})
   const [familyMembers, setFamilyMembers] = useState(initialFamilyMembers)
   const [relationships, setRelationships] = useState<Record<string, string>>(
     initialRelationships.reduce((acc, rel) => ({ ...acc, [rel.related_user_id]: rel.relationship_type }), {}),
@@ -67,15 +62,11 @@ export function FamilyManagementForm({
   const [familyProfile, setFamilyProfile] = useState({
     name: familyUnit?.name || "",
     description: familyUnit?.description || "",
-    profilePictureUrl: familyUnit?.profile_picture_url || "",
+    photos: familyUnit?.photos || [],
+    heroPhotoIndex: familyUnit?.hero_photo_index ?? 0,
   })
 
   useEffect(() => {
-    console.log("[v0] Family form useEffect triggered")
-    console.log("[v0] familyUnit:", familyUnit)
-    console.log("[v0] familyUnit.profile_picture_url:", familyUnit?.profile_picture_url)
-    console.log("[v0] initialPets:", initialPets)
-
     setFamilyMembers(initialFamilyMembers)
     setRelationships(
       initialRelationships.reduce((acc, rel) => ({ ...acc, [rel.related_user_id]: rel.relationship_type }), {}),
@@ -84,10 +75,9 @@ export function FamilyManagementForm({
     setFamilyProfile({
       name: familyUnit?.name || "",
       description: familyUnit?.description || "",
-      profilePictureUrl: familyUnit?.profile_picture_url || "",
+      photos: familyUnit?.photos || [],
+      heroPhotoIndex: familyUnit?.hero_photo_index ?? 0,
     })
-
-    console.log("[v0] State updated - familyProfile.profilePictureUrl:", familyUnit?.profile_picture_url || "")
   }, [initialFamilyMembers, initialRelationships, initialPets, familyUnit])
 
   const handleRelationshipChange = async (relatedUserId: string, relationshipType: string) => {
@@ -196,158 +186,77 @@ export function FamilyManagementForm({
     }
   }
 
-  const handleFamilyPhotoUpload = async () => {
-    const input = document.createElement("input")
-    input.type = "file"
-    input.accept = "image/jpeg,image/png,image/webp"
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0]
-      if (!file) return
+  const handleFamilyPhotosChange = async (photos: string[], heroIndex: number) => {
+    setFamilyProfile({ ...familyProfile, photos, heroPhotoIndex: heroIndex })
 
-      setUploadingPhoto(true)
-      try {
-        const formData = new FormData()
-        formData.append("file", file)
-
-        const response = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
-        })
-
-        if (!response.ok) throw new Error("Upload failed")
-
-        const { url } = await response.json()
-
-        setPendingFamilyPhoto(url)
-
-        toast({
-          title: "Photo uploaded",
-          description: "Click 'Save Photo' to save your family photo",
-        })
-      } catch (error) {
-        console.error("[v0] Error uploading family photo:", error)
-        toast({
-          title: "Upload failed",
-          description: "Failed to upload photo. Please try again.",
-          variant: "destructive",
-        })
-      } finally {
-        setUploadingPhoto(false)
-      }
-    }
-    input.click()
-  }
-
-  const handleSaveFamilyPhoto = async () => {
-    if (!pendingFamilyPhoto) return
-
-    setSavingFamilyPhoto(true)
+    const supabase = createClient()
     try {
-      const supabase = createClient()
-
-      console.log("[v0] Attempting to save family photo:", {
-        familyUnitId: familyUnit.id,
-        photoUrl: pendingFamilyPhoto,
-      })
-
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from("family_units")
-        .update({ profile_picture_url: pendingFamilyPhoto })
+        .update({
+          photos: photos,
+          hero_photo_index: heroIndex,
+          profile_picture_url: photos[heroIndex] || null,
+        })
         .eq("id", familyUnit.id)
-        .select()
-
-      console.log("[v0] Save family photo result:", { data, error })
 
       if (error) throw error
 
-      setPendingFamilyPhoto(null)
       toast({
         title: "Success",
-        description: "Family photo saved successfully",
+        description: "Family photos updated successfully",
       })
       router.refresh()
     } catch (error) {
-      console.error("[v0] Error saving family photo:", error)
+      console.error("[v0] Error saving family photos:", error)
       toast({
         title: "Save failed",
-        description: "Failed to save photo. Please try again.",
+        description: "Failed to save photos. Please try again.",
         variant: "destructive",
       })
-    } finally {
-      setSavingFamilyPhoto(false)
     }
   }
 
-  const handlePetPhotoUpload = async (petId: string) => {
-    const input = document.createElement("input")
-    input.type = "file"
-    input.accept = "image/jpeg,image/png,image/webp"
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0]
-      if (!file) return
-
-      setUploadingPetPhoto(petId)
-      try {
-        const formData = new FormData()
-        formData.append("file", file)
-
-        const response = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
-        })
-
-        if (!response.ok) throw new Error("Upload failed")
-
-        const { url } = await response.json()
-
-        setPendingPetPhotos({ ...pendingPetPhotos, [petId]: url })
-
-        toast({
-          title: "Photo uploaded",
-          description: "Click 'Save Photo' to save your pet photo",
-        })
-      } catch (error) {
-        console.error("[v0] Error uploading pet photo:", error)
-        toast({
-          title: "Upload failed",
-          description: "Failed to upload photo. Please try again.",
-          variant: "destructive",
-        })
-      } finally {
-        setUploadingPetPhoto(null)
-      }
-    }
-    input.click()
-  }
-
-  const handleSavePetPhoto = async (petId: string) => {
-    const pendingUrl = pendingPetPhotos[petId]
-    if (!pendingUrl) return
-
-    setSavingPetPhoto(petId)
+  const handlePetPhotosChange = async (petId: string, photos: string[], heroIndex: number) => {
+    const supabase = createClient()
     try {
-      const supabase = createClient()
-      const { error } = await supabase.from("pets").update({ profile_picture_url: pendingUrl }).eq("id", petId)
+      const { error } = await supabase
+        .from("pets")
+        .update({
+          photos: photos,
+          hero_photo_index: heroIndex,
+          profile_picture_url: photos[heroIndex] || null,
+        })
+        .eq("id", petId)
 
       if (error) throw error
 
-      const { [petId]: _, ...rest } = pendingPetPhotos
-      setPendingPetPhotos(rest)
+      // Update local state
+      setPets(
+        pets.map((p) =>
+          p.id === petId
+            ? {
+                ...p,
+                photos,
+                hero_photo_index: heroIndex,
+                profile_picture_url: photos[heroIndex] || null,
+              }
+            : p,
+        ),
+      )
 
       toast({
         title: "Success",
-        description: "Pet photo saved successfully",
+        description: "Pet photos updated successfully",
       })
       router.refresh()
     } catch (error) {
-      console.error("[v0] Error saving pet photo:", error)
+      console.error("[v0] Error saving pet photos:", error)
       toast({
         title: "Save failed",
-        description: "Failed to save photo. Please try again.",
+        description: "Failed to save photos. Please try again.",
         variant: "destructive",
       })
-    } finally {
-      setSavingPetPhoto(null)
     }
   }
 
@@ -386,17 +295,6 @@ export function FamilyManagementForm({
     }
   }
 
-  const displayFamilyPhoto = pendingFamilyPhoto || familyProfile.profilePictureUrl
-
-  console.log(
-    "[v0] Rendering family photo - pending:",
-    pendingFamilyPhoto,
-    "saved:",
-    familyProfile.profilePictureUrl,
-    "display:",
-    displayFamilyPhoto,
-  )
-
   return (
     <div className="space-y-6">
       {familyUnit && (
@@ -411,43 +309,20 @@ export function FamilyManagementForm({
           <CardContent className="space-y-6">
             <div className="flex flex-col items-center gap-4">
               <Avatar className="h-24 w-24">
-                <AvatarImage src={displayFamilyPhoto || "/placeholder.svg"} alt={familyInitials} />
+                <AvatarImage
+                  src={familyProfile.photos[familyProfile.heroPhotoIndex] || "/placeholder.svg"}
+                  alt={familyInitials}
+                />
                 <AvatarFallback className="text-2xl">{familyInitials}</AvatarFallback>
               </Avatar>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleFamilyPhotoUpload}
-                  disabled={uploadingPhoto}
-                >
-                  {uploadingPhoto ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="mr-2 h-4 w-4" />
-                      Upload Photo
-                    </>
-                  )}
-                </Button>
-                {pendingFamilyPhoto && (
-                  <Button type="button" size="sm" onClick={handleSaveFamilyPhoto} disabled={savingFamilyPhoto}>
-                    {savingFamilyPhoto ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      "Save Photo"
-                    )}
-                  </Button>
-                )}
-              </div>
             </div>
+
+            <PhotoManager
+              photos={familyProfile.photos}
+              heroPhotoIndex={familyProfile.heroPhotoIndex}
+              onPhotosChange={handleFamilyPhotosChange}
+              maxPhotos={10}
+            />
 
             <div className="space-y-2">
               <Label htmlFor="family-name">Family Name</Label>
@@ -602,12 +477,12 @@ export function FamilyManagementForm({
                 <p className="mt-2 text-sm text-muted-foreground">Add your family pets to your profile</p>
                 <Button variant="outline" size="sm" className="mt-4 bg-transparent" onClick={() => setShowAddPet(true)}>
                   <Plus className="mr-2 h-4 w-4" />
-                  Add Another Pet
+                  Add Pet
                 </Button>
               </div>
             ) : (
               <>
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4">
                   {pets.map((pet) => {
                     const petInitials = pet.name
                       .split(" ")
@@ -616,81 +491,40 @@ export function FamilyManagementForm({
                       .toUpperCase()
                       .slice(0, 2)
 
-                    const displayPetPhoto = pendingPetPhotos[pet.id] || pet.profile_picture_url
-
-                    console.log(
-                      "[v0] Rendering pet photo for",
-                      pet.name,
-                      "- pending:",
-                      pendingPetPhotos[pet.id],
-                      "saved:",
-                      pet.profile_picture_url,
-                      "display:",
-                      displayPetPhoto,
-                    )
+                    const petPhotos = pet.photos || []
+                    const petHeroIndex = pet.hero_photo_index ?? 0
 
                     return (
                       <Card key={pet.id}>
-                        <CardContent className="pt-6">
-                          <div className="flex flex-col items-center gap-3">
-                            <Avatar className="h-20 w-20">
-                              <AvatarImage src={displayPetPhoto || "/placeholder.svg"} alt={pet.name} />
+                        <CardContent className="pt-6 space-y-4">
+                          <div className="flex items-center gap-4">
+                            <Avatar className="h-16 w-16">
+                              <AvatarImage src={petPhotos[petHeroIndex] || "/placeholder.svg"} alt={pet.name} />
                               <AvatarFallback>{petInitials}</AvatarFallback>
                             </Avatar>
-                            <div className="text-center">
+                            <div className="flex-1">
                               <p className="font-semibold">{pet.name}</p>
                               <p className="text-sm text-muted-foreground">
                                 {pet.species}
                                 {pet.breed && ` • ${pet.breed}`}
                               </p>
                             </div>
-                            <div className="flex gap-2 w-full">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handlePetPhotoUpload(pet.id)}
-                                disabled={uploadingPetPhoto === pet.id}
-                                className="flex-1"
-                              >
-                                {uploadingPetPhoto === pet.id ? (
-                                  <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Uploading...
-                                  </>
-                                ) : (
-                                  <>
-                                    <Upload className="mr-2 h-4 w-4" />
-                                    Upload Photo
-                                  </>
-                                )}
-                              </Button>
-                              {pendingPetPhotos[pet.id] && (
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleSavePetPhoto(pet.id)}
-                                  disabled={savingPetPhoto === pet.id}
-                                  className="flex-1"
-                                >
-                                  {savingPetPhoto === pet.id ? (
-                                    <>
-                                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                      Saving...
-                                    </>
-                                  ) : (
-                                    "Save Photo"
-                                  )}
-                                </Button>
-                              )}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDeletePet(pet.id)}
-                                disabled={isLoading}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeletePet(pet.id)}
+                              disabled={isLoading}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
+
+                          <PhotoManager
+                            photos={petPhotos}
+                            heroPhotoIndex={petHeroIndex}
+                            onPhotosChange={(photos, heroIndex) => handlePetPhotosChange(pet.id, photos, heroIndex)}
+                            maxPhotos={10}
+                          />
                         </CardContent>
                       </Card>
                     )

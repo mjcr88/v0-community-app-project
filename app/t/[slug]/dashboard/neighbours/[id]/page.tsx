@@ -218,14 +218,12 @@ export default async function PublicProfilePage({
               {filteredResident.show_neighborhood && lotLocation && locations && (
                 <div className="w-full space-y-2">
                   <h4 className="text-sm font-medium text-muted-foreground">Location</h4>
-                  <Link href={`/t/${slug}/dashboard/map?highlightLot=${resident.lot_id}`} className="block">
-                    <MapPreviewWidget
-                      tenantSlug={slug}
-                      locations={locations}
-                      mapCenter={mapCenter}
-                      highlightLocationId={lotLocation.id}
-                    />
-                  </Link>
+                  <MapPreviewWidget
+                    tenantSlug={slug}
+                    locations={locations}
+                    mapCenter={mapCenter}
+                    highlightLocationId={lotLocation.id}
+                  />
                   <Button variant="outline" size="sm" className="w-full bg-transparent" asChild>
                     <Link href={`/t/${slug}/dashboard/map?highlightLot=${resident.lot_id}`}>View on Full Map</Link>
                   </Button>

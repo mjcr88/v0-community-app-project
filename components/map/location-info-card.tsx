@@ -20,6 +20,18 @@ interface LocationInfoCardProps {
     photos?: string[] | null
     neighborhood_id?: string | null
     lot_id?: string | null
+    capacity?: number | null
+    max_occupancy?: number | null
+    amenities?: string[] | null
+    hours?: string | null
+    status?: string | null
+    parking_spaces?: number | null
+    accessibility_features?: string | null
+    rules?: string | null
+    path_difficulty?: string | null
+    path_surface?: string | null
+    path_length?: string | null
+    elevation_gain?: string | null
   }
   onClose: () => void
   minimal?: boolean // Added minimal prop
@@ -204,6 +216,40 @@ export function LocationInfoCard({ location, onClose, minimal = false }: Locatio
     }
   }
 
+  const getStatusBadge = (status: string) => {
+    const statusConfig: Record<string, { label: string; color: string }> = {
+      open: { label: "Open", color: "bg-green-100 text-green-800 border-green-200" },
+      closed: { label: "Closed", color: "bg-red-100 text-red-800 border-red-200" },
+      maintenance: { label: "Maintenance", color: "bg-yellow-100 text-yellow-800 border-yellow-200" },
+      coming_soon: { label: "Coming Soon", color: "bg-blue-100 text-blue-800 border-blue-200" },
+      temporarily_unavailable: {
+        label: "Temporarily Unavailable",
+        color: "bg-orange-100 text-orange-800 border-orange-200",
+      },
+    }
+    const config = statusConfig[status] || statusConfig.open
+    return (
+      <Badge variant="outline" className={config.color}>
+        {config.label}
+      </Badge>
+    )
+  }
+
+  const getDifficultyBadge = (difficulty: string) => {
+    const difficultyConfig: Record<string, { label: string; color: string; emoji: string }> = {
+      easy: { label: "Easy", color: "bg-green-100 text-green-800 border-green-200", emoji: "🟢" },
+      moderate: { label: "Moderate", color: "bg-blue-100 text-blue-800 border-blue-200", emoji: "🔵" },
+      difficult: { label: "Difficult", color: "bg-orange-100 text-orange-800 border-orange-200", emoji: "🟠" },
+      expert: { label: "Expert", color: "bg-red-100 text-red-800 border-red-200", emoji: "🔴" },
+    }
+    const config = difficultyConfig[difficulty] || difficultyConfig.easy
+    return (
+      <Badge variant="outline" className={config.color}>
+        {config.emoji} {config.label}
+      </Badge>
+    )
+  }
+
   const cardClasses = minimal ? "w-80 max-h-[400px]" : "w-80 max-h-[600px]"
   const avatarSize = minimal ? "h-8 w-8" : "h-10 w-10"
   const titleSize = minimal ? "text-sm" : "text-base"
@@ -220,7 +266,7 @@ export function LocationInfoCard({ location, onClose, minimal = false }: Locatio
               {location.icon && <span className="text-xl">{location.icon}</span>}
               <span className="truncate">{location.name}</span>
             </CardTitle>
-            <div className="flex items-center gap-2 mt-2">
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
               <Badge variant="outline" className={getTypeColor(location.type)}>
                 {getTypeLabel(location.type)}
               </Badge>
@@ -229,6 +275,7 @@ export function LocationInfoCard({ location, onClose, minimal = false }: Locatio
                   {location.facility_type}
                 </Badge>
               )}
+              {location.status && getStatusBadge(location.status)}
             </div>
           </div>
           <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 shrink-0">
@@ -254,6 +301,153 @@ export function LocationInfoCard({ location, onClose, minimal = false }: Locatio
             <p className={`${textSize} text-muted-foreground leading-relaxed`}>{location.description}</p>
           </div>
         )}
+
+        {location.type === "facility" &&
+          (location.capacity ||
+            location.max_occupancy ||
+            location.amenities?.length ||
+            location.hours ||
+            location.parking_spaces !== undefined ||
+            location.accessibility_features ||
+            location.rules) && (
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <div className="h-px flex-1 bg-border" />
+                <span>Details</span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+
+              {(location.capacity || location.max_occupancy) && (
+                <div className="flex items-start gap-2 text-sm">
+                  <span className="text-base">👥</span>
+                  <div className="flex-1">
+                    {location.capacity && <span className="font-medium">Capacity: {location.capacity} people</span>}
+                    {location.max_occupancy && (
+                      <span className="text-muted-foreground"> | Max: {location.max_occupancy}</span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {location.hours && (
+                <div className="flex items-start gap-2 text-sm">
+                  <span className="text-base">🕐</span>
+                  <div className="flex-1">
+                    <div className="font-medium mb-1">Hours:</div>
+                    <div className="text-muted-foreground whitespace-pre-line">{location.hours}</div>
+                  </div>
+                </div>
+              )}
+
+              {location.amenities && location.amenities.length > 0 && (
+                <div className="flex items-start gap-2 text-sm">
+                  <span className="text-base">✨</span>
+                  <div className="flex-1">
+                    <div className="font-medium mb-1">Amenities:</div>
+                    <div className="flex flex-wrap gap-1">
+                      {location.amenities.map((amenity) => (
+                        <Badge key={amenity} variant="secondary" className="text-xs">
+                          {amenity}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {location.parking_spaces !== undefined && location.parking_spaces !== null && (
+                <div className="flex items-start gap-2 text-sm">
+                  <span className="text-base">🅿️</span>
+                  <div className="flex-1">
+                    {location.parking_spaces > 0 ? (
+                      <span className="font-medium">{location.parking_spaces} parking spaces available</span>
+                    ) : (
+                      <span className="font-medium text-muted-foreground">No parking available</span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {location.accessibility_features && (
+                <div className="flex items-start gap-2 text-sm">
+                  <span className="text-base">♿</span>
+                  <div className="flex-1">
+                    <div className="font-medium mb-1">Accessibility:</div>
+                    <div className="text-muted-foreground whitespace-pre-line">
+                      {location.accessibility_features.split(" | ").map((feature, idx) => (
+                        <div key={idx}>• {feature}</div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {location.rules && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <div className="h-px flex-1 bg-border" />
+                    <span>Rules & Guidelines</span>
+                    <div className="h-px flex-1 bg-border" />
+                  </div>
+                  <div
+                    className="prose prose-sm max-w-none text-sm text-muted-foreground"
+                    dangerouslySetInnerHTML={{ __html: location.rules }}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+        {location.type === "walking_path" &&
+          (location.path_difficulty || location.path_surface || location.path_length || location.elevation_gain) && (
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <div className="h-px flex-1 bg-border" />
+                <span>Path Details</span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+
+              {location.path_difficulty && (
+                <div className="flex items-start gap-2 text-sm">
+                  <span className="text-base">📈</span>
+                  <div className="flex-1">
+                    <span className="font-medium">Difficulty: </span>
+                    {getDifficultyBadge(location.path_difficulty)}
+                  </div>
+                </div>
+              )}
+
+              {location.path_surface && (
+                <div className="flex items-start gap-2 text-sm">
+                  <span className="text-base">🛤️</span>
+                  <div className="flex-1">
+                    <span className="font-medium">Surface: </span>
+                    <span className="text-muted-foreground capitalize">{location.path_surface}</span>
+                  </div>
+                </div>
+              )}
+
+              {location.path_length && (
+                <div className="flex items-start gap-2 text-sm">
+                  <span className="text-base">📏</span>
+                  <div className="flex-1">
+                    <span className="font-medium">Length: </span>
+                    <span className="text-muted-foreground">{location.path_length}</span>
+                  </div>
+                </div>
+              )}
+
+              {location.elevation_gain && (
+                <div className="flex items-start gap-2 text-sm">
+                  <span className="text-base">⛰️</span>
+                  <div className="flex-1">
+                    <span className="font-medium">Elevation Gain: </span>
+                    <span className="text-muted-foreground">{location.elevation_gain}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
         {neighborhood && (
           <div className={`flex items-center gap-2 ${padding} bg-purple-50 border border-purple-200 rounded-lg`}>

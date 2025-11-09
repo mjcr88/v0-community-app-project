@@ -209,6 +209,7 @@ export function GoogleMapViewer({
           minZoom={10}
           maxZoom={22}
           restriction={undefined}
+          mapId={undefined}
           onCenterChanged={(e) => setCenter(e.detail.center)}
           onZoomChanged={(e) => {
             console.log("[v0] Zoom changed to:", e.detail.zoom)

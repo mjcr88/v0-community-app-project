@@ -243,7 +243,7 @@ export function GoogleMapEditor({
   const [amenities, setAmenities] = useState<string[]>([])
   const [customAmenities, setCustomAmenities] = useState("")
   const [hours, setHours] = useState("")
-  const [status, setStatus] = useState("")
+  const [status, setStatus] = useState("Open") // Set default to 'Open' to match constraint
   const [parkingAvailable, setParkingAvailable] = useState(false)
   const [parkingSpaces, setParkingSpaces] = useState("")
   const [accessibilityFeatures, setAccessibilityFeatures] = useState<string[]>([])
@@ -2290,11 +2290,11 @@ export function GoogleMapEditor({
                             <SelectValue placeholder="Select status..." />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="open">Open</SelectItem>
-                            <SelectItem value="closed">Closed</SelectItem>
-                            <SelectItem value="maintenance">Maintenance</SelectItem>
-                            <SelectItem value="coming_soon">Coming Soon</SelectItem>
-                            <SelectItem value="temporarily_unavailable">Temporarily Unavailable</SelectItem>
+                            <SelectItem value="Open">Open</SelectItem>
+                            <SelectItem value="Closed">Closed</SelectItem>
+                            <SelectItem value="Maintenance">Maintenance</SelectItem>
+                            <SelectItem value="Coming Soon">Coming Soon</SelectItem>
+                            <SelectItem value="Temporarily Unavailable">Temporarily Unavailable</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -2374,15 +2374,15 @@ export function GoogleMapEditor({
                     {/* Difficulty */}
                     <div className="space-y-2">
                       <Label htmlFor="pathDifficulty">Difficulty Level</Label>
-                      <Select value={pathDifficulty} onValueChange={setPathDifficulty}>
-                        <SelectTrigger id="pathDifficulty">
-                          <SelectValue placeholder="Select difficulty..." />
+                      <Select id="pathDifficulty" value={pathDifficulty} onValueChange={setPathDifficulty}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select difficulty" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="easy">Easy - Flat, paved, suitable for all</SelectItem>
-                          <SelectItem value="moderate">Moderate - Some inclines, good condition</SelectItem>
-                          <SelectItem value="difficult">Difficult - Steep sections, uneven terrain</SelectItem>
-                          <SelectItem value="expert">Expert - Very challenging</SelectItem>
+                          <SelectItem value="Easy">Easy</SelectItem>
+                          <SelectItem value="Moderate">Moderate</SelectItem>
+                          <SelectItem value="Difficult">Difficult</SelectItem>
+                          <SelectItem value="Expert">Expert</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -2390,17 +2390,17 @@ export function GoogleMapEditor({
                     {/* Surface */}
                     <div className="space-y-2">
                       <Label htmlFor="pathSurface">Surface Type</Label>
-                      <Select value={pathSurface} onValueChange={setPathSurface}>
-                        <SelectTrigger id="pathSurface">
-                          <SelectValue placeholder="Select surface..." />
+                      <Select id="pathSurface" value={pathSurface} onValueChange={setPathSurface}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select surface type" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="paved">Paved</SelectItem>
-                          <SelectItem value="gravel">Gravel</SelectItem>
-                          <SelectItem value="dirt">Dirt/Earth</SelectItem>
-                          <SelectItem value="mixed">Mixed Surface</SelectItem>
-                          <SelectItem value="boardwalk">Boardwalk</SelectItem>
-                          <SelectItem value="rocky">Rocky</SelectItem>
+                          <SelectItem value="Paved">Paved</SelectItem>
+                          <SelectItem value="Gravel">Gravel</SelectItem>
+                          <SelectItem value="Dirt">Dirt/Earth</SelectItem>
+                          <SelectItem value="Mixed">Mixed Surface</SelectItem>
+                          <SelectItem value="Boardwalk">Boardwalk</SelectItem>
+                          <SelectItem value="Rocky">Rocky</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -2465,9 +2465,9 @@ export function GoogleMapEditor({
                           <SelectValue placeholder="Select status..." />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="open">Open</SelectItem>
-                          <SelectItem value="closed">Closed</SelectItem>
-                          <SelectItem value="maintenance">Maintenance</SelectItem>
+                          <SelectItem value="Open">Open</SelectItem>
+                          <SelectItem value="Closed">Closed</SelectItem>
+                          <SelectItem value="Maintenance">Maintenance</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

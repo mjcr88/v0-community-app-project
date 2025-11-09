@@ -218,16 +218,16 @@ export function LocationInfoCard({ location, onClose, minimal = false }: Locatio
 
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<string, { label: string; color: string }> = {
-      open: { label: "Open", color: "bg-green-100 text-green-800 border-green-200" },
-      closed: { label: "Closed", color: "bg-red-100 text-red-800 border-red-200" },
-      maintenance: { label: "Maintenance", color: "bg-yellow-100 text-yellow-800 border-yellow-200" },
-      coming_soon: { label: "Coming Soon", color: "bg-blue-100 text-blue-800 border-blue-200" },
-      temporarily_unavailable: {
+      Open: { label: "Open", color: "bg-green-100 text-green-800 border-green-200" },
+      Closed: { label: "Closed", color: "bg-red-100 text-red-800 border-red-200" },
+      Maintenance: { label: "Maintenance", color: "bg-yellow-100 text-yellow-800 border-yellow-200" },
+      "Coming Soon": { label: "Coming Soon", color: "bg-blue-100 text-blue-800 border-blue-200" },
+      "Temporarily Unavailable": {
         label: "Temporarily Unavailable",
         color: "bg-orange-100 text-orange-800 border-orange-200",
       },
     }
-    const config = statusConfig[status] || statusConfig.open
+    const config = statusConfig[status] || statusConfig.Open
     return (
       <Badge variant="outline" className={config.color}>
         {config.label}
@@ -237,12 +237,12 @@ export function LocationInfoCard({ location, onClose, minimal = false }: Locatio
 
   const getDifficultyBadge = (difficulty: string) => {
     const difficultyConfig: Record<string, { label: string; color: string; emoji: string }> = {
-      easy: { label: "Easy", color: "bg-green-100 text-green-800 border-green-200", emoji: "🟢" },
-      moderate: { label: "Moderate", color: "bg-blue-100 text-blue-800 border-blue-200", emoji: "🔵" },
-      difficult: { label: "Difficult", color: "bg-orange-100 text-orange-800 border-orange-200", emoji: "🟠" },
-      expert: { label: "Expert", color: "bg-red-100 text-red-800 border-red-200", emoji: "🔴" },
+      Easy: { label: "Easy", color: "bg-green-100 text-green-800 border-green-200", emoji: "🟢" },
+      Moderate: { label: "Moderate", color: "bg-blue-100 text-blue-800 border-blue-200", emoji: "🔵" },
+      Difficult: { label: "Difficult", color: "bg-orange-100 text-orange-800 border-orange-200", emoji: "🟠" },
+      Expert: { label: "Expert", color: "bg-red-100 text-red-800 border-red-200", emoji: "🔴" },
     }
-    const config = difficultyConfig[difficulty] || difficultyConfig.easy
+    const config = difficultyConfig[difficulty] || difficultyConfig.Easy
     return (
       <Badge variant="outline" className={config.color}>
         {config.emoji} {config.label}
@@ -505,7 +505,7 @@ export function LocationInfoCard({ location, onClose, minimal = false }: Locatio
           <div className={`${padding} bg-green-50 border border-green-200 rounded-lg ${spacing}`}>
             <div className="flex items-center gap-2">
               <Users className="h-4 w-4 text-green-600 shrink-0" />
-              <p className={`${textSize} text-green-700 font-medium`}>
+              <p className={`${titleSize} font-medium text-green-700 truncate`}>
                 {familyUnit ? "Family Members" : `Residents (${residents.length})`}
               </p>
             </div>

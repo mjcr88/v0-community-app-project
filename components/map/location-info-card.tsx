@@ -197,8 +197,8 @@ export function LocationInfoCard({ location, onClose }: LocationInfoCardProps) {
   }
 
   return (
-    <Card className="w-80 shadow-xl border-2">
-      <CardHeader className="pb-3">
+    <Card className="w-80 max-h-[600px] flex flex-col shadow-xl border-2">
+      <CardHeader className="pb-3 shrink-0">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <CardTitle className="text-lg flex items-center gap-2">
@@ -221,7 +221,7 @@ export function LocationInfoCard({ location, onClose }: LocationInfoCardProps) {
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-3 overflow-y-auto">
         {location.description && (
           <div>
             <p className="text-sm text-muted-foreground leading-relaxed">{location.description}</p>
@@ -255,7 +255,11 @@ export function LocationInfoCard({ location, onClose }: LocationInfoCardProps) {
           >
             <div className="flex items-center gap-3">
               <Avatar className="h-12 w-12 shrink-0">
-                <AvatarImage src={familyUnit.profile_picture_url || undefined} alt={familyUnit.name} />
+                <AvatarImage
+                  src={familyUnit.profile_picture_url || undefined}
+                  alt={familyUnit.name}
+                  className="object-cover"
+                />
                 <AvatarFallback className="bg-amber-200 text-amber-900 text-sm font-semibold">
                   {familyUnit.name
                     ?.split(" ")
@@ -276,6 +280,44 @@ export function LocationInfoCard({ location, onClose }: LocationInfoCardProps) {
           </Link>
         )}
 
+        {residents.length > 0 && (
+          <div className="p-3 bg-green-50 border border-green-200 rounded-lg space-y-2">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-green-600 shrink-0" />
+              <p className="text-xs text-green-700 font-medium">
+                {familyUnit ? "Family Members" : `Residents (${residents.length})`}
+              </p>
+            </div>
+            <div className="space-y-2">
+              {residents.map((resident) => (
+                <Link
+                  key={resident.id}
+                  href={`/t/${tenantSlug}/dashboard/neighbours/${resident.id}`}
+                  className="flex items-center gap-3 p-2 bg-white rounded-lg border border-green-200 hover:bg-green-50 hover:border-green-300 transition-colors"
+                >
+                  <Avatar className="h-10 w-10 shrink-0">
+                    <AvatarImage
+                      src={resident.profile_picture_url || undefined}
+                      alt={resident.first_name}
+                      className="object-cover"
+                    />
+                    <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                      {resident.first_name?.[0]}
+                      {resident.last_name?.[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {resident.first_name} {resident.last_name}
+                    </p>
+                    <p className="text-xs text-gray-500">View profile →</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
         {pets.length > 0 && (
           <div className="p-3 bg-pink-50 border border-pink-200 rounded-lg space-y-2">
             <div className="flex items-center gap-2">
@@ -294,7 +336,11 @@ export function LocationInfoCard({ location, onClose }: LocationInfoCardProps) {
                 return (
                   <div key={pet.id} className="flex items-center gap-3 p-2 bg-white rounded-lg border border-pink-200">
                     <Avatar className="h-10 w-10 shrink-0">
-                      <AvatarImage src={pet.profile_picture_url || "/placeholder.svg"} alt={pet.name} />
+                      <AvatarImage
+                        src={pet.profile_picture_url || "/placeholder.svg"}
+                        alt={pet.name}
+                        className="object-cover"
+                      />
                       <AvatarFallback className="bg-pink-100 text-pink-700 text-xs">{petInitials}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
@@ -304,40 +350,6 @@ export function LocationInfoCard({ location, onClose }: LocationInfoCardProps) {
                   </div>
                 )
               })}
-            </div>
-          </div>
-        )}
-
-        {residents.length > 0 && (
-          <div className="p-3 bg-green-50 border border-green-200 rounded-lg space-y-2">
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-green-600 shrink-0" />
-              <p className="text-xs text-green-700 font-medium">
-                {familyUnit ? "Family Members" : `Residents (${residents.length})`}
-              </p>
-            </div>
-            <div className="space-y-2">
-              {residents.map((resident) => (
-                <Link
-                  key={resident.id}
-                  href={`/t/${tenantSlug}/dashboard/neighbours/${resident.id}`}
-                  className="flex items-center gap-3 p-2 bg-white rounded-lg border border-green-200 hover:bg-green-50 hover:border-green-300 transition-colors"
-                >
-                  <Avatar className="h-10 w-10 shrink-0">
-                    <AvatarImage src={resident.profile_picture_url || undefined} alt={resident.first_name} />
-                    <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                      {resident.first_name?.[0]}
-                      {resident.last_name?.[0]}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      {resident.first_name} {resident.last_name}
-                    </p>
-                    <p className="text-xs text-gray-500">View profile →</p>
-                  </div>
-                </Link>
-              ))}
             </div>
           </div>
         )}

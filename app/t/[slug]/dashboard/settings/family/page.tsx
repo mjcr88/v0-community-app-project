@@ -36,6 +36,7 @@ export default async function FamilySettingsPage({ params }: { params: Promise<{
   let familyMembers: any[] = []
   let relationships: any[] = []
   let pets: any[] = []
+  let isPrimaryContact = false
 
   if (validFamilyUnitId) {
     const { data: familyUnitData } = await supabase
@@ -45,6 +46,7 @@ export default async function FamilySettingsPage({ params }: { params: Promise<{
       .maybeSingle()
 
     familyUnit = familyUnitData
+    isPrimaryContact = familyUnit?.primary_contact_id === resident.id
 
     const { data: familyMembersData } = await supabase
       .from("users")
@@ -107,6 +109,7 @@ export default async function FamilySettingsPage({ params }: { params: Promise<{
         lotResidents={lotResidents}
         petsEnabled={tenant?.features?.pets || false}
         tenantSlug={slug}
+        isPrimaryContact={isPrimaryContact}
       />
     </>
   )

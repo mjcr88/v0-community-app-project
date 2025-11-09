@@ -1,3 +1,5 @@
+"use client"
+
 import { createClient } from "@/lib/supabase/server"
 import { redirect, notFound } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -8,7 +10,7 @@ import { MapPin, Users, ArrowLeft, Home, MapIcon, Calendar } from "lucide-react"
 import Link from "next/link"
 
 export default async function LocationDetailsPage({ params }: { params: { slug: string; id: string } }) {
-  const { slug, id } = params
+  const { slug, id } = await params
   const supabase = await createClient()
 
   const {
@@ -25,8 +27,10 @@ export default async function LocationDetailsPage({ params }: { params: { slug: 
     redirect(`/t/${slug}/login`)
   }
 
+  console.log("[v0] LocationDetailsPage - Fetching location:", { id, tenantId: currentUser.tenant_id })
+
   // Fetch location with all related data
-  const { data: location } = await supabase
+  const { data: location, error: locationError } = await supabase
     .from("locations")
     .select(
       `
@@ -57,9 +61,14 @@ export default async function LocationDetailsPage({ params }: { params: { slug: 
     .eq("tenant_id", currentUser.tenant_id)
     .single()
 
-  if (!location) {
+  console.log("[v0] LocationDetailsPage - Query result:", { location: !!location, error: locationError })
+
+  if (locationError || !location) {
+    console.log("[v0] LocationDetailsPage - Location not found, calling notFound()")
     notFound()
   }
+
+  console.log("[v0] LocationDetailsPage - Location loaded:", { name: location.name, type: location.type })
 
   // Fetch pets if this is a lot with residents
   let pets: any[] = []

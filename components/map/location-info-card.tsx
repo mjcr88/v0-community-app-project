@@ -275,7 +275,7 @@ export function LocationInfoCard({ location, onClose, minimal = false }: Locatio
                   {location.facility_type}
                 </Badge>
               )}
-              {location.status && getStatusBadge(location.status)}
+              {location.status && location.type !== "lot" && getStatusBadge(location.status)}
             </div>
           </div>
           <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 shrink-0">

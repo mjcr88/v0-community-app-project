@@ -1,3 +1,5 @@
+"use client"
+
 import { createClient } from "@/lib/supabase/server"
 import { redirect, notFound } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -7,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { MapPin, Users, ArrowLeft, Home, MapIcon, Calendar } from "lucide-react"
 import Link from "next/link"
 
-export default async function LocationDetailsPage({ params }: { params: { slug: string; id: string } }) {
+export default async function LocationDetailsPage({ params }: { params: Promise<{ slug: string; id: string }> }) {
   const { slug, id } = await params
   const supabase = await createClient()
 
@@ -25,63 +27,73 @@ export default async function LocationDetailsPage({ params }: { params: { slug: 
     redirect(`/t/${slug}/login`)
   }
 
-  console.log("[v0] LocationDetailsPage - Fetching location:", { id, tenantId: currentUser.tenant_id })
-
-  // Fetch location with all related data
   const { data: location, error: locationError } = await supabase
     .from("locations")
-    .select(
-      `
-      *,
-      neighborhoods (
-        id,
-        name
-      ),
-      lots (
-        id,
-        lot_number,
-        users (
-          id,
-          first_name,
-          last_name,
-          profile_picture_url,
-          family_unit_id,
-          family_units (
-            id,
-            name,
-            profile_picture_url
-          )
-        )
-      )
-    `,
-    )
+    .select("*")
     .eq("id", id)
     .eq("tenant_id", currentUser.tenant_id)
     .single()
 
-  console.log("[v0] LocationDetailsPage - Query result:", { location: !!location, error: locationError })
-
   if (locationError || !location) {
-    console.log("[v0] LocationDetailsPage - Location not found, calling notFound()")
+    console.log("[v0] LocationDetailsPage - Location not found:", locationError)
     notFound()
   }
 
-  console.log("[v0] LocationDetailsPage - Location loaded:", { name: location.name, type: location.type })
+  let neighborhood = null
+  if (location.neighborhood_id) {
+    const { data: neighborhoodData } = await supabase
+      .from("neighborhoods")
+      .select("id, name")
+      .eq("id", location.neighborhood_id)
+      .single()
+    neighborhood = neighborhoodData
+  }
 
-  // Fetch pets if this is a lot with residents
+  let lot = null
+  let residents: any[] = []
+  if (location.lot_id) {
+    const { data: lotData } = await supabase.from("lots").select("id, lot_number").eq("id", location.lot_id).single()
+    lot = lotData
+
+    // Fetch residents for this lot
+    const { data: residentsData } = await supabase
+      .from("users")
+      .select(
+        `
+        id,
+        first_name,
+        last_name,
+        profile_picture_url,
+        family_unit_id
+      `,
+      )
+      .eq("lot_id", location.lot_id)
+      .eq("tenant_id", currentUser.tenant_id)
+
+    residents = residentsData || []
+  }
+
+  // Fetch family unit if residents exist
+  let familyUnit = null
+  if (residents.length > 0 && residents[0].family_unit_id) {
+    const { data: familyUnitData } = await supabase
+      .from("family_units")
+      .select("id, name, profile_picture_url")
+      .eq("id", residents[0].family_unit_id)
+      .single()
+    familyUnit = familyUnitData
+  }
+
+  // Fetch pets if family unit exists
   let pets: any[] = []
-  if (location.lots?.users && location.lots.users.length > 0) {
-    const familyUnit = location.lots.users.find((user: any) => user.family_units)?.family_units
+  if (familyUnit) {
+    const { data: petsData } = await supabase
+      .from("pets")
+      .select("id, name, species, breed, profile_picture_url")
+      .eq("family_unit_id", familyUnit.id)
 
-    if (familyUnit) {
-      const { data: petsData } = await supabase
-        .from("pets")
-        .select("id, name, species, breed, profile_picture_url")
-        .eq("family_unit_id", familyUnit.id)
-
-      if (petsData) {
-        pets = petsData
-      }
+    if (petsData) {
+      pets = petsData
     }
   }
 
@@ -131,10 +143,8 @@ export default async function LocationDetailsPage({ params }: { params: { slug: 
     return config[difficulty] || config.Easy
   }
 
-  const statusConfig = location.status ? getStatusBadge(location.status) : null
+  const statusConfig = location.status && location.type !== "lot" ? getStatusBadge(location.status) : null
   const difficultyConfig = location.path_difficulty ? getDifficultyBadge(location.path_difficulty) : null
-  const familyUnit = location.lots?.users?.find((user: any) => user.family_units)?.family_units
-  const residents = location.lots?.users || []
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-12">
@@ -339,28 +349,28 @@ export default async function LocationDetailsPage({ params }: { params: { slug: 
         )}
 
       {/* Location Information */}
-      {(location.neighborhoods || location.lots) && (
+      {(neighborhood || lot) && (
         <Card>
           <CardHeader>
             <CardTitle>Location Information</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {location.neighborhoods && (
+            {neighborhood && (
               <div className="flex items-center gap-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
                 <MapPin className="h-5 w-5 text-purple-600" />
                 <div>
                   <p className="text-sm text-purple-700 font-medium">Neighborhood</p>
-                  <p className="text-base text-purple-900 font-semibold">{location.neighborhoods.name}</p>
+                  <p className="text-base text-purple-900 font-semibold">{neighborhood.name}</p>
                 </div>
               </div>
             )}
 
-            {location.lots && (
+            {lot && (
               <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                 <Home className="h-5 w-5 text-blue-600" />
                 <div>
                   <p className="text-sm text-blue-700 font-medium">Lot</p>
-                  <p className="text-base text-blue-900 font-semibold">Lot #{location.lots.lot_number}</p>
+                  <p className="text-base text-blue-900 font-semibold">Lot #{lot.lot_number}</p>
                 </div>
               </div>
             )}

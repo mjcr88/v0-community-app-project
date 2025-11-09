@@ -210,9 +210,9 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {mapEnabled && lotLocation ? (
-          <Card className="md:col-span-2 lg:col-span-2">
+          <Card className="md:col-span-2 lg:col-span-2 lg:row-span-6">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Your Neighborhood</CardTitle>
               <MapPin className="h-4 w-4 text-muted-foreground" />
@@ -250,7 +250,7 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
           </Card>
         )}
 
-        <Card>
+        <Card className="lg:col-span-1">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Community Members</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
@@ -264,7 +264,7 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
         </Card>
 
         {familyUnitId && (
-          <Card>
+          <Card className="lg:col-span-1">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">{familyName}</CardTitle>
               <Home className="h-4 w-4 text-muted-foreground" />
@@ -276,7 +276,7 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
           </Card>
         )}
 
-        <Card>
+        <Card className="lg:col-span-1">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Languages Spoken</CardTitle>
             <Languages className="h-4 w-4 text-muted-foreground" />
@@ -287,7 +287,7 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="lg:col-span-1">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Origin Countries</CardTitle>
             <Globe className="h-4 w-4 text-muted-foreground" />
@@ -299,7 +299,7 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
         </Card>
 
         {petsEnabled && (
-          <Card>
+          <Card className="lg:col-span-1">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Community Pets</CardTitle>
               <PawPrint className="h-4 w-4 text-muted-foreground" />
@@ -311,14 +311,13 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
           </Card>
         )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Journey Stage</CardTitle>
-            <CardDescription>Your current stage</CardDescription>
+        <Card className="lg:col-span-1">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Journey Stage</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold capitalize">{resident.journey_stage || "Not set"}</div>
-            <p className="text-xs text-muted-foreground">Your current stage</p>
+            <p className="text-xs text-muted-foreground">Current stage</p>
           </CardContent>
         </Card>
       </div>

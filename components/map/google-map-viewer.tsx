@@ -32,7 +32,7 @@ interface Location {
   facility_type?: string | null
   photos?: string[] | null
   lot_id?: string | null
-  neighborhood_id?: string | null
+  neighborhood_id?: string
   tenant_id?: string
 }
 
@@ -47,7 +47,7 @@ interface GoogleMapViewerProps {
 }
 
 export const GoogleMapViewer = React.memo(function GoogleMapViewer({
-  locations: initialLocations,
+  locations: initialLocations = [], // Add default empty array to prevent undefined
   tenantId,
   mapCenter,
   mapZoom = 15,

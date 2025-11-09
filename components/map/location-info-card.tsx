@@ -250,7 +250,7 @@ export function LocationInfoCard({ location, onClose, minimal = false }: Locatio
     )
   }
 
-  const cardClasses = minimal ? "w-80 max-h-[450px]" : "w-80 max-h-[500px]"
+  const cardClasses = minimal ? "w-80 max-h-[350px]" : "w-80 max-h-[400px]"
   const avatarSize = minimal ? "h-8 w-8" : "h-10 w-10"
   const titleSize = minimal ? "text-sm" : "text-base"
   const textSize = minimal ? "text-xs" : "text-sm"

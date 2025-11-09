@@ -98,6 +98,22 @@ export function GoogleMapViewer({
           setZoom(17)
         }
       }
+    } else if (highlightLocationId && minimal) {
+      setHighlightedLocationId(highlightLocationId)
+      const location = initialLocations.find((loc) => loc.id === highlightLocationId)
+      if (location) {
+        if (location.coordinates) {
+          setCenter(location.coordinates)
+          setZoom(17)
+        } else if (location.boundary_coordinates && location.boundary_coordinates.length > 0) {
+          const lats = location.boundary_coordinates.map((c) => c[0])
+          const lngs = location.boundary_coordinates.map((c) => c[1])
+          const centerLat = lats.reduce((a, b) => a + b, 0) / lats.length
+          const centerLng = lngs.reduce((a, b) => a + b, 0) / lngs.length
+          setCenter({ lat: centerLat, lng: centerLng })
+          setZoom(17)
+        }
+      }
     }
   }, []) // Only run once on mount
 
@@ -218,10 +234,8 @@ export function GoogleMapViewer({
         >
           {showBoundary && tenantBoundary && (
             <>
-              {/* Create a world rectangle with the boundary as a hole to darken the outside */}
               <Polygon
                 paths={[
-                  // Outer world bounds (large rectangle covering entire map)
                   [
                     { lat: -85, lng: -180 },
                     { lat: -85, lng: 180 },
@@ -229,14 +243,13 @@ export function GoogleMapViewer({
                     { lat: 85, lng: -180 },
                     { lat: -85, lng: -180 },
                   ],
-                  // Inner hole (boundary shape - this creates the cutout)
                   convertCoordinates(tenantBoundary as any),
                 ]}
                 strokeColor="transparent"
                 strokeOpacity={0}
                 strokeWeight={0}
                 fillColor="#000000"
-                fillOpacity={0.4}
+                fillOpacity={0.25}
                 clickable={false}
                 zIndex={1}
               />
@@ -249,11 +262,9 @@ export function GoogleMapViewer({
             const zIndex = isHighlighted ? 200 : 1
             return (
               <>
-                {/* Create world rectangle with boundary hole to darken outside */}
                 <Polygon
                   key={`${location.id}-overlay`}
                   paths={[
-                    // Outer world bounds
                     [
                       { lat: -85, lng: -180 },
                       { lat: -85, lng: 180 },
@@ -261,14 +272,13 @@ export function GoogleMapViewer({
                       { lat: 85, lng: -180 },
                       { lat: -85, lng: -180 },
                     ],
-                    // Inner hole (boundary shape)
                     paths,
                   ]}
                   strokeColor="transparent"
                   strokeOpacity={0}
                   strokeWeight={0}
                   fillColor="#000000"
-                  fillOpacity={0.4}
+                  fillOpacity={0.25}
                   clickable={false}
                   zIndex={zIndex}
                 />
@@ -282,11 +292,9 @@ export function GoogleMapViewer({
             const zIndex = isHighlighted ? 200 : 1
             return (
               <>
-                {/* Create world rectangle with boundary hole to darken outside */}
                 <Polygon
                   key={`${location.id}-overlay`}
                   paths={[
-                    // Outer world bounds
                     [
                       { lat: -85, lng: -180 },
                       { lat: -85, lng: 180 },
@@ -294,14 +302,13 @@ export function GoogleMapViewer({
                       { lat: 85, lng: -180 },
                       { lat: -85, lng: -180 },
                     ],
-                    // Inner hole (boundary shape)
                     paths,
                   ]}
                   strokeColor="transparent"
                   strokeOpacity={0}
                   strokeWeight={0}
                   fillColor="#000000"
-                  fillOpacity={0.4}
+                  fillOpacity={0.25}
                   clickable={false}
                   zIndex={zIndex}
                 />

@@ -1,3 +1,5 @@
+"use client"
+
 import { createClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -211,31 +213,32 @@ export default async function ResidentDashboardPage({ params }: { params: Promis
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {mapEnabled && lotLocation ? (
-          <Card className="md:col-span-2 lg:col-span-2 h-full">
-            <Link href={`/t/${slug}/dashboard/map?highlightLot=${resident.lot_id}`}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 cursor-pointer hover:bg-accent transition-colors">
+          <Link
+            href={`/t/${slug}/dashboard/map?highlightLot=${resident.lot_id}`}
+            className="md:col-span-2 lg:col-span-2"
+          >
+            <Card className="h-full cursor-pointer hover:bg-accent/50 transition-colors">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Your Neighborhood</CardTitle>
                 <MapPin className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
-            </Link>
-            <CardContent className="space-y-2">
-              <div>
-                <div className="text-2xl font-bold">{resident.lots?.neighborhoods?.name || "Not assigned"}</div>
-                <p className="text-xs text-muted-foreground">Lot #{resident.lots?.lot_number || "N/A"}</p>
-              </div>
-              <MapPreviewWidget
-                tenantSlug={slug}
-                locations={allLocations}
-                mapCenter={mapCenter}
-                highlightLocationId={lotLocation.id}
-              />
-              <Link href={`/t/${slug}/dashboard/map?highlightLot=${resident.lot_id}`}>
-                <p className="text-xs text-center text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
-                  Click to view on full map
-                </p>
-              </Link>
-            </CardContent>
-          </Card>
+              <CardContent className="space-y-2">
+                <div>
+                  <div className="text-2xl font-bold">{resident.lots?.neighborhoods?.name || "Not assigned"}</div>
+                  <p className="text-xs text-muted-foreground">Lot #{resident.lots?.lot_number || "N/A"}</p>
+                </div>
+                <div onClick={(e) => e.preventDefault()}>
+                  <MapPreviewWidget
+                    tenantSlug={slug}
+                    locations={allLocations}
+                    mapCenter={mapCenter}
+                    highlightLocationId={lotLocation.id}
+                  />
+                </div>
+                <p className="text-xs text-center text-muted-foreground">Click card to view on full map</p>
+              </CardContent>
+            </Card>
+          </Link>
         ) : (
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

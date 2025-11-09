@@ -7,8 +7,8 @@ import { Users, MapPin, Globe, Languages, PawPrint, Home, Map } from "lucide-rea
 import Link from "next/link"
 import { MapPreviewWidget } from "@/components/map/map-preview-widget"
 
-export default async function ResidentDashboardPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params
+export default async function ResidentDashboardPage({ params }: { params: { slug: string } }) {
+  const { slug } = params
   const supabase = await createClient()
 
   const {

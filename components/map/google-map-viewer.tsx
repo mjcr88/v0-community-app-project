@@ -222,87 +222,61 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
           onZoomChanged={(e) => setZoom(e.detail.zoom)}
           onClick={handleMapClick}
         >
+          {/* Instead, we'll add a subtle LIGHT overlay inside the boundary to make it brighter */}
           {showBoundary && tenantBoundary && (
-            <>
-              <Polygon
-                paths={[
-                  [
-                    { lat: -85, lng: -180 },
-                    { lat: -85, lng: 180 },
-                    { lat: 85, lng: 180 },
-                    { lat: 85, lng: -180 },
-                    { lat: -85, lng: -180 },
-                  ],
-                  convertCoordinates(tenantBoundary as any),
-                ]}
-                strokeColor="transparent"
-                strokeOpacity={0}
-                strokeWeight={0}
-                fillColor="#000000"
-                fillOpacity={0.4}
-                clickable={false}
-                zIndex={1}
-              />
-            </>
+            <Polygon
+              paths={convertCoordinates(tenantBoundary as any)}
+              strokeColor="#3b82f6"
+              strokeOpacity={0.8}
+              strokeWeight={2}
+              fillColor="#ffffff"
+              fillOpacity={0.1}
+              clickable={false}
+              zIndex={2}
+            />
           )}
 
           {boundaryLocations.map((location) => {
             const paths = convertCoordinates(location.boundary_coordinates!)
             const isHighlighted = activeHighlightId === location.id
-            const zIndex = isHighlighted ? 200 : 1
+            const zIndex = isHighlighted ? 200 : 2
             return (
-              <>
-                <Polygon
-                  key={`${location.id}-overlay`}
-                  paths={[
-                    [
-                      { lat: -85, lng: -180 },
-                      { lat: -85, lng: 180 },
-                      { lat: 85, lng: 180 },
-                      { lat: 85, lng: -180 },
-                      { lat: -85, lng: -180 },
-                    ],
-                    paths,
-                  ]}
-                  strokeColor="transparent"
-                  strokeOpacity={0}
-                  strokeWeight={0}
-                  fillColor="#000000"
-                  fillOpacity={0.4}
-                  clickable={false}
-                  zIndex={zIndex}
-                />
-              </>
+              <Polygon
+                key={`${location.id}-boundary`}
+                paths={paths}
+                strokeColor={isHighlighted ? "#ef4444" : "#3b82f6"}
+                strokeOpacity={isHighlighted ? 1 : 0.8}
+                strokeWeight={isHighlighted ? 3 : 2}
+                fillColor="#ffffff"
+                fillOpacity={0.1}
+                onClick={() => {
+                  console.log("[v0] Boundary location clicked:", location.name)
+                  handleLocationClick(location)
+                }}
+                zIndex={zIndex}
+              />
             )
           })}
 
           {boundaryLocationsFromTable?.map((location) => {
             const paths = convertCoordinates(location.boundary_coordinates!)
             const isHighlighted = activeHighlightId === location.id
-            const zIndex = isHighlighted ? 200 : 1
+            const zIndex = isHighlighted ? 200 : 2
             return (
-              <>
-                <Polygon
-                  key={`${location.id}-overlay`}
-                  paths={[
-                    [
-                      { lat: -85, lng: -180 },
-                      { lat: -85, lng: 180 },
-                      { lat: 85, lng: 180 },
-                      { lat: 85, lng: -180 },
-                      { lat: -85, lng: -180 },
-                    ],
-                    paths,
-                  ]}
-                  strokeColor="transparent"
-                  strokeOpacity={0}
-                  strokeWeight={0}
-                  fillColor="#000000"
-                  fillOpacity={0.4}
-                  clickable={false}
-                  zIndex={zIndex}
-                />
-              </>
+              <Polygon
+                key={`${location.id}-boundary`}
+                paths={paths}
+                strokeColor={isHighlighted ? "#ef4444" : "#3b82f6"}
+                strokeOpacity={isHighlighted ? 1 : 0.8}
+                strokeWeight={isHighlighted ? 3 : 2}
+                fillColor="#ffffff"
+                fillOpacity={0.1}
+                onClick={() => {
+                  console.log("[v0] Boundary location clicked:", location.name)
+                  handleLocationClick(location)
+                }}
+                zIndex={zIndex}
+              />
             )
           })}
 
@@ -331,7 +305,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeOpacity={1}
                   strokeWeight={isHighlighted ? 3 : 1}
                   fillColor={isHighlighted ? "#60a5fa" : "#e9d5ff"}
-                  fillOpacity={isHighlighted ? 0.5 : 0.3}
+                  fillOpacity={isHighlighted ? 0.6 : 0.4}
                   onClick={() => {
                     console.log("[v0] Neighborhood polygon clicked:", location.name)
                     handleLocationClick(location)
@@ -399,7 +373,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeOpacity={1}
                   strokeWeight={isHighlighted ? 3 : 1}
                   fillColor={isHighlighted ? "#60a5fa" : "#fef3c7"}
-                  fillOpacity={isHighlighted ? 0.5 : 0.3}
+                  fillOpacity={isHighlighted ? 0.6 : 0.4}
                   onClick={() => {
                     console.log("[v0] Public street polygon clicked:", location.name)
                     handleLocationClick(location)
@@ -435,7 +409,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeOpacity={1}
                   strokeWeight={isHighlighted ? 3 : 1}
                   fillColor={isHighlighted ? "#60a5fa" : "#bfdbfe"}
-                  fillOpacity={isHighlighted ? 0.5 : 0.25}
+                  fillOpacity={isHighlighted ? 0.6 : 0.4}
                   onClick={() => {
                     console.log("[v0] Lot polygon clicked:", location.name)
                     handleLocationClick(location)
@@ -519,7 +493,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeOpacity={1}
                   strokeWeight={isHighlighted ? 3 : 1}
                   fillColor={isHighlighted ? "#60a5fa" : "#fed7aa"}
-                  fillOpacity={isHighlighted ? 0.5 : 0.35}
+                  fillOpacity={isHighlighted ? 0.6 : 0.5}
                   onClick={() => {
                     console.log("[v0] Facility polygon clicked:", location.name)
                     handleLocationClick(location)

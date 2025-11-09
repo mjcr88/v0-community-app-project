@@ -158,8 +158,6 @@ export default async function ResidentCommunityMapPage({
     }
   }
 
-  const highlightLocationId = undefined
-
   return (
     <div className="space-y-8">
       <div>
@@ -188,8 +186,7 @@ export default async function ResidentCommunityMapPage({
               locations={locations || []}
               tenantId={tenant.id}
               mapCenter={mapCenter}
-              mapZoom={14}
-              highlightLocationId={undefined}
+              mapZoom={15}
               minimal={false}
             />
           </div>

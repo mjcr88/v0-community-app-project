@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
-import { GoogleMapViewer } from "@/components/map/google-map-viewer"
 import { redirect } from "next/navigation"
+import { FullMapClient } from "./full-map-client"
 
 export default async function ResidentMapPage({
   params,
@@ -106,15 +106,12 @@ export default async function ResidentMapPage({
   console.log("[v0] ResidentMapPage - Rendering map viewer")
 
   return (
-    <div className="h-[calc(100vh-8rem)]">
-      <GoogleMapViewer
-        tenantSlug={slug}
-        initialLocations={locations || []}
-        mapCenter={calculatedCenter}
-        mapZoom={tenant.map_default_zoom || 15}
-        isAdmin={false}
-        highlightLocationId={highlightLocationId}
-      />
-    </div>
+    <FullMapClient
+      locations={locations || []}
+      tenantId={tenant.id}
+      mapCenter={calculatedCenter}
+      tenantSlug={slug}
+      highlightLocationId={highlightLocationId}
+    />
   )
 }

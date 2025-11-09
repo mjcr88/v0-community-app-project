@@ -179,22 +179,15 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
   )
 
   const handleMapClick = useCallback(() => {
-    if (!minimal) {
-      setDynamicHighlightId(undefined)
-      setSelectedLocation(null)
-    }
-  }, [minimal])
+    setDynamicHighlightId(undefined)
+    setSelectedLocation(null)
+  }, [])
 
-  const handleLocationClick = useCallback(
-    (location: Location) => {
-      if (!minimal) {
-        console.log("[v0] Location clicked:", location.name, location.id)
-        setDynamicHighlightId(location.id)
-        setSelectedLocation(location)
-      }
-    },
-    [minimal],
-  )
+  const handleLocationClick = useCallback((location: Location) => {
+    console.log("[v0] Location clicked:", location.name, location.id)
+    setDynamicHighlightId(location.id)
+    setSelectedLocation(location)
+  }, [])
 
   const convertCoordinates = useCallback((coords: [number, number][]) => {
     return coords.map((coord) => ({
@@ -603,7 +596,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
         </Map>
       </APIProvider>
 
-      {selectedLocation && !minimal && (
+      {selectedLocation && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
           <LocationInfoCard location={selectedLocation} onClose={() => setSelectedLocation(null)} minimal={minimal} />
         </div>

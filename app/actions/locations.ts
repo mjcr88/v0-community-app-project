@@ -50,15 +50,20 @@ export async function createLocation(data: {
       .maybeSingle()
 
     if (existingLocation) {
-      const { error } = await supabase.from("locations").update(data).eq("id", existingLocation.id)
+      const { data: updatedLocation, error } = await supabase
+        .from("locations")
+        .update(data)
+        .eq("id", existingLocation.id)
+        .select()
+        .single()
 
       if (error) {
         console.error("Error updating location:", error)
         throw new Error("Failed to update location")
       }
 
-      revalidatePath(`/t/[slug]/admin/map`, "page")
-      return
+      revalidatePath("/", "layout")
+      return updatedLocation
     }
   }
 
@@ -71,19 +76,24 @@ export async function createLocation(data: {
       .maybeSingle()
 
     if (existingLocation) {
-      const { error } = await supabase.from("locations").update(data).eq("id", existingLocation.id)
+      const { data: updatedLocation, error } = await supabase
+        .from("locations")
+        .update(data)
+        .eq("id", existingLocation.id)
+        .select()
+        .single()
 
       if (error) {
         console.error("Error updating location:", error)
         throw new Error("Failed to update location")
       }
 
-      revalidatePath(`/t/[slug]/admin/map`, "page")
-      return
+      revalidatePath("/", "layout")
+      return updatedLocation
     }
   }
 
-  const { data: newLocation, error } = await supabase.from("locations").insert(data).select("id").single()
+  const { data: newLocation, error } = await supabase.from("locations").insert(data).select().single()
 
   if (error) {
     console.error("Error creating location:", error)
@@ -99,7 +109,8 @@ export async function createLocation(data: {
     await supabase.from("neighborhoods").update({ location_id: newLocation.id }).eq("id", data.neighborhood_id)
   }
 
-  revalidatePath(`/t/[slug]/admin/map`, "page")
+  revalidatePath("/", "layout")
+  return newLocation
 }
 
 export async function updateLocation(
@@ -198,5 +209,5 @@ export async function deleteLocation(locationId: string, tenantId: string) {
     throw new Error("Failed to delete location")
   }
 
-  revalidatePath(`/t/[slug]/admin/map`, "page")
+  revalidatePath("/", "layout")
 }

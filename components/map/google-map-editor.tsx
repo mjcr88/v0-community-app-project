@@ -36,9 +36,6 @@ import {
   Layers,
   Check,
   Filter,
-  Upload,
-  X,
-  ImageIcon,
   Plus,
 } from "lucide-react"
 import { Polygon } from "./polygon"
@@ -49,6 +46,7 @@ import { geolocate } from "@/lib/geolocate"
 import { Badge } from "@/components/ui/badge"
 import { LocationInfoCard } from "./location-info-card"
 import { RichTextEditor } from "@/components/ui/rich-text-editor" // Assuming RichTextEditor is in the same directory
+import { PhotoManager } from "@/components/photo-manager"
 
 type DrawingMode = "marker" | "polygon" | "polyline" | null
 type LatLng = { lat: number; lng: number }
@@ -233,6 +231,7 @@ export function GoogleMapEditor({
   // State for photo uploads
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([])
+  const [heroPhoto, setHeroPhoto] = useState<string | null>(null)
 
   // State for deletion
   const [deleting, setDeleting] = useState(false)
@@ -539,6 +538,7 @@ export function GoogleMapEditor({
     setSelectedLotId(location.lot_id || "")
     setSelectedNeighborhoodId(location.neighborhood_id || "")
     setUploadedPhotos(location.photos || [])
+    setHeroPhoto(location.hero_photo || (location.photos && location.photos.length > 0 ? location.photos[0] : null))
 
     // Load new attributes
     setCapacity(location.capacity?.toString() || "")
@@ -710,6 +710,9 @@ export function GoogleMapEditor({
 
   const removePhoto = (urlToRemove: string) => {
     setUploadedPhotos(uploadedPhotos.filter((url) => url !== urlToRemove))
+    if (heroPhoto === urlToRemove) {
+      setHeroPhoto(null)
+    }
     toast({
       description: "Photo removed",
     })
@@ -783,6 +786,7 @@ export function GoogleMapEditor({
         type: locationType,
         description: description.trim() || null,
         photos: uploadedPhotos.length > 0 ? uploadedPhotos : null,
+        hero_photo: heroPhoto,
       }
 
       if (locationType === "facility") {
@@ -908,6 +912,7 @@ export function GoogleMapEditor({
       setSelectedNeighborhoodId("")
       setDrawingMode(null)
       setUploadedPhotos([])
+      setHeroPhoto(null)
       setEditingLocationId(null)
 
       // Reset facility attributes
@@ -968,6 +973,7 @@ export function GoogleMapEditor({
     setSelectedLotId("")
     setSelectedNeighborhoodId("")
     setUploadedPhotos([])
+    setHeroPhoto(null)
     setDrawingMode(null)
     setSaving(false)
 
@@ -1075,6 +1081,7 @@ export function GoogleMapEditor({
     setSelectedLotId("")
     setSelectedNeighborhoodId("")
     setUploadedPhotos([])
+    setHeroPhoto(null)
     setDrawingMode(null)
 
     // Reset all new fields
@@ -2474,72 +2481,15 @@ export function GoogleMapEditor({
                   </div>
                 )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="photos">Photos</Label>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Input
-                        id="photos"
-                        type="file"
-                        accept="image/jpeg,image/jpg,image/png,image/webp"
-                        multiple
-                        onChange={handlePhotoUpload}
-                        disabled={uploadingPhoto}
-                        className="hidden"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => document.getElementById("photos")?.click()}
-                        disabled={uploadingPhoto}
-                        className="w-full"
-                      >
-                        {uploadingPhoto ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Uploading...
-                          </>
-                        ) : (
-                          <>
-                            <Upload className="mr-2 h-4 w-4" />
-                            Upload Photos
-                          </>
-                        )}
-                      </Button>
-                    </div>
-
-                    {uploadedPhotos.length > 0 && (
-                      <div className="grid grid-cols-2 gap-2">
-                        {uploadedPhotos.map((url, index) => (
-                          <div key={url} className="relative group aspect-square rounded-lg overflow-hidden border">
-                            <img
-                              src={url || "/placeholder.svg"}
-                              alt={`Upload ${index + 1}`}
-                              className="w-full h-full object-cover"
-                            />
-                            <Button
-                              type="button"
-                              variant="destructive"
-                              size="icon"
-                              onClick={() => removePhoto(url)}
-                              className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {uploadedPhotos.length === 0 && (
-                      <div className="flex items-center justify-center h-24 border-2 border-dashed rounded-lg text-muted-foreground">
-                        <div className="text-center">
-                          <ImageIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                          <p className="text-sm">No photos uploaded</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                <div>
+                  <PhotoManager
+                    photos={uploadedPhotos}
+                    heroPhoto={heroPhoto}
+                    onPhotosChange={setUploadedPhotos}
+                    onHeroPhotoChange={setHeroPhoto}
+                    maxPhotos={20}
+                    entityType="location"
+                  />
                 </div>
               </>
             )}

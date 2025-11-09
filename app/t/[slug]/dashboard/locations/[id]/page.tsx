@@ -1,11 +1,14 @@
+"use client"
+
 import { createClient } from "@/lib/supabase/server"
 import { redirect, notFound } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { MapPin, Users, ArrowLeft, Home, MapIcon, Calendar } from "lucide-react"
+import { MapPin, Users, ArrowLeft, Home, MapIcon, Calendar, Star } from "lucide-react"
 import Link from "next/link"
+import { cn } from "@/lib/utils"
 
 export default async function LocationDetailsPage({ params }: { params: { slug: string; id: string } }) {
   const { slug, id } = params
@@ -144,6 +147,9 @@ export default async function LocationDetailsPage({ params }: { params: { slug: 
   const statusConfig = location.status && location.type !== "lot" ? getStatusBadge(location.status) : null
   const difficultyConfig = location.path_difficulty ? getDifficultyBadge(location.path_difficulty) : null
 
+  const mainPhoto = location.hero_photo || (location.photos && location.photos.length > 0 ? location.photos[0] : null)
+  const galleryPhotos = location.photos || []
+
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-12">
       {/* Header */}
@@ -192,14 +198,16 @@ export default async function LocationDetailsPage({ params }: { params: { slug: 
         </div>
       </div>
 
-      {/* Hero Image */}
-      {location.photos && location.photos.length > 0 && (
+      {/* Hero Image - Display hero photo */}
+      {mainPhoto && (
         <div className="relative w-full rounded-xl overflow-hidden border bg-muted aspect-[2/1]">
-          <img
-            src={location.photos[0] || "/placeholder.svg"}
-            alt={location.name}
-            className="w-full h-full object-cover"
-          />
+          <img src={mainPhoto || "/placeholder.svg"} alt={location.name} className="w-full h-full object-cover" />
+          {location.hero_photo && (
+            <Badge className="absolute top-4 left-4 bg-primary/90 text-primary-foreground shadow-lg">
+              <Star className="h-3 w-3 mr-1 fill-current" />
+              Featured Photo
+            </Badge>
+          )}
         </div>
       )}
 
@@ -480,28 +488,41 @@ export default async function LocationDetailsPage({ params }: { params: { slug: 
         </Card>
       )}
 
-      {/* Photo Gallery */}
-      {location.photos && location.photos.length > 1 && (
+      {/* Photo Gallery - Show all photos in gallery */}
+      {galleryPhotos.length > 1 && (
         <Card>
           <CardHeader>
             <CardTitle>Photo Gallery</CardTitle>
-            <CardDescription>{location.photos.length} photos</CardDescription>
+            <CardDescription>{galleryPhotos.length} photos</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {location.photos.map((photo, index) => (
-                <div
-                  key={photo}
-                  className="aspect-square rounded-lg overflow-hidden border bg-muted cursor-pointer group"
-                  onClick={() => window.open(photo, "_blank")}
-                >
-                  <img
-                    src={photo || "/placeholder.svg"}
-                    alt={`${location.name} - Photo ${index + 1}`}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                  />
-                </div>
-              ))}
+              {galleryPhotos.map((photo, index) => {
+                const isHero = photo === location.hero_photo
+
+                return (
+                  <div
+                    key={photo}
+                    className={cn(
+                      "aspect-square rounded-lg overflow-hidden border bg-muted cursor-pointer group relative",
+                      isHero && "ring-2 ring-primary ring-offset-2",
+                    )}
+                    onClick={() => window.open(photo, "_blank")}
+                  >
+                    <img
+                      src={photo || "/placeholder.svg"}
+                      alt={`${location.name} - Photo ${index + 1}`}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                    />
+                    {isHero && (
+                      <Badge className="absolute top-2 left-2 bg-primary text-primary-foreground shadow-lg">
+                        <Star className="h-3 w-3 mr-1 fill-current" />
+                        Hero
+                      </Badge>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           </CardContent>
         </Card>

@@ -90,10 +90,10 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
     if (initialHighlightId) {
       const location = initialLocations.find((loc) => loc.id === initialHighlightId)
       if (location) {
-        const hasLotId = location.type === "lot" && location.lot_id
-        console.log("[v0] Auto-selecting initial highlight:", location.name, "has lot_id:", hasLotId)
+        console.log("[v0] Auto-selecting initial highlight:", location.name, "type:", location.type)
 
-        if (!minimal && hasLotId) {
+        // Only show info card on full map (not minimal) and not for boundary types
+        if (!minimal && location.type !== "boundary") {
           setSelectedLocation(location)
         }
 

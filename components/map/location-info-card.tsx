@@ -48,6 +48,13 @@ interface Pet {
 }
 
 export function LocationInfoCard({ location, onClose }: LocationInfoCardProps) {
+  console.log("[v0] LocationInfoCard rendering for location:", location.name, location.id)
+  console.log("[v0] Location data:", {
+    type: location.type,
+    lot_id: location.lot_id,
+    neighborhood_id: location.neighborhood_id,
+  })
+
   const [neighborhood, setNeighborhood] = useState<{ id: string; name: string } | null>(null)
   const [lot, setLot] = useState<{ id: string; lot_number: string } | null>(null)
   const [residents, setResidents] = useState<Resident[]>([])
@@ -57,8 +64,11 @@ export function LocationInfoCard({ location, onClose }: LocationInfoCardProps) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    console.log("[v0] LocationInfoCard useEffect triggered for location:", location.id)
+
     const fetchRelatedData = async () => {
       setLoading(true)
+      console.log("[v0] Starting to fetch related data...")
       const supabase = createBrowserClient()
 
       const { data: userData } = await supabase.auth.getUser()
@@ -66,26 +76,38 @@ export function LocationInfoCard({ location, onClose }: LocationInfoCardProps) {
         const { data: user } = await supabase.from("users").select("tenant_id").eq("id", userData.user.id).single()
         if (user?.tenant_id) {
           const { data: tenant } = await supabase.from("tenants").select("slug").eq("id", user.tenant_id).single()
-          if (tenant) setTenantSlug(tenant.slug)
+          if (tenant) {
+            console.log("[v0] Tenant slug set:", tenant.slug)
+            setTenantSlug(tenant.slug)
+          }
         }
       }
 
       if (location.neighborhood_id) {
+        console.log("[v0] Fetching neighborhood for id:", location.neighborhood_id)
         const { data } = await supabase
           .from("neighborhoods")
           .select("id, name")
           .eq("id", location.neighborhood_id)
           .single()
-        if (data) setNeighborhood(data)
+        if (data) {
+          console.log("[v0] Neighborhood found:", data.name)
+          setNeighborhood(data)
+        }
       }
 
       if (location.lot_id) {
+        console.log("[v0] Fetching lot for id:", location.lot_id)
         const { data } = await supabase.from("lots").select("id, lot_number").eq("id", location.lot_id).single()
-        if (data) setLot(data)
+        if (data) {
+          console.log("[v0] Lot found:", data.lot_number)
+          setLot(data)
+        }
       }
 
       if (location.type === "lot" && location.lot_id) {
-        const { data } = await supabase
+        console.log("[v0] Fetching residents for lot_id:", location.lot_id)
+        const { data, error } = await supabase
           .from("users")
           .select(
             "id, first_name, last_name, profile_picture_url, family_unit_id, family_units(id, name, profile_picture_url)",
@@ -93,27 +115,56 @@ export function LocationInfoCard({ location, onClose }: LocationInfoCardProps) {
           .eq("lot_id", location.lot_id)
           .eq("role", "resident")
 
+        console.log("[v0] Residents query result:", { count: data?.length || 0, error })
+
         if (data) {
+          console.log(
+            "[v0] Residents found:",
+            data.map((r) => `${r.first_name} ${r.last_name}`),
+          )
           setResidents(data)
           const family = data.find((resident: any) => resident.family_units)?.family_units
           if (family) {
+            console.log("[v0] Family unit found:", family.name)
             setFamilyUnit(family)
 
-            const { data: petsData } = await supabase
+            console.log("[v0] Fetching pets for family:", family.id)
+            const { data: petsData, error: petsError } = await supabase
               .from("pets")
               .select("id, name, species, breed, profile_picture_url")
               .eq("family_unit_id", family.id)
 
-            if (petsData) setPets(petsData)
+            console.log("[v0] Pets query result:", { count: petsData?.length || 0, error: petsError })
+            if (petsData) {
+              console.log(
+                "[v0] Pets found:",
+                petsData.map((p) => p.name),
+              )
+              setPets(petsData)
+            }
+          } else {
+            console.log("[v0] No family unit found for residents")
           }
         }
+      } else {
+        console.log("[v0] Skipping residents fetch - not a lot or no lot_id")
       }
 
       setLoading(false)
+      console.log("[v0] Finished fetching related data, loading set to false")
     }
 
     fetchRelatedData()
   }, [location.id, location.neighborhood_id, location.lot_id, location.type])
+
+  console.log("[v0] LocationInfoCard render state:", {
+    loading,
+    hasResidents: residents.length > 0,
+    hasFamilyUnit: !!familyUnit,
+    hasPets: pets.length > 0,
+    hasNeighborhood: !!neighborhood,
+    hasLot: !!lot,
+  })
 
   const getTypeLabel = (type: string) => {
     switch (type) {

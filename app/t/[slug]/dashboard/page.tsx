@@ -226,7 +226,7 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
                 tenantSlug={slug}
                 locations={allLocations}
                 mapCenter={mapCenter}
-                highlightLocationId={lotLocation.id}
+                highlightLocationId={lotLocation?.lot_id ? lotLocation.id : undefined}
               />
               <p className="text-xs text-center text-muted-foreground">
                 Interact with map or click expand button to view full map

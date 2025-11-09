@@ -124,7 +124,7 @@ export default async function MapManagementPage({
         </div>
         <div className="flex gap-2">
           <Button asChild variant="outline">
-            <Link href={`/t/${slug}/admin/map/edit`}>View Map</Link>
+            <Link href={`/t/${slug}/admin/map/viewer`}>View Map</Link>
           </Button>
           <GeoJSONUploadButton tenantId={tenant.id} tenantSlug={slug} />
           <Button asChild>

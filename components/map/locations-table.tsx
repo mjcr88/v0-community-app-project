@@ -291,7 +291,7 @@ export function LocationsTable({ locations, tenantSlug, tenantId, initialTypeFil
                     <TableCell className="text-right">
                       <div className="flex gap-2 justify-end">
                         <Button asChild variant="ghost" size="sm">
-                          <Link href={`/t/${tenantSlug}/admin/map/edit?highlightLocation=${location.id}`}>
+                          <Link href={`/t/${tenantSlug}/admin/map/viewer?highlightLocation=${location.id}`}>
                             <Map className="h-4 w-4 mr-1" />
                             View on Map
                           </Link>

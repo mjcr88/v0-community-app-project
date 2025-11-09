@@ -63,7 +63,7 @@ export function FamilyManagementForm({
     name: familyUnit?.name || "",
     description: familyUnit?.description || "",
     photos: familyUnit?.photos || [],
-    heroPhotoIndex: familyUnit?.hero_photo_index ?? 0,
+    heroPhoto: familyUnit?.photos?.[familyUnit?.hero_photo_index ?? 0] || null,
   })
 
   useEffect(() => {
@@ -76,7 +76,7 @@ export function FamilyManagementForm({
       name: familyUnit?.name || "",
       description: familyUnit?.description || "",
       photos: familyUnit?.photos || [],
-      heroPhotoIndex: familyUnit?.hero_photo_index ?? 0,
+      heroPhoto: familyUnit?.photos?.[familyUnit?.hero_photo_index ?? 0] || null,
     })
   }, [initialFamilyMembers, initialRelationships, initialPets, familyUnit])
 
@@ -186,17 +186,20 @@ export function FamilyManagementForm({
     }
   }
 
-  const handleFamilyPhotosChange = async (photos: string[], heroIndex: number) => {
-    setFamilyProfile({ ...familyProfile, photos, heroPhotoIndex: heroIndex })
+  const handleFamilyPhotosChange = async (photos: string[]) => {
+    setFamilyProfile({ ...familyProfile, photos })
 
     const supabase = createClient()
     try {
+      const heroIndex = photos.indexOf(familyProfile.heroPhoto || "")
+      const validHeroIndex = heroIndex >= 0 ? heroIndex : 0
+
       const { error } = await supabase
         .from("family_units")
         .update({
           photos: photos,
-          hero_photo_index: heroIndex,
-          profile_picture_url: photos[heroIndex] || null,
+          hero_photo_index: validHeroIndex,
+          profile_picture_url: photos[validHeroIndex] || null,
         })
         .eq("id", familyUnit.id)
 
@@ -217,15 +220,49 @@ export function FamilyManagementForm({
     }
   }
 
-  const handlePetPhotosChange = async (petId: string, photos: string[], heroIndex: number) => {
+  const handleFamilyHeroPhotoChange = async (heroPhoto: string | null) => {
+    setFamilyProfile({ ...familyProfile, heroPhoto })
+
     const supabase = createClient()
     try {
+      const heroIndex = heroPhoto ? familyProfile.photos.indexOf(heroPhoto) : 0
+
+      const { error } = await supabase
+        .from("family_units")
+        .update({
+          hero_photo_index: heroIndex >= 0 ? heroIndex : 0,
+          profile_picture_url: heroPhoto,
+        })
+        .eq("id", familyUnit.id)
+
+      if (error) throw error
+
+      router.refresh()
+    } catch (error) {
+      console.error("[v0] Error saving hero photo:", error)
+      toast({
+        title: "Save failed",
+        description: "Failed to save hero photo. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handlePetPhotosChange = async (petId: string, photos: string[]) => {
+    const pet = pets.find((p) => p.id === petId)
+    const currentHeroPhoto = pet?.photos?.[pet?.hero_photo_index ?? 0] || null
+
+    const supabase = createClient()
+    try {
+      const heroIndex = currentHeroPhoto ? photos.indexOf(currentHeroPhoto) : 0
+      const validHeroIndex = heroIndex >= 0 ? heroIndex : 0
+
       const { error } = await supabase
         .from("pets")
         .update({
           photos: photos,
-          hero_photo_index: heroIndex,
-          profile_picture_url: photos[heroIndex] || null,
+          hero_photo_index: validHeroIndex,
+          profile_picture_url: photos[validHeroIndex] || null,
         })
         .eq("id", petId)
 
@@ -238,8 +275,8 @@ export function FamilyManagementForm({
             ? {
                 ...p,
                 photos,
-                hero_photo_index: heroIndex,
-                profile_picture_url: photos[heroIndex] || null,
+                hero_photo_index: validHeroIndex,
+                profile_picture_url: photos[validHeroIndex] || null,
               }
             : p,
         ),
@@ -255,6 +292,47 @@ export function FamilyManagementForm({
       toast({
         title: "Save failed",
         description: "Failed to save photos. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handlePetHeroPhotoChange = async (petId: string, heroPhoto: string | null) => {
+    const supabase = createClient()
+    try {
+      const pet = pets.find((p) => p.id === petId)
+      const photos = pet?.photos || []
+      const heroIndex = heroPhoto ? photos.indexOf(heroPhoto) : 0
+
+      const { error } = await supabase
+        .from("pets")
+        .update({
+          hero_photo_index: heroIndex >= 0 ? heroIndex : 0,
+          profile_picture_url: heroPhoto,
+        })
+        .eq("id", petId)
+
+      if (error) throw error
+
+      // Update local state
+      setPets(
+        pets.map((p) =>
+          p.id === petId
+            ? {
+                ...p,
+                hero_photo_index: heroIndex >= 0 ? heroIndex : 0,
+                profile_picture_url: heroPhoto,
+              }
+            : p,
+        ),
+      )
+
+      router.refresh()
+    } catch (error) {
+      console.error("[v0] Error saving pet hero photo:", error)
+      toast({
+        title: "Save failed",
+        description: "Failed to save hero photo. Please try again.",
         variant: "destructive",
       })
     }
@@ -309,19 +387,18 @@ export function FamilyManagementForm({
           <CardContent className="space-y-6">
             <div className="flex flex-col items-center gap-4">
               <Avatar className="h-24 w-24">
-                <AvatarImage
-                  src={familyProfile.photos[familyProfile.heroPhotoIndex] || "/placeholder.svg"}
-                  alt={familyInitials}
-                />
+                <AvatarImage src={familyProfile.heroPhoto || "/placeholder.svg"} alt={familyInitials} />
                 <AvatarFallback className="text-2xl">{familyInitials}</AvatarFallback>
               </Avatar>
             </div>
 
             <PhotoManager
               photos={familyProfile.photos}
-              heroPhotoIndex={familyProfile.heroPhotoIndex}
+              heroPhoto={familyProfile.heroPhoto}
               onPhotosChange={handleFamilyPhotosChange}
+              onHeroPhotoChange={handleFamilyHeroPhotoChange}
               maxPhotos={10}
+              entityType="family"
             />
 
             <div className="space-y-2">
@@ -492,14 +569,14 @@ export function FamilyManagementForm({
                       .slice(0, 2)
 
                     const petPhotos = pet.photos || []
-                    const petHeroIndex = pet.hero_photo_index ?? 0
+                    const petHeroPhoto = petPhotos[pet.hero_photo_index ?? 0] || null
 
                     return (
                       <Card key={pet.id}>
                         <CardContent className="pt-6 space-y-4">
                           <div className="flex items-center gap-4">
                             <Avatar className="h-16 w-16">
-                              <AvatarImage src={petPhotos[petHeroIndex] || "/placeholder.svg"} alt={pet.name} />
+                              <AvatarImage src={petHeroPhoto || "/placeholder.svg"} alt={pet.name} />
                               <AvatarFallback>{petInitials}</AvatarFallback>
                             </Avatar>
                             <div className="flex-1">
@@ -521,9 +598,11 @@ export function FamilyManagementForm({
 
                           <PhotoManager
                             photos={petPhotos}
-                            heroPhotoIndex={petHeroIndex}
-                            onPhotosChange={(photos, heroIndex) => handlePetPhotosChange(pet.id, photos, heroIndex)}
+                            heroPhoto={petHeroPhoto}
+                            onPhotosChange={(photos) => handlePetPhotosChange(pet.id, photos)}
+                            onHeroPhotoChange={(heroPhoto) => handlePetHeroPhotoChange(pet.id, heroPhoto)}
                             maxPhotos={10}
+                            entityType="pet"
                           />
                         </CardContent>
                       </Card>

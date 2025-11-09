@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { geolocate } from "@/lib/geolocate"
 import { createLocation, updateTenantBoundary } from "@/lib/location-utils"
+import { Switch } from "@/components/ui/switch"
 
 type LatLng = { lat: number; lng: number }
 
@@ -28,6 +29,8 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
   const { toast } = useToast()
 
   const [previewFeatures, setPreviewFeatures] = useState<any[]>([])
+  const [originalFeatures, setOriginalFeatures] = useState<any[]>([])
+  const [combineFeatures, setCombineFeatures] = useState(false)
   const [mapCenter, setMapCenter] = useState<LatLng>({ lat: 9.9567, lng: -84.5333 })
   const [mapZoom, setMapZoom] = useState(15)
   const [locationType, setLocationType] = useState<
@@ -48,7 +51,8 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
   const [boundaryExists, setBoundaryExists] = useState(false)
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""
-  const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAP_ID || "DEMO_MAP_ID"
+  const DEMO_MAP_ID = "DEMO_MAP_ID"
+  const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAP_ID || DEMO_MAP_ID
 
   useEffect(() => {
     const loadData = async () => {
@@ -65,7 +69,12 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
 
       try {
         const parsed = JSON.parse(previewData)
+        setOriginalFeatures(parsed.originalFeatures || parsed.features || [])
         setPreviewFeatures(parsed.features || [])
+
+        if (parsed.features && parsed.features.length === 1 && parsed.features[0].geometry.type === "Polygon") {
+          setCombineFeatures(true)
+        }
 
         const supabase = createBrowserClient()
         const { data: existingBoundary } = await supabase
@@ -265,36 +274,73 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
         router.push(`/t/${tenantSlug}/admin/map`)
         return
       } else {
-        for (const feature of previewFeatures) {
-          const locationData: any = {
-            tenant_id: tenantId,
-            name: feature.properties?.name || `Imported ${feature.geometry.type}`,
-            type: locationType,
-            description: feature.properties?.description || null,
-          }
+        const featuresToSave = combineFeatures ? previewFeatures : originalFeatures
 
-          if (feature.geometry.type === "Point") {
-            locationData.coordinates = {
-              lat: feature.geometry.coordinates[1],
-              lng: feature.geometry.coordinates[0],
+        let successCount = 0
+        let errorCount = 0
+
+        console.log("[v0] Saving", featuresToSave.length, "features (combine mode:", combineFeatures, ")")
+
+        for (const feature of featuresToSave) {
+          try {
+            const locationData: any = {
+              tenant_id: tenantId,
+              name: feature.properties?.name || `Imported ${feature.geometry.type} ${successCount + 1}`,
+              type: locationType,
+              description: feature.properties?.description || null,
             }
-          } else if (feature.geometry.type === "LineString") {
-            locationData.path_coordinates = feature.geometry.coordinates.map((coord: number[]) => [coord[1], coord[0]])
-          } else if (feature.geometry.type === "Polygon") {
-            locationData.boundary_coordinates = feature.geometry.coordinates[0].map((coord: number[]) => [
-              coord[1],
-              coord[0],
-            ])
-          }
 
-          const { error } = await supabase.from("locations").insert(locationData)
-          if (error) throw error
+            if (feature.geometry.type === "Point") {
+              locationData.coordinates = {
+                lat: feature.geometry.coordinates[1],
+                lng: feature.geometry.coordinates[0],
+              }
+            } else if (feature.geometry.type === "LineString") {
+              locationData.path_coordinates = feature.geometry.coordinates.map((coord: number[]) => [
+                coord[1],
+                coord[0],
+              ])
+            } else if (feature.geometry.type === "Polygon") {
+              locationData.boundary_coordinates = feature.geometry.coordinates[0].map((coord: number[]) => [
+                coord[1],
+                coord[0],
+              ])
+            }
+
+            console.log("[v0] Saving location:", {
+              name: locationData.name,
+              type: locationData.type,
+              geometryType: feature.geometry.type,
+              hasCoordinates: !!locationData.coordinates,
+              hasBoundaryCoordinates: !!locationData.boundary_coordinates,
+              hasPathCoordinates: !!locationData.path_coordinates,
+            })
+
+            const { error } = await supabase.from("locations").insert(locationData)
+            if (error) {
+              console.error("[v0] Error creating location:", error)
+              errorCount++
+            } else {
+              successCount++
+            }
+          } catch (err) {
+            console.error("[v0] Error processing feature:", err)
+            errorCount++
+          }
         }
 
-        toast({
-          title: "Success",
-          description: `${previewFeatures.length} location(s) created successfully!`,
-        })
+        if (successCount > 0) {
+          toast({
+            title: "Success",
+            description: `${successCount} location(s) created successfully!${errorCount > 0 ? ` (${errorCount} failed)` : ""}`,
+          })
+        } else {
+          toast({
+            title: "Error",
+            description: "Failed to create any locations",
+            variant: "destructive",
+          })
+        }
       }
 
       sessionStorage.removeItem("geojson-preview")
@@ -315,6 +361,8 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
     sessionStorage.removeItem("geojson-preview")
     router.push(`/t/${tenantSlug}/admin/map`)
   }
+
+  const locationCount = combineFeatures ? previewFeatures.length : originalFeatures.length
 
   if (!apiKey) {
     return (
@@ -341,7 +389,6 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
           <div className="relative h-full w-full overflow-hidden rounded-lg">
             <APIProvider apiKey={apiKey}>
               <Map
-                mapId={mapId}
                 center={mapCenter}
                 zoom={mapZoom}
                 mapTypeId="satellite"
@@ -350,6 +397,7 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
                 clickableIcons={false}
                 onCenterChanged={(e) => setMapCenter(e.detail.center)}
                 onZoomChanged={(e) => setMapZoom(e.detail.zoom)}
+                {...(mapId ? { mapId } : {})}
               >
                 {previewFeatures.map((feature, index) => {
                   if (feature.geometry.type === "Point") {
@@ -456,9 +504,25 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
           <div>
             <h3 className="text-lg font-semibold">Import GeoJSON</h3>
             <p className="text-sm text-muted-foreground">
-              {previewFeatures.length} feature{previewFeatures.length !== 1 ? "s" : ""} ready to import
+              {locationCount} location{locationCount !== 1 ? "s" : ""} will be created
             </p>
           </div>
+
+          {locationType !== "boundary" && originalFeatures.length > 1 && (
+            <div className="flex items-center justify-between space-x-2 p-3 border rounded-lg">
+              <div className="space-y-0.5">
+                <Label htmlFor="combine-mode" className="text-sm font-medium">
+                  Combine into one location
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  {combineFeatures
+                    ? `Creating 1 combined location`
+                    : `Creating ${originalFeatures.length} separate locations`}
+                </p>
+              </div>
+              <Switch id="combine-mode" checked={combineFeatures} onCheckedChange={setCombineFeatures} />
+            </div>
+          )}
 
           <Alert>
             <AlertCircle className="h-4 w-4" />
@@ -505,7 +569,7 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
           <div className="pt-4 space-y-2">
             <Button onClick={handleSave} disabled={saving} className="w-full">
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create {previewFeatures.length} Location{previewFeatures.length !== 1 ? "s" : ""}
+              Create {locationCount} Location{locationCount !== 1 ? "s" : ""}
             </Button>
             <Button variant="outline" onClick={handleCancel} disabled={saving} className="w-full bg-transparent">
               Cancel

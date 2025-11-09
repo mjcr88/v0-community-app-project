@@ -12,6 +12,20 @@ type TenantFeatures = {
   lots?: boolean
   journey_stages?: boolean
   onboarding?: boolean
+  map?: boolean
+  location_types?: {
+    facility?: boolean
+    lot?: boolean
+    walking_path?: boolean
+    neighborhood?: boolean
+    boundary?: boolean
+    protection_zone?: boolean
+    easement?: boolean
+    playground?: boolean
+    public_street?: boolean
+    green_area?: boolean
+    recreational_zone?: boolean
+  }
 }
 
 export function useTenantFeatures(tenantId: string) {
@@ -24,6 +38,20 @@ export function useTenantFeatures(tenantId: string) {
     lots: true,
     journey_stages: true,
     onboarding: true,
+    map: true,
+    location_types: {
+      facility: true,
+      lot: true,
+      walking_path: true,
+      neighborhood: true,
+      boundary: true,
+      protection_zone: true,
+      easement: true,
+      playground: true,
+      public_street: true,
+      green_area: true,
+      recreational_zone: true,
+    },
   })
   const [loading, setLoading] = useState(true)
 

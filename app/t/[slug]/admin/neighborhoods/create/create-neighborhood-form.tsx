@@ -94,7 +94,6 @@ export default function CreateNeighborhoodForm({ slug, tenantId }: { slug: strin
           tenant_id: tenantId,
           name: formData.name,
           description: formData.description,
-          photos: uploadedPhotos.length > 0 ? uploadedPhotos : null,
         })
         .select()
         .single()

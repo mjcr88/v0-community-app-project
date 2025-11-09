@@ -19,6 +19,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { filterPrivateData } from "@/lib/privacy-utils"
+import { MapPreviewWidget } from "@/components/map/map-preview-widget"
 
 export default async function PublicProfilePage({
   params,
@@ -153,6 +154,17 @@ export default async function PublicProfilePage({
     .toUpperCase()
   const displayName = `${filteredResident.first_name || ""} ${filteredResident.last_name || ""}`.trim()
 
+  const { data: tenant } = await supabase.from("tenants").select("*").eq("id", currentResident.tenant_id).single()
+
+  const { data: locations } = await supabase.from("locations").select("*").eq("tenant_id", currentResident.tenant_id)
+
+  // Find the location for this resident's lot
+  const lotLocation = locations?.find((loc) => loc.lot_id === resident.lot_id && loc.type === "lot")
+
+  const mapCenter = tenant?.map_center_coordinates
+    ? { lat: tenant.map_center_coordinates.lat, lng: tenant.map_center_coordinates.lng }
+    : null
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -200,6 +212,23 @@ export default async function PublicProfilePage({
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Calendar className="h-4 w-4" />
                   <span>Moving {new Date(filteredResident.estimated_move_in_date).toLocaleDateString()}</span>
+                </div>
+              )}
+
+              {filteredResident.show_neighborhood && lotLocation && locations && (
+                <div className="w-full space-y-2">
+                  <h4 className="text-sm font-medium text-muted-foreground">Location</h4>
+                  <Link href={`/t/${slug}/dashboard/map?highlightLot=${resident.lot_id}`} className="block">
+                    <MapPreviewWidget
+                      tenantSlug={slug}
+                      locations={locations}
+                      mapCenter={mapCenter}
+                      highlightLocationId={lotLocation.id}
+                    />
+                  </Link>
+                  <Button variant="outline" size="sm" className="w-full bg-transparent" asChild>
+                    <Link href={`/t/${slug}/dashboard/map?highlightLot=${resident.lot_id}`}>View on Full Map</Link>
+                  </Button>
                 </div>
               )}
             </div>

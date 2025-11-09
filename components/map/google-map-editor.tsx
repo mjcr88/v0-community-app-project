@@ -1,8 +1,8 @@
-"use client"
+import React from "react"
 
-import type React from "react"
+// import type React from "react" // Removed to fix redeclaration error
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { APIProvider, Map, Marker, useMap } from "@vis.gl/react-google-maps"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -45,6 +45,7 @@ import { useToast } from "@/hooks/use-toast"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { geolocate } from "@/lib/geolocate"
 import { Badge } from "@/components/ui/badge"
+import { LocationInfoCard } from "./location-info-card"
 
 type DrawingMode = "marker" | "polygon" | "polyline" | null
 type LatLng = { lat: number; lng: number }
@@ -119,8 +120,66 @@ export function GoogleMapEditor({
   const [drawingMode, setDrawingMode] = useState<DrawingMode>(null)
   const [mapType, setMapType] = useState<"roadmap" | "satellite" | "terrain">("satellite")
   const [saving, setSaving] = useState(false)
-  const [mapCenter, setMapCenter] = useState<LatLng>(initialMapCenter || { lat: 9.9567, lng: -84.5333 })
-  const [mapZoom, setMapZoom] = useState(initialMapZoom || 15)
+  const [mapCenter, setMapCenter] = useState<LatLng>(() => {
+    // Calculate initial center from boundary if available
+    if (mode === "view" && initialLocations.length > 0) {
+      const boundaryLocs = initialLocations.filter((loc) => loc.type === "boundary")
+      if (boundaryLocs.length > 0 && boundaryLocs[0].boundary_coordinates?.length > 0) {
+        const coords = boundaryLocs[0].boundary_coordinates
+        let minLat = Number.POSITIVE_INFINITY
+        let maxLat = Number.NEGATIVE_INFINITY
+        let minLng = Number.POSITIVE_INFINITY
+        let maxLng = Number.NEGATIVE_INFINITY
+
+        coords.forEach((coord: [number, number]) => {
+          const [lat, lng] = coord
+          minLat = Math.min(minLat, lat)
+          maxLat = Math.max(maxLat, lat)
+          minLng = Math.min(minLng, lng)
+          maxLng = Math.max(maxLng, lng)
+        })
+
+        return { lat: (minLat + maxLat) / 2, lng: (minLng + maxLng) / 2 }
+      }
+    }
+    return initialMapCenter || { lat: 9.9567, lng: -84.5333 }
+  })
+
+  const [mapZoom, setMapZoom] = useState(() => {
+    // Calculate initial zoom from boundary if available
+    if (mode === "view" && initialLocations.length > 0) {
+      const boundaryLocs = initialLocations.filter((loc) => loc.type === "boundary")
+      if (boundaryLocs.length > 0 && boundaryLocs[0].boundary_coordinates?.length > 0) {
+        const coords = boundaryLocs[0].boundary_coordinates
+        let minLat = Number.POSITIVE_INFINITY
+        let maxLat = Number.NEGATIVE_INFINITY
+        let minLng = Number.POSITIVE_INFINITY
+        let maxLng = Number.NEGATIVE_INFINITY
+
+        coords.forEach((coord: [number, number]) => {
+          const [lat, lng] = coord
+          minLat = Math.min(minLat, lat)
+          maxLat = Math.max(maxLat, lat)
+          minLng = Math.min(minLng, lng)
+          maxLng = Math.max(maxLng, lng)
+        })
+
+        const latDiff = maxLat - minLat
+        const lngDiff = maxLng - minLng
+        const maxDiff = Math.max(latDiff, lngDiff)
+
+        let zoom = 15
+        if (maxDiff > 0.01) zoom = 14
+        if (maxDiff > 0.05) zoom = 13
+        if (maxDiff > 0.1) zoom = 12
+        if (maxDiff > 0.5) zoom = 10
+        if (maxDiff > 1) zoom = 9
+
+        return zoom
+      }
+    }
+    return initialMapZoom || 15
+  })
 
   const [markerPosition, setMarkerPosition] = useState<LatLng | null>(null)
   const [polygonPoints, setPolygonPoints] = useState<LatLng[]>([])
@@ -175,60 +234,58 @@ export function GoogleMapEditor({
   // State for deletion
   const [deleting, setDeleting] = useState(false)
 
+  const mapRef = useRef(null)
+
   useEffect(() => {
     if (mode === "view") {
       setSavedLocations(initialLocations)
-      console.log("[v0] View mode - initial locations:", initialLocations)
-      console.log(
-        "[v0] Boundary locations:",
-        initialLocations.filter((loc) => loc.type === "boundary"),
-      )
-      const boundaryLocs = initialLocations.filter((loc) => loc.type === "boundary")
-      if (boundaryLocs.length > 0) {
-        console.log("[v0] First boundary location details:", {
-          id: boundaryLocs[0].id,
-          name: boundaryLocs[0].name,
-          hasCoordinates: !!boundaryLocs[0].boundary_coordinates,
-          coordinateCount: boundaryLocs[0].boundary_coordinates?.length || 0,
-          firstCoord: boundaryLocs[0].boundary_coordinates?.[0],
-        })
-      }
       return
     }
 
     const loadLocations = async () => {
       const supabase = createBrowserClient()
       const { data } = await supabase.from("locations").select("*").eq("tenant_id", tenantId)
-      console.log("[v0] Loaded locations:", data)
-      console.log(
-        "[v0] Boundary locations:",
-        data?.filter((loc) => loc.type === "boundary"),
-      )
-      const boundaryLocs = data?.filter((loc) => loc.type === "boundary") || []
-      if (boundaryLocs.length > 0) {
-        console.log("[v0] First boundary location details:", {
-          id: boundaryLocs[0].id,
-          name: boundaryLocs[0].name,
-          hasCoordinates: !!boundaryLocs[0].boundary_coordinates,
-          coordinateCount: boundaryLocs[0].boundary_coordinates?.length || 0,
-          firstCoord: boundaryLocs[0].boundary_coordinates?.[0],
-        })
-      }
       if (data) {
+        console.log("[v0] Loaded locations in edit mode:", data.length)
         setSavedLocations(data)
 
-        if (editLocationIdFromUrl) {
-          const locationToEdit = data.find((loc) => loc.id === editLocationIdFromUrl)
-          if (locationToEdit) {
-            console.log("[v0] Auto-loading location for editing:", locationToEdit)
-            // Don't call handleLocationClick yet, just highlight it
-            // User needs to click it to start editing
-          }
+        const boundaryLoc = data.find((loc) => loc.type === "boundary")
+        if (boundaryLoc?.boundary_coordinates?.length > 0) {
+          const coords = boundaryLoc.boundary_coordinates
+          let minLat = Number.POSITIVE_INFINITY
+          let maxLat = Number.NEGATIVE_INFINITY
+          let minLng = Number.POSITIVE_INFINITY
+          let maxLng = Number.NEGATIVE_INFINITY
+
+          coords.forEach((coord: [number, number]) => {
+            const [lat, lng] = coord
+            minLat = Math.min(minLat, lat)
+            maxLat = Math.max(maxLat, lat)
+            minLng = Math.min(minLng, lng)
+            maxLng = Math.max(maxLng, lng)
+          })
+
+          const center = { lat: (minLat + maxLat) / 2, lng: (minLng + maxLng) / 2 }
+          setMapCenter(center)
+
+          const latDiff = maxLat - minLat
+          const lngDiff = maxLng - minLng
+          const maxDiff = Math.max(latDiff, lngDiff)
+
+          let zoom = 15
+          if (maxDiff > 0.01) zoom = 14
+          if (maxDiff > 0.05) zoom = 13
+          if (maxDiff > 0.1) zoom = 12
+          if (maxDiff > 0.5) zoom = 10
+          if (maxDiff > 1) zoom = 9
+
+          setMapZoom(zoom)
+          console.log("[v0] Set map center and zoom from boundary:", center, zoom)
         }
       }
     }
     loadLocations()
-  }, [tenantId, editLocationIdFromUrl, mode, initialLocations])
+  }, [tenantId, mode])
 
   useEffect(() => {
     if (isPreviewMode) {
@@ -236,8 +293,6 @@ export function GoogleMapEditor({
       if (previewData) {
         try {
           const parsed = JSON.parse(previewData)
-          console.log("[v0] Preview data loaded:", parsed)
-
           setPreviewFeatures(parsed.features || [])
           setIsImporting(true)
 
@@ -249,11 +304,8 @@ export function GoogleMapEditor({
 
             parsed.features.forEach((feature: any) => {
               const coords = feature.geometry.coordinates
-              console.log("[v0] Feature geometry:", feature.geometry.type, "coords:", coords)
-
               if (feature.geometry.type === "Point") {
                 const [lng, lat] = coords
-                console.log("[v0] Point coords - lng:", lng, "lat:", lat)
                 minLat = Math.min(minLat, lat)
                 maxLat = Math.max(maxLat, lat)
                 minLng = Math.min(minLng, lng)
@@ -261,7 +313,6 @@ export function GoogleMapEditor({
               } else if (feature.geometry.type === "LineString") {
                 coords.forEach((coord: number[]) => {
                   const [lng, lat] = coord
-                  console.log("[v0] LineString point - lng:", lng, "lat:", lat)
                   minLat = Math.min(minLat, lat)
                   maxLat = Math.max(maxLat, lat)
                   minLng = Math.min(minLng, lng)
@@ -270,7 +321,6 @@ export function GoogleMapEditor({
               } else if (feature.geometry.type === "Polygon") {
                 coords[0].forEach((coord: number[]) => {
                   const [lng, lat] = coord
-                  console.log("[v0] Polygon point - lng:", lng, "lat:", lat)
                   minLat = Math.min(minLat, lat)
                   maxLat = Math.max(maxLat, lat)
                   minLng = Math.min(minLng, lng)
@@ -279,28 +329,21 @@ export function GoogleMapEditor({
               }
             })
 
-            // Calculate center and appropriate zoom
             const centerLat = (minLat + maxLat) / 2
             const centerLng = (minLng + maxLng) / 2
 
-            console.log("[v0] Calculated bounds:", { minLat, maxLat, minLng, maxLng })
-            console.log("[v0] Calculated center:", { lat: centerLat, lng: centerLng })
-
             setMapCenter({ lat: centerLat, lng: centerLng })
 
-            // Calculate zoom based on bounds
             const latDiff = maxLat - minLat
             const lngDiff = maxLng - minLng
             const maxDiff = Math.max(latDiff, lngDiff)
 
-            // Rough zoom calculation (adjust as needed)
             let zoom = 15
             if (maxDiff > 0.1) zoom = 12
             if (maxDiff > 0.5) zoom = 10
             if (maxDiff > 1) zoom = 9
             if (maxDiff > 5) zoom = 7
 
-            console.log("[v0] Setting zoom to:", zoom, "based on maxDiff:", maxDiff)
             setMapZoom(zoom)
           }
 
@@ -309,7 +352,7 @@ export function GoogleMapEditor({
             description: `${parsed.features?.length || 0} feature(s) ready to import`,
           })
         } catch (error) {
-          console.error("[v0] Error loading preview data:", error)
+          console.error("Error loading preview data:", error)
           toast({
             title: "Error",
             description: "Failed to load preview data",
@@ -318,7 +361,7 @@ export function GoogleMapEditor({
         }
       }
     }
-  }, [isPreviewMode, toast])
+  }, []) // Only run once on mount
 
   useEffect(() => {
     if (mode === "view" && initialHighlightLocationId) {
@@ -327,7 +370,6 @@ export function GoogleMapEditor({
         setSelectedLocation(location)
         setHighlightedLocationId(initialHighlightLocationId)
 
-        // Center map on highlighted location
         if (location.coordinates) {
           setMapCenter(location.coordinates)
           setMapZoom(18)
@@ -410,8 +452,6 @@ export function GoogleMapEditor({
   }, [isEditingLot, isEditingNeighborhood])
 
   const handleLocationClick = (location: any) => {
-    console.log("[v0] handleLocationClick called", { mode, locationId: location.id, highlightedLocationId })
-
     if (mode === "view") {
       setHighlightedLocationId(location.id)
       setSelectedLocation(location)
@@ -465,14 +505,11 @@ export function GoogleMapEditor({
   }
 
   const handleMapClick = (lat: number, lng: number) => {
-    console.log("[v0] handleMapClick called", { mode, lat, lng, highlightedLocationId })
+    // Clear selection when clicking on empty space
+    setHighlightedLocationId(undefined)
+    setSelectedLocation(null)
 
     if (mode === "view") {
-      if (highlightedLocationId) {
-        console.log("[v0] Clearing highlight because clicked empty space")
-      }
-      setHighlightedLocationId(undefined)
-      setSelectedLocation(null)
       return
     }
 
@@ -566,7 +603,7 @@ export function GoogleMapEditor({
         description: `${urls.length} photo${urls.length > 1 ? "s" : ""} uploaded successfully`,
       })
     } catch (error) {
-      console.error("[v0] Photo upload error:", error)
+      console.error("Photo upload error:", error)
       toast({
         title: "Upload Error",
         description: error instanceof Error ? error.message : "Failed to upload photos",
@@ -595,18 +632,18 @@ export function GoogleMapEditor({
       return
     }
 
-    if (locationType === "facility" && !markerPosition && polygonPoints.length === 0) {
+    if (locationType === "facility" && !markerPosition && polygonPoints.length === 0 && !polylinePoints.length) {
       toast({
         title: "Validation Error",
-        description: "Please place a marker or draw a boundary for the facility",
+        description: "Please place a marker, draw a boundary, or draw a path for the facility",
         variant: "destructive",
       })
       return
     }
-    if (locationType === "lot" && polygonPoints.length < 3) {
+    if (locationType === "lot" && polygonPoints.length < 3 && polylinePoints.length < 2) {
       toast({
         title: "Validation Error",
-        description: "Please draw a boundary for the lot (at least 3 points)",
+        description: "Please draw a boundary (at least 3 points) or a path (at least 2 points) for the lot",
         variant: "destructive",
       })
       return
@@ -662,13 +699,24 @@ export function GoogleMapEditor({
         if (polygonPoints.length > 0) {
           locationData.boundary_coordinates = polygonPoints.map((p) => [p.lat, p.lng])
         }
+        if (polylinePoints.length > 0) {
+          locationData.path_coordinates = polylinePoints.map((p) => [p.lat, p.lng])
+        }
         if (facilityType) locationData.facility_type = facilityType
         if (icon) locationData.icon = icon
         if (selectedNeighborhoodId && selectedNeighborhoodId !== "none") {
           locationData.neighborhood_id = selectedNeighborhoodId
         }
+        if (selectedLotId && selectedLotId !== "none") {
+          locationData.lot_id = selectedLotId
+        }
       } else if (locationType === "lot") {
-        locationData.boundary_coordinates = polygonPoints.map((p) => [p.lat, p.lng])
+        if (polygonPoints.length > 0) {
+          locationData.boundary_coordinates = polygonPoints.map((p) => [p.lat, p.lng])
+        }
+        if (polylinePoints.length > 0) {
+          locationData.path_coordinates = polylinePoints.map((p) => [p.lat, p.lng])
+        }
         locationData.lot_id = selectedLotId
       } else if (locationType === "neighborhood") {
         locationData.boundary_coordinates = polygonPoints.map((p) => [p.lat, p.lng])
@@ -677,6 +725,9 @@ export function GoogleMapEditor({
         locationData.path_coordinates = polylinePoints.map((p) => [p.lat, p.lng])
         if (selectedNeighborhoodId && selectedNeighborhoodId !== "none") {
           locationData.neighborhood_id = selectedNeighborhoodId
+        }
+        if (selectedLotId && selectedLotId !== "none") {
+          locationData.lot_id = selectedLotId
         }
       } else if (
         locationType === "boundary" ||
@@ -688,9 +739,13 @@ export function GoogleMapEditor({
         locationType === "recreational_zone"
       ) {
         locationData.boundary_coordinates = polygonPoints.map((p) => [p.lat, p.lng])
+        if (selectedNeighborhoodId && selectedNeighborhoodId !== "none") {
+          locationData.neighborhood_id = selectedNeighborhoodId
+        }
+        if (selectedLotId && selectedLotId !== "none") {
+          locationData.lot_id = selectedLotId
+        }
       }
-
-      console.log("[v0] Saving location:", locationData)
 
       if (editingLocationId) {
         await updateLocation(editingLocationId, locationData)
@@ -725,6 +780,7 @@ export function GoogleMapEditor({
       setDrawingMode(null)
       setUploadedPhotos([])
       setEditingLocationId(null)
+      setSaving(false) // Reset saving state immediately after form reset
 
       if (locationType === "neighborhood" && prefilledName) {
         toast({
@@ -739,13 +795,12 @@ export function GoogleMapEditor({
         })
       }
     } catch (error) {
-      console.error("[v0] Error saving location:", error)
+      console.error("Error saving location:", error)
       toast({
         title: "Error",
         description: "Error saving location: " + (error instanceof Error ? error.message : "Unknown error"),
         variant: "destructive",
       })
-    } finally {
       setSaving(false)
     }
   }
@@ -762,6 +817,8 @@ export function GoogleMapEditor({
     setSelectedLotId("")
     setSelectedNeighborhoodId("")
     setUploadedPhotos([])
+    setDrawingMode(null)
+    setSaving(false)
     toast({
       description: "Edit cancelled",
     })
@@ -816,17 +873,20 @@ export function GoogleMapEditor({
 
       if (data) {
         setSavedLocations(data)
+        // Force map to re-render by updating a state that affects the key
+        setIsImporting((prev) => !prev)
+        setTimeout(() => setIsImporting((prev) => !prev), 0)
       }
 
       handleNewLocation()
+      setDeleting(false)
     } catch (error) {
-      console.error("[v0] Error deleting location:", error)
+      console.error("Error deleting location:", error)
       toast({
         title: "Error",
         description: "Error deleting location: " + (error instanceof Error ? error.message : "Unknown error"),
         variant: "destructive",
       })
-    } finally {
       setDeleting(false)
     }
   }
@@ -864,31 +924,9 @@ export function GoogleMapEditor({
     }
   }
 
-  // TODO: Get API key from environment variables
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""
-  const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAP_ID || "DEMO_MAP_ID"
-
-  console.log("[v0] Map configuration:", {
-    apiKey: apiKey ? "✓ Present" : "✗ Missing",
-    mapId,
-    mapCenter,
-    mapZoom,
-    isPreviewMode,
-    isImporting,
-    previewFeaturesCount: previewFeatures.length,
-  })
-
-  if (!apiKey) {
-    return (
-      <Alert variant="destructive">
-        <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Configuration Error</AlertTitle>
-        <AlertDescription>
-          Google Maps API key is missing. Please add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to your environment variables.
-        </AlertDescription>
-      </Alert>
-    )
-  }
+  const DEMO_MAP_ID = "DEMO_MAP_ID"
+  const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAP_ID || DEMO_MAP_ID
 
   const filteredLocations = savedLocations.filter((location) => {
     if (location.type === "facility") return showFacilities
@@ -905,7 +943,11 @@ export function GoogleMapEditor({
     return true
   })
 
-  // Handle Save/Cancel for GeoJSON Import
+  const hasType = (type: string) => {
+    const existingLocationTypes = new Set(savedLocations.map((loc) => loc.type))
+    return existingLocationTypes.has(type)
+  }
+
   const handleSaveImport = async () => {
     if (!locationType) {
       toast({
@@ -953,6 +995,14 @@ export function GoogleMapEditor({
           ])
         }
 
+        // Added neighborhood and lot linking for imported locations
+        if (selectedNeighborhoodId && selectedNeighborhoodId !== "none") {
+          locationData.neighborhood_id = selectedNeighborhoodId
+        }
+        if (selectedLotId && selectedLotId !== "none") {
+          locationData.lot_id = selectedLotId
+        }
+
         const { data, error } = await supabase.from("locations").insert(locationData).select().single()
 
         if (error) throw error
@@ -964,21 +1014,18 @@ export function GoogleMapEditor({
         description: `${createdLocations.length} location(s) created successfully!`,
       })
 
-      // Clear preview data
       sessionStorage.removeItem("geojson-preview")
       setPreviewFeatures([])
       setIsImporting(false)
 
-      // Reload locations
       const { data } = await supabase.from("locations").select("*").eq("tenant_id", tenantId)
       if (data) {
         setSavedLocations(data)
       }
 
-      // Redirect back to map
       router.push(`/t/${tenantSlug}/admin/map`)
     } catch (error) {
-      console.error("[v0] Error importing locations:", error)
+      console.error("Error importing locations:", error)
       toast({
         title: "Error",
         description: "Error importing locations: " + (error instanceof Error ? error.message : "Unknown error"),
@@ -1003,23 +1050,26 @@ export function GoogleMapEditor({
     }))
   }
 
+  const boundaryLocation = savedLocations.find((loc) => loc.type === "boundary")
+
   return (
-    <div className={mode === "view" ? "h-full" : "grid gap-6 lg:grid-cols-[1fr_400px]"}>
-      <Card className={mode === "view" ? "h-full" : "min-h-[600px]"}>
-        <CardContent className="p-1.5 h-full">
-          <div className="relative h-full w-full overflow-hidden rounded-lg">
+    <div className="grid gap-6 lg:grid-cols-[1fr_400px]">
+      <Card>
+        <CardContent className="p-1.5">
+          <div className="relative h-[600px] w-full overflow-hidden rounded-lg">
             <APIProvider apiKey={apiKey}>
               <Map
-                key={`map-${isImporting ? "importing" : "normal"}`}
-                mapId={mapId}
+                ref={mapRef}
                 center={mapCenter}
                 zoom={mapZoom}
-                mapTypeId={mapType}
+                mapTypeId="satellite"
                 gestureHandling="greedy"
                 disableDefaultUI={true}
                 clickableIcons={false}
+                onClick={handleMapClick}
                 onCenterChanged={(e) => setMapCenter(e.detail.center)}
                 onZoomChanged={(e) => setMapZoom(e.detail.zoom)}
+                {...(mapId ? { mapId } : {})}
               >
                 <MapClickHandler drawingMode={drawingMode} onMapClick={handleMapClick} />
 
@@ -1115,11 +1165,41 @@ export function GoogleMapEditor({
                     return null
                   })}
 
+                {boundaryLocation && boundaryLocation.boundary_coordinates && (
+                  <Polygon
+                    paths={convertCoordinates(boundaryLocation.boundary_coordinates)}
+                    strokeColor="transparent"
+                    strokeOpacity={0}
+                    strokeWeight={0}
+                    fillColor="#ffffff"
+                    fillOpacity={0.15}
+                    clickable={false}
+                    zIndex={1}
+                  />
+                )}
+
                 {filteredLocations.map((location) => {
                   const isEditing = mode === "edit" && editingLocationId === location.id
                   const isHovered = hoveredLocationId === location.id
                   const isHighlightedFromUrl = mode === "edit" && editLocationIdFromUrl === location.id
-                  const isHighlightedInView = mode === "view" && highlightedLocationId === location.id
+                  const isHighlightedInView = highlightedLocationId === location.id
+
+                  const isSelected = isHighlightedInView || isHighlightedFromUrl || isEditing
+                  const baseZIndex =
+                    location.type === "boundary"
+                      ? 1
+                      : location.type === "public_street"
+                        ? 15
+                        : location.type === "lot"
+                          ? 10
+                          : location.type === "neighborhood"
+                            ? 8
+                            : location.type === "facility"
+                              ? 20
+                              : location.type === "walking_path"
+                                ? 25
+                                : 5
+                  const zIndex = isSelected ? 200 : baseZIndex
 
                   const isBoundary = location.type === "boundary"
                   const isProtectionZone = location.type === "protection_zone"
@@ -1128,6 +1208,7 @@ export function GoogleMapEditor({
                   const isPublicStreet = location.type === "public_street"
                   const isGreenArea = location.type === "green_area"
                   const isRecreationalZone = location.type === "recreational_zone"
+                  const isNeighborhood = location.type === "neighborhood"
 
                   if (location.type === "facility" && location.coordinates) {
                     return (
@@ -1135,12 +1216,34 @@ export function GoogleMapEditor({
                         key={`saved-${location.id}`}
                         position={location.coordinates}
                         onClick={() => handleLocationClick(location)}
+                        title={location.name}
+                        zIndex={zIndex}
                       />
                     )
                   }
+
+                  if (location.type === "facility" && location.path_coordinates) {
+                    const path = convertCoordinates(location.path_coordinates)
+                    return (
+                      <Polyline
+                        key={`saved-${location.id}`}
+                        path={path}
+                        strokeColor={
+                          isHighlightedFromUrl || isHighlightedInView ? "#ef4444" : isEditing ? "#10b981" : "#fb923c"
+                        }
+                        strokeOpacity={isHovered ? 1 : 0.9}
+                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 3 : isHovered ? 2 : 1}
+                        onClick={() => handleLocationClick(location)}
+                        onMouseOver={() => setHoveredLocationId(location.id)}
+                        onMouseOut={() => setHoveredLocationId(null)}
+                        zIndex={zIndex}
+                      />
+                    )
+                  }
+
                   if (
                     (location.type === "facility" ||
-                      location.type === "neighborhood" ||
+                      isNeighborhood ||
                       isBoundary ||
                       isProtectionZone ||
                       isEasement ||
@@ -1152,94 +1255,177 @@ export function GoogleMapEditor({
                   ) {
                     const paths = convertCoordinates(location.boundary_coordinates)
 
-                    const strokeColor = isBoundary
-                      ? "#ffffff"
-                      : isProtectionZone
-                        ? "#842029"
-                        : isEasement
-                          ? "#198754"
-                          : isPlayground
-                            ? "#0d6efd"
-                            : isPublicStreet
-                              ? "#6c757d"
-                              : isGreenArea
-                                ? "#198754"
-                                : isRecreationalZone
-                                  ? "#0d6efd"
-                                  : isHighlightedFromUrl || isHighlightedInView
-                                    ? "#ef4444"
-                                    : isEditing
-                                      ? "#10b981"
-                                      : location.type === "neighborhood"
-                                        ? "#a855f7"
-                                        : "#fb923c"
+                    let strokeColor = "#6b9b47"
+                    let fillColor = "#6b9b47"
 
-                    const fillColor = isBoundary
-                      ? "#ffffff"
-                      : isProtectionZone
-                        ? "#f8d7da"
-                        : isEasement
-                          ? "#d1e7dd"
-                          : isPlayground
-                            ? "#cfe2ff"
-                            : isPublicStreet
-                              ? "#d3d3d3"
-                              : isGreenArea
-                                ? "#d1e7dd"
-                                : isRecreationalZone
-                                  ? "#cfe2ff"
-                                  : isHighlightedFromUrl || isHighlightedInView
-                                    ? "#fca5a5"
-                                    : isEditing
-                                      ? "#6ee7b7"
-                                      : location.type === "neighborhood"
-                                        ? "#d8b4fe"
-                                        : "#fdba74"
+                    if (location.type === "facility") {
+                      strokeColor = "#fb923c"
+                      fillColor = "#fb923c"
+                    } else if (location.type === "neighborhood") {
+                      strokeColor = "#a855f7"
+                      fillColor = "#a855f7"
+                    } else if (isBoundary) {
+                      strokeColor = "#000000" // Changed from white to transparent/invisible
+                      fillColor = "#000000"
+                    } else if (isProtectionZone) {
+                      strokeColor = "#ef4444"
+                      fillColor = "#ef4444"
+                    } else if (isEasement) {
+                      strokeColor = "#f59e0b"
+                      fillColor = "#f59e0b"
+                    } else if (isPlayground) {
+                      strokeColor = "#ec4899"
+                      fillColor = "#ec4899"
+                    } else if (isPublicStreet) {
+                      strokeColor = "#fbbf24"
+                      fillColor = "#fbbf24"
+                    } else if (isGreenArea) {
+                      strokeColor = "#22c55e"
+                      fillColor = "#22c55e"
+                    } else if (isRecreationalZone) {
+                      strokeColor = "#06b6d4"
+                      fillColor = "#06b6d4"
+                    }
+
+                    if (isHighlightedFromUrl || isHighlightedInView) {
+                      strokeColor = "#ef4444"
+                      fillColor = "#60a5fa"
+                    } else if (isEditing) {
+                      strokeColor = "#10b981"
+                      fillColor = "#60a5fa"
+                    }
+
+                    const isClickable = !isBoundary
+                    const strokeOpacityValue = isBoundary ? 0 : isHovered ? 1 : 0.8
 
                     return (
                       <Polygon
                         key={`saved-${location.id}`}
                         paths={paths}
                         strokeColor={strokeColor}
-                        strokeOpacity={isBoundary ? 0.8 : isHovered ? 1 : 0.7}
-                        strokeWeight={
-                          isBoundary
-                            ? 2
-                            : isHighlightedFromUrl || isHighlightedInView || isEditing
-                              ? 2
-                              : isHovered
-                                ? 2
-                                : 1
-                        }
+                        strokeOpacity={strokeOpacityValue}
+                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 3 : isHovered ? 2 : 1}
                         fillColor={fillColor}
-                        fillOpacity={isBoundary ? 0.15 : isHovered ? 0.3 : 0.2}
-                        onClick={() => handleLocationClick(location)}
-                        onMouseOver={() => setHoveredLocationId(location.id)}
-                        onMouseOut={() => setHoveredLocationId(null)}
+                        fillOpacity={
+                          isHighlightedFromUrl || isHighlightedInView || isEditing ? 0.4 : isHovered ? 0.3 : 0.25
+                        }
+                        onClick={isClickable ? () => handleLocationClick(location) : undefined}
+                        onMouseOver={isClickable ? () => setHoveredLocationId(location.id) : undefined}
+                        onMouseOut={isClickable ? () => setHoveredLocationId(null) : undefined}
+                        zIndex={zIndex}
                       />
                     )
                   }
+
+                  // Lot polylines with increased opacity and invisible wider line for easier clicking
+                  if (location.type === "lot" && location.path_coordinates) {
+                    const path = convertCoordinates(location.path_coordinates)
+                    const isEditing = editingLocationId === location.id
+                    const isHovered = hoveredLocationId === location.id
+                    const isHighlightedFromUrl = editLocationIdFromUrl === location.id
+                    const isHighlightedInView = highlightedLocationId === location.id
+
+                    const zIndex = isHighlightedFromUrl || isHighlightedInView || isEditing ? 100 : 3
+
+                    return (
+                      <React.Fragment key={`saved-${location.id}`}>
+                        {/* Invisible wider line for easier clicking */}
+                        <Polyline
+                          path={path}
+                          strokeColor="transparent"
+                          strokeOpacity={0}
+                          strokeWeight={8}
+                          onClick={() => handleLocationClick(location)}
+                          onMouseOver={() => setHoveredLocationId(location.id)}
+                          onMouseOut={() => setHoveredLocationId(null)}
+                          zIndex={zIndex}
+                        />
+                        {/* Visible thin line */}
+                        <Polyline
+                          path={path}
+                          strokeColor={
+                            isHighlightedFromUrl || isHighlightedInView ? "#ef4444" : isEditing ? "#10b981" : "#60a5fa"
+                          }
+                          strokeOpacity={isHovered ? 1 : 0.9}
+                          strokeWeight={
+                            isHighlightedFromUrl || isHighlightedInView || isEditing ? 3 : isHovered ? 2 : 1
+                          }
+                          onClick={() => handleLocationClick(location)}
+                          onMouseOver={() => setHoveredLocationId(location.id)}
+                          onMouseOut={() => setHoveredLocationId(null)}
+                          zIndex={zIndex + 1}
+                        />
+                      </React.Fragment>
+                    )
+                  }
+
+                  // Lot polygons with lighter blue fill and invisible wider border for easier clicking
                   if (location.type === "lot" && location.boundary_coordinates) {
                     const paths = convertCoordinates(location.boundary_coordinates)
+                    const isEditing = editingLocationId === location.id
+                    const isHovered = hoveredLocationId === location.id
+                    const isHighlightedFromUrl = editLocationIdFromUrl === location.id
+                    const isHighlightedInView = highlightedLocationId === location.id
+
+                    const zIndex = isHighlightedFromUrl || isHighlightedInView || isEditing ? 100 : 3
+
                     return (
-                      <Polygon
+                      <React.Fragment key={`saved-${location.id}`}>
+                        {/* Invisible wider border for easier clicking */}
+                        <Polygon
+                          paths={paths}
+                          strokeColor="transparent"
+                          strokeOpacity={0}
+                          strokeWeight={8}
+                          fillColor="transparent"
+                          fillOpacity={0}
+                          onClick={() => handleLocationClick(location)}
+                          onMouseOver={() => setHoveredLocationId(location.id)}
+                          onMouseOut={() => setHoveredLocationId(null)}
+                          zIndex={zIndex}
+                        />
+                        {/* Visible thin border with fill */}
+                        <Polygon
+                          paths={paths}
+                          strokeColor={
+                            isHighlightedFromUrl || isHighlightedInView ? "#ef4444" : isEditing ? "#10b981" : "#60a5fa"
+                          }
+                          strokeOpacity={isHovered ? 1 : 0.7}
+                          strokeWeight={
+                            isHighlightedFromUrl || isHighlightedInView || isEditing ? 3 : isHovered ? 2 : 1
+                          }
+                          fillColor={isHighlightedFromUrl || isHighlightedInView || isEditing ? "#bfdbfe" : "#bfdbfe"}
+                          fillOpacity={
+                            isHighlightedFromUrl || isHighlightedInView || isEditing ? 0.5 : isHovered ? 0.4 : 0.35
+                          }
+                          onClick={() => handleLocationClick(location)}
+                          onMouseOver={() => setHoveredLocationId(location.id)}
+                          onMouseOut={() => setHoveredLocationId(null)}
+                          zIndex={zIndex + 1}
+                        />
+                      </React.Fragment>
+                    )
+                  }
+
+                  if (location.type === "public_street" && location.path_coordinates) {
+                    const path = convertCoordinates(location.path_coordinates)
+                    return (
+                      <Polyline
                         key={`saved-${location.id}`}
-                        paths={paths}
+                        path={path}
                         strokeColor={
-                          isHighlightedFromUrl || isHighlightedInView ? "#ef4444" : isEditing ? "#10b981" : "#60a5fa"
+                          isHighlightedFromUrl || isHighlightedInView ? "#ef4444" : isEditing ? "#10b981" : "#fbbf24"
                         }
-                        strokeOpacity={isHovered ? 1 : 0.7}
-                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 2 : isHovered ? 2 : 1}
-                        fillColor={
-                          isHighlightedFromUrl || isHighlightedInView ? "#fca5a5" : isEditing ? "#6ee7b7" : "#93c5fd"
-                        }
-                        fillOpacity={isHovered ? 0.3 : 0.2}
+                        strokeOpacity={isHovered ? 1 : 0.95}
+                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 3 : isHovered ? 2 : 1}
                         onClick={() => handleLocationClick(location)}
                         onMouseOver={() => setHoveredLocationId(location.id)}
                         onMouseOut={() => setHoveredLocationId(null)}
+                        zIndex={zIndex}
                       />
                     )
                   }
+
                   if (location.type === "walking_path" && location.path_coordinates) {
                     const path = convertCoordinates(location.path_coordinates)
                     return (
@@ -1250,12 +1436,11 @@ export function GoogleMapEditor({
                           isHighlightedFromUrl || isHighlightedInView ? "#ef4444" : isEditing ? "#10b981" : "#3b82f6"
                         }
                         strokeOpacity={isHovered ? 1 : 0.8}
-                        strokeWeight={
-                          isHighlightedFromUrl || isHighlightedInView || isEditing ? 3 : isHovered ? 3 : 1.5
-                        }
+                        strokeWeight={isHighlightedFromUrl || isHighlightedInView || isEditing ? 3 : isHovered ? 2 : 1}
                         onClick={() => handleLocationClick(location)}
                         onMouseOver={() => setHoveredLocationId(location.id)}
                         onMouseOut={() => setHoveredLocationId(null)}
+                        zIndex={zIndex}
                       />
                     )
                   }
@@ -1270,7 +1455,7 @@ export function GoogleMapEditor({
                   <Button
                     variant="secondary"
                     size="icon"
-                    onClick={() => setMapZoom(mapZoom + 1)}
+                    onClick={() => setMapZoom((prev) => prev + 1)}
                     className="h-10 w-10 shadow-lg"
                     title="Zoom In"
                   >
@@ -1279,7 +1464,7 @@ export function GoogleMapEditor({
                   <Button
                     variant="secondary"
                     size="icon"
-                    onClick={() => setMapZoom(mapZoom - 1)}
+                    onClick={() => setMapZoom((prev) => prev - 1)}
                     className="h-10 w-10 shadow-lg"
                     title="Zoom Out"
                   >
@@ -1374,39 +1559,64 @@ export function GoogleMapEditor({
                 <DropdownMenuContent align="end">
                   <DropdownMenuLabel>Show on Map</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuCheckboxItem checked={showFacilities} onCheckedChange={setShowFacilities}>
-                    Facilities
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem checked={showLots} onCheckedChange={setShowLots}>
-                    Lots
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem checked={showWalkingPaths} onCheckedChange={setShowWalkingPaths}>
-                    Walking Paths
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem checked={showNeighborhoods} onCheckedChange={setShowNeighborhoods}>
-                    Neighborhoods
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem checked={showBoundaries} onCheckedChange={setShowBoundaries}>
-                    Boundaries
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem checked={showProtectionZones} onCheckedChange={setShowProtectionZones}>
-                    Protection Zones
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem checked={showEasements} onCheckedChange={setShowEasements}>
-                    Easements
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem checked={showPlaygrounds} onCheckedChange={setShowPlaygrounds}>
-                    Playgrounds
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem checked={showPublicStreets} onCheckedChange={setShowPublicStreets}>
-                    Public Streets
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem checked={showGreenAreas} onCheckedChange={setShowGreenAreas}>
-                    Green Areas
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem checked={showRecreationalZones} onCheckedChange={setShowRecreationalZones}>
-                    Recreational Zones
-                  </DropdownMenuCheckboxItem>
+                  {hasType("facility") && (
+                    <DropdownMenuCheckboxItem checked={showFacilities} onCheckedChange={setShowFacilities}>
+                      Facilities
+                    </DropdownMenuCheckboxItem>
+                  )}
+                  {hasType("lot") && (
+                    <DropdownMenuCheckboxItem checked={showLots} onCheckedChange={setShowLots}>
+                      Lots
+                    </DropdownMenuCheckboxItem>
+                  )}
+                  {hasType("walking_path") && (
+                    <DropdownMenuCheckboxItem checked={showWalkingPaths} onCheckedChange={setShowWalkingPaths}>
+                      Walking Paths
+                    </DropdownMenuCheckboxItem>
+                  )}
+                  {hasType("neighborhood") && (
+                    <DropdownMenuCheckboxItem checked={showNeighborhoods} onCheckedChange={setShowNeighborhoods}>
+                      Neighborhoods
+                    </DropdownMenuCheckboxItem>
+                  )}
+                  {hasType("boundary") && (
+                    <DropdownMenuCheckboxItem checked={showBoundaries} onCheckedChange={setShowBoundaries}>
+                      Boundaries
+                    </DropdownMenuCheckboxItem>
+                  )}
+                  {hasType("protection_zone") && (
+                    <DropdownMenuCheckboxItem checked={showProtectionZones} onCheckedChange={setShowProtectionZones}>
+                      Protection Zones
+                    </DropdownMenuCheckboxItem>
+                  )}
+                  {hasType("easement") && (
+                    <DropdownMenuCheckboxItem checked={showEasements} onCheckedChange={setShowEasements}>
+                      Easements
+                    </DropdownMenuCheckboxItem>
+                  )}
+                  {hasType("playground") && (
+                    <DropdownMenuCheckboxItem checked={showPlaygrounds} onCheckedChange={setShowPlaygrounds}>
+                      Playgrounds
+                    </DropdownMenuCheckboxItem>
+                  )}
+                  {hasType("public_street") && (
+                    <DropdownMenuCheckboxItem checked={showPublicStreets} onCheckedChange={setShowPublicStreets}>
+                      Public Streets
+                    </DropdownMenuCheckboxItem>
+                  )}
+                  {hasType("green_area") && (
+                    <DropdownMenuCheckboxItem checked={showGreenAreas} onCheckedChange={setShowGreenAreas}>
+                      Green Areas
+                    </DropdownMenuCheckboxItem>
+                  )}
+                  {hasType("recreational_zone") && (
+                    <DropdownMenuCheckboxItem
+                      checked={showRecreationalZones}
+                      onCheckedChange={setShowRecreationalZones}
+                    >
+                      Recreational Zones
+                    </DropdownMenuCheckboxItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
 
@@ -1497,61 +1707,8 @@ export function GoogleMapEditor({
             )}
 
             {mode === "view" && selectedLocation && (
-              <div className="absolute bottom-20 left-3 right-3 md:left-auto md:right-3 md:w-80 bg-background/95 backdrop-blur-sm rounded-lg shadow-lg border p-4">
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className="font-semibold text-lg">{selectedLocation.name}</h3>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setSelectedLocation(null)}
-                    className="h-6 w-6 -mt-1 -mr-1"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-                {selectedLocation.description && (
-                  <p className="text-sm text-muted-foreground mb-2">{selectedLocation.description}</p>
-                )}
-                <div className="flex items-center gap-2 text-sm">
-                  <Badge variant="secondary">
-                    {selectedLocation.type === "facility"
-                      ? "Facility"
-                      : selectedLocation.type === "lot"
-                        ? "Lot"
-                        : selectedLocation.type === "walking_path"
-                          ? "Walking Path"
-                          : selectedLocation.type === "neighborhood"
-                            ? "Neighborhood"
-                            : selectedLocation.type === "boundary"
-                              ? "Boundary"
-                              : selectedLocation.type === "protection_zone"
-                                ? "Protection Zone"
-                                : selectedLocation.type === "easement"
-                                  ? "Easement"
-                                  : selectedLocation.type === "playground"
-                                    ? "Playground"
-                                    : selectedLocation.type === "public_street"
-                                      ? "Public Street"
-                                      : selectedLocation.type === "green_area"
-                                        ? "Green Area"
-                                        : selectedLocation.type === "recreational_zone"
-                                          ? "Recreational Zone"
-                                          : "Unknown"}
-                  </Badge>
-                  {selectedLocation.facility_type && <Badge variant="outline">{selectedLocation.facility_type}</Badge>}
-                </div>
-                {selectedLocation.photos && selectedLocation.photos.length > 0 && (
-                  <div className="mt-3 grid grid-cols-2 gap-2">
-                    {selectedLocation.photos.map((url: string, index: number) => (
-                      <img
-                        key={url}
-                        src={url || "/placeholder.svg"}
-                        alt={`${selectedLocation.name} ${index + 1}`}
-                        className="w-full h-24 object-cover rounded"
-                      />
-                    ))}
-                  </div>
-                )}
+              <div className="absolute bottom-20 left-3 right-3 md:left-auto md:right-3 md:w-80">
+                <LocationInfoCard location={selectedLocation} onClose={() => setSelectedLocation(null)} />
               </div>
             )}
           </div>
@@ -1656,6 +1813,41 @@ export function GoogleMapEditor({
                   </Select>
                 </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor="neighborhood-link-import">Link to Neighborhood (Optional)</Label>
+                  <Select value={selectedNeighborhoodId} onValueChange={setSelectedNeighborhoodId}>
+                    <SelectTrigger id="neighborhood-link-import">
+                      <SelectValue placeholder="Choose a neighborhood..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      {neighborhoods.map((neighborhood) => (
+                        <SelectItem key={neighborhood.id} value={neighborhood.id}>
+                          {neighborhood.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="lot-link-import">Link to Lot (Optional)</Label>
+                  <Select value={selectedLotId} onValueChange={setSelectedLotId}>
+                    <SelectTrigger id="lot-link-import">
+                      <SelectValue placeholder="Choose a lot..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      {lots.map((lot) => (
+                        <SelectItem key={lot.id} value={lot.id}>
+                          {lot.lot_number} {lot.neighborhoods?.name && `(${lot.neighborhoods.name})`}
+                          {lot.address && ` - ${lot.address}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div className="pt-4 space-y-2">
                   <Button onClick={handleSaveImport} disabled={saving} className="w-full">
                     {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -1729,9 +1921,10 @@ export function GoogleMapEditor({
                   </div>
                 )}
 
-                {(locationType === "facility" || locationType === "walking_path") && neighborhoods.length > 0 && (
+                {/* Changed to allow linking for all types except lot/neighborhood */}
+                {locationType !== "lot" && locationType !== "neighborhood" && neighborhoods.length > 0 && (
                   <div className="space-y-2">
-                    <Label htmlFor="neighborhood">Neighborhood (Optional)</Label>
+                    <Label htmlFor="neighborhood">Link to Neighborhood (Optional)</Label>
                     <Select value={selectedNeighborhoodId} onValueChange={setSelectedNeighborhoodId}>
                       <SelectTrigger id="neighborhood">
                         <SelectValue placeholder="Choose a neighborhood..." />
@@ -1741,6 +1934,26 @@ export function GoogleMapEditor({
                         {neighborhoods.map((neighborhood) => (
                           <SelectItem key={neighborhood.id} value={neighborhood.id}>
                             {neighborhood.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {locationType !== "lot" && locationType !== "neighborhood" && lots.length > 0 && (
+                  <div className="space-y-2">
+                    <Label htmlFor="lot-link">Link to Lot (Optional)</Label>
+                    <Select value={selectedLotId} onValueChange={setSelectedLotId}>
+                      <SelectTrigger id="lot-link">
+                        <SelectValue placeholder="Choose a lot..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {lots.map((lot) => (
+                          <SelectItem key={lot.id} value={lot.id}>
+                            {lot.lot_number} {lot.neighborhoods?.name && `(${lot.neighborhoods.name})`}
+                            {lot.address && ` - ${lot.address}`}
                           </SelectItem>
                         ))}
                       </SelectContent>

@@ -16,7 +16,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
-import { Home, Users } from "lucide-react"
+import { Home, Users, Map } from "lucide-react"
 import Link from "next/link"
 import { UserAvatarMenu } from "@/components/user-avatar-menu"
 
@@ -30,7 +30,6 @@ export default async function ResidentDashboardLayout({
   const { slug } = await params
   const supabase = await createClient()
 
-  // Check authentication
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -41,7 +40,6 @@ export default async function ResidentDashboardLayout({
 
   const { data: userData } = await supabase.from("users").select("role, tenant_id").eq("id", user.id).maybeSingle()
 
-  // Get tenant info
   const { data: tenant } = await supabase.from("tenants").select("*").eq("slug", slug).single()
 
   if (!tenant) {
@@ -55,7 +53,6 @@ export default async function ResidentDashboardLayout({
     redirect(`/t/${slug}/admin/dashboard`)
   }
 
-  // Get resident info
   const { data: resident } = await supabase
     .from("users")
     .select(
@@ -80,9 +77,11 @@ export default async function ResidentDashboardLayout({
     redirect(`/t/${slug}/login`)
   }
 
-  // They will see "Complete Onboarding" quick action button instead
-
   const isAdmin = resident.is_tenant_admin === true
+
+  const defaultFeatures = { map: true }
+  const mergedFeatures = { ...defaultFeatures, ...(tenant?.features || {}) }
+  const mapEnabled = mergedFeatures.map === true
 
   return (
     <SidebarProvider>
@@ -121,6 +120,16 @@ export default async function ResidentDashboardLayout({
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
+                {mapEnabled && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link href={`/t/${slug}/dashboard/community-map`}>
+                        <Map />
+                        <span>Community Map</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

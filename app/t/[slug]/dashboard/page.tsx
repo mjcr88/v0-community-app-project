@@ -1,11 +1,12 @@
 import { createClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Users, MapPin, Globe, Languages, PawPrint, Home } from "lucide-react"
+import { Users, MapPin, Globe, Languages, PawPrint, Home, Map } from "lucide-react"
 import Link from "next/link"
+import { MapPreviewWidget } from "@/components/map/map-preview-widget"
 
-export default async function ResidentDashboardPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params
+export default async function ResidentDashboardPage({ params }: { params: { slug: string } }) {
+  const { slug } = params
   const supabase = await createClient()
 
   const {
@@ -58,6 +59,35 @@ export default async function ResidentDashboardPage({ params }: { params: Promis
   const { data: tenant } = await supabase.from("tenants").select("*").eq("id", resident.tenant_id).single()
 
   const petsEnabled = tenant?.features?.pets === true
+  const defaultFeatures = {
+    map: true,
+  }
+  const mergedFeatures = { ...defaultFeatures, ...(tenant?.features || {}) }
+  const mapEnabled = mergedFeatures.map === true
+
+  console.log("[v0] Dashboard map feature check:", {
+    tenantFeatures: tenant?.features,
+    mapEnabled,
+    mergedFeatures,
+  })
+
+  let lotLocation = null
+  let allLocations = []
+  if (mapEnabled && resident.lot_id) {
+    const { data: locations } = await supabase.from("locations").select("*").eq("tenant_id", resident.tenant_id)
+
+    console.log("[v0] Dashboard locations query:", { count: locations?.length })
+
+    allLocations = locations || []
+    lotLocation = locations?.find((loc) => loc.lot_id === resident.lot_id && loc.type === "lot" && loc.lot_id !== null)
+
+    console.log("[v0] Dashboard lot location:", {
+      lotLocation: lotLocation?.name,
+      lotLocationId: lotLocation?.id,
+      residentLotId: resident.lot_id,
+      locationHasLotId: lotLocation?.lot_id !== null,
+    })
+  }
 
   // Get total residents count in neighborhood (or tenant if no neighborhood)
   const neighborhoodId = resident.lots?.neighborhoods?.id
@@ -141,6 +171,10 @@ export default async function ResidentDashboardPage({ params }: { params: Promis
 
   console.log("[v0] Dashboard family data:", { familyUnitId, familyMembersCount, familyName })
 
+  const mapCenter = tenant?.map_center_coordinates
+    ? { lat: tenant.map_center_coordinates.lat, lng: tenant.map_center_coordinates.lng }
+    : null
+
   return (
     <div className="space-y-6">
       <div>
@@ -165,20 +199,56 @@ export default async function ResidentDashboardPage({ params }: { params: Promis
           <Button asChild variant="outline">
             <Link href={`/t/${slug}/dashboard/neighbours`}>Browse Neighbours</Link>
           </Button>
+          {mapEnabled && (
+            <Button asChild variant="outline">
+              <Link href={`/t/${slug}/dashboard/map`}>
+                <Map className="h-4 w-4 mr-2" />
+                View Community Map
+              </Link>
+            </Button>
+          )}
         </CardContent>
       </Card>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Your Neighborhood</CardTitle>
-            <MapPin className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{resident.lots?.neighborhoods?.name || "Not assigned"}</div>
-            <p className="text-xs text-muted-foreground">Lot #{resident.lots?.lot_number || "N/A"}</p>
-          </CardContent>
-        </Card>
+        {mapEnabled && lotLocation ? (
+          <Card className="md:col-span-2 lg:col-span-2">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Your Neighborhood</CardTitle>
+              <MapPin className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div>
+                <div className="text-2xl font-bold">{resident.lots?.neighborhoods?.name || "Not assigned"}</div>
+                <p className="text-xs text-muted-foreground">Lot #{resident.lots?.lot_number || "N/A"}</p>
+              </div>
+              <MapPreviewWidget
+                tenantSlug={slug}
+                tenantId={resident.tenant_id}
+                locations={allLocations}
+                mapCenter={mapCenter}
+                highlightLocationId={lotLocation?.lot_id ? lotLocation.id : undefined}
+              />
+              <p className="text-xs text-center text-muted-foreground">
+                Interact with map or click expand button to view full map
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Your Neighborhood</CardTitle>
+              <MapPin className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{resident.lots?.neighborhoods?.name || "Not assigned"}</div>
+              <p className="text-xs text-muted-foreground">Lot #{resident.lots?.lot_number || "N/A"}</p>
+              <p className="text-xs text-muted-foreground mt-2">
+                Map: {mapEnabled ? "enabled" : "disabled"}, Lot: {lotLocation ? "found" : "not found"}
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

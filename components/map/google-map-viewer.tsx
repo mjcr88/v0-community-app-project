@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { APIProvider, Map, Marker } from "@vis.gl/react-google-maps"
 import { Button } from "@/components/ui/button"
 import { Plus, Locate, Layers, Filter } from "lucide-react"
@@ -17,12 +17,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu"
-import { createBrowserClient } from "@/utils/supabase-client"
+import { createBrowserClient } from "@/lib/supabase/client"
+import React from "react"
 
 interface Location {
   id: string
   name: string
-  type: "facility" | "lot" | "walking_path" | "neighborhood" | "boundary"
+  type: "facility" | "lot" | "walking_path" | "neighborhood" | "boundary" | "public_street"
   coordinates?: { lat: number; lng: number }
   boundary_coordinates?: Array<[number, number]>
   path_coordinates?: Array<[number, number]>
@@ -30,27 +31,33 @@ interface Location {
   icon?: string | null
   facility_type?: string | null
   photos?: string[] | null
+  lot_id?: string | null
+  neighborhood_id?: string
+  tenant_id?: string
 }
 
 interface GoogleMapViewerProps {
-  tenantSlug: string
-  initialLocations: Location[]
+  locations: Location[]
+  tenantId: string
   mapCenter?: { lat: number; lng: number } | null
   mapZoom?: number
   isAdmin?: boolean
   highlightLocationId?: string
+  minimal?: boolean
 }
 
-export function GoogleMapViewer({
-  tenantSlug,
-  initialLocations,
+export const GoogleMapViewer = React.memo(function GoogleMapViewer({
+  locations: initialLocations = [], // Add default empty array to prevent undefined
+  tenantId,
   mapCenter,
   mapZoom = 15,
   isAdmin = false,
   highlightLocationId,
+  minimal = false,
 }: GoogleMapViewerProps) {
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null)
-  const [highlightedLocationId, setHighlightedLocationId] = useState<string | undefined>(highlightLocationId)
+  const [initialHighlightId] = useState<string | undefined>(highlightLocationId)
+  const [dynamicHighlightId, setDynamicHighlightId] = useState<string | undefined>(undefined)
   const [center, setCenter] = useState<{ lat: number; lng: number }>(mapCenter || { lat: 9.9567, lng: -84.5333 })
   const [zoom, setZoom] = useState(mapZoom)
   const [mapType, setMapType] = useState<"roadmap" | "satellite" | "terrain">("satellite")
@@ -65,20 +72,26 @@ export function GoogleMapViewer({
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""
 
-  console.log("[v0] GoogleMapViewer received locations:", initialLocations.length)
-  console.log(
-    "[v0] Location types:",
-    initialLocations.map((l) => l.type),
-  )
-  console.log("[v0] GoogleMapViewer highlightLocationId:", highlightLocationId)
+  const activeHighlightId = dynamicHighlightId || initialHighlightId
 
   useEffect(() => {
-    if (highlightLocationId) {
-      setHighlightedLocationId(highlightLocationId)
-      const location = initialLocations.find((loc) => loc.id === highlightLocationId)
+    console.log("[v0] GoogleMapViewer mounted with:", {
+      locationsCount: initialLocations.length,
+      highlightLocationId,
+      minimal,
+    })
+  }, [])
+
+  useEffect(() => {
+    if (initialHighlightId) {
+      const location = initialLocations.find((loc) => loc.id === initialHighlightId)
       if (location) {
-        console.log("[v0] Auto-selecting highlighted location:", location.name)
-        setSelectedLocation(location)
+        const hasLotId = location.type === "lot" && location.lot_id
+        console.log("[v0] Auto-selecting initial highlight:", location.name, "has lot_id:", hasLotId)
+
+        if (!minimal && hasLotId) {
+          setSelectedLocation(location)
+        }
 
         if (location.coordinates) {
           setCenter(location.coordinates)
@@ -96,82 +109,92 @@ export function GoogleMapViewer({
         }
       }
     }
-  }, []) // Only run once on mount
+  }, [initialHighlightId, minimal, initialLocations])
 
   useEffect(() => {
     const loadTenantBoundary = async () => {
       const supabase = createBrowserClient()
       const { data: tenant } = await supabase
         .from("tenants")
-        .select("map_boundary_coordinates, id")
-        .eq("slug", tenantSlug)
+        .select("map_boundary_coordinates")
+        .eq("id", tenantId)
         .single()
-
-      console.log("[v0] Tenant boundary data:", tenant)
-      console.log("[v0] Tenant boundary coordinates:", tenant?.map_boundary_coordinates)
 
       if (tenant?.map_boundary_coordinates) {
         setTenantBoundary(tenant.map_boundary_coordinates as Array<{ lat: number; lng: number }>)
-        console.log("[v0] Tenant boundary set:", tenant.map_boundary_coordinates)
-      } else {
-        console.log("[v0] No tenant boundary found")
       }
 
       const { data: boundaryLocations } = await supabase
         .from("locations")
         .select("*")
         .eq("type", "boundary")
-        .eq("tenant_id", tenant?.id || "")
+        .eq("tenant_id", tenantId)
 
-      console.log("[v0] Boundary locations from table:", boundaryLocations?.length || 0)
-      if (boundaryLocations && boundaryLocations.length > 0) {
-        console.log("[v0] First boundary location:", {
-          id: boundaryLocations[0].id,
-          name: boundaryLocations[0].name,
-          hasCoordinates: !!boundaryLocations[0].boundary_coordinates,
-          coordinateCount: boundaryLocations[0].boundary_coordinates?.length || 0,
-          firstCoord: boundaryLocations[0].boundary_coordinates?.[0],
-        })
-      }
       setBoundaryLocationsFromTable(boundaryLocations)
     }
 
     loadTenantBoundary()
-  }, [tenantSlug])
+  }, [tenantId])
 
-  const facilityMarkers = initialLocations.filter((loc) => showFacilities && loc.type === "facility" && loc.coordinates)
-  const facilityPolygons = initialLocations.filter(
-    (loc) => showFacilities && loc.type === "facility" && loc.boundary_coordinates,
+  const facilityMarkers = useMemo(
+    () => initialLocations.filter((loc) => showFacilities && loc.type === "facility" && loc.coordinates),
+    [initialLocations, showFacilities],
   )
-  const lotPolygons = initialLocations.filter((loc) => showLots && loc.type === "lot" && loc.boundary_coordinates)
-  const walkingPaths = initialLocations.filter(
-    (loc) => showWalkingPaths && loc.type === "walking_path" && loc.path_coordinates,
+  const facilityPolygons = useMemo(
+    () => initialLocations.filter((loc) => showFacilities && loc.type === "facility" && loc.boundary_coordinates),
+    [initialLocations, showFacilities],
   )
-  const neighborhoodPolygons = initialLocations.filter(
-    (loc) => showNeighborhoods && loc.type === "neighborhood" && loc.boundary_coordinates,
+  const facilityPolylines = useMemo(
+    () => initialLocations.filter((loc) => showFacilities && loc.type === "facility" && loc.path_coordinates),
+    [initialLocations, showFacilities],
   )
-  const boundaryLocations = initialLocations.filter(
-    (loc) => showBoundary && loc.type === "boundary" && loc.boundary_coordinates,
+  const lotPolygons = useMemo(
+    () => initialLocations.filter((loc) => showLots && loc.type === "lot" && loc.boundary_coordinates),
+    [initialLocations, showLots],
+  )
+  const lotPolylines = useMemo(
+    () => initialLocations.filter((loc) => showLots && loc.type === "lot" && loc.path_coordinates),
+    [initialLocations, showLots],
+  )
+  const walkingPaths = useMemo(
+    () => initialLocations.filter((loc) => showWalkingPaths && loc.type === "walking_path" && loc.path_coordinates),
+    [initialLocations, showWalkingPaths],
+  )
+  const neighborhoodPolygons = useMemo(
+    () =>
+      initialLocations.filter((loc) => showNeighborhoods && loc.type === "neighborhood" && loc.boundary_coordinates),
+    [initialLocations, showNeighborhoods],
+  )
+  const boundaryLocations = useMemo(
+    () => initialLocations.filter((loc) => showBoundary && loc.type === "boundary" && loc.boundary_coordinates),
+    [initialLocations, showBoundary],
+  )
+  const publicStreetPolylines = useMemo(
+    () => initialLocations.filter((loc) => loc.type === "public_street" && loc.path_coordinates),
+    [initialLocations],
+  )
+  const publicStreetPolygons = useMemo(
+    () => initialLocations.filter((loc) => loc.type === "public_street" && loc.boundary_coordinates),
+    [initialLocations],
   )
 
-  console.log("[v0] Filtered neighborhoods:", neighborhoodPolygons.length)
-
-  const handleMapClick = () => {
-    setHighlightedLocationId(undefined)
+  const handleMapClick = useCallback(() => {
+    setDynamicHighlightId(undefined)
     setSelectedLocation(null)
-  }
+  }, [])
 
-  const handleLocationClick = (location: Location) => {
-    setHighlightedLocationId(undefined)
+  const handleLocationClick = useCallback((location: Location) => {
+    console.log("[v0] Location clicked:", location.name, location.id)
+    setDynamicHighlightId(location.id)
     setSelectedLocation(location)
-  }
+  }, [])
 
-  const convertCoordinates = (coords: [number, number][]) => {
+  const convertCoordinates = useCallback((coords: [number, number][]) => {
     return coords.map((coord) => ({
       lat: coord[0],
       lng: coord[1],
     }))
-  }
+  }, [])
 
   if (!apiKey) {
     return (
@@ -190,131 +213,384 @@ export function GoogleMapViewer({
           mapTypeId={mapType}
           gestureHandling="greedy"
           disableDefaultUI={true}
+          zoomControl={false}
+          minZoom={10}
+          maxZoom={22}
+          restriction={undefined}
+          mapId={undefined}
           onCenterChanged={(e) => setCenter(e.detail.center)}
           onZoomChanged={(e) => setZoom(e.detail.zoom)}
           onClick={handleMapClick}
         >
           {showBoundary && tenantBoundary && (
-            <Polygon
-              paths={convertCoordinates(tenantBoundary as any)}
-              strokeColor="#ffffff"
-              strokeOpacity={0.8}
-              strokeWeight={2}
-              fillColor="#ffffff"
-              fillOpacity={0.15}
-              clickable={false}
-            />
+            <>
+              <Polygon
+                paths={[
+                  [
+                    { lat: -85, lng: -180 },
+                    { lat: -85, lng: 180 },
+                    { lat: 85, lng: 180 },
+                    { lat: 85, lng: -180 },
+                    { lat: -85, lng: -180 },
+                  ],
+                  convertCoordinates(tenantBoundary as any),
+                ]}
+                strokeColor="transparent"
+                strokeOpacity={0}
+                strokeWeight={0}
+                fillColor="#000000"
+                fillOpacity={0.25}
+                clickable={false}
+                zIndex={1}
+              />
+            </>
           )}
 
           {boundaryLocations.map((location) => {
             const paths = convertCoordinates(location.boundary_coordinates!)
-            console.log("[v0] Rendering boundary location:", location.id, "with", paths.length, "coordinate pairs")
-            console.log("[v0] First path coordinate:", paths[0])
+            const isHighlighted = activeHighlightId === location.id
+            const zIndex = isHighlighted ? 200 : 1
             return (
-              <Polygon
-                key={location.id}
-                paths={paths}
-                strokeColor="#ffffff"
-                strokeOpacity={0.8}
-                strokeWeight={2}
-                fillColor="#ffffff"
-                fillOpacity={0.15}
-                onClick={() => handleLocationClick(location)}
-              />
+              <>
+                <Polygon
+                  key={`${location.id}-overlay`}
+                  paths={[
+                    [
+                      { lat: -85, lng: -180 },
+                      { lat: -85, lng: 180 },
+                      { lat: 85, lng: 180 },
+                      { lat: 85, lng: -180 },
+                      { lat: -85, lng: -180 },
+                    ],
+                    paths,
+                  ]}
+                  strokeColor="transparent"
+                  strokeOpacity={0}
+                  strokeWeight={0}
+                  fillColor="#000000"
+                  fillOpacity={0.25}
+                  clickable={false}
+                  zIndex={zIndex}
+                />
+              </>
             )
           })}
 
           {boundaryLocationsFromTable?.map((location) => {
             const paths = convertCoordinates(location.boundary_coordinates!)
-            console.log(
-              "[v0] Rendering boundary location from table:",
-              location.id,
-              "with",
-              paths.length,
-              "coordinate pairs",
-            )
-            console.log("[v0] First path coordinate from table:", paths[0])
+            const isHighlighted = activeHighlightId === location.id
+            const zIndex = isHighlighted ? 200 : 1
             return (
-              <Polygon
-                key={location.id}
-                paths={paths}
-                strokeColor="#000000"
-                strokeOpacity={0.8}
-                strokeWeight={2}
-                fillColor="#000000"
-                fillOpacity={0.15}
-                onClick={() => handleLocationClick(location)}
-              />
+              <>
+                <Polygon
+                  key={`${location.id}-overlay`}
+                  paths={[
+                    [
+                      { lat: -85, lng: -180 },
+                      { lat: -85, lng: 180 },
+                      { lat: 85, lng: 180 },
+                      { lat: 85, lng: -180 },
+                      { lat: -85, lng: -180 },
+                    ],
+                    paths,
+                  ]}
+                  strokeColor="transparent"
+                  strokeOpacity={0}
+                  strokeWeight={0}
+                  fillColor="#000000"
+                  fillOpacity={0.25}
+                  clickable={false}
+                  zIndex={zIndex}
+                />
+              </>
             )
           })}
 
           {neighborhoodPolygons.map((location) => {
             const paths = convertCoordinates(location.boundary_coordinates!)
-            const isHighlighted = highlightedLocationId === location.id
+            const isHighlighted = activeHighlightId === location.id
+            const zIndex = isHighlighted ? 200 : 8
             return (
-              <Polygon
-                key={location.id}
-                paths={paths}
-                strokeColor={isHighlighted ? "#ef4444" : "#a855f7"}
-                strokeOpacity={isHighlighted ? 1 : 0.7}
-                strokeWeight={isHighlighted ? 4 : 2}
-                fillColor={isHighlighted ? "#fca5a5" : "#c084fc"}
-                fillOpacity={isHighlighted ? 0.4 : 0.25}
-                onClick={() => handleLocationClick(location)}
-              />
+              <React.Fragment key={location.id}>
+                <Polygon
+                  paths={paths}
+                  strokeColor="transparent"
+                  strokeOpacity={0}
+                  strokeWeight={8}
+                  fillColor="transparent"
+                  fillOpacity={0}
+                  onClick={() => {
+                    console.log("[v0] Neighborhood polygon clicked:", location.name)
+                    handleLocationClick(location)
+                  }}
+                  zIndex={zIndex}
+                />
+                <Polygon
+                  paths={paths}
+                  strokeColor={isHighlighted ? "#ef4444" : "#c084fc"}
+                  strokeOpacity={1}
+                  strokeWeight={isHighlighted ? 3 : 1}
+                  fillColor={isHighlighted ? "#60a5fa" : "#e9d5ff"}
+                  fillOpacity={isHighlighted ? 0.7 : 0.7}
+                  onClick={() => {
+                    console.log("[v0] Neighborhood polygon clicked:", location.name)
+                    handleLocationClick(location)
+                  }}
+                  zIndex={zIndex + 1}
+                />
+              </React.Fragment>
             )
           })}
 
-          {facilityMarkers.map((location) => (
-            <Marker key={location.id} position={location.coordinates!} onClick={() => handleLocationClick(location)} />
-          ))}
-
-          {facilityPolygons.map((location) => {
-            const paths = convertCoordinates(location.boundary_coordinates!)
-            const isHighlighted = highlightedLocationId === location.id
+          {publicStreetPolylines.map((location) => {
+            const path = convertCoordinates(location.path_coordinates!)
+            const isHighlighted = activeHighlightId === location.id
+            const zIndex = isHighlighted ? 200 : 15
             return (
-              <Polygon
-                key={location.id}
-                paths={paths}
-                strokeColor={isHighlighted ? "#ef4444" : "#fb923c"}
-                strokeOpacity={isHighlighted ? 1 : 0.7}
-                strokeWeight={isHighlighted ? 4 : 2}
-                fillColor={isHighlighted ? "#fca5a5" : "#fdba74"}
-                fillOpacity={isHighlighted ? 0.4 : 0.25}
-                onClick={() => handleLocationClick(location)}
-              />
+              <React.Fragment key={location.id}>
+                <Polyline
+                  path={path}
+                  strokeColor="transparent"
+                  strokeOpacity={0}
+                  strokeWeight={8}
+                  onClick={() => {
+                    console.log("[v0] Public street polyline clicked:", location.name)
+                    handleLocationClick(location)
+                  }}
+                  zIndex={zIndex}
+                />
+                <Polyline
+                  path={path}
+                  strokeColor={isHighlighted ? "#ef4444" : "#fbbf24"}
+                  strokeOpacity={1}
+                  strokeWeight={isHighlighted ? 4 : 1}
+                  onClick={() => {
+                    console.log("[v0] Public street polyline clicked:", location.name)
+                    handleLocationClick(location)
+                  }}
+                  zIndex={zIndex + 1}
+                />
+              </React.Fragment>
+            )
+          })}
+
+          {publicStreetPolygons.map((location) => {
+            const paths = convertCoordinates(location.boundary_coordinates!)
+            const isHighlighted = activeHighlightId === location.id
+            const zIndex = isHighlighted ? 200 : 15
+            return (
+              <React.Fragment key={location.id}>
+                <Polygon
+                  paths={paths}
+                  strokeColor="transparent"
+                  strokeOpacity={0}
+                  strokeWeight={8}
+                  fillColor="transparent"
+                  fillOpacity={0}
+                  onClick={() => {
+                    console.log("[v0] Public street polygon clicked:", location.name)
+                    handleLocationClick(location)
+                  }}
+                  zIndex={zIndex}
+                />
+                <Polygon
+                  paths={paths}
+                  strokeColor={isHighlighted ? "#ef4444" : "#fbbf24"}
+                  strokeOpacity={1}
+                  strokeWeight={isHighlighted ? 3 : 1}
+                  fillColor={isHighlighted ? "#60a5fa" : "#fef3c7"}
+                  fillOpacity={isHighlighted ? 0.7 : 0.7}
+                  onClick={() => {
+                    console.log("[v0] Public street polygon clicked:", location.name)
+                    handleLocationClick(location)
+                  }}
+                  zIndex={zIndex + 1}
+                />
+              </React.Fragment>
             )
           })}
 
           {lotPolygons.map((location) => {
             const paths = convertCoordinates(location.boundary_coordinates!)
-            const isHighlighted = highlightedLocationId === location.id
+            const isHighlighted = activeHighlightId === location.id
+            const zIndex = isHighlighted ? 200 : 10
             return (
-              <Polygon
+              <React.Fragment key={location.id}>
+                <Polygon
+                  paths={paths}
+                  strokeColor="transparent"
+                  strokeOpacity={0}
+                  strokeWeight={8}
+                  fillColor="transparent"
+                  fillOpacity={0}
+                  onClick={() => {
+                    console.log("[v0] Lot polygon clicked:", location.name)
+                    handleLocationClick(location)
+                  }}
+                  zIndex={zIndex}
+                />
+                <Polygon
+                  paths={paths}
+                  strokeColor={isHighlighted ? "#ef4444" : "#60a5fa"}
+                  strokeOpacity={1}
+                  strokeWeight={isHighlighted ? 3 : 1}
+                  fillColor={isHighlighted ? "#60a5fa" : "#bfdbfe"}
+                  fillOpacity={isHighlighted ? 0.7 : 0.7}
+                  onClick={() => {
+                    console.log("[v0] Lot polygon clicked:", location.name)
+                    handleLocationClick(location)
+                  }}
+                  zIndex={zIndex + 1}
+                />
+              </React.Fragment>
+            )
+          })}
+
+          {lotPolylines.map((location) => {
+            const path = convertCoordinates(location.path_coordinates!)
+            const isHighlighted = activeHighlightId === location.id
+            const zIndex = isHighlighted ? 200 : 10
+            return (
+              <React.Fragment key={location.id}>
+                <Polyline
+                  path={path}
+                  strokeColor="transparent"
+                  strokeOpacity={0}
+                  strokeWeight={8}
+                  onClick={() => {
+                    console.log("[v0] Lot polyline clicked:", location.name)
+                    handleLocationClick(location)
+                  }}
+                  zIndex={zIndex}
+                />
+                <Polyline
+                  path={path}
+                  strokeColor={isHighlighted ? "#ef4444" : "#60a5fa"}
+                  strokeOpacity={1}
+                  strokeWeight={isHighlighted ? 4 : 1}
+                  onClick={() => {
+                    console.log("[v0] Lot polyline clicked:", location.name)
+                    handleLocationClick(location)
+                  }}
+                  zIndex={zIndex + 1}
+                />
+              </React.Fragment>
+            )
+          })}
+
+          {facilityMarkers.map((location) => {
+            const isHighlighted = activeHighlightId === location.id
+            const zIndex = isHighlighted ? 200 : 20
+            return (
+              <Marker
                 key={location.id}
-                paths={paths}
-                strokeColor={isHighlighted ? "#ef4444" : "#60a5fa"}
-                strokeOpacity={isHighlighted ? 1 : 0.7}
-                strokeWeight={isHighlighted ? 4 : 2}
-                fillColor={isHighlighted ? "#fca5a5" : "#93c5fd"}
-                fillOpacity={isHighlighted ? 0.4 : 0.25}
-                onClick={() => handleLocationClick(location)}
+                position={location.coordinates!}
+                onClick={() => {
+                  console.log("[v0] Facility marker clicked:", location.name)
+                  handleLocationClick(location)
+                }}
+                zIndex={zIndex}
               />
+            )
+          })}
+
+          {facilityPolygons.map((location) => {
+            const paths = convertCoordinates(location.boundary_coordinates!)
+            const isHighlighted = activeHighlightId === location.id
+            const zIndex = isHighlighted ? 200 : 20
+            return (
+              <React.Fragment key={location.id}>
+                <Polygon
+                  paths={paths}
+                  strokeColor="transparent"
+                  strokeOpacity={0}
+                  strokeWeight={8}
+                  fillColor="transparent"
+                  fillOpacity={0}
+                  onClick={() => {
+                    console.log("[v0] Facility polygon clicked:", location.name)
+                    handleLocationClick(location)
+                  }}
+                  zIndex={zIndex}
+                />
+                <Polygon
+                  paths={paths}
+                  strokeColor={isHighlighted ? "#ef4444" : "#fb923c"}
+                  strokeOpacity={1}
+                  strokeWeight={isHighlighted ? 3 : 1}
+                  fillColor={isHighlighted ? "#60a5fa" : "#fed7aa"}
+                  fillOpacity={isHighlighted ? 0.7 : 0.75}
+                  onClick={() => {
+                    console.log("[v0] Facility polygon clicked:", location.name)
+                    handleLocationClick(location)
+                  }}
+                  zIndex={zIndex + 1}
+                />
+              </React.Fragment>
+            )
+          })}
+
+          {facilityPolylines.map((location) => {
+            const path = convertCoordinates(location.path_coordinates!)
+            const isHighlighted = activeHighlightId === location.id
+            const zIndex = isHighlighted ? 200 : 20
+            return (
+              <React.Fragment key={location.id}>
+                <Polyline
+                  path={path}
+                  strokeColor="transparent"
+                  strokeOpacity={0}
+                  strokeWeight={8}
+                  onClick={() => {
+                    console.log("[v0] Facility polyline clicked:", location.name)
+                    handleLocationClick(location)
+                  }}
+                  zIndex={zIndex}
+                />
+                <Polyline
+                  path={path}
+                  strokeColor={isHighlighted ? "#ef4444" : "#fb923c"}
+                  strokeOpacity={1}
+                  strokeWeight={isHighlighted ? 4 : 1}
+                  onClick={() => {
+                    console.log("[v0] Facility polyline clicked:", location.name)
+                    handleLocationClick(location)
+                  }}
+                  zIndex={zIndex + 1}
+                />
+              </React.Fragment>
             )
           })}
 
           {walkingPaths.map((location) => {
             const path = convertCoordinates(location.path_coordinates!)
-            const isHighlighted = highlightedLocationId === location.id
+            const isHighlighted = activeHighlightId === location.id
+            const zIndex = isHighlighted ? 200 : 25
             return (
-              <Polyline
-                key={location.id}
-                path={path}
-                strokeColor={isHighlighted ? "#ef4444" : "#3b82f6"}
-                strokeOpacity={isHighlighted ? 1 : 0.8}
-                strokeWeight={isHighlighted ? 5 : 3}
-                onClick={() => handleLocationClick(location)}
-              />
+              <React.Fragment key={location.id}>
+                <Polyline
+                  path={path}
+                  strokeColor="transparent"
+                  strokeOpacity={0}
+                  strokeWeight={8}
+                  onClick={() => {
+                    console.log("[v0] Walking path clicked:", location.name)
+                    handleLocationClick(location)
+                  }}
+                  zIndex={zIndex}
+                />
+                <Polyline
+                  path={path}
+                  strokeColor={isHighlighted ? "#ef4444" : "#3b82f6"}
+                  strokeOpacity={1}
+                  strokeWeight={isHighlighted ? 4 : 1}
+                  onClick={() => {
+                    console.log("[v0] Walking path clicked:", location.name)
+                    handleLocationClick(location)
+                  }}
+                  zIndex={zIndex + 1}
+                />
+              </React.Fragment>
             )
           })}
         </Map>
@@ -322,7 +598,7 @@ export function GoogleMapViewer({
 
       {selectedLocation && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
-          <LocationInfoCard location={selectedLocation} onClose={() => setSelectedLocation(null)} />
+          <LocationInfoCard location={selectedLocation} onClose={() => setSelectedLocation(null)} minimal={minimal} />
         </div>
       )}
 
@@ -350,7 +626,7 @@ export function GoogleMapViewer({
       {isAdmin && (
         <div className="absolute bottom-3 left-3 z-10">
           <Button asChild size="icon" className="shadow-lg h-10 w-10">
-            <Link href={`/t/${tenantSlug}/admin/map/locations/create`}>
+            <Link href={`/t/${tenantId}/admin/map/locations/create`}>
               <Plus className="h-5 w-5" />
             </Link>
           </Button>
@@ -406,4 +682,4 @@ export function GoogleMapViewer({
       </div>
     </div>
   )
-}
+})

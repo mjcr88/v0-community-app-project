@@ -105,18 +105,18 @@ export function ProfileEditForm({
 
       setUploadingPhoto(true)
       try {
-        const formData = new FormData()
-        formData.append("file", file)
+        const uploadFormData = new FormData()
+        uploadFormData.append("file", file)
 
         const response = await fetch("/api/upload", {
           method: "POST",
-          body: formData,
+          body: uploadFormData,
         })
 
         if (!response.ok) throw new Error("Upload failed")
 
         const { url } = await response.json()
-        setFormData({ ...formData, profilePicture: url })
+        setFormData((prevState) => ({ ...prevState, profilePicture: url }))
       } catch (error) {
         console.error("[v0] Error uploading photo:", error)
         alert("Failed to upload photo. Please try again.")

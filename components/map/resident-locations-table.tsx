@@ -4,31 +4,22 @@ import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Trash2, Loader2, Map, Search } from "lucide-react"
+import { Map, Search } from "lucide-react"
 import Link from "next/link"
-import { deleteLocation } from "@/app/actions/locations"
-import { useRouter } from "next/navigation"
-import { useToast } from "@/hooks/use-toast"
 
-interface LocationsTableProps {
+interface ResidentLocationsTableProps {
   locations: any[]
   tenantSlug: string
-  tenantId: string
   initialTypeFilter?: string
 }
 
-export function LocationsTable({ locations, tenantSlug, tenantId, initialTypeFilter }: LocationsTableProps) {
-  const router = useRouter()
-  const { toast } = useToast()
+export function ResidentLocationsTable({ locations, tenantSlug, initialTypeFilter }: ResidentLocationsTableProps) {
   const [typeFilter, setTypeFilter] = useState<string>(initialTypeFilter || "all")
   const [neighborhoodFilter, setNeighborhoodFilter] = useState<string>("all")
   const [nameFilter, setNameFilter] = useState("")
   const [descriptionFilter, setDescriptionFilter] = useState("")
   const [globalSearch, setGlobalSearch] = useState("")
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [deleting, setDeleting] = useState(false)
   const [displayLimit, setDisplayLimit] = useState(10)
 
   useEffect(() => {
@@ -60,6 +51,18 @@ export function LocationsTable({ locations, tenantSlug, tenantId, initialTypeFil
     recreational_zone: "Recreational Zone",
   }
 
+  const getFamilyUnit = (location: any) => {
+    if (!location.lots?.users || location.lots.users.length === 0) return null
+
+    // Get all unique family units from users
+    const familyUnits = location.lots.users
+      .map((user: any) => user.family_units)
+      .filter((family: any) => family != null)
+
+    // Return the first family unit if any exist
+    return familyUnits.length > 0 ? familyUnits[0] : null
+  }
+
   const filteredLocations = useMemo(() => {
     return locations.filter((location) => {
       // Global search
@@ -87,81 +90,25 @@ export function LocationsTable({ locations, tenantSlug, tenantId, initialTypeFil
 
   const visibleLocations = filteredLocations.slice(0, displayLimit)
 
-  const toggleSelectAll = () => {
-    if (selectedIds.size === visibleLocations.length) {
-      setSelectedIds(new Set())
-    } else {
-      setSelectedIds(new Set(visibleLocations.map((l) => l.id)))
-    }
-  }
-
-  const toggleSelect = (id: string) => {
-    const newSelected = new Set(selectedIds)
-    if (newSelected.has(id)) {
-      newSelected.delete(id)
-    } else {
-      newSelected.add(id)
-    }
-    setSelectedIds(newSelected)
-  }
-
-  const handleBulkDelete = async () => {
-    if (selectedIds.size === 0) return
-
-    const confirmed = window.confirm(
-      `Are you sure you want to delete ${selectedIds.size} location(s)? This action cannot be undone.`,
-    )
-    if (!confirmed) return
-
-    setDeleting(true)
-
-    try {
-      await Promise.all(Array.from(selectedIds).map((id) => deleteLocation(id, tenantId)))
-
-      toast({
-        title: "Success",
-        description: `Deleted ${selectedIds.size} location(s) successfully!`,
+  useEffect(() => {
+    const sampleLocation = locations.find((l) => l.lots?.lot_number === "D-001")
+    if (sampleLocation) {
+      console.log("[v0] Sample location D-001 data:", {
+        name: sampleLocation.name,
+        lotNumber: sampleLocation.lots?.lot_number,
+        lotsObject: sampleLocation.lots,
+        hasUsers: !!sampleLocation.lots?.users,
+        usersCount: sampleLocation.lots?.users?.length,
+        users: sampleLocation.lots?.users,
       })
-
-      setSelectedIds(new Set())
-      router.refresh()
-    } catch (error) {
-      console.error("[v0] Error deleting locations:", error)
-      toast({
-        title: "Error",
-        description: "Error deleting locations: " + (error instanceof Error ? error.message : "Unknown error"),
-        variant: "destructive",
-      })
-    } finally {
-      setDeleting(false)
     }
-  }
-
-  const getFamilyUnit = (location: any) => {
-    if (!location.lots?.users || location.lots.users.length === 0) return null
-
-    // Get all unique family units from users
-    const familyUnits = location.lots.users
-      .map((user: any) => user.family_units)
-      .filter((family: any) => family != null)
-
-    // Return the first family unit if any exist
-    return familyUnits.length > 0 ? familyUnits[0] : null
-  }
+  }, [locations])
 
   return (
     <div className="space-y-4" id="locations-table">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold">All Locations</h2>
-          <p className="text-sm text-muted-foreground">Browse and filter all map locations</p>
-        </div>
-        {selectedIds.size > 0 && (
-          <Button variant="destructive" onClick={handleBulkDelete} disabled={deleting}>
-            {deleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
-            Delete {selectedIds.size} Selected
-          </Button>
-        )}
+      <div>
+        <h2 className="text-xl font-semibold">All Locations</h2>
+        <p className="text-sm text-muted-foreground">Browse and search all community locations</p>
       </div>
 
       <div className="relative">
@@ -178,12 +125,6 @@ export function LocationsTable({ locations, tenantSlug, tenantId, initialTypeFil
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-12">
-                <Checkbox
-                  checked={selectedIds.size === visibleLocations.length && visibleLocations.length > 0}
-                  onCheckedChange={toggleSelectAll}
-                />
-              </TableHead>
               <TableHead className="font-semibold">Name</TableHead>
               <TableHead className="font-semibold">Type</TableHead>
               <TableHead className="font-semibold">Neighborhood</TableHead>
@@ -192,7 +133,6 @@ export function LocationsTable({ locations, tenantSlug, tenantId, initialTypeFil
               <TableHead className="text-right font-semibold">Actions</TableHead>
             </TableRow>
             <TableRow className="bg-muted/50">
-              <TableCell />
               <TableCell>
                 <Input
                   placeholder="Filter name..."
@@ -236,7 +176,6 @@ export function LocationsTable({ locations, tenantSlug, tenantId, initialTypeFil
                   </SelectContent>
                 </Select>
               </TableCell>
-              <TableCell />
               <TableCell>
                 <Input
                   placeholder="Filter description..."
@@ -251,7 +190,7 @@ export function LocationsTable({ locations, tenantSlug, tenantId, initialTypeFil
           <TableBody>
             {visibleLocations.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                   No locations found matching your filters
                 </TableCell>
               </TableRow>
@@ -262,12 +201,6 @@ export function LocationsTable({ locations, tenantSlug, tenantId, initialTypeFil
 
                 return (
                   <TableRow key={location.id}>
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedIds.has(location.id)}
-                        onCheckedChange={() => toggleSelect(location.id)}
-                      />
-                    </TableCell>
                     <TableCell className="font-medium">{location.name || "—"}</TableCell>
                     <TableCell>{typeLabels[location.type] || location.type}</TableCell>
                     <TableCell>{location.neighborhoods?.name || "—"}</TableCell>
@@ -289,19 +222,12 @@ export function LocationsTable({ locations, tenantSlug, tenantId, initialTypeFil
                       {location.description ? <span className="line-clamp-1">{location.description}</span> : "—"}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex gap-2 justify-end">
-                        <Button asChild variant="ghost" size="sm">
-                          <Link href={`/t/${tenantSlug}/admin/map/viewer?highlightLocation=${location.id}`}>
-                            <Map className="h-4 w-4 mr-1" />
-                            View on Map
-                          </Link>
-                        </Button>
-                        <Button asChild variant="ghost" size="sm">
-                          <Link href={`/t/${tenantSlug}/admin/map/locations/create?editLocationId=${location.id}`}>
-                            Edit
-                          </Link>
-                        </Button>
-                      </div>
+                      <Button asChild variant="ghost" size="sm">
+                        <Link href={`/t/${tenantSlug}/dashboard/map?highlightLocation=${location.id}`}>
+                          <Map className="h-4 w-4 mr-1" />
+                          View on Map
+                        </Link>
+                      </Button>
                     </TableCell>
                   </TableRow>
                 )
@@ -315,7 +241,6 @@ export function LocationsTable({ locations, tenantSlug, tenantId, initialTypeFil
         <p className="text-sm text-muted-foreground">
           Showing {visibleLocations.length} of {filteredLocations.length} locations
           {filteredLocations.length < locations.length && ` (${locations.length} total)`}
-          {selectedIds.size > 0 && ` • ${selectedIds.size} selected`}
         </p>
         {visibleLocations.length < filteredLocations.length && (
           <div className="flex gap-2">

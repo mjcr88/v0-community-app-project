@@ -1,24 +1,33 @@
 import { createServerClient } from "@/lib/supabase/server"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { Plus } from "lucide-react"
 import { LocationsTable } from "@/components/map/locations-table"
 import { GeoJSONUploadButton } from "@/components/map/geojson-upload-button"
+import { AdminMapClient } from "./admin-map-client"
+import { redirect } from "next/navigation"
 
-export default async function MapManagementPage({ params }: { params: Promise<{ slug: string }> }) {
-  console.log("[v0] Map page rendering started")
+export default async function MapManagementPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>
+  searchParams: Promise<{ type?: string }>
+}) {
   const { slug } = await params
-  console.log("[v0] Slug:", slug)
+  const { type: initialTypeFilter } = await searchParams
 
   const supabase = await createServerClient()
 
   const { data: tenant } = await supabase.from("tenants").select("*").eq("slug", slug).single()
-  console.log("[v0] Tenant:", tenant?.id)
 
   if (!tenant) {
-    console.log("[v0] Tenant not found")
     return <div>Tenant not found</div>
+  }
+
+  const features = tenant.features as { map?: boolean } | null
+  if (features?.map === false) {
+    redirect(`/t/${slug}/admin/dashboard`)
   }
 
   const { count: facilitiesCount } = await supabase
@@ -81,14 +90,30 @@ export default async function MapManagementPage({ params }: { params: Promise<{ 
     .eq("tenant_id", tenant.id)
     .eq("type", "recreational_zone")
 
-  const { data: locations, error: locationsError } = await supabase
+  const { data: locations } = await supabase
     .from("locations")
-    .select("*, neighborhoods!locations_neighborhood_id_fkey(name)")
+    .select(`
+      *, 
+      neighborhoods!locations_neighborhood_id_fkey(name),
+      lots!locations_lot_id_fkey(
+        id, 
+        lot_number,
+        users!users_lot_id_fkey(
+          id, 
+          first_name, 
+          last_name, 
+          profile_picture_url,
+          family_units!users_family_unit_id_fkey(
+            id,
+            name,
+            profile_picture_url,
+            description
+          )
+        )
+      )
+    `)
     .eq("tenant_id", tenant.id)
     .order("created_at", { ascending: false })
-
-  console.log("[v0] Locations query result:", { count: locations?.length, error: locationsError })
-  console.log("[v0] Map page rendering complete")
 
   return (
     <div className="space-y-6">
@@ -111,109 +136,28 @@ export default async function MapManagementPage({ params }: { params: Promise<{ 
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle>Facilities</CardTitle>
-            <CardDescription>Community amenities and points of interest</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{facilitiesCount || 0}</p>
-          </CardContent>
-        </Card>
+      {/* Use client component for clickable cards */}
+      <AdminMapClient
+        counts={{
+          facilities: facilitiesCount || 0,
+          lots: lotsCount || 0,
+          neighborhoods: neighborhoodsCount || 0,
+          walkingPaths: pathsCount || 0,
+          protectionZones: protectionZonesCount || 0,
+          easements: easementsCount || 0,
+          playgrounds: playgroundsCount || 0,
+          publicStreets: publicStreetsCount || 0,
+          greenAreas: greenAreasCount || 0,
+          recreationalZones: recreationalZonesCount || 0,
+        }}
+      />
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Lots</CardTitle>
-            <CardDescription>Property boundaries and lot markers</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{lotsCount || 0}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Neighborhoods</CardTitle>
-            <CardDescription>Neighborhood areas</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{neighborhoodsCount || 0}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Walking Paths</CardTitle>
-            <CardDescription>Trails and pathways through the community</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{pathsCount || 0}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Protection Zones</CardTitle>
-            <CardDescription>Protected areas</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{protectionZonesCount || 0}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Easements</CardTitle>
-            <CardDescription>Easement areas</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{easementsCount || 0}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Playgrounds</CardTitle>
-            <CardDescription>Play areas</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{playgroundsCount || 0}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Public Streets</CardTitle>
-            <CardDescription>Street network</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{publicStreetsCount || 0}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Green Areas</CardTitle>
-            <CardDescription>Green spaces</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{greenAreasCount || 0}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Recreational Zones</CardTitle>
-            <CardDescription>Recreation areas</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{recreationalZonesCount || 0}</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <LocationsTable locations={locations || []} tenantSlug={slug} tenantId={tenant.id} />
+      <LocationsTable
+        locations={locations || []}
+        tenantSlug={slug}
+        tenantId={tenant.id}
+        initialTypeFilter={initialTypeFilter}
+      />
     </div>
   )
 }

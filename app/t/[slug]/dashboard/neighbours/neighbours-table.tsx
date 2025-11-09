@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { ArrowUpDown, ArrowUp, ArrowDown, Search } from "lucide-react"
+import { ArrowUpDown, ArrowUp, ArrowDown, Search, Map } from "lucide-react"
 import Link from "next/link"
 import { filterPrivateData } from "@/lib/privacy-utils"
 
@@ -19,7 +19,7 @@ interface NeighboursTableProps {
   currentUserFamilyId: string | null
 }
 
-type SortField = "name" | "neighborhood" | "lot" | null
+type SortField = "name" | "neighborhood" | "lot" | "family" | null
 type SortDirection = "asc" | "desc"
 
 export function NeighboursTable({
@@ -154,6 +154,10 @@ export function NeighboursTable({
             aValue = a.lots?.lot_number || ""
             bValue = b.lots?.lot_number || ""
             break
+          case "family":
+            aValue = a.family_units?.name || ""
+            bValue = b.family_units?.name || ""
+            break
         }
 
         if (sortDirection === "asc") {
@@ -178,6 +182,16 @@ export function NeighboursTable({
     sortDirection,
   ])
 
+  console.log(
+    "[v0] NeighboursTable residents with lots:",
+    residents.map((r) => ({
+      name: `${r.first_name} ${r.last_name}`,
+      lotId: r.lots?.id,
+      lotNumber: r.lots?.lot_number,
+      hasLot: !!r.lots?.id,
+    })),
+  )
+
   return (
     <div className="space-y-4">
       <div className="relative">
@@ -200,6 +214,7 @@ export function NeighboursTable({
                   {getSortIcon("name")}
                 </Button>
               </TableHead>
+              <TableHead className="font-semibold">Family</TableHead>
               <TableHead>
                 <Button variant="ghost" onClick={() => handleSort("neighborhood")} className="h-8 px-2 font-semibold">
                   Neighborhood
@@ -225,6 +240,7 @@ export function NeighboursTable({
                   className="h-8"
                 />
               </TableCell>
+              <TableCell />
               <TableCell>
                 <Select value={neighborhoodFilter} onValueChange={setNeighborhoodFilter}>
                   <SelectTrigger className="h-8">
@@ -284,7 +300,7 @@ export function NeighboursTable({
           <TableBody>
             {filteredAndSortedResidents.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                   No residents found matching your filters
                 </TableCell>
               </TableRow>
@@ -317,6 +333,18 @@ export function NeighboursTable({
                           {filteredData.first_name} {filteredData.last_name}
                         </div>
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      {resident.family_units && (isFamily || privacySettings?.show_family !== false) ? (
+                        <Link
+                          href={`/t/${tenantSlug}/dashboard/families/${resident.family_units.id}`}
+                          className="text-primary hover:underline"
+                        >
+                          {resident.family_units.name}
+                        </Link>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">-</span>
+                      )}
                     </TableCell>
                     <TableCell>{resident.lots?.neighborhoods?.name || "Not assigned"}</TableCell>
                     <TableCell>{resident.lots?.lot_number || "Not assigned"}</TableCell>
@@ -357,9 +385,19 @@ export function NeighboursTable({
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" asChild>
-                        <Link href={`/t/${tenantSlug}/dashboard/neighbours/${resident.id}`}>View Profile</Link>
-                      </Button>
+                      <div className="flex items-center justify-end gap-2">
+                        <Button variant="ghost" size="sm" asChild>
+                          <Link href={`/t/${tenantSlug}/dashboard/neighbours/${resident.id}`}>View Profile</Link>
+                        </Button>
+                        {resident.lots?.id && (
+                          <Button variant="ghost" size="sm" asChild>
+                            <Link href={`/t/${tenantSlug}/dashboard/map?highlightLot=${resident.lots.id}`}>
+                              <Map className="h-4 w-4 mr-1" />
+                              View on Map
+                            </Link>
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 )

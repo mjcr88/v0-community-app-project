@@ -192,6 +192,12 @@ export function ProfileEditForm({
     formData.selectedInterests.includes(interest.id),
   )
 
+  const filteredSkills = availableSkills.filter(
+    (skill) =>
+      skill.name?.toLowerCase().includes(newSkill.toLowerCase()) &&
+      !formData.skills.some((s: any) => s?.skill_name === skill.name),
+  )
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {hasEmptyFields && (
@@ -488,40 +494,34 @@ export function ProfileEditForm({
               </Button>
             </div>
 
-            {newSkill && availableSkills.length > 0 && (
+            {newSkill && availableSkills.length > 0 && filteredSkills.length > 0 && (
               <ScrollArea className="h-[150px] border rounded-lg">
                 <div className="p-2 space-y-1">
-                  {availableSkills
-                    .filter(
-                      (skill) =>
-                        skill.name.toLowerCase().includes(newSkill.toLowerCase()) &&
-                        !formData.skills.some((s: any) => s.skill_name === skill.name),
-                    )
-                    .map((skill) => (
-                      <button
-                        key={skill.id}
-                        type="button"
-                        onClick={() => {
-                          setFormData({
-                            ...formData,
-                            skills: [
-                              ...formData.skills,
-                              { skill_id: skill.id, skill_name: skill.name, open_to_requests: false },
-                            ],
-                          })
-                          setNewSkill("")
-                        }}
-                        className="w-full text-left px-3 py-2 rounded-md hover:bg-accent transition-colors"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="font-medium text-sm">{skill.name}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {skill.user_skills?.[0]?.count || 0}{" "}
-                            {skill.user_skills?.[0]?.count === 1 ? "person" : "people"}
-                          </div>
+                  {filteredSkills.map((skill) => (
+                    <button
+                      key={skill.id}
+                      type="button"
+                      onClick={() => {
+                        setFormData({
+                          ...formData,
+                          skills: [
+                            ...formData.skills,
+                            { skill_id: skill.id, skill_name: skill.name, open_to_requests: false },
+                          ],
+                        })
+                        setNewSkill("")
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-md hover:bg-accent transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="font-medium text-sm">{skill.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {skill.user_skills?.[0]?.count || 0}{" "}
+                          {skill.user_skills?.[0]?.count === 1 ? "person" : "people"}
                         </div>
-                      </button>
-                    ))}
+                      </div>
+                    </button>
+                  ))}
                 </div>
               </ScrollArea>
             )}

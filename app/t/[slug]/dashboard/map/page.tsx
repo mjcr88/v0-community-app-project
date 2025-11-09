@@ -13,16 +13,11 @@ export default async function ResidentMapPage({
   const { highlightLot } = await searchParams
   const supabase = await createClient()
 
-  console.log("[v0] ResidentMapPage - Starting, slug:", slug, "highlightLot:", highlightLot)
-
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  console.log("[v0] ResidentMapPage - Auth user:", user?.id)
-
   if (!user) {
-    console.log("[v0] ResidentMapPage - No user, redirecting to login")
     redirect(`/t/${slug}/login`)
   }
 
@@ -34,20 +29,14 @@ export default async function ResidentMapPage({
     .eq("role", "resident")
     .single()
 
-  console.log("[v0] ResidentMapPage - Resident data:", resident?.id)
-
   if (!resident) {
-    console.log("[v0] ResidentMapPage - No resident found, redirecting to dashboard")
     redirect(`/t/${slug}/dashboard`)
   }
 
   // Get tenant for map configuration
   const { data: tenant } = await supabase.from("tenants").select("*").eq("id", resident.tenant_id).single()
 
-  console.log("[v0] ResidentMapPage - Tenant data:", tenant?.id)
-
   if (!tenant) {
-    console.log("[v0] ResidentMapPage - No tenant found, redirecting to dashboard")
     redirect(`/t/${slug}/dashboard`)
   }
 
@@ -56,14 +45,10 @@ export default async function ResidentMapPage({
   const mergedFeatures = { ...defaultFeatures, ...(tenant?.features || {}) }
   const mapEnabled = mergedFeatures.map === true
 
-  console.log("[v0] ResidentMapPage - Map enabled:", mapEnabled)
-
   if (!mapEnabled) {
-    console.log("[v0] ResidentMapPage - Map not enabled, redirecting to dashboard")
     redirect(`/t/${slug}/dashboard`)
   }
 
-  // Get all locations for the tenant
   const { data: locations } = await supabase
     .from("locations")
     .select(`
@@ -83,25 +68,25 @@ export default async function ResidentMapPage({
     `)
     .eq("tenant_id", tenant.id)
 
-  console.log("[v0] ResidentMapPage - Locations count:", locations?.length)
+  const mappedLocations =
+    locations?.map((loc: any) => ({
+      ...loc,
+      lot_id: loc.lotsObject?.id || loc.lot_id,
+      lotNumber: loc.lotsObject?.lot_number || loc.lotNumber,
+    })) || []
 
-  const mappedLocations = locations?.map((loc: any) => ({
-    ...loc,
-    lot_id: loc.lotsObject?.id || loc.lot_id,
-    lotNumber: loc.lotsObject?.lot_number || loc.lotNumber,
-  }))
-
-  console.log(
-    "[v0] Sample location D-001 data:",
-    JSON.stringify(mappedLocations?.find((l: any) => l.name === "D-001")).substring(0, 500),
-  )
+  const sampleLocation = mappedLocations.find((l: any) => l.name === "D-001")
+  if (sampleLocation) {
+    const locationJson = JSON.stringify(sampleLocation)
+    console.log("[v0] Sample location D-001 data:", locationJson.substring(0, Math.min(500, locationJson.length)))
+  }
 
   let calculatedCenter = tenant.map_center_coordinates
     ? { lat: tenant.map_center_coordinates.lat, lng: tenant.map_center_coordinates.lng }
     : null
 
   if (!calculatedCenter) {
-    const boundaryLocations = mappedLocations?.filter((loc) => loc.type === "boundary" && loc.boundary_coordinates)
+    const boundaryLocations = mappedLocations.filter((loc) => loc.type === "boundary" && loc.boundary_coordinates)
     if (boundaryLocations && boundaryLocations.length > 0) {
       const allCoords: Array<[number, number]> = []
       boundaryLocations.forEach((loc) => {
@@ -116,7 +101,6 @@ export default async function ResidentMapPage({
         const centerLat = lats.reduce((a, b) => a + b, 0) / lats.length
         const centerLng = lngs.reduce((a, b) => a + b, 0) / lngs.length
         calculatedCenter = { lat: centerLat, lng: centerLng }
-        console.log("[v0] ResidentMapPage - Calculated center from boundaries:", calculatedCenter)
       }
     }
   }
@@ -124,18 +108,15 @@ export default async function ResidentMapPage({
   // Find highlighted location if highlightLot is provided
   let highlightLocationId: string | undefined
   if (highlightLot) {
-    const lotLocation = mappedLocations?.find((loc) => loc.lot_id === highlightLot && loc.type === "lot")
+    const lotLocation = mappedLocations.find((loc) => loc.lot_id === highlightLot && loc.type === "lot")
     if (lotLocation) {
       highlightLocationId = lotLocation.id
-      console.log("[v0] ResidentMapPage - Highlighting lot:", lotLocation.name, lotLocation.id)
     }
   }
 
-  console.log("[v0] ResidentMapPage - Rendering map viewer")
-
   return (
     <FullMapClient
-      locations={mappedLocations || []}
+      locations={mappedLocations}
       tenantId={tenant.id}
       mapCenter={calculatedCenter}
       tenantSlug={slug}

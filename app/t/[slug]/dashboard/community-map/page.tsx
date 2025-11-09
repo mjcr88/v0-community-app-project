@@ -113,10 +113,10 @@ export default async function ResidentCommunityMapPage({
     .select(`
       *, 
       neighborhoods!locations_neighborhood_id_fkey(name),
-      lots!locations_lot_id_fkey(
+      lotsObject:lots(
         id, 
         lot_number,
-        users!users_lot_id_fkey(
+        users!inner(
           id, 
           first_name, 
           last_name, 
@@ -135,9 +135,8 @@ export default async function ResidentCommunityMapPage({
 
   const mappedLocations = locations?.map((loc: any) => ({
     ...loc,
-    lot_id: loc.lots?.id || loc.lot_id,
-    lotNumber: loc.lots?.lot_number || loc.lotNumber,
-    lotsObject: loc.lots, // Keep lots data as lotsObject for embedded data usage
+    lot_id: loc.lotsObject?.id || loc.lot_id,
+    lotNumber: loc.lotsObject?.lot_number || loc.lotNumber,
   }))
 
   let mapCenter = tenant?.map_center_coordinates

@@ -179,6 +179,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
   )
 
   const handleMapClick = useCallback(() => {
+    console.log("[v0] Map clicked - clearing selection")
     setDynamicHighlightId(undefined)
     setSelectedLocation(null)
   }, [])

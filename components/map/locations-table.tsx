@@ -137,6 +137,18 @@ export function LocationsTable({ locations, tenantSlug, tenantId, initialTypeFil
     }
   }
 
+  const getFamilyUnit = (location: any) => {
+    if (!location.lots?.users || location.lots.users.length === 0) return null
+
+    // Get all unique family units from users
+    const familyUnits = location.lots.users
+      .map((user: any) => user.family_units)
+      .filter((family: any) => family != null)
+
+    // Return the first family unit if any exist
+    return familyUnits.length > 0 ? familyUnits[0] : null
+  }
+
   return (
     <div className="space-y-4" id="locations-table">
       <div className="flex items-center justify-between">
@@ -175,7 +187,7 @@ export function LocationsTable({ locations, tenantSlug, tenantId, initialTypeFil
               <TableHead className="font-semibold">Name</TableHead>
               <TableHead className="font-semibold">Type</TableHead>
               <TableHead className="font-semibold">Neighborhood</TableHead>
-              <TableHead className="font-semibold">Residents</TableHead>
+              <TableHead className="font-semibold">Family/Residents</TableHead>
               <TableHead className="font-semibold">Description</TableHead>
               <TableHead className="text-right font-semibold">Actions</TableHead>
             </TableRow>
@@ -244,44 +256,56 @@ export function LocationsTable({ locations, tenantSlug, tenantId, initialTypeFil
                 </TableCell>
               </TableRow>
             ) : (
-              visibleLocations.map((location) => (
-                <TableRow key={location.id}>
-                  <TableCell>
-                    <Checkbox
-                      checked={selectedIds.has(location.id)}
-                      onCheckedChange={() => toggleSelect(location.id)}
-                    />
-                  </TableCell>
-                  <TableCell className="font-medium">{location.name || "—"}</TableCell>
-                  <TableCell>{typeLabels[location.type] || location.type}</TableCell>
-                  <TableCell>{location.neighborhoods?.name || "—"}</TableCell>
-                  <TableCell>
-                    {location.lots?.users && location.lots.users.length > 0 ? (
-                      <span className="text-sm text-muted-foreground">{location.lots.users.length} resident(s)</span>
-                    ) : (
-                      "—"
-                    )}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {location.description ? <span className="line-clamp-1">{location.description}</span> : "—"}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex gap-2 justify-end">
-                      <Button asChild variant="ghost" size="sm">
-                        <Link href={`/t/${tenantSlug}/admin/map/edit?highlightLocation=${location.id}`}>
-                          <Map className="h-4 w-4 mr-1" />
-                          View on Map
+              visibleLocations.map((location) => {
+                const familyUnit = getFamilyUnit(location)
+                const residentCount = location.lots?.users?.length || 0
+
+                return (
+                  <TableRow key={location.id}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.has(location.id)}
+                        onCheckedChange={() => toggleSelect(location.id)}
+                      />
+                    </TableCell>
+                    <TableCell className="font-medium">{location.name || "—"}</TableCell>
+                    <TableCell>{typeLabels[location.type] || location.type}</TableCell>
+                    <TableCell>{location.neighborhoods?.name || "—"}</TableCell>
+                    <TableCell>
+                      {familyUnit ? (
+                        <Link
+                          href={`/t/${tenantSlug}/dashboard/families/${familyUnit.id}`}
+                          className="text-sm font-medium text-primary hover:underline"
+                        >
+                          {familyUnit.name} ({residentCount})
                         </Link>
-                      </Button>
-                      <Button asChild variant="ghost" size="sm">
-                        <Link href={`/t/${tenantSlug}/admin/map/locations/create?editLocationId=${location.id}`}>
-                          Edit
-                        </Link>
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
+                      ) : residentCount > 0 ? (
+                        <span className="text-sm text-muted-foreground">{residentCount} resident(s)</span>
+                      ) : (
+                        "—"
+                      )}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {location.description ? <span className="line-clamp-1">{location.description}</span> : "—"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex gap-2 justify-end">
+                        <Button asChild variant="ghost" size="sm">
+                          <Link href={`/t/${tenantSlug}/admin/map/edit?highlightLocation=${location.id}`}>
+                            <Map className="h-4 w-4 mr-1" />
+                            View on Map
+                          </Link>
+                        </Button>
+                        <Button asChild variant="ghost" size="sm">
+                          <Link href={`/t/${tenantSlug}/admin/map/locations/create?editLocationId=${location.id}`}>
+                            Edit
+                          </Link>
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              })
             )}
           </TableBody>
         </Table>

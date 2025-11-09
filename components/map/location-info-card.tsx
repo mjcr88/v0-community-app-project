@@ -29,12 +29,21 @@ interface Resident {
   first_name: string
   last_name: string
   profile_picture_url?: string | null
+  family_unit_id?: string
+  family_units?: FamilyUnit[]
+}
+
+interface FamilyUnit {
+  id: string
+  name: string
+  profile_picture_url?: string | null
 }
 
 export function LocationInfoCard({ location, onClose }: LocationInfoCardProps) {
   const [neighborhood, setNeighborhood] = useState<{ id: string; name: string } | null>(null)
   const [lot, setLot] = useState<{ id: string; lot_number: string } | null>(null)
   const [residents, setResidents] = useState<Resident[]>([])
+  const [familyUnit, setFamilyUnit] = useState<FamilyUnit | null>(null)
   const [tenantSlug, setTenantSlug] = useState<string>("")
   const [loading, setLoading] = useState(true)
 
@@ -43,7 +52,6 @@ export function LocationInfoCard({ location, onClose }: LocationInfoCardProps) {
       setLoading(true)
       const supabase = createBrowserClient()
 
-      // Get tenant slug
       const { data: userData } = await supabase.auth.getUser()
       if (userData.user) {
         const { data: user } = await supabase.from("users").select("tenant_id").eq("id", userData.user.id).single()
@@ -53,7 +61,6 @@ export function LocationInfoCard({ location, onClose }: LocationInfoCardProps) {
         }
       }
 
-      // Fetch neighborhood if linked
       if (location.neighborhood_id) {
         const { data } = await supabase
           .from("neighborhoods")
@@ -63,20 +70,25 @@ export function LocationInfoCard({ location, onClose }: LocationInfoCardProps) {
         if (data) setNeighborhood(data)
       }
 
-      // Fetch lot if linked
       if (location.lot_id) {
         const { data } = await supabase.from("lots").select("id, lot_number").eq("id", location.lot_id).single()
         if (data) setLot(data)
       }
 
-      // Fetch residents if this is a lot location
       if (location.type === "lot" && location.lot_id) {
         const { data } = await supabase
           .from("users")
-          .select("id, first_name, last_name, profile_picture_url")
+          .select(
+            "id, first_name, last_name, profile_picture_url, family_unit_id, family_units(id, name, profile_picture_url)",
+          )
           .eq("lot_id", location.lot_id)
           .eq("role", "resident")
-        if (data) setResidents(data)
+
+        if (data) {
+          setResidents(data)
+          const family = data.find((resident: any) => resident.family_units)?.family_units
+          if (family) setFamilyUnit(family)
+        }
       }
 
       setLoading(false)
@@ -167,11 +179,41 @@ export function LocationInfoCard({ location, onClose }: LocationInfoCardProps) {
           </div>
         )}
 
+        {familyUnit && (
+          <Link
+            href={`/t/${tenantSlug}/dashboard/families/${familyUnit.id}`}
+            className="block p-3 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 hover:border-amber-300 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <Avatar className="h-12 w-12 shrink-0">
+                <AvatarImage src={familyUnit.profile_picture_url || undefined} alt={familyUnit.name} />
+                <AvatarFallback className="bg-amber-200 text-amber-900 text-sm font-semibold">
+                  {familyUnit.name
+                    ?.split(" ")
+                    .map((n) => n[0])
+                    .join("")
+                    .substring(0, 2)
+                    .toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-amber-900 truncate">{familyUnit.name}</p>
+                <p className="text-xs text-amber-700">
+                  {residents.length} member{residents.length !== 1 ? "s" : ""}
+                </p>
+                <p className="text-xs text-amber-600 mt-1">View family profile →</p>
+              </div>
+            </div>
+          </Link>
+        )}
+
         {residents.length > 0 && (
           <div className="p-3 bg-green-50 border border-green-200 rounded-lg space-y-2">
             <div className="flex items-center gap-2">
               <Users className="h-4 w-4 text-green-600 shrink-0" />
-              <p className="text-xs text-green-700 font-medium">Residents ({residents.length})</p>
+              <p className="text-xs text-green-700 font-medium">
+                {familyUnit ? "Family Members" : `Residents (${residents.length})`}
+              </p>
             </div>
             <div className="space-y-2">
               {residents.map((resident) => (

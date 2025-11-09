@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { createBrowserClient } from "@/lib/supabase/client"
 import React from "react"
-import * as google from "googlemaps"
 
 interface Location {
   id: string
@@ -362,7 +361,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   path={path}
                   strokeColor={isHighlighted ? "#ef4444" : "#fbbf24"}
                   strokeOpacity={1}
-                  strokeWeight={isHighlighted ? 4 : 1}
+                  strokeWeight={isHighlighted ? 4 : 2}
                   onClick={() => handleLocationClick(location)}
                   zIndex={zIndex + 1}
                 />
@@ -456,21 +455,109 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
             )
           })}
 
-          {/* Existing facility and walking path code */}
+          {facilityPolygons.map((location) => {
+            const paths = convertCoordinates(location.boundary_coordinates!)
+            const isHighlighted = activeHighlightId === location.id
+            const zIndex = isHighlighted ? 200 : 80
+            return (
+              <React.Fragment key={location.id}>
+                <Polygon
+                  paths={paths}
+                  strokeColor={isHighlighted ? "#fca5a5" : "transparent"}
+                  strokeOpacity={isHighlighted ? 0.6 : 0}
+                  strokeWeight={12}
+                  fillColor={isHighlighted ? "#fca5a5" : "transparent"}
+                  fillOpacity={isHighlighted ? 0.3 : 0}
+                  onClick={() => handleLocationClick(location)}
+                  zIndex={zIndex}
+                />
+                <Polygon
+                  paths={paths}
+                  strokeColor={isHighlighted ? "#ef4444" : "#f97316"}
+                  strokeOpacity={1}
+                  strokeWeight={isHighlighted ? 3 : 1}
+                  fillColor={isHighlighted ? "#60a5fa" : "#fed7aa"}
+                  fillOpacity={isHighlighted ? 0.8 : 0.7}
+                  onClick={() => handleLocationClick(location)}
+                  zIndex={zIndex + 1}
+                />
+              </React.Fragment>
+            )
+          })}
+
+          {facilityPolylines.map((location) => {
+            const path = convertCoordinates(location.path_coordinates!)
+            const isHighlighted = activeHighlightId === location.id
+            const zIndex = isHighlighted ? 200 : 80
+            return (
+              <React.Fragment key={location.id}>
+                <Polyline
+                  path={path}
+                  strokeColor={isHighlighted ? "#fca5a5" : "transparent"}
+                  strokeOpacity={isHighlighted ? 0.6 : 0}
+                  strokeWeight={12}
+                  onClick={() => handleLocationClick(location)}
+                  zIndex={zIndex}
+                />
+                <Polyline
+                  path={path}
+                  strokeColor={isHighlighted ? "#ef4444" : "#f97316"}
+                  strokeOpacity={1}
+                  strokeWeight={isHighlighted ? 3 : 1}
+                  onClick={() => handleLocationClick(location)}
+                  zIndex={zIndex + 1}
+                />
+              </React.Fragment>
+            )
+          })}
+
+          {walkingPaths.map((location) => {
+            const path = convertCoordinates(location.path_coordinates!)
+            const isHighlighted = activeHighlightId === location.id
+            const zIndex = isHighlighted ? 200 : 90
+            return (
+              <React.Fragment key={location.id}>
+                <Polyline
+                  path={path}
+                  strokeColor={isHighlighted ? "#fca5a5" : "transparent"}
+                  strokeOpacity={isHighlighted ? 0.6 : 0}
+                  strokeWeight={12}
+                  onClick={() => handleLocationClick(location)}
+                  zIndex={zIndex}
+                />
+                <Polyline
+                  path={path}
+                  strokeColor={isHighlighted ? "#ef4444" : "#84cc16"}
+                  strokeOpacity={1}
+                  strokeWeight={isHighlighted ? 4 : 2}
+                  onClick={() => handleLocationClick(location)}
+                  zIndex={zIndex + 1}
+                />
+              </React.Fragment>
+            )
+          })}
+
+          {facilityMarkers.map((location) => {
+            const isHighlighted = activeHighlightId === location.id
+            return (
+              <Marker
+                key={location.id}
+                position={location.coordinates!}
+                onClick={() => handleLocationClick(location)}
+                zIndex={isHighlighted ? 300 : 100}
+              />
+            )
+          })}
 
           {userLocation && (
-            <Marker
-              position={userLocation}
-              icon={{
-                path: google.maps.SymbolPath.CIRCLE,
-                scale: 8,
-                fillColor: "#3b82f6",
-                fillOpacity: 1,
-                strokeColor: "#ffffff",
-                strokeWeight: 2,
-              }}
-              zIndex={300}
-            />
+            <Marker position={userLocation} title="Your Location" zIndex={300}>
+              <div className="relative flex items-center justify-center">
+                {/* Blue dot with white border */}
+                <div className="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-lg" />
+                {/* Pulsing ring animation */}
+                <div className="absolute w-8 h-8 bg-blue-400 rounded-full opacity-30 animate-ping" />
+              </div>
+            </Marker>
           )}
         </Map>
       </APIProvider>

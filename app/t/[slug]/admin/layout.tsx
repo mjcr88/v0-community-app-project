@@ -16,7 +16,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
-import { Home, MapPin, Users, Building2, HeartHandshake, Lightbulb, Map } from "lucide-react"
+import { Home, MapPin, Users, Building2, HeartHandshake, Lightbulb, Map, Calendar, Settings } from "lucide-react"
 import Link from "next/link"
 import { UserAvatarMenu } from "@/components/user-avatar-menu"
 
@@ -139,17 +139,20 @@ export default async function TenantAdminLayout({
     families: true,
     lots: true,
     map: true,
+    events_enabled: false,
   }
 
   const features = {
     ...defaultFeatures,
     ...(tenant?.features || {}),
+    events_enabled: tenant?.events_enabled ?? false,
   } as {
     neighborhoods?: boolean
     interests?: boolean
     families?: boolean
     lots?: boolean
     map?: boolean
+    events_enabled?: boolean
     location_types?: Record<string, boolean>
   }
 
@@ -246,6 +249,31 @@ export default async function TenantAdminLayout({
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 )}
+                {features.events_enabled && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link href={`/t/${slug}/admin/events`}>
+                        <Calendar />
+                        <span>Events</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+          <SidebarGroup>
+            <SidebarGroupLabel>Configuration</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <Link href={`/t/${slug}/admin/settings`}>
+                      <Settings />
+                      <span>Settings</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

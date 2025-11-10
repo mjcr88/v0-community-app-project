@@ -43,7 +43,7 @@ export default async function EventsPage({ params }: { params: Promise<{ slug: s
         name,
         icon
       ),
-      users (
+      creator:users!created_by (
         first_name,
         last_name,
         profile_picture_url

@@ -29,7 +29,7 @@ export async function createEventCategory(
     throw new Error(error.message)
   }
 
-  revalidatePath(`/t/[slug]/admin/events/categories`, "page")
+  revalidatePath(`/admin/events/categories`, "layout")
   return category
 }
 
@@ -77,12 +77,11 @@ export async function updateEventCategory(
 
   if (selectError) {
     console.error("[v0] Error fetching updated category:", selectError)
-    // Update succeeded but couldn't fetch - still revalidate
-    revalidatePath(`/t/[slug]/admin/events/categories`, "page")
+    revalidatePath(`/admin/events/categories`, "layout")
     return { id: categoryId, ...data, tenant_id: existingCategory.tenant_id }
   }
 
-  revalidatePath(`/t/[slug]/admin/events/categories`, "page")
+  revalidatePath(`/admin/events/categories`, "layout")
   return updatedCategory
 }
 
@@ -99,5 +98,5 @@ export async function deleteEventCategory(categoryId: string) {
     throw new Error(error.message)
   }
 
-  revalidatePath(`/t/[slug]/admin/events/categories`, "page")
+  revalidatePath(`/admin/events/categories`, "layout")
 }

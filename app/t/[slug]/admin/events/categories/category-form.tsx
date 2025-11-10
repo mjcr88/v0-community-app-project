@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
 import { createEventCategory, updateEventCategory } from "@/app/actions/event-categories"
+import Link from "next/link"
 
 type Category = {
   id: string
@@ -43,6 +44,9 @@ export function CategoryForm({
         await updateEventCategory(category.id, { name, description, icon })
       } else {
         await createEventCategory(tenantId, { name, description, icon })
+        setName("")
+        setDescription("")
+        setIcon("")
       }
 
       router.push(`/t/${tenantSlug}/admin/events/categories`)
@@ -100,8 +104,8 @@ export function CategoryForm({
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button type="button" variant="outline" onClick={() => router.back()} disabled={loading}>
-              Cancel
+            <Button type="button" variant="outline" asChild disabled={loading}>
+              <Link href={`/t/${tenantSlug}/admin/events/categories`}>Cancel</Link>
             </Button>
             <Button type="submit" disabled={loading}>
               {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}

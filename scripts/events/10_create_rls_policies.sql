@@ -82,15 +82,16 @@ CREATE POLICY "Residents can view accessible events"
           -- Community events visible to all tenant residents
           visibility_scope = 'community'
           OR
+          -- Fixed neighborhood visibility logic to use lots table
           -- Neighborhood events visible to residents in those neighborhoods
           (
             visibility_scope = 'neighborhood'
             AND EXISTS (
               SELECT 1 FROM event_neighborhoods en
-              JOIN family_units fu ON fu.neighborhood_id = en.neighborhood_id
-              JOIN family_members fm ON fm.family_unit_id = fu.id
+              JOIN lots l ON l.neighborhood_id = en.neighborhood_id
+              JOIN users u ON u.lot_id = l.id
               WHERE en.event_id = events.id
-                AND fm.user_id = auth.uid()
+                AND u.id = auth.uid()
             )
           )
           OR
@@ -108,9 +109,9 @@ CREATE POLICY "Residents can view accessible events"
               -- Family unit invite
               EXISTS (
                 SELECT 1 FROM event_invites ei
-                JOIN family_members fm ON fm.family_unit_id = ei.family_unit_id
+                JOIN users u ON u.family_unit_id = ei.family_unit_id
                 WHERE ei.event_id = events.id
-                  AND fm.user_id = auth.uid()
+                  AND u.id = auth.uid()
               )
             )
           )
@@ -235,7 +236,7 @@ CREATE POLICY "Users can view invites for accessible events"
     )
     OR invitee_id = auth.uid()
     OR family_unit_id IN (
-      SELECT family_unit_id FROM family_members WHERE user_id = auth.uid()
+      SELECT family_unit_id FROM users WHERE id = auth.uid()
     )
   );
 

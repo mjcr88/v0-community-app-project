@@ -16,6 +16,14 @@ export default async function EventDetailPage({
 }) {
   const { slug, eventId } = await params
 
+  const reservedPaths = ["new", "edit", "create"]
+  if (reservedPaths.includes(eventId.toLowerCase())) {
+    // Return null to let Next.js fall through to static routes
+    // notFound() throws an error, but returning null allows routing to continue
+    return null
+  }
+
+  // Validate UUID format before making database queries
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
   if (!uuidRegex.test(eventId)) {
     notFound()

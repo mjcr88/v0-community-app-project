@@ -5,6 +5,7 @@ import { Calendar, Plus } from "lucide-react"
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { format } from "date-fns"
 
 export default async function EventsPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -14,8 +15,6 @@ export default async function EventsPage({ params }: { params: Promise<{ slug: s
   const {
     data: { user },
   } = await supabase.auth.getUser()
-
-  console.log("[v0] Events page - auth user:", user?.id)
 
   if (!user) {
     redirect(`/t/${slug}/login`)
@@ -27,8 +26,6 @@ export default async function EventsPage({ params }: { params: Promise<{ slug: s
     .eq("id", user.id)
     .eq("role", "resident")
     .single()
-
-  console.log("[v0] Events page - resident data:", resident)
 
   if (!resident) {
     redirect(`/t/${slug}/login`)
@@ -55,15 +52,6 @@ export default async function EventsPage({ params }: { params: Promise<{ slug: s
     .eq("status", "published")
     .order("start_date", { ascending: true })
     .order("start_time", { ascending: true })
-
-  console.log("[v0] Events page - query params:", {
-    tenant_id: resident.tenant_id,
-    visibility_scope: "community",
-    status: "published",
-  })
-  console.log("[v0] Events page - events data:", events)
-  console.log("[v0] Events page - events error:", error)
-  console.log("[v0] Events page - events count:", events?.length || 0)
 
   const hasEvents = events && events.length > 0
 
@@ -110,6 +98,15 @@ export default async function EventsPage({ params }: { params: Promise<{ slug: s
               ? format(new Date(dateTimeStr), "MMM d, yyyy 'at' h:mm a")
               : format(new Date(event.start_date), "MMM d, yyyy")
 
+            const creatorName =
+              event.creator?.first_name && event.creator?.last_name
+                ? `${event.creator.first_name} ${event.creator.last_name}`
+                : "Unknown"
+            const creatorInitials =
+              event.creator?.first_name && event.creator?.last_name
+                ? `${event.creator.first_name[0]}${event.creator.last_name[0]}`.toUpperCase()
+                : "?"
+
             return (
               <Link key={event.id} href={`/t/${slug}/dashboard/events/${event.id}`}>
                 <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
@@ -135,6 +132,13 @@ export default async function EventsPage({ params }: { params: Promise<{ slug: s
                     <div className="flex items-center gap-2">
                       <Badge variant="secondary">{event.event_type}</Badge>
                       <Badge variant="outline">{event.visibility_scope}</Badge>
+                    </div>
+                    <div className="flex items-center gap-2 pt-2 border-t">
+                      <Avatar className="h-6 w-6">
+                        <AvatarImage src={event.creator?.profile_picture_url || undefined} alt={creatorName} />
+                        <AvatarFallback className="text-xs">{creatorInitials}</AvatarFallback>
+                      </Avatar>
+                      <span className="text-xs text-muted-foreground">Organized by {creatorName}</span>
                     </div>
                   </CardContent>
                 </Card>

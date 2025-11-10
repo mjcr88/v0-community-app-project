@@ -1,3 +1,5 @@
+"use client"
+
 import { createClient } from "@/lib/supabase/server"
 import { redirect, notFound } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -20,6 +22,7 @@ export default async function EventDetailPage({
 }) {
   const { slug, eventId } = await params
 
+  // Return notFound before any auth checks or database queries
   if (!isValidUUID(eventId)) {
     notFound()
   }

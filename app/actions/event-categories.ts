@@ -89,19 +89,22 @@ export async function updateEventCategory(
 export async function deleteEventCategory(categoryId: string) {
   const supabase = await createServerClient()
 
-  try {
-    const { count } = await supabase
-      .from("events")
-      .select("*", { count: "exact", head: true })
-      .eq("category_id", categoryId)
+  // Check if events table is accessible and has events using this category
+  const { data: eventsCheck, error: checkError } = await supabase
+    .from("events")
+    .select("id", { count: "exact", head: false })
+    .eq("category_id", categoryId)
+    .limit(1)
 
-    if (count && count > 0) {
-      throw new Error(`Cannot delete category: ${count} events are using this category`)
-    }
-  } catch (error: any) {
-    // If the events query fails (e.g., table doesn't exist or RLS blocks it),
-    // allow deletion to proceed since we're in early setup phase
-    console.log("[v0] Could not check events for category, proceeding with delete:", error.message)
+  // If we can query events and found some, prevent deletion
+  if (!checkError && eventsCheck && eventsCheck.length > 0) {
+    throw new Error("Cannot delete category: events are using this category")
+  }
+
+  // If there's an error querying events (table doesn't exist, RLS blocks, etc),
+  // log it but proceed with deletion since we're in early setup phase
+  if (checkError) {
+    console.log("[v0] Could not check events for category (expected in Sprint 2):", checkError.message)
   }
 
   const { error } = await supabase.from("event_categories").delete().eq("id", categoryId)

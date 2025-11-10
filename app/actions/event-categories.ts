@@ -3,23 +3,6 @@
 import { createServerClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 
-export async function getEventCategories(tenantId: string) {
-  const supabase = await createServerClient()
-
-  const { data: categories, error } = await supabase
-    .from("event_categories")
-    .select("*")
-    .eq("tenant_id", tenantId)
-    .order("name", { ascending: true })
-
-  if (error) {
-    console.error("[v0] Error fetching event categories:", error)
-    throw new Error(error.message)
-  }
-
-  return categories || []
-}
-
 export async function createEventCategory(
   tenantId: string,
   data: {

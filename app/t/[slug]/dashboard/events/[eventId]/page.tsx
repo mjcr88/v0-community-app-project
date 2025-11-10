@@ -14,6 +14,12 @@ export default async function EventDetailPage({
   params: Promise<{ slug: string; eventId: string }>
 }) {
   const { slug, eventId } = await params
+
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  if (!uuidRegex.test(eventId)) {
+    notFound()
+  }
+
   const supabase = await createClient()
 
   const {

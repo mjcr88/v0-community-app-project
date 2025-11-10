@@ -5,12 +5,13 @@ CREATE TABLE IF NOT EXISTS event_images (
   image_url TEXT NOT NULL,
   is_hero BOOLEAN DEFAULT false,
   display_order INTEGER DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  
-  -- Ensure only one hero image per event
-  CONSTRAINT one_hero_per_event UNIQUE NULLS NOT DISTINCT (event_id, is_hero) 
-    WHERE is_hero = true
+  created_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- Fixed: Create partial unique index instead of inline constraint with WHERE clause
+CREATE UNIQUE INDEX IF NOT EXISTS idx_one_hero_per_event 
+  ON event_images(event_id) 
+  WHERE is_hero = true;
 
 -- Add indexes for performance
 CREATE INDEX IF NOT EXISTS idx_event_images_event_id ON event_images(event_id);

@@ -1,3 +1,5 @@
+"use client"
+
 import { createClient } from "@/lib/supabase/server"
 import { redirect, notFound } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -14,6 +16,11 @@ export default async function EventDetailPage({
   params: Promise<{ slug: string; eventId: string }>
 }) {
   const { slug, eventId } = await params
+
+  if (eventId === "new" || eventId === "edit") {
+    notFound()
+  }
+
   const supabase = await createClient()
 
   const {

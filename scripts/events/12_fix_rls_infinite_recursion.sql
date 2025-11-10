@@ -97,8 +97,9 @@ CREATE POLICY "Users can view invites for accessible events"
     )
   );
 
+-- Fixed table name from event_neighborhoods to event_invites
 CREATE POLICY "Event creators can manage invites"
-  ON event_neighborhoods FOR ALL
+  ON event_invites FOR ALL
   TO authenticated
   USING (
     EXISTS (

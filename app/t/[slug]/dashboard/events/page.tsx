@@ -62,7 +62,7 @@ export default async function EventsPage({ params }: { params: Promise<{ slug: s
           <p className="text-muted-foreground">Discover and join community events</p>
         </div>
         <Button asChild>
-          <Link href={`/t/${slug}/dashboard/events/create`}>
+          <Link href={`/t/${slug}/dashboard/events/new`}>
             <Plus className="h-4 w-4 mr-2" />
             Create Event
           </Link>
@@ -80,7 +80,7 @@ export default async function EventsPage({ params }: { params: Promise<{ slug: s
           </CardHeader>
           <CardContent className="flex justify-center">
             <Button asChild>
-              <Link href={`/t/${slug}/dashboard/events/create`}>
+              <Link href={`/t/${slug}/dashboard/events/new`}>
                 <Plus className="h-4 w-4 mr-2" />
                 Create First Event
               </Link>

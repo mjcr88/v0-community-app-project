@@ -33,7 +33,7 @@ export function EventForm({ tenantSlug, tenantId, categories }: EventFormProps) 
     title: "",
     description: "",
     categoryId: "",
-    eventType: "in_person" as "in_person" | "virtual" | "hybrid",
+    eventType: "resident" as "resident" | "official",
     startDate: "",
     startTime: "",
     endDate: "",
@@ -45,18 +45,15 @@ export function EventForm({ tenantSlug, tenantId, categories }: EventFormProps) 
     setIsSubmitting(true)
 
     try {
-      // Combine date and time for start and end datetime
-      const startDatetime = new Date(`${formData.startDate}T${formData.startTime}`)
-      const endDatetime =
-        formData.endDate && formData.endTime ? new Date(`${formData.endDate}T${formData.endTime}`) : null
-
       await createEvent(tenantId, {
         title: formData.title,
         description: formData.description || null,
         category_id: formData.categoryId,
         event_type: formData.eventType,
-        start_datetime: startDatetime.toISOString(),
-        end_datetime: endDatetime?.toISOString() || null,
+        start_date: formData.startDate,
+        start_time: formData.startTime || null,
+        end_date: formData.endDate || null,
+        end_time: formData.endTime || null,
         visibility_scope: "community", // Sprint 3: community only
         status: "published", // Sprint 3: auto-publish
       })
@@ -121,24 +118,6 @@ export function EventForm({ tenantSlug, tenantId, categories }: EventFormProps) 
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="eventType">Event Type *</Label>
-            <Select
-              value={formData.eventType}
-              onValueChange={(value: any) => setFormData({ ...formData, eventType: value })}
-              required
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="in_person">In Person</SelectItem>
-                <SelectItem value="virtual">Virtual</SelectItem>
-                <SelectItem value="hybrid">Hybrid</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="startDate">Start Date *</Label>
@@ -151,13 +130,12 @@ export function EventForm({ tenantSlug, tenantId, categories }: EventFormProps) 
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="startTime">Start Time *</Label>
+              <Label htmlFor="startTime">Start Time</Label>
               <Input
                 id="startTime"
                 type="time"
                 value={formData.startTime}
                 onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                required
               />
             </div>
           </div>

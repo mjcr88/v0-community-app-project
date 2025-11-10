@@ -9,9 +9,11 @@ export async function createEvent(
     title: string
     description: string | null
     category_id: string
-    event_type: "in_person" | "virtual" | "hybrid"
-    start_datetime: string
-    end_datetime: string | null
+    event_type: "resident" | "official"
+    start_date: string
+    start_time: string | null
+    end_date: string | null
+    end_time: string | null
     visibility_scope: "community" | "neighborhood" | "private"
     status: "draft" | "published" | "cancelled"
   },
@@ -35,8 +37,10 @@ export async function createEvent(
       description: data.description,
       category_id: data.category_id,
       event_type: data.event_type,
-      start_datetime: data.start_datetime,
-      end_datetime: data.end_datetime,
+      start_date: data.start_date,
+      start_time: data.start_time,
+      end_date: data.end_date,
+      end_time: data.end_time,
       visibility_scope: data.visibility_scope,
       status: data.status,
     })

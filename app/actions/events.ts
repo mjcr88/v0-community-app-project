@@ -4,6 +4,7 @@ import { createServerClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 
 export async function createEvent(
+  tenantSlug: string,
   tenantId: string,
   data: {
     title: string
@@ -54,6 +55,6 @@ export async function createEvent(
     throw new Error(error.message)
   }
 
-  revalidatePath(`/dashboard/events`, "layout")
+  revalidatePath(`/t/${tenantSlug}/dashboard/events`, "layout")
   return event
 }

@@ -11,8 +11,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { createEvent } from "@/app/actions/events"
-import { Loader2 } from "lucide-react"
+import { Loader2, CheckCircle2 } from "lucide-react"
 import Link from "next/link"
+import { useToast } from "@/hooks/use-toast"
 
 type Category = {
   id: string
@@ -28,6 +29,7 @@ type EventFormProps = {
 
 export function EventForm({ tenantSlug, tenantId, categories }: EventFormProps) {
   const router = useRouter()
+  const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState({
     title: "",
@@ -45,7 +47,7 @@ export function EventForm({ tenantSlug, tenantId, categories }: EventFormProps) 
     setIsSubmitting(true)
 
     try {
-      await createEvent(tenantId, {
+      const event = await createEvent(tenantSlug, tenantId, {
         title: formData.title,
         description: formData.description || null,
         category_id: formData.categoryId,
@@ -54,14 +56,37 @@ export function EventForm({ tenantSlug, tenantId, categories }: EventFormProps) 
         start_time: formData.startTime || null,
         end_date: formData.endDate || formData.startDate,
         end_time: formData.endTime || null,
-        visibility_scope: "community", // Sprint 3: community only
-        status: "published", // Sprint 3: auto-publish
+        visibility_scope: "community",
+        status: "published",
       })
 
-      router.push(`/t/${tenantSlug}/dashboard/events`)
+      toast({
+        title: "Event created successfully!",
+        description: `"${formData.title}" has been published to the community.`,
+        variant: "default",
+      })
+
+      setFormData({
+        title: "",
+        description: "",
+        categoryId: "",
+        eventType: "resident",
+        startDate: "",
+        startTime: "",
+        endDate: "",
+        endTime: "",
+      })
+
+      setTimeout(() => {
+        router.push(`/t/${tenantSlug}/dashboard/events`)
+      }, 500)
     } catch (error) {
       console.error("Error creating event:", error)
-      alert("Failed to create event. Please try again.")
+      toast({
+        title: "Failed to create event",
+        description: error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      })
     } finally {
       setIsSubmitting(false)
     }
@@ -71,7 +96,7 @@ export function EventForm({ tenantSlug, tenantId, categories }: EventFormProps) 
     setFormData({
       ...formData,
       startDate: value,
-      endDate: formData.endDate || value, // Only set if end date is empty
+      endDate: formData.endDate || value,
     })
   }
 
@@ -172,12 +197,21 @@ export function EventForm({ tenantSlug, tenantId, categories }: EventFormProps) 
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" asChild>
+            <Button type="button" variant="outline" asChild disabled={isSubmitting}>
               <Link href={`/t/${tenantSlug}/dashboard/events`}>Cancel</Link>
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isSubmitting ? "Creating..." : "Create Event"}
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  Create Event
+                </>
+              )}
             </Button>
           </div>
         </CardContent>

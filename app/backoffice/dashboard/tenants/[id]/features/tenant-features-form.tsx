@@ -96,6 +96,12 @@ const FEATURES = [
     description: "Enable interactive community map with locations and boundaries",
     table: "locations",
   },
+  {
+    key: "events",
+    label: "Events",
+    description: "Enable community events with calendar, RSVPs, and event management",
+    table: "events",
+  },
 ] as const
 
 const LOCATION_TYPE_OPTIONS = [
@@ -127,6 +133,7 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
     journey_stages: true,
     onboarding: true,
     map: true,
+    events: false,
     location_types: {
       facility: true,
       lot: true,
@@ -152,6 +159,7 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
     journey_stages?: boolean
     onboarding?: boolean
     map?: boolean
+    events?: boolean
     location_types?: {
       facility?: boolean
       lot?: boolean
@@ -287,9 +295,15 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
     setLoading(true)
 
     try {
+      const { events, ...otherFeatures } = features
+
       const { error } = await supabase
         .from("tenants")
-        .update({ features, resident_visibility_scope: visibilityScope })
+        .update({
+          features: otherFeatures,
+          resident_visibility_scope: visibilityScope,
+          events_enabled: events ?? false,
+        })
         .eq("id", tenant.id)
 
       if (error) {
@@ -337,7 +351,7 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
 
         <div className="space-y-4 pt-4 border-t">
           <h3 className="text-sm font-semibold text-muted-foreground">Community Features</h3>
-          {FEATURES.filter((f) => ["pets", "interests", "skills"].includes(f.key)).map((feature) => (
+          {FEATURES.filter((f) => ["pets", "interests", "skills", "events"].includes(f.key)).map((feature) => (
             <div key={feature.key} className="flex items-center justify-between space-x-4">
               <div className="flex-1 space-y-1">
                 <Label htmlFor={feature.key} className="text-base font-medium">
@@ -347,7 +361,7 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
               </div>
               <Switch
                 id={feature.key}
-                checked={features[feature.key as keyof typeof features] ?? true}
+                checked={features[feature.key as keyof typeof features] ?? (feature.key === "events" ? false : true)}
                 onCheckedChange={(checked) => handleToggle(feature.key, checked)}
               />
             </div>

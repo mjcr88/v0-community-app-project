@@ -15,6 +15,8 @@ export default async function EventsPage({ params }: { params: Promise<{ slug: s
     data: { user },
   } = await supabase.auth.getUser()
 
+  console.log("[v0] Events page - auth user:", user?.id)
+
   if (!user) {
     redirect(`/t/${slug}/login`)
   }
@@ -26,11 +28,13 @@ export default async function EventsPage({ params }: { params: Promise<{ slug: s
     .eq("role", "resident")
     .single()
 
+  console.log("[v0] Events page - resident data:", resident)
+
   if (!resident) {
     redirect(`/t/${slug}/login`)
   }
 
-  const { data: events } = await supabase
+  const { data: events, error } = await supabase
     .from("events")
     .select(
       `
@@ -51,6 +55,15 @@ export default async function EventsPage({ params }: { params: Promise<{ slug: s
     .eq("status", "published")
     .order("start_date", { ascending: true })
     .order("start_time", { ascending: true })
+
+  console.log("[v0] Events page - query params:", {
+    tenant_id: resident.tenant_id,
+    visibility_scope: "community",
+    status: "published",
+  })
+  console.log("[v0] Events page - events data:", events)
+  console.log("[v0] Events page - events error:", error)
+  console.log("[v0] Events page - events count:", events?.length || 0)
 
   const hasEvents = events && events.length > 0
 

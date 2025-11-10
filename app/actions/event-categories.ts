@@ -54,25 +54,36 @@ export async function updateEventCategory(
     throw new Error("Category not found or access denied")
   }
 
-  const { data: category, error } = await supabase
+  const { error: updateError } = await supabase
     .from("event_categories")
     .update({
       name: data.name,
       description: data.description || null,
       icon: data.icon || null,
-      tenant_id: existingCategory.tenant_id, // Ensure tenant_id doesn't change
+      tenant_id: existingCategory.tenant_id,
     })
     .eq("id", categoryId)
-    .select()
+
+  if (updateError) {
+    console.error("[v0] Error updating event category:", updateError)
+    throw new Error(updateError.message)
+  }
+
+  const { data: updatedCategory, error: selectError } = await supabase
+    .from("event_categories")
+    .select("*")
+    .eq("id", categoryId)
     .single()
 
-  if (error) {
-    console.error("[v0] Error updating event category:", error)
-    throw new Error(error.message)
+  if (selectError) {
+    console.error("[v0] Error fetching updated category:", selectError)
+    // Update succeeded but couldn't fetch - still revalidate
+    revalidatePath(`/t/[slug]/admin/events/categories`, "page")
+    return { id: categoryId, ...data, tenant_id: existingCategory.tenant_id }
   }
 
   revalidatePath(`/t/[slug]/admin/events/categories`, "page")
-  return category
+  return updatedCategory
 }
 
 export async function deleteEventCategory(categoryId: string) {

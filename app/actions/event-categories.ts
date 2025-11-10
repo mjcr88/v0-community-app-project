@@ -13,22 +13,6 @@ export async function createEventCategory(
 ) {
   const supabase = await createServerClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  console.log("[v0] Creating category - Auth user:", user?.id)
-
-  const { data: userData, error: userError } = await supabase
-    .from("users")
-    .select("id, tenant_id, is_tenant_admin, role")
-    .eq("id", user?.id)
-    .single()
-
-  console.log("[v0] User data from DB:", userData)
-  console.log("[v0] User error:", userError)
-  console.log("[v0] Tenant ID passed:", tenantId)
-  console.log("[v0] Category data:", data)
-
   const { data: category, error } = await supabase
     .from("event_categories")
     .insert({

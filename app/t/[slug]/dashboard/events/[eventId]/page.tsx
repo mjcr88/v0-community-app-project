@@ -18,6 +18,12 @@ export default async function EventDetailPage({
   const { slug, eventId } = await params
   console.log("[v0] EventDetailPage - params:", { slug, eventId })
 
+  // Return null to let Next.js route to the static /new/page.tsx
+  if (eventId === "new") {
+    console.log("[v0] EventDetailPage - Detected static route 'new', returning null")
+    return null
+  }
+
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
   const isValidUuid = uuidRegex.test(eventId)
   console.log("[v0] EventDetailPage - UUID validation:", { eventId, isValidUuid })

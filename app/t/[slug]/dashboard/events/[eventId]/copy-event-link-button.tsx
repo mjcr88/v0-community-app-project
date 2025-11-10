@@ -1,5 +1,3 @@
-"use client"
-
 import { Button } from "@/components/ui/button"
 import { LinkIcon } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"

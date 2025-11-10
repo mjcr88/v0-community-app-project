@@ -1,14 +1,13 @@
-"use client"
-
 import { createClient } from "@/lib/supabase/server"
 import { redirect, notFound } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Calendar, Clock, Users, LinkIcon } from "lucide-react"
+import { Calendar, Clock, Users } from "lucide-react"
 import { format } from "date-fns"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import { CopyEventLinkButton } from "./copy-event-link-button"
 
 const isValidUUID = (str: string) => {
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -22,7 +21,6 @@ export default async function EventDetailPage({
 }) {
   const { slug, eventId } = await params
 
-  // Return notFound before any auth checks or database queries
   if (!isValidUUID(eventId)) {
     notFound()
   }
@@ -84,13 +82,6 @@ export default async function EventDetailPage({
     }
     const dateTime = new Date(`${date}T${time}`)
     return format(dateTime, "EEEE, MMMM d, yyyy 'at' h:mm a")
-  }
-
-  const formatTime = (time: string) => {
-    const [hours, minutes] = time.split(":")
-    const date = new Date()
-    date.setHours(Number.parseInt(hours), Number.parseInt(minutes))
-    return format(date, "h:mm a")
   }
 
   const eventUrl = `${process.env.NEXT_PUBLIC_SITE_URL || ""}/t/${slug}/dashboard/events/${eventId}`
@@ -221,16 +212,7 @@ export default async function EventDetailPage({
 
           {/* Share Event */}
           <div className="pt-4 border-t">
-            <Button
-              variant="outline"
-              className="w-full bg-transparent"
-              onClick={() => {
-                navigator.clipboard.writeText(eventUrl)
-              }}
-            >
-              <LinkIcon className="h-4 w-4 mr-2" />
-              Copy Event Link
-            </Button>
+            <CopyEventLinkButton eventUrl={eventUrl} />
           </div>
         </CardContent>
       </Card>

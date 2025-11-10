@@ -52,7 +52,7 @@ export function EventForm({ tenantSlug, tenantId, categories }: EventFormProps) 
         event_type: formData.eventType,
         start_date: formData.startDate,
         start_time: formData.startTime || null,
-        end_date: formData.endDate || null,
+        end_date: formData.endDate || formData.startDate,
         end_time: formData.endTime || null,
         visibility_scope: "community", // Sprint 3: community only
         status: "published", // Sprint 3: auto-publish
@@ -65,6 +65,14 @@ export function EventForm({ tenantSlug, tenantId, categories }: EventFormProps) 
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  const handleStartDateChange = (value: string) => {
+    setFormData({
+      ...formData,
+      startDate: value,
+      endDate: formData.endDate || value, // Only set if end date is empty
+    })
   }
 
   return (
@@ -125,7 +133,7 @@ export function EventForm({ tenantSlug, tenantId, categories }: EventFormProps) 
                 id="startDate"
                 type="date"
                 value={formData.startDate}
-                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                onChange={(e) => handleStartDateChange(e.target.value)}
                 required
               />
             </div>
@@ -148,7 +156,9 @@ export function EventForm({ tenantSlug, tenantId, categories }: EventFormProps) 
                 type="date"
                 value={formData.endDate}
                 onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                placeholder="Same as start date if not specified"
               />
+              <p className="text-sm text-muted-foreground">Leave empty for single-day event</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="endTime">End Time</Label>

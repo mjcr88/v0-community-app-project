@@ -28,6 +28,8 @@ export async function createEvent(
     throw new Error("User not authenticated")
   }
 
+  const endDate = data.end_date || data.start_date
+
   const { data: event, error } = await supabase
     .from("events")
     .insert({
@@ -39,7 +41,7 @@ export async function createEvent(
       event_type: data.event_type,
       start_date: data.start_date,
       start_time: data.start_time,
-      end_date: data.end_date,
+      end_date: endDate,
       end_time: data.end_time,
       visibility_scope: data.visibility_scope,
       status: data.status,

@@ -39,6 +39,7 @@ type Tenant = {
       recreational_zone?: boolean
     }
   }
+  events_enabled?: boolean
 }
 
 const FEATURES = [
@@ -297,6 +298,9 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
     try {
       const { events, ...otherFeatures } = features
 
+      const wasEventsEnabled = tenant.events_enabled ?? false
+      const willEnableEvents = !wasEventsEnabled && (events ?? false)
+
       const { error } = await supabase
         .from("tenants")
         .update({
@@ -310,6 +314,26 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
         console.error("[v0] Error saving features:", error)
         alert("Failed to save features")
         return
+      }
+
+      if (willEnableEvents) {
+        try {
+          const response = await fetch("/api/seed-event-categories", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ tenantId: tenant.id }),
+          })
+
+          if (!response.ok) {
+            console.error("[v0] Failed to seed event categories")
+          } else {
+            const result = await response.json()
+            console.log("[v0] Seeded categories:", result)
+          }
+        } catch (seedError) {
+          console.error("[v0] Error seeding categories:", seedError)
+          // Don't fail the whole operation if seeding fails
+        }
       }
 
       router.refresh()

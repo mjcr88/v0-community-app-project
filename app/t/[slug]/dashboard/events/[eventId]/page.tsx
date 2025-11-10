@@ -9,21 +9,12 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { CopyEventLinkButton } from "./copy-event-link-button"
 
-const isValidUUID = (str: string) => {
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-  return uuidRegex.test(str)
-}
-
 export default async function EventDetailPage({
   params,
 }: {
   params: Promise<{ slug: string; eventId: string }>
 }) {
   const { slug, eventId } = await params
-
-  if (!isValidUUID(eventId)) {
-    notFound()
-  }
 
   const supabase = await createClient()
 
@@ -46,6 +37,7 @@ export default async function EventDetailPage({
     redirect(`/t/${slug}/login`)
   }
 
+  // This returns null instead of throwing an error, allowing proper 404 handling
   const { data: event } = await supabase
     .from("events")
     .select(

@@ -45,6 +45,14 @@ CREATE POLICY "Tenant admins can update event categories"
       WHERE u.id = auth.uid() 
         AND u.is_tenant_admin = true
     )
+  )
+  WITH CHECK (
+    tenant_id IN (
+      SELECT u.tenant_id 
+      FROM users u
+      WHERE u.id = auth.uid() 
+        AND u.is_tenant_admin = true
+    )
   );
 
 CREATE POLICY "Tenant admins can delete event categories"
@@ -278,7 +286,7 @@ CREATE POLICY "Users can view their saved events"
   TO authenticated
   USING (user_id = auth.uid());
 
-CREATE POLICY "Users can manage their saved events"
+CREATE POLICY "Users can manage their own saved events"
   ON saved_events FOR ALL
   TO authenticated
   USING (user_id = auth.uid())

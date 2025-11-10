@@ -43,12 +43,24 @@ export async function updateEventCategory(
 ) {
   const supabase = await createServerClient()
 
+  const { data: existingCategory, error: fetchError } = await supabase
+    .from("event_categories")
+    .select("id, tenant_id")
+    .eq("id", categoryId)
+    .single()
+
+  if (fetchError || !existingCategory) {
+    console.error("[v0] Error fetching event category:", fetchError)
+    throw new Error("Category not found or access denied")
+  }
+
   const { data: category, error } = await supabase
     .from("event_categories")
     .update({
       name: data.name,
       description: data.description || null,
       icon: data.icon || null,
+      tenant_id: existingCategory.tenant_id, // Ensure tenant_id doesn't change
     })
     .eq("id", categoryId)
     .select()

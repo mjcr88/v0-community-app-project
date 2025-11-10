@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { MapPin, Users, ArrowLeft, Briefcase } from "lucide-react"
+import { MapPin, Users, ArrowLeft, Briefcase, Star } from "lucide-react"
 import Link from "next/link"
 import { filterPrivateData } from "@/lib/privacy-utils"
 
@@ -117,6 +117,15 @@ export default async function FamilyProfilePage({ params }: { params: Promise<{ 
     .toUpperCase()
     .slice(0, 2)
 
+  const familyPhotos = Array.isArray(familyUnit.photos)
+    ? familyUnit.photos
+        .filter((p: any) => (typeof p === "string" ? p : p?.url))
+        .map((p: any) => (typeof p === "string" ? p : p?.url))
+    : []
+  const familyHeroPhoto =
+    familyUnit.hero_photo || familyUnit.profile_picture_url || (familyPhotos.length > 0 ? familyPhotos[0] : null)
+  const otherFamilyPhotos = familyHeroPhoto ? familyPhotos.filter((p: string) => p !== familyHeroPhoto) : familyPhotos
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -137,7 +146,7 @@ export default async function FamilyProfilePage({ params }: { params: Promise<{ 
           <CardContent className="pt-6">
             <div className="flex flex-col items-center text-center space-y-4">
               <Avatar className="h-32 w-32">
-                <AvatarImage src={familyUnit.profile_picture_url || undefined} alt={familyUnit.name} />
+                <AvatarImage src={familyHeroPhoto || undefined} alt={familyUnit.name} />
                 <AvatarFallback className="text-3xl">{initials}</AvatarFallback>
               </Avatar>
 
@@ -251,36 +260,89 @@ export default async function FamilyProfilePage({ params }: { params: Promise<{ 
           </Card>
 
           {familyUnit.pets && familyUnit.pets.length > 0 && (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {familyUnit.pets.map((pet: any) => {
-                const petInitials = pet.name
-                  .split(" ")
-                  .map((word: string) => word[0])
-                  .join("")
-                  .toUpperCase()
-                  .slice(0, 2)
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span>🐾</span>
+                  Family Pets ({familyUnit.pets.length})
+                </CardTitle>
+                <CardDescription>Beloved members of the family</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {familyUnit.pets.map((pet: any) => {
+                    const petInitials = pet.name
+                      .split(" ")
+                      .map((word: string) => word[0])
+                      .join("")
+                      .toUpperCase()
+                      .slice(0, 2)
 
-                return (
-                  <Card key={pet.id}>
-                    <CardContent className="pt-6">
-                      <div className="flex flex-col items-center gap-3 text-center">
-                        <Avatar className="h-16 w-16">
+                    return (
+                      <div key={pet.id} className="flex items-center gap-3 p-3 rounded-lg border bg-card">
+                        <Avatar className="h-12 w-12">
                           <AvatarImage src={pet.profile_picture_url || "/placeholder.svg"} alt={pet.name} />
                           <AvatarFallback>{petInitials}</AvatarFallback>
                         </Avatar>
-                        <div>
-                          <p className="font-semibold">{pet.name}</p>
-                          <p className="text-sm text-muted-foreground">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold truncate">{pet.name}</p>
+                          <p className="text-sm text-muted-foreground truncate">
                             {pet.species}
                             {pet.breed && ` • ${pet.breed}`}
                           </p>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                )
-              })}
-            </div>
+                    )
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Family Photo Gallery */}
+          {familyPhotos.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Family Photo Gallery</CardTitle>
+                <CardDescription>
+                  {familyPhotos.length} photo{familyPhotos.length === 1 ? "" : "s"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {familyHeroPhoto && (
+                  <div className="space-y-3 mb-4">
+                    <Badge variant="secondary" className="gap-1">
+                      <Star className="h-3 w-3 fill-current" />
+                      Featured Photo
+                    </Badge>
+                    <div className="rounded-lg overflow-hidden aspect-video">
+                      <img
+                        src={familyHeroPhoto || "/placeholder.svg"}
+                        alt="Featured family photo"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {otherFamilyPhotos.length > 0 && (
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-3">More Family Photos</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      {otherFamilyPhotos.map((photo, index) => (
+                        <div key={index} className="rounded-lg overflow-hidden aspect-square">
+                          <img
+                            src={photo || "/placeholder.svg"}
+                            alt={`Family photo ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           )}
         </div>
       </div>

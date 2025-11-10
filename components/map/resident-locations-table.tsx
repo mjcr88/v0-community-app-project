@@ -176,6 +176,7 @@ export function ResidentLocationsTable({ locations, tenantSlug, initialTypeFilte
                   </SelectContent>
                 </Select>
               </TableCell>
+              <TableCell />
               <TableCell>
                 <Input
                   placeholder="Filter description..."
@@ -222,12 +223,17 @@ export function ResidentLocationsTable({ locations, tenantSlug, initialTypeFilte
                       {location.description ? <span className="line-clamp-1">{location.description}</span> : "—"}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button asChild variant="ghost" size="sm">
-                        <Link href={`/t/${tenantSlug}/dashboard/map?highlightLocation=${location.id}`}>
-                          <Map className="h-4 w-4 mr-1" />
-                          View on Map
-                        </Link>
-                      </Button>
+                      <div className="flex gap-2 justify-end">
+                        <Button asChild variant="default" size="sm">
+                          <Link href={`/t/${tenantSlug}/dashboard/locations/${location.id}`}>View Details</Link>
+                        </Button>
+                        <Button asChild variant="ghost" size="sm">
+                          <Link href={`/t/${tenantSlug}/dashboard/map?highlightLocation=${location.id}`}>
+                            <Map className="h-4 w-4 mr-1" />
+                            Map
+                          </Link>
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 )

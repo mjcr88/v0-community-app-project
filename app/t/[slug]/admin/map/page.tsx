@@ -6,6 +6,7 @@ import { LocationsTable } from "@/components/map/locations-table"
 import { GeoJSONUploadButton } from "@/components/map/geojson-upload-button"
 import { AdminMapClient } from "./admin-map-client"
 import { redirect } from "next/navigation"
+import { getLocationCounts } from "@/lib/queries/get-locations"
 
 export default async function MapManagementPage({
   params,
@@ -30,65 +31,7 @@ export default async function MapManagementPage({
     redirect(`/t/${slug}/admin/dashboard`)
   }
 
-  const { count: facilitiesCount } = await supabase
-    .from("locations")
-    .select("*", { count: "exact", head: true })
-    .eq("tenant_id", tenant.id)
-    .eq("type", "facility")
-
-  const { count: lotsCount } = await supabase
-    .from("locations")
-    .select("*", { count: "exact", head: true })
-    .eq("tenant_id", tenant.id)
-    .eq("type", "lot")
-
-  const { count: pathsCount } = await supabase
-    .from("locations")
-    .select("*", { count: "exact", head: true })
-    .eq("tenant_id", tenant.id)
-    .eq("type", "walking_path")
-
-  const { count: neighborhoodsCount } = await supabase
-    .from("locations")
-    .select("*", { count: "exact", head: true })
-    .eq("tenant_id", tenant.id)
-    .eq("type", "neighborhood")
-
-  const { count: protectionZonesCount } = await supabase
-    .from("locations")
-    .select("*", { count: "exact", head: true })
-    .eq("tenant_id", tenant.id)
-    .eq("type", "protection_zone")
-
-  const { count: easementsCount } = await supabase
-    .from("locations")
-    .select("*", { count: "exact", head: true })
-    .eq("tenant_id", tenant.id)
-    .eq("type", "easement")
-
-  const { count: playgroundsCount } = await supabase
-    .from("locations")
-    .select("*", { count: "exact", head: true })
-    .eq("tenant_id", tenant.id)
-    .eq("type", "playground")
-
-  const { count: publicStreetsCount } = await supabase
-    .from("locations")
-    .select("*", { count: "exact", head: true })
-    .eq("tenant_id", tenant.id)
-    .eq("type", "public_street")
-
-  const { count: greenAreasCount } = await supabase
-    .from("locations")
-    .select("*", { count: "exact", head: true })
-    .eq("tenant_id", tenant.id)
-    .eq("type", "green_area")
-
-  const { count: recreationalZonesCount } = await supabase
-    .from("locations")
-    .select("*", { count: "exact", head: true })
-    .eq("tenant_id", tenant.id)
-    .eq("type", "recreational_zone")
+  const counts = await getLocationCounts(tenant.id)
 
   const { data: locations } = await supabase
     .from("locations")
@@ -139,16 +82,16 @@ export default async function MapManagementPage({
       {/* Use client component for clickable cards */}
       <AdminMapClient
         counts={{
-          facilities: facilitiesCount || 0,
-          lots: lotsCount || 0,
-          neighborhoods: neighborhoodsCount || 0,
-          walkingPaths: pathsCount || 0,
-          protectionZones: protectionZonesCount || 0,
-          easements: easementsCount || 0,
-          playgrounds: playgroundsCount || 0,
-          publicStreets: publicStreetsCount || 0,
-          greenAreas: greenAreasCount || 0,
-          recreationalZones: recreationalZonesCount || 0,
+          facilities: counts.facility || 0,
+          lots: counts.lot || 0,
+          neighborhoods: counts.neighborhood || 0,
+          walkingPaths: counts.walking_path || 0,
+          protectionZones: counts.protection_zone || 0,
+          easements: counts.easement || 0,
+          playgrounds: counts.playground || 0,
+          publicStreets: counts.public_street || 0,
+          greenAreas: counts.green_area || 0,
+          recreationalZones: counts.recreational_zone || 0,
         }}
       />
 

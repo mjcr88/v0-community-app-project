@@ -16,6 +16,7 @@ import {
   Users,
   ArrowLeft,
   CheckCircle2,
+  Star,
 } from "lucide-react"
 import Link from "next/link"
 import { filterPrivateData } from "@/lib/privacy-utils"
@@ -98,7 +99,9 @@ export default async function PublicProfilePage({
         show_interests,
         show_skills,
         show_open_to_requests
-      )
+      ),
+      photos,
+      hero_photo
     `,
     )
     .eq("id", id)
@@ -147,6 +150,8 @@ export default async function PublicProfilePage({
     show_phone: filteredResident.show_phone,
   })
 
+  const { data: pets } = await supabase.from("pets").select("*").eq("family_unit_id", resident.family_unit_id)
+
   const initials = [filteredResident.first_name, filteredResident.last_name]
     .filter(Boolean)
     .map((n) => n![0])
@@ -164,6 +169,11 @@ export default async function PublicProfilePage({
   const mapCenter = tenant?.map_center_coordinates
     ? { lat: tenant.map_center_coordinates.lat, lng: tenant.map_center_coordinates.lng }
     : null
+
+  const residentPhotos = Array.isArray(resident.photos) ? resident.photos : []
+  const heroPhoto =
+    resident.hero_photo || resident.profile_picture_url || (residentPhotos.length > 0 ? residentPhotos[0] : null)
+  const otherPhotos = heroPhoto ? residentPhotos.filter((p) => p !== heroPhoto) : residentPhotos
 
   return (
     <div className="space-y-6">
@@ -185,7 +195,7 @@ export default async function PublicProfilePage({
           <CardContent className="pt-6">
             <div className="flex flex-col items-center text-center space-y-4">
               <Avatar className="h-32 w-32">
-                <AvatarImage src={filteredResident.profile_picture_url || undefined} alt={displayName} />
+                <AvatarImage src={heroPhoto || undefined} alt={displayName} />
                 <AvatarFallback className="text-3xl">{initials || "?"}</AvatarFallback>
               </Avatar>
 
@@ -218,14 +228,12 @@ export default async function PublicProfilePage({
               {filteredResident.show_neighborhood && lotLocation && locations && (
                 <div className="w-full space-y-2">
                   <h4 className="text-sm font-medium text-muted-foreground">Location</h4>
-                  <Link href={`/t/${slug}/dashboard/map?highlightLot=${resident.lot_id}`} className="block">
-                    <MapPreviewWidget
-                      tenantSlug={slug}
-                      locations={locations}
-                      mapCenter={mapCenter}
-                      highlightLocationId={lotLocation.id}
-                    />
-                  </Link>
+                  <MapPreviewWidget
+                    tenantSlug={slug}
+                    locations={locations}
+                    mapCenter={mapCenter}
+                    highlightLocationId={lotLocation.id}
+                  />
                   <Button variant="outline" size="sm" className="w-full bg-transparent" asChild>
                     <Link href={`/t/${slug}/dashboard/map?highlightLot=${resident.lot_id}`}>View on Full Map</Link>
                   </Button>
@@ -382,6 +390,89 @@ export default async function PublicProfilePage({
                     </div>
                   ))}
                 </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {pets && pets.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Family Pets</CardTitle>
+                <CardDescription>
+                  {pets.length} pet{pets.length === 1 ? "" : "s"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {pets.map((pet) => {
+                    const petInitials = pet.name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")
+                      .toUpperCase()
+
+                    return (
+                      <div key={pet.id} className="flex items-center gap-3 rounded-lg border p-3">
+                        <Avatar className="h-12 w-12">
+                          <AvatarImage src={pet.profile_picture_url || undefined} alt={pet.name} />
+                          <AvatarFallback>{petInitials}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{pet.name}</p>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {pet.breed ? `${pet.species} • ${pet.breed}` : pet.species}
+                          </p>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Photo Gallery */}
+          {residentPhotos.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Photo Gallery</CardTitle>
+                <CardDescription>
+                  {residentPhotos.length} photo{residentPhotos.length === 1 ? "" : "s"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {heroPhoto && (
+                  <div className="space-y-3 mb-4">
+                    <Badge variant="secondary" className="gap-1">
+                      <Star className="h-3 w-3 fill-current" />
+                      Featured Photo
+                    </Badge>
+                    <div className="rounded-lg overflow-hidden aspect-video">
+                      <img
+                        src={heroPhoto || "/placeholder.svg"}
+                        alt="Featured"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {otherPhotos.length > 0 && (
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-3">More Photos</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      {otherPhotos.map((photo, index) => (
+                        <div key={index} className="rounded-lg overflow-hidden aspect-square">
+                          <img
+                            src={photo || "/placeholder.svg"}
+                            alt={`Photo ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}

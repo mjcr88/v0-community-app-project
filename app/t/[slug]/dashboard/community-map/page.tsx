@@ -1,8 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import Link from "next/link"
-import { Map } from "lucide-react"
 import { redirect } from "next/navigation"
+import { getLocations, getLocationCounts } from "@/lib/queries/get-locations"
+import { CommunityMapClient } from "./community-map-client"
 
 export default async function ResidentCommunityMapPage({
   params,
@@ -21,13 +20,13 @@ export default async function ResidentCommunityMapPage({
   } = await supabase.auth.getUser()
 
   if (!user) {
-    redirect(`/t/${slug}/auth/login`)
+    redirect(`/t/${slug}/login`)
   }
 
   const { data: resident } = await supabase.from("users").select("*").eq("id", user.id).eq("role", "resident").single()
 
   if (!resident) {
-    redirect(`/t/${slug}/auth/login`)
+    redirect(`/t/${slug}/login`)
   }
 
   const { data: tenant } = await supabase.from("tenants").select("*").eq("id", resident.tenant_id).single()
@@ -44,138 +43,83 @@ export default async function ResidentCommunityMapPage({
     redirect(`/t/${slug}/dashboard`)
   }
 
-  // Fetch location counts
-  const { count: facilitiesCount } = await supabase
-    .from("locations")
-    .select("*", { count: "exact", head: true })
-    .eq("tenant_id", tenant.id)
-    .eq("type", "facility")
+  const counts = await getLocationCounts(tenant.id)
+  const locations = await getLocations(tenant.id, {
+    enrichWithNeighborhood: true,
+    enrichWithLot: true,
+    enrichWithResidents: true,
+    enrichWithFamilies: true,
+    enrichWithPets: true,
+  })
 
-  const { count: lotsCount } = await supabase
-    .from("locations")
-    .select("*", { count: "exact", head: true })
-    .eq("tenant_id", tenant.id)
-    .eq("type", "lot")
+  const boundaryLocation = locations.find(
+    (loc) =>
+      loc.type === "boundary" &&
+      (loc.name.toLowerCase().includes("boundary") || loc.name.toLowerCase().includes("community")),
+  )
 
-  const { count: pathsCount } = await supabase
-    .from("locations")
-    .select("*", { count: "exact", head: true })
-    .eq("tenant_id", tenant.id)
-    .eq("type", "walking_path")
+  let calculatedCenter = tenant.map_center_coordinates
+    ? { lat: tenant.map_center_coordinates.lat, lng: tenant.map_center_coordinates.lng }
+    : null
 
-  const { count: neighborhoodsCount } = await supabase
-    .from("locations")
-    .select("*", { count: "exact", head: true })
-    .eq("tenant_id", tenant.id)
-    .eq("type", "neighborhood")
+  if (!calculatedCenter) {
+    const boundaryLocations = locations.filter((loc) => loc.type === "boundary" && loc.boundary_coordinates)
+    if (boundaryLocations.length > 0) {
+      const allCoords: Array<[number, number]> = []
+      boundaryLocations.forEach((loc) => {
+        if (loc.boundary_coordinates) {
+          allCoords.push(...loc.boundary_coordinates)
+        }
+      })
 
-  const { count: protectionZonesCount } = await supabase
-    .from("locations")
-    .select("*", { count: "exact", head: true })
-    .eq("tenant_id", tenant.id)
-    .eq("type", "protection_zone")
+      if (allCoords.length > 0) {
+        const lats = allCoords.map((c) => c[0])
+        const lngs = allCoords.map((c) => c[1])
+        const centerLat = lats.reduce((a, b) => a + b, 0) / lats.length
+        const centerLng = lngs.reduce((a, b) => a + b, 0) / lngs.length
+        calculatedCenter = { lat: centerLat, lng: centerLng }
+      }
+    }
+  }
 
-  const { count: easementsCount } = await supabase
-    .from("locations")
-    .select("*", { count: "exact", head: true })
-    .eq("tenant_id", tenant.id)
-    .eq("type", "easement")
+  let calculatedZoom = 11 // Start with wider default (was 12)
+  if (boundaryLocation?.boundary_coordinates && boundaryLocation.boundary_coordinates.length > 0) {
+    const lats = boundaryLocation.boundary_coordinates.map((c) => c[0])
+    const lngs = boundaryLocation.boundary_coordinates.map((c) => c[1])
+    const latDiff = Math.max(...lats) - Math.min(...lats)
+    const lngDiff = Math.max(...lngs) - Math.min(...lngs)
+    const maxDiff = Math.max(latDiff, lngDiff)
 
-  const { count: playgroundsCount } = await supabase
-    .from("locations")
-    .select("*", { count: "exact", head: true })
-    .eq("tenant_id", tenant.id)
-    .eq("type", "playground")
-
-  const { count: publicStreetsCount } = await supabase
-    .from("locations")
-    .select("*", { count: "exact", head: true })
-    .eq("tenant_id", tenant.id)
-    .eq("type", "public_street")
-
-  const { count: greenAreasCount } = await supabase
-    .from("locations")
-    .select("*", { count: "exact", head: true })
-    .eq("tenant_id", tenant.id)
-    .eq("type", "green_area")
-
-  const { count: recreationalZonesCount } = await supabase
-    .from("locations")
-    .select("*", { count: "exact", head: true })
-    .eq("tenant_id", tenant.id)
-    .eq("type", "recreational_zone")
+    if (maxDiff > 0.02)
+      calculatedZoom = 10 // Very large community
+    else if (maxDiff > 0.01)
+      calculatedZoom = 11 // Large community
+    else if (maxDiff > 0.005)
+      calculatedZoom = 12 // Medium community
+    else calculatedZoom = 13 // Small community
+  }
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold">Community Map</h1>
-        <p className="text-muted-foreground">Explore locations and facilities in your community</p>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Interactive Community Map</CardTitle>
-              <CardDescription>Map view coming soon</CardDescription>
-            </div>
-            <Link href={`/t/${slug}/dashboard/map`}>
-              <button className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors">
-                <Map className="h-4 w-4" />
-                View Full Map
-              </button>
-            </Link>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[400px] rounded-lg overflow-hidden border flex items-center justify-center bg-muted">
-            <p className="text-muted-foreground">Map components need to be recreated</p>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Facilities</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{facilitiesCount || 0}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Lots</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{lotsCount || 0}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Neighborhoods</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{neighborhoodsCount || 0}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Walking Paths</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{pathsCount || 0}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Playgrounds</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{playgroundsCount || 0}</div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+    <CommunityMapClient
+      slug={slug}
+      tenantId={tenant.id}
+      counts={{
+        facilities: counts.facility || 0,
+        lots: counts.lot || 0,
+        neighborhoods: counts.neighborhood || 0,
+        walkingPaths: counts.walking_path || 0,
+        protectionZones: counts.protection_zone || 0,
+        easements: counts.easement || 0,
+        playgrounds: counts.playground || 0,
+        publicStreets: counts.public_street || 0,
+        greenAreas: counts.green_area || 0,
+        recreationalZones: counts.recreational_zone || 0,
+      }}
+      locations={locations}
+      mapCenter={calculatedCenter}
+      boundaryLocationId={boundaryLocation?.id}
+      mapZoom={calculatedZoom}
+      initialTypeFilter={initialTypeFilter}
+    />
   )
 }

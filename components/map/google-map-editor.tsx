@@ -1,3 +1,5 @@
+"use client"
+
 import React from "react"
 
 // import type React from "react" // Removed to fix redeclaration error
@@ -34,9 +36,6 @@ import {
   Layers,
   Check,
   Filter,
-  Upload,
-  X,
-  ImageIcon,
   Plus,
 } from "lucide-react"
 import { Polygon } from "./polygon"
@@ -46,6 +45,8 @@ import { createBrowserClient } from "@/lib/supabase/client"
 import { geolocate } from "@/lib/geolocate"
 import { Badge } from "@/components/ui/badge"
 import { LocationInfoCard } from "./location-info-card"
+import { RichTextEditor } from "@/components/ui/rich-text-editor" // Assuming RichTextEditor is in the same directory
+import { PhotoManager } from "@/components/photo-manager"
 
 type DrawingMode = "marker" | "polygon" | "polyline" | null
 type LatLng = { lat: number; lng: number }
@@ -230,9 +231,60 @@ export function GoogleMapEditor({
   // State for photo uploads
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([])
+  const [heroPhoto, setHeroPhoto] = useState<string | null>(null)
 
   // State for deletion
   const [deleting, setDeleting] = useState(false)
+
+  // Existing state for facilities
+  const [capacity, setCapacity] = useState("")
+  const [maxOccupancy, setMaxOccupancy] = useState("")
+  const [amenities, setAmenities] = useState<string[]>([])
+  const [customAmenities, setCustomAmenities] = useState("")
+  const [hours, setHours] = useState("")
+  const [status, setStatus] = useState("Open") // Set default to 'Open' to match constraint
+  const [parkingAvailable, setParkingAvailable] = useState(false)
+  const [parkingSpaces, setParkingSpaces] = useState("")
+  const [accessibilityFeatures, setAccessibilityFeatures] = useState<string[]>([])
+  const [accessibilityNotes, setAccessibilityNotes] = useState("")
+  const [rules, setRules] = useState("")
+
+  // State for walking paths
+  const [pathDifficulty, setPathDifficulty] = useState("")
+  const [pathSurface, setPathSurface] = useState("")
+  const [pathLength, setPathLength] = useState("")
+  const [pathLengthUnit, setPathLengthUnit] = useState("km")
+  const [elevationGain, setElevationGain] = useState("")
+  const [elevationUnit, setElevationUnit] = useState("m")
+
+  // Predefined options
+  const AMENITY_OPTIONS = [
+    "WiFi",
+    "Parking Available",
+    "Restrooms",
+    "Showers",
+    "BBQ Grills",
+    "Playground Equipment",
+    "Covered Area",
+    "Electricity Outlets",
+    "Water Access",
+    "Tables & Benches",
+    "Night Lighting",
+    "Security Camera",
+    "Kitchen Facilities",
+    "Air Conditioning",
+    "Heating",
+    "First Aid Kit",
+  ]
+
+  const ACCESSIBILITY_OPTIONS = [
+    "Wheelchair Accessible",
+    "Accessible Parking",
+    "Ramps Available",
+    "Elevator Access",
+    "Accessible Restrooms",
+    "Wide Doorways",
+  ]
 
   const mapRef = useRef(null)
 
@@ -486,6 +538,47 @@ export function GoogleMapEditor({
     setSelectedLotId(location.lot_id || "")
     setSelectedNeighborhoodId(location.neighborhood_id || "")
     setUploadedPhotos(location.photos || [])
+    setHeroPhoto(location.hero_photo || (location.photos && location.photos.length > 0 ? location.photos[0] : null))
+
+    // Load new attributes
+    setCapacity(location.capacity?.toString() || "")
+    setMaxOccupancy(location.max_occupancy?.toString() || "")
+    setAmenities(location.amenities || [])
+    setCustomAmenities("") // Clear custom amenities, will be populated if needed on save
+    setHours(location.hours || "")
+    setStatus(location.status || "")
+    setParkingAvailable(!!location.parking_spaces)
+    setParkingSpaces(location.parking_spaces?.toString() || "")
+    // Accessibility needs careful handling as it's stored as a string
+    if (location.accessibility_features) {
+      const features = location.accessibility_features.split(" | ")
+      setAccessibilityFeatures(features.filter((f: string) => ACCESSIBILITY_OPTIONS.includes(f)))
+      setAccessibilityNotes(features.find((f: string) => f.startsWith("Notes:"))?.replace("Notes: ", "") || "")
+    } else {
+      setAccessibilityFeatures([])
+      setAccessibilityNotes("")
+    }
+    setRules(location.rules || "")
+
+    // Load path attributes
+    setPathDifficulty(location.path_difficulty || "")
+    setPathSurface(location.path_surface || "")
+    if (location.path_length) {
+      const [length, unit] = location.path_length.split(" ")
+      setPathLength(length)
+      setPathLengthUnit(unit || "km")
+    } else {
+      setPathLength("")
+      setPathLengthUnit("km")
+    }
+    if (location.elevation_gain) {
+      const [gain, unit] = location.elevation_gain.split(" ")
+      setElevationGain(gain)
+      setElevationUnit(unit || "m")
+    } else {
+      setElevationGain("")
+      setElevationUnit("m")
+    }
 
     if (location.coordinates) {
       setMarkerPosition(location.coordinates)
@@ -617,6 +710,9 @@ export function GoogleMapEditor({
 
   const removePhoto = (urlToRemove: string) => {
     setUploadedPhotos(uploadedPhotos.filter((url) => url !== urlToRemove))
+    if (heroPhoto === urlToRemove) {
+      setHeroPhoto(null)
+    }
     toast({
       description: "Photo removed",
     })
@@ -690,6 +786,7 @@ export function GoogleMapEditor({
         type: locationType,
         description: description.trim() || null,
         photos: uploadedPhotos.length > 0 ? uploadedPhotos : null,
+        hero_photo: heroPhoto,
       }
 
       if (locationType === "facility") {
@@ -710,6 +807,35 @@ export function GoogleMapEditor({
         if (selectedLotId && selectedLotId !== "none") {
           locationData.lot_id = selectedLotId
         }
+
+        if (capacity) locationData.capacity = Number.parseInt(capacity)
+        if (maxOccupancy) locationData.max_occupancy = Number.parseInt(maxOccupancy)
+        if (amenities.length > 0 || customAmenities) {
+          const allAmenities = [...amenities]
+          if (customAmenities) {
+            allAmenities.push(
+              ...customAmenities
+                .split(",")
+                .map((a) => a.trim())
+                .filter(Boolean),
+            )
+          }
+          locationData.amenities = allAmenities
+        }
+        if (hours) locationData.hours = hours
+        if (status) locationData.status = status
+        if (parkingAvailable && parkingSpaces) {
+          locationData.parking_spaces = Number.parseInt(parkingSpaces)
+        } else if (!parkingAvailable) {
+          locationData.parking_spaces = 0
+        }
+        if (accessibilityFeatures.length > 0 || accessibilityNotes) {
+          const accessibilityText = [...accessibilityFeatures, accessibilityNotes ? `Notes: ${accessibilityNotes}` : ""]
+            .filter(Boolean)
+            .join(" | ")
+          locationData.accessibility_features = accessibilityText
+        }
+        if (rules) locationData.rules = rules
       } else if (locationType === "lot") {
         if (polygonPoints.length > 0) {
           locationData.boundary_coordinates = polygonPoints.map((p) => [p.lat, p.lng])
@@ -729,6 +855,13 @@ export function GoogleMapEditor({
         if (selectedLotId && selectedLotId !== "none") {
           locationData.lot_id = selectedLotId
         }
+
+        // Add path attributes
+        if (pathDifficulty) locationData.path_difficulty = pathDifficulty
+        if (pathSurface) locationData.path_surface = pathSurface
+        if (pathLength) locationData.path_length = `${pathLength} ${pathLengthUnit}`
+        if (elevationGain) locationData.elevation_gain = `${elevationGain} ${elevationUnit}`
+        if (status) locationData.status = status
       } else if (
         locationType === "boundary" ||
         locationType === "protection_zone" ||
@@ -779,7 +912,30 @@ export function GoogleMapEditor({
       setSelectedNeighborhoodId("")
       setDrawingMode(null)
       setUploadedPhotos([])
+      setHeroPhoto(null)
       setEditingLocationId(null)
+
+      // Reset facility attributes
+      setCapacity("")
+      setMaxOccupancy("")
+      setAmenities([])
+      setCustomAmenities("")
+      setHours("")
+      setStatus("")
+      setParkingAvailable(false)
+      setParkingSpaces("")
+      setAccessibilityFeatures([])
+      setAccessibilityNotes("")
+      setRules("")
+
+      // Reset path attributes
+      setPathDifficulty("")
+      setPathSurface("")
+      setPathLength("")
+      setPathLengthUnit("km")
+      setElevationGain("")
+      setElevationUnit("m")
+
       setSaving(false) // Reset saving state immediately after form reset
 
       if (locationType === "neighborhood" && prefilledName) {
@@ -817,8 +973,30 @@ export function GoogleMapEditor({
     setSelectedLotId("")
     setSelectedNeighborhoodId("")
     setUploadedPhotos([])
+    setHeroPhoto(null)
     setDrawingMode(null)
     setSaving(false)
+
+    // Reset all new fields
+    setCapacity("")
+    setMaxOccupancy("")
+    setAmenities([])
+    setCustomAmenities("")
+    setHours("")
+    setStatus("")
+    setParkingAvailable(false)
+    setParkingSpaces("")
+    setAccessibilityFeatures([])
+    setAccessibilityNotes("")
+    setRules("")
+
+    setPathDifficulty("")
+    setPathSurface("")
+    setPathLength("")
+    setPathLengthUnit("km")
+    setElevationGain("")
+    setElevationUnit("m")
+
     toast({
       description: "Edit cancelled",
     })
@@ -903,7 +1081,29 @@ export function GoogleMapEditor({
     setSelectedLotId("")
     setSelectedNeighborhoodId("")
     setUploadedPhotos([])
+    setHeroPhoto(null)
     setDrawingMode(null)
+
+    // Reset all new fields
+    setCapacity("")
+    setMaxOccupancy("")
+    setAmenities([])
+    setCustomAmenities("")
+    setHours("")
+    setStatus("")
+    setParkingAvailable(false)
+    setParkingSpaces("")
+    setAccessibilityFeatures([])
+    setAccessibilityNotes("")
+    setRules("")
+
+    setPathDifficulty("")
+    setPathSurface("")
+    setPathLength("")
+    setPathLengthUnit("km")
+    setElevationGain("")
+    setElevationUnit("m")
+
     toast({
       description: "Ready to create new location",
     })
@@ -1062,7 +1262,7 @@ export function GoogleMapEditor({
                 ref={mapRef}
                 center={mapCenter}
                 zoom={mapZoom}
-                mapTypeId="satellite"
+                mapTypeId={mapType} // Use state for map type
                 gestureHandling="greedy"
                 disableDefaultUI={true}
                 clickableIcons={false}
@@ -2016,75 +2216,280 @@ export function GoogleMapEditor({
                         placeholder="e.g., 🏊 or pool"
                       />
                     </div>
+
+                    <div className="pt-4 border-t space-y-4">
+                      <h3 className="text-sm font-semibold">Facility Details</h3>
+
+                      {/* Capacity and Max Occupancy */}
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="capacity">Capacity</Label>
+                          <Input
+                            id="capacity"
+                            type="number"
+                            min="1"
+                            value={capacity}
+                            onChange={(e) => setCapacity(e.target.value)}
+                            placeholder="50"
+                          />
+                          <p className="text-xs text-muted-foreground">Maximum number of people</p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="maxOccupancy">Max Occupancy</Label>
+                          <Input
+                            id="maxOccupancy"
+                            type="number"
+                            min="1"
+                            value={maxOccupancy}
+                            onChange={(e) => setMaxOccupancy(e.target.value)}
+                            placeholder="40"
+                          />
+                          <p className="text-xs text-muted-foreground">Usually 80% of capacity</p>
+                        </div>
+                      </div>
+
+                      {/* Amenities */}
+                      <div className="space-y-2">
+                        <Label>Amenities</Label>
+                        <div className="grid gap-2 sm:grid-cols-2 p-3 border rounded-md max-h-48 overflow-y-auto">
+                          {AMENITY_OPTIONS.map((amenity) => (
+                            <label key={amenity} className="flex items-center gap-2 text-sm">
+                              <input
+                                type="checkbox"
+                                checked={amenities.includes(amenity)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setAmenities([...amenities, amenity])
+                                  } else {
+                                    setAmenities(amenities.filter((a) => a !== amenity))
+                                  }
+                                }}
+                                className="rounded border-gray-300"
+                              />
+                              <span>{amenity}</span>
+                            </label>
+                          ))}
+                        </div>
+                        <Input
+                          placeholder="Other amenities (comma separated)"
+                          value={customAmenities}
+                          onChange={(e) => setCustomAmenities(e.target.value)}
+                        />
+                      </div>
+
+                      {/* Operating Hours */}
+                      <div className="space-y-2">
+                        <Label htmlFor="hours">Operating Hours</Label>
+                        <Textarea
+                          id="hours"
+                          value={hours}
+                          onChange={(e) => setHours(e.target.value)}
+                          placeholder="Mon-Fri: 6:00 AM - 10:00 PM&#10;Sat-Sun: 8:00 AM - 8:00 PM"
+                          rows={3}
+                        />
+                      </div>
+
+                      {/* Status */}
+                      <div className="space-y-2">
+                        <Label htmlFor="status">Status</Label>
+                        <Select value={status} onValueChange={setStatus}>
+                          <SelectTrigger id="status">
+                            <SelectValue placeholder="Select status..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Open">Open</SelectItem>
+                            <SelectItem value="Closed">Closed</SelectItem>
+                            <SelectItem value="Maintenance">Maintenance</SelectItem>
+                            <SelectItem value="Coming Soon">Coming Soon</SelectItem>
+                            <SelectItem value="Temporarily Unavailable">Temporarily Unavailable</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Parking */}
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            id="parkingAvailable"
+                            checked={parkingAvailable}
+                            onChange={(e) => setParkingAvailable(e.target.checked)}
+                            className="rounded border-gray-300"
+                          />
+                          <Label htmlFor="parkingAvailable" className="cursor-pointer">
+                            Parking Available
+                          </Label>
+                        </div>
+                        {parkingAvailable && (
+                          <Input
+                            type="number"
+                            min="1"
+                            placeholder="Number of spaces"
+                            value={parkingSpaces}
+                            onChange={(e) => setParkingSpaces(e.target.value)}
+                          />
+                        )}
+                      </div>
+
+                      {/* Accessibility */}
+                      <div className="space-y-2">
+                        <Label>Accessibility Features</Label>
+                        <div className="grid gap-2 sm:grid-cols-2 p-3 border rounded-md">
+                          {ACCESSIBILITY_OPTIONS.map((feature) => (
+                            <label key={feature} className="flex items-center gap-2 text-sm">
+                              <input
+                                type="checkbox"
+                                checked={accessibilityFeatures.includes(feature)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setAccessibilityFeatures([...accessibilityFeatures, feature])
+                                  } else {
+                                    setAccessibilityFeatures(accessibilityFeatures.filter((f) => f !== feature))
+                                  }
+                                }}
+                                className="rounded border-gray-300"
+                              />
+                              <span>{feature}</span>
+                            </label>
+                          ))}
+                        </div>
+                        <Textarea
+                          placeholder="Additional accessibility notes..."
+                          value={accessibilityNotes}
+                          onChange={(e) => setAccessibilityNotes(e.target.value)}
+                          rows={2}
+                        />
+                      </div>
+
+                      {/* Rules */}
+                      <div className="space-y-2">
+                        <Label htmlFor="rules">Facility Rules & Guidelines</Label>
+                        <RichTextEditor
+                          value={rules}
+                          onChange={setRules}
+                          placeholder="Enter facility rules and guidelines..."
+                        />
+                      </div>
+                    </div>
                   </>
                 )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="photos">Photos</Label>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Input
-                        id="photos"
-                        type="file"
-                        accept="image/jpeg,image/jpg,image/png,image/webp"
-                        multiple
-                        onChange={handlePhotoUpload}
-                        disabled={uploadingPhoto}
-                        className="hidden"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => document.getElementById("photos")?.click()}
-                        disabled={uploadingPhoto}
-                        className="w-full"
-                      >
-                        {uploadingPhoto ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Uploading...
-                          </>
-                        ) : (
-                          <>
-                            <Upload className="mr-2 h-4 w-4" />
-                            Upload Photos
-                          </>
-                        )}
-                      </Button>
+                {locationType === "walking_path" && (
+                  <div className="pt-4 border-t space-y-4">
+                    <h3 className="text-sm font-semibold">Path Details</h3>
+
+                    {/* Difficulty */}
+                    <div className="space-y-2">
+                      <Label htmlFor="pathDifficulty">Difficulty Level</Label>
+                      <Select id="pathDifficulty" value={pathDifficulty} onValueChange={setPathDifficulty}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select difficulty" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Easy">Easy</SelectItem>
+                          <SelectItem value="Moderate">Moderate</SelectItem>
+                          <SelectItem value="Difficult">Difficult</SelectItem>
+                          <SelectItem value="Expert">Expert</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
 
-                    {uploadedPhotos.length > 0 && (
-                      <div className="grid grid-cols-2 gap-2">
-                        {uploadedPhotos.map((url, index) => (
-                          <div key={url} className="relative group aspect-square rounded-lg overflow-hidden border">
-                            <img
-                              src={url || "/placeholder.svg"}
-                              alt={`Upload ${index + 1}`}
-                              className="w-full h-full object-cover"
-                            />
-                            <Button
-                              type="button"
-                              variant="destructive"
-                              size="icon"
-                              onClick={() => removePhoto(url)}
-                              className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    {/* Surface */}
+                    <div className="space-y-2">
+                      <Label htmlFor="pathSurface">Surface Type</Label>
+                      <Select id="pathSurface" value={pathSurface} onValueChange={setPathSurface}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select surface type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Paved">Paved</SelectItem>
+                          <SelectItem value="Gravel">Gravel</SelectItem>
+                          <SelectItem value="Dirt">Dirt/Earth</SelectItem>
+                          <SelectItem value="Mixed">Mixed Surface</SelectItem>
+                          <SelectItem value="Boardwalk">Boardwalk</SelectItem>
+                          <SelectItem value="Rocky">Rocky</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                    {uploadedPhotos.length === 0 && (
-                      <div className="flex items-center justify-center h-24 border-2 border-dashed rounded-lg text-muted-foreground">
-                        <div className="text-center">
-                          <ImageIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                          <p className="text-sm">No photos uploaded</p>
-                        </div>
+                    {/* Path Length */}
+                    <div className="space-y-2">
+                      <Label htmlFor="pathLength">Path Length</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="pathLength"
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          placeholder="2.5"
+                          value={pathLength}
+                          onChange={(e) => setPathLength(e.target.value)}
+                          className="flex-1"
+                        />
+                        <Select value={pathLengthUnit} onValueChange={setPathLengthUnit}>
+                          <SelectTrigger className="w-24">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="km">km</SelectItem>
+                            <SelectItem value="mi">miles</SelectItem>
+                            <SelectItem value="m">meters</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
-                    )}
+                    </div>
+
+                    {/* Elevation Gain */}
+                    <div className="space-y-2">
+                      <Label htmlFor="elevationGain">Elevation Gain</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="elevationGain"
+                          type="number"
+                          min="0"
+                          placeholder="150"
+                          value={elevationGain}
+                          onChange={(e) => setElevationGain(e.target.value)}
+                          className="flex-1"
+                        />
+                        <Select value={elevationUnit} onValueChange={setElevationUnit}>
+                          <SelectTrigger className="w-24">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="m">meters</SelectItem>
+                            <SelectItem value="ft">feet</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {/* Status */}
+                    <div className="space-y-2">
+                      <Label htmlFor="pathStatus">Status</Label>
+                      <Select value={status} onValueChange={setStatus}>
+                        <SelectTrigger id="pathStatus">
+                          <SelectValue placeholder="Select status..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Open">Open</SelectItem>
+                          <SelectItem value="Closed">Closed</SelectItem>
+                          <SelectItem value="Maintenance">Maintenance</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
+                )}
+
+                <div>
+                  <PhotoManager
+                    photos={uploadedPhotos}
+                    heroPhoto={heroPhoto}
+                    onPhotosChange={setUploadedPhotos}
+                    onHeroPhotoChange={setHeroPhoto}
+                    maxPhotos={20}
+                    entityType="location"
+                  />
                 </div>
               </>
             )}

@@ -12,11 +12,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Combobox } from "@/components/ui/combobox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Upload, Loader2, X, Plus, AlertCircle, Search, Check } from "lucide-react"
+import { Loader2, X, Plus, AlertCircle, Search, Check } from "lucide-react"
 import { COUNTRIES, LANGUAGES } from "@/lib/data/countries-languages"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Switch } from "@/components/ui/switch"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { createClient } from "@/lib/supabase/client"
+import { PhotoManager } from "@/components/photo-manager"
+import { useToast } from "@/hooks/use-toast"
 
 interface ProfileEditFormProps {
   resident: any
@@ -34,8 +37,8 @@ export function ProfileEditForm({
   tenantSlug,
 }: ProfileEditFormProps) {
   const router = useRouter()
+  const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
-  const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const [formData, setFormData] = useState({
     firstName: resident.first_name || "",
     lastName: resident.last_name || "",
@@ -45,7 +48,8 @@ export function ProfileEditForm({
     currentCountry: resident.current_country || "",
     languages: resident.languages || [],
     preferredLanguage: resident.preferred_language || "",
-    profilePicture: resident.profile_picture_url || "",
+    photos: resident.photos || [],
+    heroPhoto: resident.hero_photo || (resident.photos && resident.photos.length > 0 ? resident.photos[0] : null),
     journeyStage: resident.journey_stage || "",
     estimatedMoveInDate: resident.estimated_move_in_date || "",
     selectedInterests: resident.user_interests?.map((ui: any) => ui.interest_id) || [],
@@ -55,24 +59,11 @@ export function ProfileEditForm({
         skill_name: us.skills?.name || "",
         open_to_requests: us.open_to_requests || false,
       })) || [],
+    interestSearch: "",
+    skillSearch: "",
+    newSkill: "",
+    languageSearch: "",
   })
-
-  const [newSkill, setNewSkill] = useState("")
-  const [languageSearch, setLanguageSearch] = useState("")
-  const [interestSearch, setInterestSearch] = useState("")
-  const [skillSearch, setSkillSearch] = useState("")
-
-  const features = (tenant?.features as Record<string, boolean>) || {}
-
-  const countryOptions = COUNTRIES.map((country) => ({
-    value: country,
-    label: country,
-  }))
-
-  const languageOptions = LANGUAGES.map((language) => ({
-    value: language,
-    label: language,
-  }))
 
   const initials = [formData.firstName, formData.lastName]
     .filter(Boolean)
@@ -85,52 +76,192 @@ export function ProfileEditForm({
     setIsLoading(true)
 
     try {
-      // TODO: Implement profile update with server action
-      console.log("[v0] Updating profile:", formData)
+      const supabase = createClient()
+
+      const { error: userError } = await supabase
+        .from("users")
+        .update({
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          phone: formData.phone,
+          birthday: formData.birthday || null,
+          birth_country: formData.birthCountry || null,
+          current_country: formData.currentCountry || null,
+          languages: formData.languages,
+          preferred_language: formData.preferredLanguage || null,
+          photos: formData.photos,
+          hero_photo: formData.heroPhoto,
+          profile_picture_url: formData.heroPhoto || null,
+          journey_stage: formData.journeyStage || null,
+          estimated_move_in_date: formData.estimatedMoveInDate || null,
+        })
+        .eq("id", resident.id)
+
+      if (userError) {
+        console.error("[v0] Error updating profile:", userError)
+        toast({
+          title: "Update failed",
+          description: "Failed to update profile. Please try again.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      const { error: deleteInterestsError } = await supabase.from("user_interests").delete().eq("user_id", resident.id)
+
+      if (deleteInterestsError) {
+        console.error("[v0] Error deleting interests:", deleteInterestsError)
+      }
+
+      if (formData.selectedInterests.length > 0) {
+        const { error: insertInterestsError } = await supabase.from("user_interests").insert(
+          formData.selectedInterests.map((interestId) => ({
+            user_id: resident.id,
+            interest_id: interestId,
+            tenant_id: resident.tenant_id,
+          })),
+        )
+
+        if (insertInterestsError) {
+          console.error("[v0] Error inserting interests:", insertInterestsError)
+        }
+      }
+
+      const { error: deleteSkillsError } = await supabase.from("user_skills").delete().eq("user_id", resident.id)
+
+      if (deleteSkillsError) {
+        console.error("[v0] Error deleting skills:", deleteSkillsError)
+      }
+
+      if (formData.skills.length > 0) {
+        const skillsToInsert = []
+
+        for (const skill of formData.skills) {
+          if (skill.skill_id) {
+            skillsToInsert.push({
+              user_id: resident.id,
+              skill_id: skill.skill_id,
+              open_to_requests: skill.open_to_requests,
+              tenant_id: resident.tenant_id,
+            })
+          } else {
+            const { data: newSkillData, error: createSkillError } = await supabase
+              .from("skills")
+              .insert({
+                name: skill.skill_name,
+                tenant_id: resident.tenant_id,
+              })
+              .select()
+              .single()
+
+            if (!createSkillError && newSkillData) {
+              skillsToInsert.push({
+                user_id: resident.id,
+                skill_id: newSkillData.id,
+                open_to_requests: skill.open_to_requests,
+                tenant_id: resident.tenant_id,
+              })
+            }
+          }
+        }
+
+        if (skillsToInsert.length > 0) {
+          const { error: insertSkillsError } = await supabase.from("user_skills").insert(skillsToInsert)
+
+          if (insertSkillsError) {
+            console.error("[v0] Error inserting skills:", insertSkillsError)
+          }
+        }
+      }
+
+      toast({
+        title: "Success",
+        description: "Profile updated successfully!",
+      })
       router.refresh()
     } catch (error) {
       console.error("[v0] Error updating profile:", error)
+      toast({
+        title: "Error",
+        description: "An error occurred while updating your profile. Please try again.",
+        variant: "destructive",
+      })
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handlePhotoUpload = async () => {
-    const input = document.createElement("input")
-    input.type = "file"
-    input.accept = "image/jpeg,image/png,image/webp"
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0]
-      if (!file) return
+  const handlePhotosChange = async (photos: string[]) => {
+    setFormData({ ...formData, photos })
 
-      setUploadingPhoto(true)
-      try {
-        const uploadFormData = new FormData()
-        uploadFormData.append("file", file)
-
-        const response = await fetch("/api/upload", {
-          method: "POST",
-          body: uploadFormData,
-        })
-
-        if (!response.ok) throw new Error("Upload failed")
-
-        const { url } = await response.json()
-        setFormData((prevState) => ({ ...prevState, profilePicture: url }))
-      } catch (error) {
-        console.error("[v0] Error uploading photo:", error)
-        alert("Failed to upload photo. Please try again.")
-      } finally {
-        setUploadingPhoto(false)
+    const supabase = createClient()
+    try {
+      const updateData: any = {
+        photos: photos,
       }
+
+      // If hero photo was deleted, set first photo as new hero
+      if (formData.heroPhoto && !photos.includes(formData.heroPhoto)) {
+        const newHero = photos[0] || null
+        updateData.hero_photo = newHero
+        updateData.profile_picture_url = newHero
+        setFormData({ ...formData, photos, heroPhoto: newHero })
+      }
+
+      const { error } = await supabase.from("users").update(updateData).eq("id", resident.id)
+
+      if (error) throw error
+
+      toast({
+        description: "Photos updated successfully",
+      })
+      router.refresh()
+    } catch (error) {
+      console.error("[v0] Error saving photos:", error)
+      toast({
+        title: "Save failed",
+        description: "Failed to save photos. Please try again.",
+        variant: "destructive",
+      })
+      // Revert on error
+      setFormData({ ...formData, photos: resident.photos || [] })
     }
-    input.click()
+  }
+
+  const handleHeroPhotoChange = async (heroPhoto: string | null) => {
+    setFormData({ ...formData, heroPhoto })
+
+    const supabase = createClient()
+    try {
+      const { error } = await supabase
+        .from("users")
+        .update({
+          hero_photo: heroPhoto,
+          profile_picture_url: heroPhoto,
+        })
+        .eq("id", resident.id)
+
+      if (error) throw error
+
+      toast({
+        description: "Hero photo updated",
+      })
+      router.refresh()
+    } catch (error) {
+      console.error("[v0] Error saving hero photo:", error)
+      toast({
+        title: "Save failed",
+        description: "Failed to save hero photo. Please try again.",
+        variant: "destructive",
+      })
+      // Revert on error
+      setFormData({ ...formData, heroPhoto: resident.hero_photo || null })
+    }
   }
 
   const addLanguage = (language: string) => {
     if (language && !formData.languages.includes(language)) {
       setFormData({ ...formData, languages: [...formData.languages, language] })
-      setLanguageSearch("")
     }
   }
 
@@ -139,12 +270,13 @@ export function ProfileEditForm({
   }
 
   const addSkill = () => {
-    if (newSkill.trim()) {
+    const newSkillTrimmed = formData.newSkill.trim()
+    if (newSkillTrimmed) {
       setFormData({
         ...formData,
-        skills: [...formData.skills, { skill_name: newSkill.trim(), open_to_requests: false }],
+        skills: [...formData.skills, { skill_name: newSkillTrimmed, open_to_requests: false }],
+        newSkill: "",
       })
-      setNewSkill("")
     }
   }
 
@@ -183,13 +315,21 @@ export function ProfileEditForm({
     !formData.journeyStage
 
   const filteredInterests = availableInterests.filter((interest) =>
-    interest.name.toLowerCase().includes(interestSearch.toLowerCase()),
+    interest.name.toLowerCase().includes(formData.interestSearch.toLowerCase()),
   )
 
   const unselectedInterests = filteredInterests.filter((interest) => !formData.selectedInterests.includes(interest.id))
 
   const selectedInterestObjects = availableInterests.filter((interest) =>
     formData.selectedInterests.includes(interest.id),
+  )
+
+  const filteredSkills = availableSkills.filter((skill) =>
+    skill.name.toLowerCase().includes(formData.skillSearch.toLowerCase()),
+  )
+
+  const unselectedSkills = filteredSkills.filter(
+    (skill) => !formData.skills.some((s: any) => s.skill_name === skill.name),
   )
 
   return (
@@ -212,23 +352,19 @@ export function ProfileEditForm({
         <CardContent className="space-y-6">
           <div className="flex flex-col items-center gap-4">
             <Avatar className="h-24 w-24">
-              <AvatarImage src={formData.profilePicture || "/placeholder.svg"} alt={initials} />
+              <AvatarImage src={formData.heroPhoto || "/placeholder.svg"} alt={initials} />
               <AvatarFallback className="text-2xl">{initials || "?"}</AvatarFallback>
             </Avatar>
-            <Button type="button" variant="outline" size="sm" onClick={handlePhotoUpload} disabled={uploadingPhoto}>
-              {uploadingPhoto ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Uploading...
-                </>
-              ) : (
-                <>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Upload Photo
-                </>
-              )}
-            </Button>
           </div>
+
+          <PhotoManager
+            photos={formData.photos}
+            heroPhoto={formData.heroPhoto}
+            onPhotosChange={handlePhotosChange}
+            onHeroPhotoChange={handleHeroPhotoChange}
+            maxPhotos={10}
+            entityType="user"
+          />
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
@@ -288,7 +424,7 @@ export function ProfileEditForm({
             <div className="space-y-2">
               <Label htmlFor="birthCountry">Country of Origin *</Label>
               <Combobox
-                options={countryOptions}
+                options={COUNTRIES}
                 value={formData.birthCountry}
                 onValueChange={(value) => setFormData({ ...formData, birthCountry: value })}
                 placeholder="Select country"
@@ -299,7 +435,7 @@ export function ProfileEditForm({
             <div className="space-y-2">
               <Label htmlFor="currentCountry">Current Country *</Label>
               <Combobox
-                options={countryOptions}
+                options={COUNTRIES}
                 value={formData.currentCountry}
                 onValueChange={(value) => setFormData({ ...formData, currentCountry: value })}
                 placeholder="Select country"
@@ -312,10 +448,11 @@ export function ProfileEditForm({
           <div className="space-y-2">
             <Label>Languages You Speak *</Label>
             <Combobox
-              options={languageOptions}
-              value={languageSearch}
+              options={LANGUAGES}
+              value={formData.languageSearch}
               onValueChange={(value) => {
                 addLanguage(value)
+                setFormData({ ...formData, languageSearch: value })
               }}
               placeholder="Select languages"
               searchPlaceholder="Search languages..."
@@ -342,7 +479,7 @@ export function ProfileEditForm({
           <div className="space-y-2">
             <Label htmlFor="preferredLanguage">Preferred Language *</Label>
             <Combobox
-              options={languageOptions}
+              options={LANGUAGES}
               value={formData.preferredLanguage}
               onValueChange={(value) => setFormData({ ...formData, preferredLanguage: value })}
               placeholder="Select preferred language"
@@ -391,7 +528,7 @@ export function ProfileEditForm({
       </Card>
 
       {/* Interests */}
-      {features.interests && availableInterests.length > 0 && (
+      {tenant?.features?.interests && availableInterests.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Your Interests</CardTitle>
@@ -404,8 +541,8 @@ export function ProfileEditForm({
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search interests..."
-                  value={interestSearch}
-                  onChange={(e) => setInterestSearch(e.target.value)}
+                  value={formData.interestSearch}
+                  onChange={(e) => setFormData({ ...formData, interestSearch: e.target.value })}
                   className="pl-9"
                 />
               </div>
@@ -474,8 +611,8 @@ export function ProfileEditForm({
             <div className="flex gap-2">
               <Input
                 placeholder="Search or add a skill (e.g., Plumbing, Gardening)"
-                value={newSkill}
-                onChange={(e) => setNewSkill(e.target.value)}
+                value={formData.newSkill}
+                onChange={(e) => setFormData({ ...formData, newSkill: e.target.value })}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault()
@@ -488,40 +625,34 @@ export function ProfileEditForm({
               </Button>
             </div>
 
-            {newSkill && availableSkills.length > 0 && (
+            {formData.newSkill && availableSkills.length > 0 && (
               <ScrollArea className="h-[150px] border rounded-lg">
                 <div className="p-2 space-y-1">
-                  {availableSkills
-                    .filter(
-                      (skill) =>
-                        skill.name.toLowerCase().includes(newSkill.toLowerCase()) &&
-                        !formData.skills.some((s: any) => s.skill_name === skill.name),
-                    )
-                    .map((skill) => (
-                      <button
-                        key={skill.id}
-                        type="button"
-                        onClick={() => {
-                          setFormData({
-                            ...formData,
-                            skills: [
-                              ...formData.skills,
-                              { skill_id: skill.id, skill_name: skill.name, open_to_requests: false },
-                            ],
-                          })
-                          setNewSkill("")
-                        }}
-                        className="w-full text-left px-3 py-2 rounded-md hover:bg-accent transition-colors"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="font-medium text-sm">{skill.name}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {skill.user_skills?.[0]?.count || 0}{" "}
-                            {skill.user_skills?.[0]?.count === 1 ? "person" : "people"}
-                          </div>
+                  {unselectedSkills.map((skill) => (
+                    <button
+                      key={skill.id}
+                      type="button"
+                      onClick={() => {
+                        setFormData({
+                          ...formData,
+                          skills: [
+                            ...formData.skills,
+                            { skill_id: skill.id, skill_name: skill.name, open_to_requests: false },
+                          ],
+                          newSkill: "",
+                        })
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-md hover:bg-accent transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="font-medium text-sm">{skill.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {skill.user_skills?.[0]?.count || 0}{" "}
+                          {skill.user_skills?.[0]?.count === 1 ? "person" : "people"}
                         </div>
-                      </button>
-                    ))}
+                      </div>
+                    </button>
+                  ))}
                 </div>
               </ScrollArea>
             )}

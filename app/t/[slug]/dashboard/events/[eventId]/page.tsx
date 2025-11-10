@@ -13,58 +13,37 @@ export default async function EventDetailPage({
 }: {
   params: Promise<{ slug: string; eventId: string }>
 }) {
-  console.log("[v0] EventDetailPage - Component invoked")
-
   const { slug, eventId } = await params
-  console.log("[v0] EventDetailPage - params:", { slug, eventId })
-
-  // Return null to let Next.js route to the static /new/page.tsx
-  if (eventId === "new") {
-    console.log("[v0] EventDetailPage - Detected static route 'new', returning null")
-    return null
-  }
 
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
   const isValidUuid = uuidRegex.test(eventId)
-  console.log("[v0] EventDetailPage - UUID validation:", { eventId, isValidUuid })
 
   if (!isValidUuid) {
-    console.log("[v0] EventDetailPage - Invalid UUID, calling notFound()")
     notFound()
   }
 
-  console.log("[v0] EventDetailPage - Creating Supabase client")
   const supabase = await createClient()
 
-  console.log("[v0] EventDetailPage - Fetching auth user")
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  console.log("[v0] EventDetailPage - Auth user:", user?.id)
-
   if (!user) {
-    console.log("[v0] EventDetailPage - No user, redirecting to login")
     redirect(`/t/${slug}/login`)
   }
 
-  console.log("[v0] EventDetailPage - Fetching resident data")
-  const { data: resident, error: residentError } = await supabase
+  const { data: resident } = await supabase
     .from("users")
     .select("id, tenant_id")
     .eq("id", user.id)
     .eq("role", "resident")
     .single()
 
-  console.log("[v0] EventDetailPage - Resident data:", { resident, residentError })
-
   if (!resident) {
-    console.log("[v0] EventDetailPage - No resident, redirecting to login")
     redirect(`/t/${slug}/login`)
   }
 
-  console.log("[v0] EventDetailPage - Fetching event data with ID:", eventId)
-  const { data: event, error: eventError } = await supabase
+  const { data: event } = await supabase
     .from("events")
     .select(
       `
@@ -84,19 +63,9 @@ export default async function EventDetailPage({
     .eq("tenant_id", resident.tenant_id)
     .single()
 
-  console.log("[v0] EventDetailPage - Event query result:", {
-    eventFound: !!event,
-    eventId: event?.id,
-    eventTitle: event?.title,
-    error: eventError,
-  })
-
   if (!event) {
-    console.log("[v0] EventDetailPage - No event found, calling notFound()")
     notFound()
   }
-
-  console.log("[v0] EventDetailPage - Successfully loaded event, rendering page")
 
   const creator = event.creator
   const creatorInitials =

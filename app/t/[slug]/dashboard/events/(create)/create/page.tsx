@@ -3,14 +3,20 @@ import { redirect } from "next/navigation"
 import { EventForm } from "./event-form"
 
 export default async function CreateEventPage({ params }: { params: Promise<{ slug: string }> }) {
+  console.log("[v0] CreateEventPage - Component invoked")
   const { slug } = await params
+  console.log("[v0] CreateEventPage - slug:", slug)
+
   const supabase = await createClient()
 
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
+  console.log("[v0] CreateEventPage - user:", user?.id)
+
   if (!user) {
+    console.log("[v0] CreateEventPage - No user, redirecting to login")
     redirect(`/t/${slug}/login`)
   }
 
@@ -21,7 +27,10 @@ export default async function CreateEventPage({ params }: { params: Promise<{ sl
     .eq("role", "resident")
     .single()
 
+  console.log("[v0] CreateEventPage - resident:", resident)
+
   if (!resident) {
+    console.log("[v0] CreateEventPage - No resident, redirecting to login")
     redirect(`/t/${slug}/login`)
   }
 
@@ -31,6 +40,9 @@ export default async function CreateEventPage({ params }: { params: Promise<{ sl
     .select("*")
     .eq("tenant_id", resident.tenant_id)
     .order("name")
+
+  console.log("[v0] CreateEventPage - categories count:", categories?.length)
+  console.log("[v0] CreateEventPage - Rendering form")
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">

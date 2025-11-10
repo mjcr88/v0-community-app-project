@@ -16,7 +16,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
-import { Home, MapPin, Users, Building2, HeartHandshake, Lightbulb, Map } from "lucide-react"
+import { Home, MapPin, Users, Building2, HeartHandshake, Lightbulb, Map, Calendar } from "lucide-react"
 import Link from "next/link"
 import { UserAvatarMenu } from "@/components/user-avatar-menu"
 
@@ -139,23 +139,27 @@ export default async function TenantAdminLayout({
     families: true,
     lots: true,
     map: true,
+    events_enabled: false,
   }
 
   const features = {
     ...defaultFeatures,
     ...(tenant?.features || {}),
+    events_enabled: tenant?.events_enabled ?? false,
   } as {
     neighborhoods?: boolean
     interests?: boolean
     families?: boolean
     lots?: boolean
     map?: boolean
+    events_enabled?: boolean
     location_types?: Record<string, boolean>
   }
 
   console.log("[v0] Tenant features from DB (layout):", tenant?.features)
   console.log("[v0] Merged features (layout):", features)
   console.log("[v0] Map feature enabled?", features.map)
+  console.log("[v0] Events enabled?", features.events_enabled)
 
   return (
     <SidebarProvider>
@@ -242,6 +246,16 @@ export default async function TenantAdminLayout({
                       <Link href={`/t/${slug}/admin/interests`}>
                         <Lightbulb />
                         <span>Interests</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
+                {features.events_enabled && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link href={`/t/${slug}/admin/events/categories`}>
+                        <Calendar />
+                        <span>Events</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

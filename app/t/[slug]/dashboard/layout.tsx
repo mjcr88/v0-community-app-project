@@ -16,7 +16,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
-import { Home, Users, Map } from "lucide-react"
+import { Home, Users, Map, Calendar } from "lucide-react"
 import Link from "next/link"
 import { UserAvatarMenu } from "@/components/user-avatar-menu"
 
@@ -82,6 +82,7 @@ export default async function ResidentDashboardLayout({
   const defaultFeatures = { map: true }
   const mergedFeatures = { ...defaultFeatures, ...(tenant?.features || {}) }
   const mapEnabled = mergedFeatures.map === true
+  const eventsEnabled = tenant.events_enabled === true
 
   return (
     <SidebarProvider>
@@ -126,6 +127,16 @@ export default async function ResidentDashboardLayout({
                       <Link href={`/t/${slug}/dashboard/community-map`}>
                         <Map />
                         <span>Community Map</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
+                {eventsEnabled && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link href={`/t/${slug}/dashboard/events`}>
+                        <Calendar />
+                        <span>Events</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

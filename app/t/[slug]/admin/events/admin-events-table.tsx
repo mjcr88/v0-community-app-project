@@ -1,12 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Pencil, Eye, ArrowUpDown, Flag, Users, MapPin } from "lucide-react"
+import { Pencil, Eye, ArrowUpDown, Flag, Users, MapPin, Search } from "lucide-react"
 import Link from "next/link"
 import { formatDate } from "date-fns"
 
@@ -43,25 +44,45 @@ type AdminEvent = {
 }
 
 export function AdminEventsTable({ events, slug }: { events: AdminEvent[]; slug: string }) {
+  const [searchQuery, setSearchQuery] = useState("")
   const [sortedEvents, setSortedEvents] = useState<AdminEvent[]>(events)
   const [sortField, setSortField] = useState<string>("start_date")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
   const [selectedEvents, setSelectedEvents] = useState<string[]>([])
 
+  const filteredEvents = useMemo(() => {
+    if (!searchQuery.trim()) return events
+
+    const query = searchQuery.toLowerCase()
+    return events.filter((event) => {
+      if (event.title.toLowerCase().includes(query)) return true
+      if (event.description?.toLowerCase().includes(query)) return true
+      if (event.event_categories?.name.toLowerCase().includes(query)) return true
+      if (event.users) {
+        const creatorName = `${event.users.first_name} ${event.users.last_name}`.toLowerCase()
+        if (creatorName.includes(query)) return true
+      }
+      if (event.event_type.toLowerCase().includes(query)) return true
+      if (event.visibility_scope.toLowerCase().includes(query)) return true
+      if (event.status.toLowerCase().includes(query)) return true
+      if (event.custom_location_name?.toLowerCase().includes(query)) return true
+      return false
+    })
+  }, [events, searchQuery])
+
   useEffect(() => {
-    setSortedEvents(events)
-  }, [events])
+    setSortedEvents(filteredEvents)
+  }, [filteredEvents])
 
   const handleSort = (field: string) => {
     const direction = sortField === field && sortDirection === "asc" ? "desc" : "asc"
     setSortField(field)
     setSortDirection(direction)
 
-    const sorted = [...events].sort((a, b) => {
+    const sorted = [...filteredEvents].sort((a, b) => {
       let aVal: any = a[field as keyof AdminEvent]
       let bVal: any = b[field as keyof AdminEvent]
 
-      // Handle nested objects
       if (field === "category") {
         aVal = a.event_categories?.name?.toLowerCase() || ""
         bVal = b.event_categories?.name?.toLowerCase() || ""
@@ -138,6 +159,23 @@ export function AdminEventsTable({ events, slug }: { events: AdminEvent[]; slug:
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center gap-4">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search events by title, description, category, creator..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        {searchQuery && (
+          <div className="text-sm text-muted-foreground">
+            {filteredEvents.length} of {events.length} event{events.length !== 1 ? "s" : ""}
+          </div>
+        )}
+      </div>
+
       {selectedEvents.length > 0 && (
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">
@@ -197,7 +235,7 @@ export function AdminEventsTable({ events, slug }: { events: AdminEvent[]; slug:
             {sortedEvents.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={11} className="text-center text-muted-foreground">
-                  No events found
+                  {searchQuery ? "No events found matching your search" : "No events found"}
                 </TableCell>
               </TableRow>
             ) : (

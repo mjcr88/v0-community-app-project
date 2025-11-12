@@ -11,6 +11,7 @@ import { EventRsvpSection } from "./event-rsvp-section"
 import { SaveEventButton } from "./save-event-button"
 import { EventAttendeesSection } from "./event-attendees-section"
 import { EventLocationSection } from "./event-location-section"
+import { EventImagesGallery } from "./event-images-gallery"
 import { getEventAttendees } from "@/app/actions/events"
 import { canUserViewEvent } from "@/lib/visibility-filter"
 
@@ -203,6 +204,12 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     }
   }
 
+  const { data: eventImages } = await supabase
+    .from("event_images")
+    .select("id, image_url, is_hero, display_order")
+    .eq("event_id", eventId)
+    .order("display_order")
+
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
@@ -341,6 +348,9 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
               )}
             </div>
           )}
+
+          {/* Image Gallery Section */}
+          {eventImages && eventImages.length > 0 && <EventImagesGallery images={eventImages} />}
 
           {/* Description Section */}
           {event.description && (

@@ -18,7 +18,7 @@ interface PhotoManagerProps {
   onPhotosChange: (photos: string[]) => void
   onHeroPhotoChange: (heroPhoto: string | null) => void
   maxPhotos?: number
-  entityType?: "location" | "family" | "user" | "pet" | "neighborhood"
+  entityType?: "location" | "family" | "user" | "pet" | "neighborhood" | "event"
 }
 
 export function PhotoManager({
@@ -40,6 +40,18 @@ export function PhotoManager({
       toast({
         title: "Too many photos",
         description: `Maximum ${maxPhotos} photos allowed. You can upload ${maxPhotos - photos.length} more.`,
+        variant: "destructive",
+      })
+      return
+    }
+
+    const maxFileSize = 10 * 1024 * 1024 // 10MB
+    const oversizedFiles = Array.from(files).filter((file) => file.size > maxFileSize)
+
+    if (oversizedFiles.length > 0) {
+      toast({
+        title: "File too large",
+        description: `Some files exceed the 10MB limit. Please choose smaller images.`,
         variant: "destructive",
       })
       return
@@ -136,6 +148,7 @@ export function PhotoManager({
       user: "profile",
       pet: "pet",
       neighborhood: "neighborhood",
+      event: "event",
     }
     return labels[entityType] || "item"
   }
@@ -179,7 +192,7 @@ export function PhotoManager({
           ) : (
             <>
               <Upload className="mr-2 h-4 w-4" />
-              Upload Photos
+              Upload Photos {photos.length >= maxPhotos && "(Limit reached)"}
             </>
           )}
         </Button>
@@ -254,7 +267,7 @@ export function PhotoManager({
 
       {/* Helper Text */}
       {photos.length > 0 && !heroPhoto && (
-        <p className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-lg p-3">
+        <p className="text-sm text-amber-600 bg-amber-50 dark:bg-amber-950/20 dark:text-amber-500 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
           <Star className="h-4 w-4 inline mr-1" />
           Click the star icon on a photo to set it as the hero image
         </p>

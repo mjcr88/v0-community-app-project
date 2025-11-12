@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation"
 import { createServerClient } from "@/lib/supabase/server"
 import { getEvent } from "@/app/actions/events"
-import { ArrowLeft, Calendar, Share2, Pencil, Users, Lock } from "lucide-react"
+import { ArrowLeft, Calendar, Share2, Pencil, Users, Lock, Flag } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -14,7 +14,7 @@ import { EventLocationSection } from "./event-location-section"
 import { EventImagesGallery } from "./event-images-gallery"
 import { getEventAttendees } from "@/app/actions/events"
 import { canUserViewEvent } from "@/lib/visibility-filter"
-import { FlagEventClient } from "./flag-event-client"
+import { FlagEventDialog } from "./flag-event-dialog"
 
 interface EventDetailPageProps {
   params: Promise<{ slug: string; eventId: string }>
@@ -209,25 +209,20 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     .eq("event_id", eventId)
     .order("display_order")
 
-  const { count: flagCount } = await supabase
-    .from("event_flags")
-    .select("*", { count: "exact", head: true })
-    .eq("event_id", eventId)
-    .eq("tenant_id", tenant.id)
+  const { data: flagCountData, error: flagCountError } = await supabase.rpc("get_event_flag_count", {
+    p_event_id: eventId,
+    p_tenant_id: tenant.id,
+  })
 
-  console.log("[v0] Flag count for event:", { eventId, flagCount: flagCount ?? 0 })
+  const flagCount = flagCountData ?? 0
 
-  const { data: userFlag } = await supabase
-    .from("event_flags")
-    .select("id")
-    .eq("event_id", eventId)
-    .eq("flagged_by", user.id)
-    .eq("tenant_id", tenant.id)
-    .maybeSingle()
+  const { data: hasUserFlaggedData, error: userFlagError } = await supabase.rpc("has_user_flagged_event", {
+    p_event_id: eventId,
+    p_user_id: user.id,
+    p_tenant_id: tenant.id,
+  })
 
-  const hasUserFlagged = !!userFlag
-
-  console.log("[v0] User flag status:", { userId: user.id, hasUserFlagged, userFlagId: userFlag?.id })
+  const hasUserFlagged = hasUserFlaggedData ?? false
 
   let locationData = null
   if (event.location_type === "community_location" && event.location_id) {
@@ -269,6 +264,12 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                 </Badge>
                 <Badge variant={eventTypeVariant as any}>{eventTypeLabel}</Badge>
                 <Badge variant={statusVariant as any}>{statusLabel}</Badge>
+                {flagCount > 0 && (
+                  <Badge variant="destructive" className="gap-1.5">
+                    <Flag className="h-3 w-3" />
+                    Flagged ({flagCount})
+                  </Badge>
+                )}
                 {event.visibility_scope === "neighborhood" && (
                   <Badge variant="secondary" className="gap-1">
                     <Users className="h-3 w-3" />
@@ -311,20 +312,17 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                 <Share2 className="h-4 w-4" />
                 Share Event
               </Button>
+              <FlagEventDialog
+                eventId={eventId}
+                tenantSlug={slug}
+                triggerLabel={hasUserFlagged ? "Flagged" : "Flag Event"}
+                triggerVariant={hasUserFlagged ? "secondary" : "outline"}
+                triggerSize="sm"
+                disabled={hasUserFlagged}
+                initialFlagCount={flagCount}
+                initialHasUserFlagged={hasUserFlagged}
+              />
             </div>
-
-            {/* Flag Event Client */}
-            <FlagEventClient
-              eventId={eventId}
-              tenantSlug={slug}
-              initialFlagCount={flagCount ?? 0}
-              initialHasUserFlagged={hasUserFlagged}
-              category={event.category}
-              eventType={event.event_type}
-              status={event.status}
-              isPastEvent={isPastEvent}
-              visibilityScope={event.visibility_scope}
-            />
           </div>
         </div>
       </div>

@@ -1244,8 +1244,6 @@ export async function flagEvent(eventId: string, reason: string, tenantSlug: str
       return { success: false, error: "User not authenticated" }
     }
 
-    console.log("[v0] flagEvent called:", { eventId, userId: user.id, reasonLength: reason.trim().length })
-
     // Validate reason
     const trimmedReason = reason.trim()
     if (trimmedReason.length < 10 || trimmedReason.length > 500) {
@@ -1260,7 +1258,6 @@ export async function flagEvent(eventId: string, reason: string, tenantSlug: str
       .single()
 
     if (tenantError || !tenant) {
-      console.error("[v0] Tenant not found:", { tenantSlug, error: tenantError })
       return { success: false, error: "Tenant not found" }
     }
 
@@ -1273,22 +1270,20 @@ export async function flagEvent(eventId: string, reason: string, tenantSlug: str
       .single()
 
     if (eventError || !event) {
-      console.log("[v0] Event not found:", { eventId, error: eventError })
       return { success: false, error: "Event not found" }
     }
 
-    const { data: existingFlag } = await supabase
-      .from("event_flags")
-      .select("id")
-      .eq("event_id", eventId)
-      .eq("flagged_by", user.id)
-      .eq("tenant_id", tenant.id)
-      .maybeSingle()
+    const { data: alreadyFlagged } = await supabase.rpc("has_user_flagged_event", {
+      p_event_id: eventId,
+      p_user_id: user.id,
+      p_tenant_id: tenant.id,
+    })
 
-    if (existingFlag) {
+    if (alreadyFlagged) {
       return { success: false, error: "You have already flagged this event" }
     }
 
+    // Insert flag
     const { error: insertError } = await supabase.from("event_flags").insert({
       event_id: eventId,
       flagged_by: user.id,
@@ -1305,23 +1300,16 @@ export async function flagEvent(eventId: string, reason: string, tenantSlug: str
       return { success: false, error: insertError.message }
     }
 
-    console.log("[v0] Flag inserted successfully")
-
-    await new Promise((resolve) => setTimeout(resolve, 300))
-
-    const { count: verifyCount } = await supabase
-      .from("event_flags")
-      .select("*", { count: "exact", head: true })
-      .eq("event_id", eventId)
-      .eq("tenant_id", tenant.id)
-
-    console.log("[v0] Flag count after insert:", { eventId, flagCount: verifyCount })
+    const { data: updatedCount } = await supabase.rpc("get_event_flag_count", {
+      p_event_id: eventId,
+      p_tenant_id: tenant.id,
+    })
 
     revalidatePath(`/t/${tenantSlug}/dashboard/events/${eventId}`)
 
-    return { success: true, flagCount: verifyCount ?? 1 }
+    return { success: true, flagCount: updatedCount ?? 1 }
   } catch (error) {
-    console.error("Unexpected error flagging event:", error)
+    console.error("[v0] Unexpected error flagging event:", error)
     return {
       success: false,
       error: "An unexpected error occurred. Please try again.",

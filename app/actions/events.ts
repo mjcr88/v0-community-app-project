@@ -1261,6 +1261,17 @@ export async function flagEvent(eventId: string, reason: string, tenantSlug: str
       return { success: false, error: "Event not found" }
     }
 
+    const { data: existingFlag } = await supabase
+      .from("event_flags")
+      .select("id")
+      .eq("event_id", eventId)
+      .eq("flagged_by", user.id)
+      .maybeSingle()
+
+    if (existingFlag) {
+      return { success: false, error: "You have already flagged this event" }
+    }
+
     // Insert flag into event_flags table
     const { error: insertError } = await supabase.from("event_flags").insert({
       event_id: eventId,
@@ -1271,7 +1282,6 @@ export async function flagEvent(eventId: string, reason: string, tenantSlug: str
     if (insertError) {
       console.error("[v0] Error flagging event:", insertError)
 
-      // Handle duplicate flag error (user already flagged this event)
       if (insertError.code === "23505") {
         return { success: false, error: "You have already flagged this event" }
       }

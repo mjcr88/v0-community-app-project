@@ -26,6 +26,7 @@ interface FlagEventDialogProps {
   triggerLabel?: string
   triggerVariant?: "default" | "outline" | "ghost" | "secondary" | "destructive"
   disabled?: boolean
+  onFlagSuccess?: () => void
 }
 
 export function FlagEventDialog({
@@ -34,6 +35,7 @@ export function FlagEventDialog({
   triggerLabel = "Flag Event",
   triggerVariant = "outline",
   disabled = false,
+  onFlagSuccess,
 }: FlagEventDialogProps) {
   const [open, setOpen] = useState(false)
   const [reason, setReason] = useState("")
@@ -61,24 +63,33 @@ export function FlagEventDialog({
     setIsSubmitting(true)
 
     try {
-      console.log("[v0] Submitting flag:", { eventId, reasonLength: trimmedReason.length })
-
       const result = await flagEvent(eventId, trimmedReason, tenantSlug)
 
-      console.log("[v0] Flag result:", result)
-
       if (result.success) {
-        toast.success("Event flagged. Admins will review.")
+        if (onFlagSuccess) {
+          onFlagSuccess()
+        }
+
+        toast.success("Event flagged. Admins will review.", {
+          duration: 3000,
+        })
         setReason("")
         setOpen(false)
-        router.refresh()
+
+        setTimeout(() => {
+          router.refresh()
+        }, 500)
       } else {
         // Handle specific error messages from server
-        toast.error(result.error || "Failed to flag event. Please try again.")
+        toast.error(result.error || "Failed to flag event. Please try again.", {
+          duration: 4000,
+        })
       }
     } catch (error) {
-      console.error("[v0] Error flagging event:", error)
-      toast.error("Failed to flag event. Please try again.")
+      console.error("Error flagging event:", error)
+      toast.error("Failed to flag event. Please try again.", {
+        duration: 4000,
+      })
     } finally {
       setIsSubmitting(false)
     }

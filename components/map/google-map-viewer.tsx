@@ -2,23 +2,23 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react"
 import { APIProvider, Map, Marker } from "@vis.gl/react-google-maps"
-import { Button } from "@/components/ui/button"
-import { Plus, Locate, Layers, Filter, MapPin, Trash2 } from "lucide-react"
-import Link from "next/link"
 import { Polygon } from "./polygon"
 import { Polyline } from "./polyline"
+import { createBrowserClient } from "@/lib/supabase/client"
+import React from "react"
 import { LocationInfoCard } from "./location-info-card"
+import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuCheckboxItem,
-  DropdownMenuSeparator,
-  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu"
-import { createBrowserClient } from "@/lib/supabase/client"
-import React from "react"
+import { Link } from "next/link"
+import { MapPin, Trash2, Filter, Layers, Locate, Plus } from "lucide-react"
 
 interface Location {
   id: string
@@ -195,69 +195,13 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
 
       console.log("[v0] Place clicked on map:", placeId)
 
-      if (typeof window === "undefined" || !window.google) {
-        console.error("[v0] Google Maps API not loaded")
+      if (drawingMode) {
         return
       }
 
-      // Use Places service to get details
-      const service = new window.google.maps.places.PlacesService(mapInstance)
-
-      service.getDetails(
-        {
-          placeId: placeId,
-          fields: ["name", "formatted_address", "geometry.location"],
-        },
-        (place, status) => {
-          console.log("[v0] Place getDetails response - status:", status, "place:", place)
-
-          if (status === window.google.maps.places.PlacesServiceStatus.OK && place) {
-            const lat = place.geometry?.location?.lat()
-            const lng = place.geometry?.location?.lng()
-
-            const name =
-              place.name ||
-              (place.formatted_address ? place.formatted_address.split(",")[0] : null) ||
-              "Custom Location"
-
-            console.log("[v0] Extracted place data - name:", name, "lat:", lat, "lng:", lng)
-
-            if (lat !== undefined && lng !== undefined && name) {
-              console.log("[v0] Selected place:", { name, lat, lng })
-
-              setMarkerPosition({ lat, lng })
-
-              if (typeof onDrawingComplete === "function") {
-                onDrawingComplete({
-                  coordinates: { lat, lng },
-                  type: "pin",
-                  path: null,
-                })
-              }
-
-              if (typeof window !== "undefined") {
-                console.log("[v0] Dispatching placeSelected event with name:", name)
-                window.dispatchEvent(
-                  new CustomEvent("placeSelected", {
-                    detail: { name, lat, lng },
-                  }),
-                )
-              }
-
-              // Exit drawing mode
-              if (typeof onDrawingModeChange === "function") {
-                onDrawingModeChange(null)
-              }
-            } else {
-              console.error("[v0] Missing required place data - name:", name, "lat:", lat, "lng:", lng)
-            }
-          } else {
-            console.error("[v0] Place getDetails failed - status:", status)
-          }
-        },
-      )
+      console.log("[v0] Letting Google show native place info window")
     },
-    [mapInstance, onDrawingComplete, onDrawingModeChange],
+    [mapInstance, drawingMode],
   )
 
   useEffect(() => {
@@ -270,30 +214,74 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
       drawingMode,
     )
 
-    // Only set up place click handling if explicitly enabled or in drawing mode
-    if (!enableClickablePlaces && !drawingMode) {
-      return
+    if (drawingMode === "marker") {
+      const drawingListener = mapInstance.addListener("click", (e: any) => {
+        if (e.placeId) {
+          console.log("[v0] Place icon clicked in drawing mode:", e.placeId)
+          e.stop() // Prevent default info window
+
+          // Use Places service to get details
+          const service = new window.google.maps.places.PlacesService(mapInstance)
+          service.getDetails(
+            {
+              placeId: e.placeId,
+              fields: ["name", "formatted_address", "geometry.location"],
+            },
+            (place, status) => {
+              console.log("[v0] Place getDetails response - status:", status, "place:", place)
+
+              if (status === window.google.maps.places.PlacesServiceStatus.OK && place) {
+                const lat = place.geometry?.location?.lat()
+                const lng = place.geometry?.location?.lng()
+                const name =
+                  place.name ||
+                  (place.formatted_address ? place.formatted_address.split(",")[0] : null) ||
+                  "Custom Location"
+
+                console.log("[v0] Extracted place data - name:", name, "lat:", lat, "lng:", lng)
+
+                if (lat !== undefined && lng !== undefined && name) {
+                  console.log("[v0] Selected place:", { name, lat, lng })
+                  setMarkerPosition({ lat, lng })
+
+                  if (typeof onDrawingComplete === "function") {
+                    onDrawingComplete({
+                      coordinates: { lat, lng },
+                      type: "pin",
+                      path: null,
+                    })
+                  }
+
+                  if (typeof window !== "undefined") {
+                    console.log("[v0] Dispatching placeSelected event with name:", name)
+                    window.dispatchEvent(
+                      new CustomEvent("placeSelected", {
+                        detail: { name, lat, lng },
+                      }),
+                    )
+                  }
+
+                  // Exit drawing mode
+                  if (typeof onDrawingModeChange === "function") {
+                    onDrawingModeChange(null)
+                  }
+                }
+              }
+            },
+          )
+        }
+      })
+
+      return () => {
+        console.log("[v0] Cleaning up drawing mode place listener")
+        if (drawingListener) {
+          window.google?.maps?.event?.removeListener(drawingListener)
+        }
+      }
     }
 
-    // Listen for clicks on place icons - this works across all map types
-    const placeClickListener = mapInstance.addListener("click", (e: any) => {
-      console.log("[v0] Map click event - placeId:", e.placeId, "latLng:", e.latLng)
-
-      // If a place icon was clicked (has placeId), handle it specially
-      if (e.placeId) {
-        console.log("[v0] Place icon clicked with ID:", e.placeId)
-        e.stop() // Prevent default info window
-        handlePlaceClick(e.placeId)
-      }
-    })
-
-    return () => {
-      console.log("[v0] Cleaning up place click listener")
-      if (placeClickListener) {
-        window.google?.maps?.event?.removeListener(placeClickListener)
-      }
-    }
-  }, [mapInstance, enableClickablePlaces, drawingMode, handlePlaceClick])
+    // The native info window will show automatically due to clickableIcons: true
+  }, [mapInstance, enableClickablePlaces, drawingMode, onDrawingComplete, onDrawingModeChange])
 
   const facilityMarkers = useMemo(
     () => initialLocations.filter((loc) => showFacilities && loc.type === "facility" && loc.coordinates),
@@ -799,11 +787,10 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
             )
           })}
 
-          {markerPosition && (
+          {markerPosition && drawingMode && (
             <Marker
               position={markerPosition}
               zIndex={400}
-              onClick={drawingMode ? undefined : handleCustomMarkerClick}
               icon={{
                 url: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='48' viewBox='0 0 32 48'%3E%3Cpath fill='%239333ea' stroke='%23ffffff' strokeWidth='2' d='M16 0C8.8 0 3 5.8 3 13c0 8.5 13 35 13 35s13-26.5 13-35c0-7.2-5.8-13-13-13zm0 18c-2.8 0-5-2.2-5-5s2.2-5 5-5 5 2.2 5 5-2.2 5-5 5z'/%3E%3C/svg%3E",
                 scaledSize: { width: 32, height: 48 },
@@ -901,9 +888,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
           {userLocation && (
             <Marker position={userLocation} title="Your Location" zIndex={300}>
               <div className="relative flex items-center justify-center">
-                {/* Blue dot with white border */}
                 <div className="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-lg" />
-                {/* Pulsing ring animation */}
                 <div className="absolute w-8 h-8 bg-blue-400 rounded-full opacity-30 animate-ping" />
               </div>
             </Marker>

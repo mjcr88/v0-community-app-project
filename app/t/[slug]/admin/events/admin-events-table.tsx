@@ -7,10 +7,9 @@ import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Pencil, Eye, ArrowUpDown, Flag, Users, MapPin, Search, X, Filter, Trash2, XCircle } from "lucide-react"
+import { Pencil, Eye, ArrowUpDown, Flag, Users, MapPin, Search, X, Trash2, XCircle, ChevronDown } from "lucide-react"
 import Link from "next/link"
 import { formatDate } from "date-fns"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -18,6 +17,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"
 import {
   AlertDialog,
@@ -93,13 +93,12 @@ export function AdminEventsTable({
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
   const [selectedEvents, setSelectedEvents] = useState<string[]>([])
 
-  // Advanced filtering state
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [eventTypeFilter, setEventTypeFilter] = useState<string>("all")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [visibilityFilter, setVisibilityFilter] = useState<string>("all")
   const [dateRangeFilter, setDateRangeFilter] = useState<string>("all")
-  const [flaggedOnlyFilter, setFlaggedOnlyFilter] = useState(false)
+  const [flaggedFilter, setFlaggedFilter] = useState<string>("all")
 
   // Bulk action states
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
@@ -176,8 +175,10 @@ export function AdminEventsTable({
       })
     }
 
-    if (flaggedOnlyFilter) {
+    if (flaggedFilter === "flagged") {
       filtered = filtered.filter((event) => event.flag_count > 0)
+    } else if (flaggedFilter === "not_flagged") {
+      filtered = filtered.filter((event) => event.flag_count === 0)
     }
 
     return filtered
@@ -189,7 +190,7 @@ export function AdminEventsTable({
     statusFilter,
     visibilityFilter,
     dateRangeFilter,
-    flaggedOnlyFilter,
+    flaggedFilter,
   ])
 
   useEffect(() => {
@@ -214,6 +215,9 @@ export function AdminEventsTable({
       } else if (field === "location_name") {
         aVal = a.location_name?.toLowerCase() || ""
         bVal = b.location_name?.toLowerCase() || ""
+      } else if (field === "flag_count") {
+        aVal = a.flag_count || 0
+        bVal = b.flag_count || 0
       } else if (typeof aVal === "string") {
         aVal = aVal.toLowerCase()
       }
@@ -246,7 +250,6 @@ export function AdminEventsTable({
     }
   }
 
-  // Clear all filters
   const clearFilters = () => {
     setSearchQuery("")
     setSelectedCategories([])
@@ -254,7 +257,7 @@ export function AdminEventsTable({
     setStatusFilter("all")
     setVisibilityFilter("all")
     setDateRangeFilter("all")
-    setFlaggedOnlyFilter(false)
+    setFlaggedFilter("all")
   }
 
   const hasActiveFilters =
@@ -264,9 +267,8 @@ export function AdminEventsTable({
     statusFilter !== "all" ||
     visibilityFilter !== "all" ||
     dateRangeFilter !== "all" ||
-    flaggedOnlyFilter
+    flaggedFilter !== "all"
 
-  // Bulk delete handler
   const handleBulkDelete = async () => {
     setIsProcessing(true)
     try {
@@ -275,7 +277,8 @@ export function AdminEventsTable({
         toast.success(`${selectedEvents.length} event(s) deleted successfully`)
         setSelectedEvents([])
         setShowDeleteDialog(false)
-        router.refresh()
+        // Force hard refresh
+        window.location.reload()
       } else {
         toast.error(result.error || "Failed to delete events")
       }
@@ -422,134 +425,27 @@ export function AdminEventsTable({
 
   return (
     <div className="space-y-4">
-      {/* Filter controls */}
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search events by title, description, category, creator..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
+      <div className="flex items-center gap-4">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search events..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        {searchQuery && (
+          <div className="text-sm text-muted-foreground">
+            {filteredEvents.length} of {events.length} event{events.length !== 1 ? "s" : ""}
           </div>
-          {searchQuery && (
-            <div className="text-sm text-muted-foreground">
-              {filteredEvents.length} of {events.length} event{events.length !== 1 ? "s" : ""}
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Category filter */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 bg-transparent">
-                <Filter className="mr-2 h-4 w-4" />
-                Category
-                {selectedCategories.length > 0 && (
-                  <Badge variant="secondary" className="ml-2">
-                    {selectedCategories.length}
-                  </Badge>
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56">
-              <DropdownMenuLabel>Filter by category</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {categories.map((category) => (
-                <DropdownMenuCheckboxItem
-                  key={category.id}
-                  checked={selectedCategories.includes(category.id)}
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      setSelectedCategories([...selectedCategories, category.id])
-                    } else {
-                      setSelectedCategories(selectedCategories.filter((id) => id !== category.id))
-                    }
-                  }}
-                >
-                  {category.icon && <span className="mr-2">{category.icon}</span>}
-                  {category.name}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Event type filter */}
-          <Select value={eventTypeFilter} onValueChange={setEventTypeFilter}>
-            <SelectTrigger className="h-8 w-[130px]">
-              <SelectValue placeholder="Event type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All types</SelectItem>
-              <SelectItem value="community">Community</SelectItem>
-              <SelectItem value="virtual">Virtual</SelectItem>
-              <SelectItem value="hybrid">Hybrid</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* Status filter */}
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="h-8 w-[130px]">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All status</SelectItem>
-              <SelectItem value="published">Published</SelectItem>
-              <SelectItem value="cancelled">Cancelled</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* Visibility filter */}
-          <Select value={visibilityFilter} onValueChange={setVisibilityFilter}>
-            <SelectTrigger className="h-8 w-[130px]">
-              <SelectValue placeholder="Visibility" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All scopes</SelectItem>
-              <SelectItem value="community">Community</SelectItem>
-              <SelectItem value="neighborhood">Neighborhood</SelectItem>
-              <SelectItem value="private">Private</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* Date range filter */}
-          <Select value={dateRangeFilter} onValueChange={setDateRangeFilter}>
-            <SelectTrigger className="h-8 w-[140px]">
-              <SelectValue placeholder="Date range" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All dates</SelectItem>
-              <SelectItem value="past">Past</SelectItem>
-              <SelectItem value="today">Today</SelectItem>
-              <SelectItem value="upcoming">Upcoming</SelectItem>
-              <SelectItem value="this_week">This week</SelectItem>
-              <SelectItem value="this_month">This month</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* Flagged only filter */}
-          <Button
-            variant={flaggedOnlyFilter ? "default" : "outline"}
-            size="sm"
-            className="h-8"
-            onClick={() => setFlaggedOnlyFilter(!flaggedOnlyFilter)}
-          >
-            <Flag className="mr-2 h-4 w-4" />
-            Flagged only
+        )}
+        {hasActiveFilters && (
+          <Button variant="ghost" size="sm" onClick={clearFilters}>
+            <X className="mr-2 h-4 w-4" />
+            Clear all filters
           </Button>
-
-          {/* Clear filters */}
-          {hasActiveFilters && (
-            <Button variant="ghost" size="sm" className="h-8" onClick={clearFilters}>
-              <X className="mr-2 h-4 w-4" />
-              Clear filters
-            </Button>
-          )}
-        </div>
+        )}
       </div>
 
       {/* Bulk action buttons */}
@@ -605,33 +501,166 @@ export function AdminEventsTable({
                 </Button>
               </TableHead>
               <TableHead>
-                <Button variant="ghost" size="sm" onClick={() => handleSort("category")} className="-ml-3">
-                  Category
-                  <ArrowUpDown className="ml-2 h-4 w-4" />
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="-ml-3">
+                      Category
+                      <ChevronDown className="ml-2 h-4 w-4" />
+                      {selectedCategories.length > 0 && (
+                        <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
+                          {selectedCategories.length}
+                        </Badge>
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-56">
+                    <DropdownMenuLabel>Filter by category</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {categories.map((category) => (
+                      <DropdownMenuCheckboxItem
+                        key={category.id}
+                        checked={selectedCategories.includes(category.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedCategories([...selectedCategories, category.id])
+                          } else {
+                            setSelectedCategories(selectedCategories.filter((id) => id !== category.id))
+                          }
+                        }}
+                      >
+                        {category.icon && <span className="mr-2">{category.icon}</span>}
+                        {category.name}
+                      </DropdownMenuCheckboxItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </TableHead>
               <TableHead>
-                <Button variant="ghost" size="sm" onClick={() => handleSort("event_type")} className="-ml-3">
-                  Type
-                  <ArrowUpDown className="ml-2 h-4 w-4" />
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="-ml-3">
+                      Type
+                      <ChevronDown className="ml-2 h-4 w-4" />
+                      {eventTypeFilter !== "all" && (
+                        <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
+                          1
+                        </Badge>
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuLabel>Filter by type</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setEventTypeFilter("all")}>All types</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setEventTypeFilter("community")}>Community</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setEventTypeFilter("virtual")}>Virtual</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setEventTypeFilter("hybrid")}>Hybrid</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </TableHead>
               <TableHead>
-                <Button variant="ghost" size="sm" onClick={() => handleSort("start_date")} className="-ml-3">
-                  Date
-                  <ArrowUpDown className="ml-2 h-4 w-4" />
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="-ml-3">
+                      Date
+                      <ChevronDown className="ml-2 h-4 w-4" />
+                      {dateRangeFilter !== "all" && (
+                        <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
+                          1
+                        </Badge>
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuLabel>Filter by date</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setDateRangeFilter("all")}>All dates</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setDateRangeFilter("past")}>Past</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setDateRangeFilter("today")}>Today</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setDateRangeFilter("upcoming")}>Upcoming</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setDateRangeFilter("this_week")}>This week</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setDateRangeFilter("this_month")}>This month</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Scope</TableHead>
+              <TableHead>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="-ml-3">
+                      Status
+                      <ChevronDown className="ml-2 h-4 w-4" />
+                      {statusFilter !== "all" && (
+                        <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
+                          1
+                        </Badge>
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuLabel>Filter by status</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setStatusFilter("all")}>All status</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setStatusFilter("published")}>Published</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setStatusFilter("cancelled")}>Cancelled</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setStatusFilter("draft")}>Draft</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </TableHead>
+              <TableHead>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="-ml-3">
+                      Scope
+                      <ChevronDown className="ml-2 h-4 w-4" />
+                      {visibilityFilter !== "all" && (
+                        <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
+                          1
+                        </Badge>
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuLabel>Filter by scope</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setVisibilityFilter("all")}>All scopes</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setVisibilityFilter("community")}>Community</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setVisibilityFilter("neighborhood")}>
+                      Neighborhood
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setVisibilityFilter("private")}>Private</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </TableHead>
               <TableHead>RSVPs</TableHead>
+              <TableHead>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="-ml-3">
+                      <Flag className="h-4 w-4 mr-2" />
+                      <ChevronDown className="h-4 w-4" />
+                      {flaggedFilter !== "all" && (
+                        <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
+                          1
+                        </Badge>
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuLabel>Filter by flags</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setFlaggedFilter("all")}>All events</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setFlaggedFilter("flagged")}>Flagged only</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setFlaggedFilter("not_flagged")}>Not flagged</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {sortedEvents.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={12} className="text-center text-muted-foreground">
+                <TableCell colSpan={13} className="text-center text-muted-foreground">
                   {hasActiveFilters ? "No events found matching your filters" : "No events found"}
                 </TableCell>
               </TableRow>
@@ -656,30 +685,12 @@ export function AdminEventsTable({
                     </Avatar>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-start gap-2">
-                      <div className="flex-1 min-w-0">
-                        <Link
-                          href={`/t/${slug}/dashboard/events/${event.id}`}
-                          className="font-medium hover:underline line-clamp-1"
-                        >
-                          {event.title}
-                        </Link>
-                      </div>
-                      {event.flag_count > 0 && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 px-2"
-                          onClick={() => handleUnflagEvent(event.id)}
-                          disabled={isProcessing}
-                        >
-                          <Badge variant="destructive" className="shrink-0">
-                            <Flag className="h-3 w-3 mr-1" />
-                            {event.flag_count}
-                          </Badge>
-                        </Button>
-                      )}
-                    </div>
+                    <Link
+                      href={`/t/${slug}/dashboard/events/${event.id}`}
+                      className="font-medium hover:underline line-clamp-1"
+                    >
+                      {event.title}
+                    </Link>
                   </TableCell>
                   <TableCell>
                     {event.location_name ? (
@@ -732,6 +743,24 @@ export function AdminEventsTable({
                           {event.max_attendees ? `/${event.max_attendees}` : ""}
                         </span>
                       </div>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {event.flag_count > 0 ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2"
+                        onClick={() => handleUnflagEvent(event.id)}
+                        disabled={isProcessing}
+                      >
+                        <Badge variant="destructive">
+                          <Flag className="h-3 w-3 mr-1" />
+                          {event.flag_count}
+                        </Badge>
+                      </Button>
                     ) : (
                       <span className="text-muted-foreground text-sm">—</span>
                     )}

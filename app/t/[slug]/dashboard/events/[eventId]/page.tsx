@@ -15,8 +15,6 @@ import { EventImagesGallery } from "./event-images-gallery"
 import { getEventAttendees } from "@/app/actions/events"
 import { canUserViewEvent } from "@/lib/visibility-filter"
 import { FlagEventDialog } from "./flag-event-dialog"
-import { EventFlagsSection } from "./event-flags-section"
-import { getEventFlags } from "@/app/actions/events"
 
 interface EventDetailPageProps {
   params: Promise<{ slug: string; eventId: string }>
@@ -205,6 +203,26 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     }
   }
 
+  const { data: eventImages } = await supabase
+    .from("event_images")
+    .select("id, image_url, is_hero, display_order")
+    .eq("event_id", eventId)
+    .order("display_order")
+
+  const { count: flagCount } = await supabase
+    .from("event_flags")
+    .select("*", { count: "exact", head: true })
+    .eq("event_id", eventId)
+
+  const { data: userFlag } = await supabase
+    .from("event_flags")
+    .select("id")
+    .eq("event_id", eventId)
+    .eq("flagged_by", user.id)
+    .maybeSingle()
+
+  const hasUserFlagged = !!userFlag
+
   let locationData = null
   if (event.location_type === "community_location" && event.location_id) {
     const { data: location } = await supabase
@@ -217,31 +235,6 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
       locationData = location
     }
   }
-
-  const { data: eventImages } = await supabase
-    .from("event_images")
-    .select("id, image_url, is_hero, display_order")
-    .eq("event_id", eventId)
-    .order("display_order")
-
-  const isAdmin = userData?.is_tenant_admin || userData?.role === "super_admin" || userData?.role === "tenant_admin"
-
-  let eventFlags = null
-  if (isAdmin) {
-    const flagsResult = await getEventFlags(eventId, tenant.id)
-    if (flagsResult.success && flagsResult.data) {
-      eventFlags = flagsResult.data
-    }
-  }
-
-  const { count: flagCount } = await supabase
-    .from("event_flags")
-    .select("*", { count: "exact", head: true })
-    .eq("event_id", eventId)
-
-  const eventFlagCount = flagCount || 0
-
-  console.log(`[v0] Event "${event.title}" flag count:`, eventFlagCount)
 
   return (
     <div className="min-h-screen bg-background">
@@ -270,6 +263,12 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                 </Badge>
                 <Badge variant={eventTypeVariant as any}>{eventTypeLabel}</Badge>
                 <Badge variant={statusVariant as any}>{statusLabel}</Badge>
+                {flagCount !== null && flagCount > 0 && (
+                  <Badge variant="destructive" className="gap-1.5">
+                    <Flag className="h-3 w-3" />
+                    Flagged ({flagCount})
+                  </Badge>
+                )}
                 {event.visibility_scope === "neighborhood" && (
                   <Badge variant="secondary" className="gap-1">
                     <Users className="h-3 w-3" />
@@ -282,12 +281,6 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                     Private
                   </Badge>
                 )}
-                {eventFlagCount > 0 && (
-                  <Badge variant="destructive" className="gap-1">
-                    <Flag className="h-3 w-3" />
-                    Flagged ({eventFlagCount})
-                  </Badge>
-                )}
               </div>
 
               <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-balance">{event.title}</h1>
@@ -298,11 +291,10 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
               <SaveEventButton eventId={eventId} userId={user?.id || null} />
               <FlagEventDialog
                 eventId={eventId}
-                tenantId={tenant.id}
                 tenantSlug={slug}
-                eventTitle={event.title}
-                variant="outline"
-                size="sm"
+                triggerLabel={hasUserFlagged ? "Flagged" : "Flag Event"}
+                triggerVariant={hasUserFlagged ? "secondary" : "outline"}
+                disabled={hasUserFlagged}
               />
               {canManageEvent && (
                 <>
@@ -334,28 +326,6 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
       {/* Content Section */}
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto space-y-8">
-          {eventFlagCount > 0 && (
-            <div className="p-6 border-2 border-destructive/50 rounded-lg bg-destructive/5 space-y-3">
-              <div className="flex items-start gap-3">
-                <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center flex-shrink-0">
-                  <Flag className="h-5 w-5 text-destructive" />
-                </div>
-                <div className="space-y-1 flex-1">
-                  <h3 className="font-semibold text-destructive">This event has been flagged</h3>
-                  <p className="text-sm text-muted-foreground">
-                    This event has been flagged {eventFlagCount} {eventFlagCount === 1 ? "time" : "times"} by community
-                    members for admin review.
-                    {!isAdmin && " Admins have been notified and will review the content."}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {isAdmin && eventFlags && eventFlags.length > 0 && (
-            <EventFlagsSection flags={eventFlags} eventId={eventId} tenantId={tenant.id} tenantSlug={slug} />
-          )}
-
           {canManageEvent && visibilityDetails && (
             <div className="p-6 border rounded-lg bg-muted/30 space-y-3">
               <div className="flex items-center gap-2">

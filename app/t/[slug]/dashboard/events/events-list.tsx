@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { Calendar, Plus, CalendarClock, Lock, Building, Flag } from "lucide-react"
+import { Calendar, Plus, CalendarClock, Lock, Building } from "lucide-react"
 import Link from "next/link"
 import { format, isPast, parseISO } from "date-fns"
 import { EventRsvpQuickAction } from "@/components/event-rsvp-quick-action"
@@ -41,7 +41,6 @@ interface Event {
     name: string
   } | null
   custom_location_name?: string | null
-  flag_count?: number
 }
 
 export function EventsList({
@@ -99,10 +98,6 @@ export function EventsList({
         const isMultiDay = endDate && endDate.toDateString() !== startDate.toDateString()
         const eventIsPast = isPast(endDate || startDate)
 
-        if (event.flag_count && event.flag_count > 0) {
-          console.log(`[v0] Event "${event.title}" has ${event.flag_count} flags`)
-        }
-
         let displayDate: string
         if (event.is_all_day) {
           if (isMultiDay) {
@@ -141,23 +136,15 @@ export function EventsList({
             key={event.id}
             className={`hover:shadow-lg transition-all cursor-pointer h-full ${
               eventIsPast ? "opacity-60 hover:opacity-80" : ""
-            } ${event.flag_count !== undefined && event.flag_count > 0 ? "border-destructive/50 border-2" : ""}`}
+            }`}
           >
             <Link href={`/t/${slug}/dashboard/events/${event.id}`}>
               <CardHeader>
                 <div className="flex items-start justify-between gap-2">
                   <CardTitle className="line-clamp-2 text-balance">{event.title}</CardTitle>
-                  <div className="flex items-center gap-2">
-                    {event.flag_count !== undefined && (
-                      <Badge variant="destructive" className="text-xs gap-1 flex-shrink-0">
-                        <Flag className="h-3 w-3" />
-                        {event.flag_count}
-                      </Badge>
-                    )}
-                    {event.event_categories?.icon && (
-                      <span className="text-2xl flex-shrink-0">{event.event_categories.icon}</span>
-                    )}
-                  </div>
+                  {event.event_categories?.icon && (
+                    <span className="text-2xl flex-shrink-0">{event.event_categories.icon}</span>
+                  )}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <CardDescription className="line-clamp-1">

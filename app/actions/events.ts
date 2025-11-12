@@ -1232,7 +1232,7 @@ export async function adminUnflagEvent(eventId: string, tenantId: string, tenant
   }
 }
 
-export async function flagEvent(eventId: string, tenantId: string, tenantSlug: string, reason: string) {
+export async function flagEvent(eventId: string, reason: string, tenantSlug: string) {
   try {
     const supabase = await createServerClient()
 
@@ -1244,37 +1244,44 @@ export async function flagEvent(eventId: string, tenantId: string, tenantSlug: s
       return { success: false, error: "User not authenticated" }
     }
 
-    if (!reason.trim()) {
-      return { success: false, error: "Reason is required" }
+    // Validate reason
+    const trimmedReason = reason.trim()
+    if (trimmedReason.length < 10 || trimmedReason.length > 500) {
+      return { success: false, error: "Reason must be between 10 and 500 characters" }
     }
 
-    // Check if event exists and belongs to tenant
+    // Verify event exists
     const { data: event, error: eventError } = await supabase
       .from("events")
       .select("id, tenant_id")
       .eq("id", eventId)
-      .eq("tenant_id", tenantId)
       .single()
 
     if (eventError || !event) {
       return { success: false, error: "Event not found" }
     }
 
+    // Insert flag into event_flags table
     const { error: insertError } = await supabase.from("event_flags").insert({
       event_id: eventId,
       flagged_by: user.id,
-      reason: reason.trim(),
+      reason: trimmedReason,
     })
 
     if (insertError) {
+      console.error("[v0] Error flagging event:", insertError)
+
+      // Handle duplicate flag error (user already flagged this event)
       if (insertError.code === "23505") {
         return { success: false, error: "You have already flagged this event" }
       }
-      console.error("[v0] Error flagging event:", insertError)
+
       return { success: false, error: insertError.message }
     }
 
+    // Revalidate paths to show updated flag count
     revalidatePath(`/t/${tenantSlug}/dashboard/events`)
+    revalidatePath(`/t/${tenantSlug}/dashboard/events/${eventId}`)
 
     return { success: true }
   } catch (error) {
@@ -1283,78 +1290,5 @@ export async function flagEvent(eventId: string, tenantId: string, tenantSlug: s
       success: false,
       error: "An unexpected error occurred. Please try again.",
     }
-  }
-}
-
-export async function getEventFlags(eventId: string, tenantId: string) {
-  try {
-    const supabase = await createServerClient()
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-      return { success: false, error: "User not authenticated", data: [] }
-    }
-
-    // Verify user is admin
-    const { data: userData } = await supabase.from("users").select("is_tenant_admin, role").eq("id", user.id).single()
-
-    const isAdmin = userData?.is_tenant_admin || userData?.role === "super_admin" || userData?.role === "tenant_admin"
-
-    if (!isAdmin) {
-      return { success: false, error: "You don't have permission to view flags", data: [] }
-    }
-
-    // Fetch all flags for this event with user info
-    const { data: flags, error } = await supabase
-      .from("event_flags")
-      .select(
-        `
-        id,
-        reason,
-        created_at,
-        flagged_by,
-        user:users!flagged_by(id, first_name, last_name, profile_picture_url)
-      `,
-      )
-      .eq("event_id", eventId)
-      .order("created_at", { ascending: false })
-
-    if (error) {
-      console.error("[v0] Error fetching event flags:", error)
-      return { success: false, error: error.message, data: [] }
-    }
-
-    return { success: true, data: flags || [] }
-  } catch (error) {
-    console.error("[v0] Unexpected error fetching event flags:", error)
-    return {
-      success: false,
-      error: "An unexpected error occurred. Please try again.",
-      data: [],
-    }
-  }
-}
-
-export async function getEventFlagCount(eventId: string) {
-  try {
-    const supabase = await createServerClient()
-
-    const { count, error } = await supabase
-      .from("event_flags")
-      .select("*", { count: "exact", head: true })
-      .eq("event_id", eventId)
-
-    if (error) {
-      console.error("[v0] Error fetching event flag count:", error)
-      return { success: false, count: 0 }
-    }
-
-    return { success: true, count: count || 0 }
-  } catch (error) {
-    console.error("[v0] Unexpected error fetching event flag count:", error)
-    return { success: false, count: 0 }
   }
 }

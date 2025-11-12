@@ -72,23 +72,23 @@ export default async function EventsPage({
 
   const eventIds = (events || []).map((e) => e.id)
 
-  const [{ data: allRsvps }, { data: savedEvents }, { data: eventFlags }] = await Promise.all([
-    supabase.from("event_rsvps").select("event_id, rsvp_status, user_id").in("event_id", eventIds),
-    supabase.from("saved_events").select("event_id").eq("user_id", user.id).in("event_id", eventIds),
-    supabase.from("event_flags").select("event_id").in("event_id", eventIds),
-  ])
+  // Get all attending counts in one query
+  const { data: allRsvps } = await supabase
+    .from("event_rsvps")
+    .select("event_id, rsvp_status, user_id")
+    .in("event_id", eventIds)
+
+  // Get user's saved events in one query
+  const { data: savedEvents } = await supabase
+    .from("saved_events")
+    .select("event_id")
+    .eq("user_id", user.id)
+    .in("event_id", eventIds)
 
   // Build lookup maps for O(1) access
   const attendingCountMap = new Map<string, number>()
   const userRsvpMap = new Map<string, string>()
   const savedEventsSet = new Set<string>(savedEvents?.map((s) => s.event_id) || [])
-  const flagCountMap = new Map<string, number>()
-
-  eventFlags?.forEach((flag) => {
-    flagCountMap.set(flag.event_id, (flagCountMap.get(flag.event_id) || 0) + 1)
-  })
-
-  console.log("[v0] Flag counts map:", Object.fromEntries(flagCountMap))
 
   allRsvps?.forEach((rsvp) => {
     // Count attending
@@ -107,13 +107,7 @@ export default async function EventsPage({
     attending_count: attendingCountMap.get(event.id) || 0,
     user_rsvp_status: userRsvpMap.get(event.id) || null,
     is_saved: savedEventsSet.has(event.id),
-    flag_count: flagCountMap.get(event.id) || 0,
   }))
-
-  console.log(
-    "[v0] Events with flag counts:",
-    eventsWithUserData.map((e) => ({ id: e.id, title: e.title, flag_count: e.flag_count })),
-  )
 
   return (
     <div className="space-y-6">

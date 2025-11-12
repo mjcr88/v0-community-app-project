@@ -33,7 +33,6 @@ interface Event {
     last_name: string
     profile_picture_url: string | null
   } | null
-  flag_count?: number
 }
 
 interface Category {

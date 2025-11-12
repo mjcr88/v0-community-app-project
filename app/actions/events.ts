@@ -1260,18 +1260,6 @@ export async function flagEvent(eventId: string, tenantId: string, tenantSlug: s
       return { success: false, error: "Event not found" }
     }
 
-    // Check if user already flagged this event
-    const { data: existingFlag } = await supabase
-      .from("event_flags")
-      .select("id")
-      .eq("event_id", eventId)
-      .eq("flagged_by", user.id)
-      .maybeSingle()
-
-    if (existingFlag) {
-      return { success: false, error: "You have already flagged this event" }
-    }
-
     // Insert flag
     const { error: insertError } = await supabase.from("event_flags").insert({
       event_id: eventId,
@@ -1328,7 +1316,7 @@ export async function getEventFlags(eventId: string, tenantId: string) {
         reason,
         created_at,
         flagged_by,
-        user:users!flagged_by(id, first_name, last_name)
+        user:users!flagged_by(id, first_name, last_name, profile_picture_url)
       `,
       )
       .eq("event_id", eventId)
@@ -1347,5 +1335,26 @@ export async function getEventFlags(eventId: string, tenantId: string) {
       error: "An unexpected error occurred. Please try again.",
       data: [],
     }
+  }
+}
+
+export async function getEventFlagCount(eventId: string) {
+  try {
+    const supabase = await createServerClient()
+
+    const { count, error } = await supabase
+      .from("event_flags")
+      .select("*", { count: "exact", head: true })
+      .eq("event_id", eventId)
+
+    if (error) {
+      console.error("[v0] Error fetching event flag count:", error)
+      return { success: false, count: 0 }
+    }
+
+    return { success: true, count: count || 0 }
+  } catch (error) {
+    console.error("[v0] Unexpected error fetching event flag count:", error)
+    return { success: false, count: 0 }
   }
 }

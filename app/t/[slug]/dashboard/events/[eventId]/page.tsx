@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation"
 import { createServerClient } from "@/lib/supabase/server"
 import { getEvent } from "@/app/actions/events"
-import { ArrowLeft, Calendar, Share2, Pencil, Users, Lock } from "lucide-react"
+import { ArrowLeft, Calendar, Share2, Pencil, Users, Lock, Flag } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -234,6 +234,13 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     }
   }
 
+  const { data: flagCount } = await supabase
+    .from("event_flags")
+    .select("*", { count: "exact", head: true })
+    .eq("event_id", eventId)
+
+  const eventFlagCount = flagCount || 0
+
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
@@ -271,6 +278,12 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                   <Badge variant="secondary" className="gap-1">
                     <Lock className="h-3 w-3" />
                     Private
+                  </Badge>
+                )}
+                {eventFlagCount > 0 && (
+                  <Badge variant="destructive" className="gap-1">
+                    <Flag className="h-3 w-3" />
+                    Flagged ({eventFlagCount})
                   </Badge>
                 )}
               </div>

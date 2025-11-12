@@ -194,28 +194,30 @@ export function AdminEventsTable({
   ])
 
   useEffect(() => {
-    setSortedEvents(filteredEvents)
-  }, [filteredEvents])
-
-  const handleSort = (field: string) => {
-    const direction = sortField === field && sortDirection === "asc" ? "desc" : "asc"
-    setSortField(field)
-    setSortDirection(direction)
-
+    // Sort by flag count (descending) first, then by the selected sort field
     const sorted = [...filteredEvents].sort((a, b) => {
-      let aVal: any = a[field as keyof AdminEvent]
-      let bVal: any = b[field as keyof AdminEvent]
+      // First priority: flagged events come first
+      const aFlagged = a.flag_count || 0
+      const bFlagged = b.flag_count || 0
 
-      if (field === "category") {
+      if (aFlagged !== bFlagged) {
+        return bFlagged - aFlagged // Higher flag counts first
+      }
+
+      // Second priority: user's selected sort field
+      let aVal: any = a[sortField as keyof AdminEvent]
+      let bVal: any = b[sortField as keyof AdminEvent]
+
+      if (sortField === "category") {
         aVal = a.event_categories?.name?.toLowerCase() || ""
         bVal = b.event_categories?.name?.toLowerCase() || ""
-      } else if (field === "creator") {
+      } else if (sortField === "creator") {
         aVal = `${a.users?.last_name} ${a.users?.first_name}`.toLowerCase()
         bVal = `${b.users?.last_name} ${b.users?.first_name}`.toLowerCase()
-      } else if (field === "location_name") {
+      } else if (sortField === "location_name") {
         aVal = a.location_name?.toLowerCase() || ""
         bVal = b.location_name?.toLowerCase() || ""
-      } else if (field === "flag_count") {
+      } else if (sortField === "flag_count") {
         aVal = a.flag_count || 0
         bVal = b.flag_count || 0
       } else if (typeof aVal === "string") {
@@ -226,12 +228,18 @@ export function AdminEventsTable({
         bVal = bVal.toLowerCase()
       }
 
-      if (aVal < bVal) return direction === "asc" ? -1 : 1
-      if (aVal > bVal) return direction === "asc" ? 1 : -1
+      if (aVal < bVal) return sortDirection === "asc" ? -1 : 1
+      if (aVal > bVal) return sortDirection === "asc" ? 1 : -1
       return 0
     })
 
     setSortedEvents(sorted)
+  }, [filteredEvents, sortField, sortDirection])
+
+  const handleSort = (field: string) => {
+    const direction = sortField === field && sortDirection === "asc" ? "desc" : "asc"
+    setSortField(field)
+    setSortDirection(direction)
   }
 
   const handleSelectAll = (checked: boolean) => {

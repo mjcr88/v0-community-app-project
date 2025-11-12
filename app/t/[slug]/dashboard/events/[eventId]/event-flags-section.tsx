@@ -3,6 +3,7 @@
 import { AlertTriangle, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
 import { adminUnflagEvent } from "@/app/actions/events"
@@ -18,6 +19,7 @@ interface EventFlag {
     id: string
     first_name: string | null
     last_name: string | null
+    profile_picture_url: string | null
   } | null
 }
 
@@ -26,6 +28,12 @@ interface EventFlagsSectionProps {
   eventId: string
   tenantId: string
   tenantSlug: string
+}
+
+function getInitials(firstName: string | null, lastName: string | null): string {
+  const first = firstName?.charAt(0) || ""
+  const last = lastName?.charAt(0) || ""
+  return (first + last).toUpperCase() || "U"
 }
 
 export function EventFlagsSection({ flags, eventId, tenantId, tenantSlug }: EventFlagsSectionProps) {
@@ -83,22 +91,38 @@ export function EventFlagsSection({ flags, eventId, tenantId, tenantSlug }: Even
       <CardContent className="space-y-4">
         {flags.map((flag, index) => (
           <div key={flag.id} className="p-4 border rounded-lg bg-background">
-            <div className="flex items-start justify-between gap-4 mb-2">
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="shrink-0">
-                  Flag #{index + 1}
-                </Badge>
-                <p className="text-sm text-muted-foreground">
-                  Flagged by {flag.user?.first_name || "Unknown"} {flag.user?.last_name || "User"} on{" "}
-                  {new Date(flag.created_at).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                  })}
-                </p>
+            <div className="flex items-start justify-between gap-4 mb-3">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={flag.user?.profile_picture_url || undefined} alt="User avatar" />
+                  <AvatarFallback className="text-xs">
+                    {getInitials(flag.user?.first_name, flag.user?.last_name)}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="shrink-0">
+                      Flag #{index + 1}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Flagged by{" "}
+                    <span className="font-medium">
+                      {flag.user?.first_name || "Unknown"} {flag.user?.last_name || "User"}
+                    </span>{" "}
+                    on{" "}
+                    {new Date(flag.created_at).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                </div>
               </div>
             </div>
-            <p className="text-sm">{flag.reason}</p>
+            <p className="text-sm pl-11">{flag.reason}</p>
           </div>
         ))}
       </CardContent>

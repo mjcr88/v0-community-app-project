@@ -14,6 +14,9 @@ import { EventLocationSection } from "./event-location-section"
 import { EventImagesGallery } from "./event-images-gallery"
 import { getEventAttendees } from "@/app/actions/events"
 import { canUserViewEvent } from "@/lib/visibility-filter"
+import { FlagEventDialog } from "./flag-event-dialog"
+import { EventFlagsSection } from "./event-flags-section"
+import { getEventFlags } from "@/app/actions/events"
 
 interface EventDetailPageProps {
   params: Promise<{ slug: string; eventId: string }>
@@ -221,6 +224,16 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     .eq("event_id", eventId)
     .order("display_order")
 
+  const isAdmin = userData?.is_tenant_admin || userData?.role === "super_admin" || userData?.role === "tenant_admin"
+
+  let eventFlags = null
+  if (isAdmin) {
+    const flagsResult = await getEventFlags(eventId, tenant.id)
+    if (flagsResult.success && flagsResult.data) {
+      eventFlags = flagsResult.data
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
@@ -268,6 +281,14 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             {/* Action Buttons */}
             <div className="flex flex-wrap gap-2">
               <SaveEventButton eventId={eventId} userId={user?.id || null} />
+              <FlagEventDialog
+                eventId={eventId}
+                tenantId={tenant.id}
+                tenantSlug={slug}
+                eventTitle={event.title}
+                variant="outline"
+                size="sm"
+              />
               {canManageEvent && (
                 <>
                   <Link href={`/t/${slug}/dashboard/events/${eventId}/edit`}>
@@ -298,6 +319,10 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
       {/* Content Section */}
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto space-y-8">
+          {isAdmin && eventFlags && eventFlags.length > 0 && (
+            <EventFlagsSection flags={eventFlags} eventId={eventId} tenantId={tenant.id} tenantSlug={slug} />
+          )}
+
           {canManageEvent && visibilityDetails && (
             <div className="p-6 border rounded-lg bg-muted/30 space-y-3">
               <div className="flex items-center gap-2">

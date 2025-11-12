@@ -1231,3 +1231,121 @@ export async function adminUnflagEvent(eventId: string, tenantId: string, tenant
     }
   }
 }
+
+export async function flagEvent(eventId: string, tenantId: string, tenantSlug: string, reason: string) {
+  try {
+    const supabase = await createServerClient()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: "User not authenticated" }
+    }
+
+    if (!reason.trim()) {
+      return { success: false, error: "Reason is required" }
+    }
+
+    // Check if event exists and belongs to tenant
+    const { data: event, error: eventError } = await supabase
+      .from("events")
+      .select("id, tenant_id")
+      .eq("id", eventId)
+      .eq("tenant_id", tenantId)
+      .single()
+
+    if (eventError || !event) {
+      return { success: false, error: "Event not found" }
+    }
+
+    // Check if user already flagged this event
+    const { data: existingFlag } = await supabase
+      .from("event_flags")
+      .select("id")
+      .eq("event_id", eventId)
+      .eq("flagged_by", user.id)
+      .maybeSingle()
+
+    if (existingFlag) {
+      return { success: false, error: "You have already flagged this event" }
+    }
+
+    // Insert flag
+    const { error: insertError } = await supabase.from("event_flags").insert({
+      event_id: eventId,
+      flagged_by: user.id,
+      reason: reason.trim(),
+    })
+
+    if (insertError) {
+      console.error("[v0] Error flagging event:", insertError)
+      return { success: false, error: insertError.message }
+    }
+
+    revalidatePath(`/t/${tenantSlug}/admin/events`)
+    revalidatePath(`/t/${tenantSlug}/dashboard/events/${eventId}`)
+    revalidatePath(`/t/${tenantSlug}/dashboard/events`)
+
+    return { success: true }
+  } catch (error) {
+    console.error("[v0] Unexpected error flagging event:", error)
+    return {
+      success: false,
+      error: "An unexpected error occurred. Please try again.",
+    }
+  }
+}
+
+export async function getEventFlags(eventId: string, tenantId: string) {
+  try {
+    const supabase = await createServerClient()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: "User not authenticated", data: [] }
+    }
+
+    // Verify user is admin
+    const { data: userData } = await supabase.from("users").select("is_tenant_admin, role").eq("id", user.id).single()
+
+    const isAdmin = userData?.is_tenant_admin || userData?.role === "super_admin" || userData?.role === "tenant_admin"
+
+    if (!isAdmin) {
+      return { success: false, error: "You don't have permission to view flags", data: [] }
+    }
+
+    // Fetch all flags for this event with user info
+    const { data: flags, error } = await supabase
+      .from("event_flags")
+      .select(
+        `
+        id,
+        reason,
+        created_at,
+        flagged_by,
+        user:users!flagged_by(id, first_name, last_name)
+      `,
+      )
+      .eq("event_id", eventId)
+      .order("created_at", { ascending: false })
+
+    if (error) {
+      console.error("[v0] Error fetching event flags:", error)
+      return { success: false, error: error.message, data: [] }
+    }
+
+    return { success: true, data: flags || [] }
+  } catch (error) {
+    console.error("[v0] Unexpected error fetching event flags:", error)
+    return {
+      success: false,
+      error: "An unexpected error occurred. Please try again.",
+      data: [],
+    }
+  }
+}

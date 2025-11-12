@@ -24,6 +24,7 @@ type AdminEvent = {
   status: string
   location_type: string
   custom_location_name: string | null
+  location_name: string | null
   max_attendees: number | null
   requires_rsvp: boolean
   created_at: string
@@ -65,7 +66,7 @@ export function AdminEventsTable({ events, slug }: { events: AdminEvent[]; slug:
       if (event.event_type.toLowerCase().includes(query)) return true
       if (event.visibility_scope.toLowerCase().includes(query)) return true
       if (event.status.toLowerCase().includes(query)) return true
-      if (event.custom_location_name?.toLowerCase().includes(query)) return true
+      if (event.location_name?.toLowerCase().includes(query)) return true
       return false
     })
   }, [events, searchQuery])
@@ -267,10 +268,10 @@ export function AdminEventsTable({ events, slug }: { events: AdminEvent[]; slug:
                         >
                           {event.title}
                         </Link>
-                        {event.location_type === "custom" && event.custom_location_name && (
+                        {event.location_name && (
                           <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
                             <MapPin className="h-3 w-3" />
-                            <span className="line-clamp-1">{event.custom_location_name}</span>
+                            <span className="line-clamp-1">{event.location_name}</span>
                           </div>
                         )}
                       </div>

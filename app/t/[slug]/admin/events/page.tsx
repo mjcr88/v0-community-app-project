@@ -46,6 +46,10 @@ export default async function AdminEventsPage({
       event_images!left (
         image_url,
         is_hero
+      ),
+      locations:location_id (
+        id,
+        name
       )
     `)
     .eq("tenant_id", tenant.id)
@@ -88,12 +92,13 @@ export default async function AdminEventsPage({
     {} as Record<string, number>,
   )
 
-  // Enrich events with counts and hero image
   const enrichedEvents = events?.map((event) => ({
     ...event,
     rsvp_count: rsvpCounts?.[event.id] || 0,
     flag_count: flagCounts?.[event.id] || 0,
     hero_image: event.event_images?.find((img: any) => img.is_hero)?.image_url || null,
+    location_name:
+      event.location_type === "community_location" ? (event.locations as any)?.name : event.custom_location_name,
   }))
 
   return (

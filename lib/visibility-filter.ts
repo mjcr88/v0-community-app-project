@@ -31,6 +31,16 @@ export async function canUserViewEvent(eventId: string, context: VisibilityConte
     return false
   }
 
+  const { data: userData } = await supabase
+    .from("users")
+    .select("role, is_tenant_admin")
+    .eq("id", context.userId)
+    .single()
+
+  if (userData && (userData.is_tenant_admin || userData.role === "tenant_admin" || userData.role === "super_admin")) {
+    return true
+  }
+
   // Event creator can always view their own events
   if (event.created_by === context.userId) {
     return true

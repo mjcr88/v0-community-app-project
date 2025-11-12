@@ -990,3 +990,102 @@ export async function getEventAttendees(eventId: string, tenantId: string) {
     }
   }
 }
+
+export async function saveEventImages(
+  eventId: string,
+  tenantSlug: string,
+  imageUrls: string[],
+  heroImageUrl: string | null,
+) {
+  try {
+    const supabase = await createServerClient()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: "User not authenticated" }
+    }
+
+    // Verify user owns this event
+    const { data: event, error: eventError } = await supabase
+      .from("events")
+      .select("id, created_by")
+      .eq("id", eventId)
+      .single()
+
+    if (eventError || !event) {
+      return { success: false, error: "Event not found" }
+    }
+
+    if (event.created_by !== user.id) {
+      return { success: false, error: "You don't have permission to manage images for this event" }
+    }
+
+    // Delete existing images for this event
+    const { error: deleteError } = await supabase.from("event_images").delete().eq("event_id", eventId)
+
+    if (deleteError) {
+      console.error("[v0] Error deleting existing event images:", deleteError)
+      return { success: false, error: deleteError.message }
+    }
+
+    // If no images to add, return success
+    if (imageUrls.length === 0) {
+      revalidatePath(`/t/${tenantSlug}/dashboard/events/${eventId}`)
+      return { success: true }
+    }
+
+    // Prepare image records with display_order and is_hero
+    const imageRecords = imageUrls.map((url, index) => ({
+      event_id: eventId,
+      image_url: url,
+      display_order: index,
+      is_hero: url === heroImageUrl,
+    }))
+
+    // Insert new images
+    const { error: insertError } = await supabase.from("event_images").insert(imageRecords)
+
+    if (insertError) {
+      console.error("[v0] Error inserting event images:", insertError)
+      return { success: false, error: insertError.message }
+    }
+
+    revalidatePath(`/t/${tenantSlug}/dashboard/events/${eventId}`)
+    return { success: true }
+  } catch (error) {
+    console.error("[v0] Unexpected error saving event images:", error)
+    return {
+      success: false,
+      error: "An unexpected error occurred. Please try again.",
+    }
+  }
+}
+
+export async function getEventImages(eventId: string) {
+  try {
+    const supabase = await createServerClient()
+
+    const { data: images, error } = await supabase
+      .from("event_images")
+      .select("*")
+      .eq("event_id", eventId)
+      .order("display_order", { ascending: true })
+
+    if (error) {
+      console.error("[v0] Error fetching event images:", error)
+      return { success: false, error: error.message, data: [] }
+    }
+
+    return { success: true, data: images || [] }
+  } catch (error) {
+    console.error("[v0] Unexpected error fetching event images:", error)
+    return {
+      success: false,
+      error: "An unexpected error occurred. Please try again.",
+      data: [],
+    }
+  }
+}

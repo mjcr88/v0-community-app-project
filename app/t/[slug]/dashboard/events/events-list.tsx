@@ -137,15 +137,23 @@ export function EventsList({
             key={event.id}
             className={`hover:shadow-lg transition-all cursor-pointer h-full ${
               eventIsPast ? "opacity-60 hover:opacity-80" : ""
-            }`}
+            } ${event.flag_count && event.flag_count > 0 ? "border-destructive/50" : ""}`}
           >
             <Link href={`/t/${slug}/dashboard/events/${event.id}`}>
               <CardHeader>
                 <div className="flex items-start justify-between gap-2">
                   <CardTitle className="line-clamp-2 text-balance">{event.title}</CardTitle>
-                  {event.event_categories?.icon && (
-                    <span className="text-2xl flex-shrink-0">{event.event_categories.icon}</span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {event.flag_count && event.flag_count > 0 && (
+                      <Badge variant="destructive" className="text-xs gap-1 flex-shrink-0">
+                        <Flag className="h-3 w-3" />
+                        {event.flag_count}
+                      </Badge>
+                    )}
+                    {event.event_categories?.icon && (
+                      <span className="text-2xl flex-shrink-0">{event.event_categories.icon}</span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <CardDescription className="line-clamp-1">
@@ -154,12 +162,6 @@ export function EventsList({
                   {eventIsPast && (
                     <Badge variant="outline" className="text-xs">
                       Past Event
-                    </Badge>
-                  )}
-                  {event.flag_count && event.flag_count > 0 && (
-                    <Badge variant="destructive" className="text-xs gap-1">
-                      <Flag className="h-3 w-3" />
-                      Flagged ({event.flag_count})
                     </Badge>
                   )}
                 </div>

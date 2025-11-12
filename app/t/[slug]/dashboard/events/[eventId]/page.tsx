@@ -234,7 +234,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     }
   }
 
-  const { data: flagCount } = await supabase
+  const { count: flagCount } = await supabase
     .from("event_flags")
     .select("*", { count: "exact", head: true })
     .eq("event_id", eventId)

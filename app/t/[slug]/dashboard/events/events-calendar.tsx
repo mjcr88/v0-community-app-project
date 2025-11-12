@@ -4,7 +4,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { CalendarClock, Plus, Lock, Building } from "lucide-react"
+import { CalendarClock, Plus, Lock, Building, Flag } from "lucide-react"
 import Link from "next/link"
 import { format, parseISO } from "date-fns"
 import { useState } from "react"
@@ -39,6 +39,7 @@ interface Event {
     name: string
   } | null
   custom_location_name?: string | null
+  flag_count?: number
 }
 
 export function EventsCalendar({
@@ -60,11 +61,16 @@ export function EventsCalendar({
 
   const eventDates = new Set<string>()
   const eventsByDate = new Map<string, Event[]>()
+  const flaggedDates = new Set<string>()
 
   events.forEach((event) => {
     const startDate = parseISO(event.start_date)
     const dateKey = format(startDate, "yyyy-MM-dd")
     eventDates.add(dateKey)
+
+    if (event.flag_count && event.flag_count > 0) {
+      flaggedDates.add(dateKey)
+    }
 
     if (!eventsByDate.has(dateKey)) {
       eventsByDate.set(dateKey, [])
@@ -120,10 +126,13 @@ export function EventsCalendar({
             onSelect={setSelectedDate}
             modifiers={{
               hasEvent: (date) => eventDates.has(format(date, "yyyy-MM-dd")),
+              hasFlaggedEvent: (date) => flaggedDates.has(format(date, "yyyy-MM-dd")),
             }}
             modifiersClassNames={{
               hasEvent:
                 "relative after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:w-1.5 after:h-1.5 after:bg-primary after:rounded-full",
+              hasFlaggedEvent:
+                "bg-destructive/10 border-destructive/30 relative after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:w-1.5 after:h-1.5 after:bg-destructive after:rounded-full",
             }}
             className="rounded-md border w-full max-w-full"
           />
@@ -147,14 +156,27 @@ export function EventsCalendar({
                 const endTime = event.end_time ? format(parseISO(`2000-01-01T${event.end_time}`), "h:mm a") : null
 
                 return (
-                  <Card key={event.id} className="hover:shadow-md transition-all">
+                  <Card
+                    key={event.id}
+                    className={`hover:shadow-md transition-all ${
+                      event.flag_count && event.flag_count > 0 ? "border-destructive/50" : ""
+                    }`}
+                  >
                     <Link href={`/t/${slug}/dashboard/events/${event.id}`}>
                       <CardHeader className="pb-3">
                         <div className="flex items-start justify-between gap-2">
                           <CardTitle className="text-base line-clamp-2">{event.title}</CardTitle>
-                          {event.event_categories?.icon && (
-                            <span className="text-xl flex-shrink-0">{event.event_categories.icon}</span>
-                          )}
+                          <div className="flex items-center gap-2">
+                            {event.flag_count && event.flag_count > 0 && (
+                              <Badge variant="destructive" className="text-xs gap-1 flex-shrink-0">
+                                <Flag className="h-3 w-3" />
+                                {event.flag_count}
+                              </Badge>
+                            )}
+                            {event.event_categories?.icon && (
+                              <span className="text-xl flex-shrink-0">{event.event_categories.icon}</span>
+                            )}
+                          </div>
                         </div>
                         <CardDescription className="text-sm">
                           {event.event_categories?.name || "Uncategorized"}

@@ -1279,6 +1279,9 @@ export async function flagEvent(eventId: string, tenantId: string, tenantSlug: s
     })
 
     if (insertError) {
+      if (insertError.code === "23505") {
+        return { success: false, error: "You have already flagged this event" }
+      }
       console.error("[v0] Error flagging event:", insertError)
       return { success: false, error: insertError.message }
     }

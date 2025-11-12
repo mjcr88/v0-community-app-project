@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -59,6 +59,26 @@ export function EventForm({ tenantSlug, tenantId, categories }: EventFormProps) 
     custom_location_type: null as "pin" | "polygon" | null,
     custom_location_path: null as Array<{ lat: number; lng: number }> | null,
   })
+
+  const handleCustomLocationNameChange = useCallback((name: string) => {
+    setFormData((prev) => ({ ...prev, custom_location_name: name }))
+  }, [])
+
+  const handleCustomLocationChange = useCallback(
+    (data: {
+      coordinates?: { lat: number; lng: number } | null
+      type?: "pin" | "polygon" | null
+      path?: Array<{ lat: number; lng: number }> | null
+    }) => {
+      setFormData((prev) => ({
+        ...prev,
+        custom_location_coordinates: data.coordinates || null,
+        custom_location_type: data.type || null,
+        custom_location_path: data.path || null,
+      }))
+    },
+    [],
+  )
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -355,15 +375,8 @@ export function EventForm({ tenantSlug, tenantId, categories }: EventFormProps) 
               })
             }
             onCommunityLocationChange={(locationId) => setFormData({ ...formData, location_id: locationId })}
-            onCustomLocationNameChange={(name) => setFormData({ ...formData, custom_location_name: name })}
-            onCustomLocationChange={(data) =>
-              setFormData({
-                ...formData,
-                custom_location_coordinates: data.coordinates || null,
-                custom_location_type: data.type || null,
-                custom_location_path: data.path || null,
-              })
-            }
+            onCustomLocationNameChange={handleCustomLocationNameChange}
+            onCustomLocationChange={handleCustomLocationChange}
           />
 
           <div className="space-y-4 pt-4 border-t">

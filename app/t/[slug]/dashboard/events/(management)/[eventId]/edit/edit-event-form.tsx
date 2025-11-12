@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -90,6 +90,26 @@ export function EditEventForm({
 
   const [showVisibilityWarning, setShowVisibilityWarning] = useState(false)
   const [visibilityChangeType, setVisibilityChangeType] = useState<"expanding" | "reducing" | null>(null)
+
+  const handleCustomLocationNameChange = useCallback((name: string) => {
+    setFormData((prev) => ({ ...prev, custom_location_name: name }))
+  }, [])
+
+  const handleCustomLocationChange = useCallback(
+    (data: {
+      coordinates?: { lat: number; lng: number } | null
+      type?: "pin" | "polygon" | null
+      path?: Array<{ lat: number; lng: number }> | null
+    }) => {
+      console.log("[v0] Custom location updated in form:", data)
+      setFormData((prev) => ({
+        ...prev,
+        custom_location_coordinates: data.coordinates || null,
+        custom_location_type: data.type || null,
+      }))
+    },
+    [],
+  )
 
   useEffect(() => {
     const original = initialData.visibility_scope
@@ -398,15 +418,8 @@ export function EditEventForm({
               setFormData({ ...formData, location_type: type, location_id: null, custom_location_name: "" })
             }
             onCommunityLocationChange={(locationId) => setFormData({ ...formData, location_id: locationId })}
-            onCustomLocationNameChange={(name) => setFormData({ ...formData, custom_location_name: name })}
-            onCustomLocationChange={(data) => {
-              console.log("[v0] Custom location updated in form:", data)
-              setFormData({
-                ...formData,
-                custom_location_coordinates: data.coordinates || null,
-                custom_location_type: data.type || null,
-              })
-            }}
+            onCustomLocationNameChange={handleCustomLocationNameChange}
+            onCustomLocationChange={handleCustomLocationChange}
           />
 
           <div className="space-y-4 pt-4 border-t">

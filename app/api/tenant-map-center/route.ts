@@ -38,8 +38,14 @@ export async function GET(request: NextRequest) {
       const coords = tenant.map_boundary_coordinates as Array<{ lat: number; lng: number }>
       const lats = coords.map((c) => c.lat)
       const lngs = coords.map((c) => c.lng)
-      const centerLat = lats.reduce((a, b) => a + b, 0) / lats.length
-      const centerLng = lngs.reduce((a, b) => a + b, 0) / lngs.length
+
+      // Calculate bounding box center (visual center of the polygon)
+      const minLat = Math.min(...lats)
+      const maxLat = Math.max(...lats)
+      const minLng = Math.min(...lngs)
+      const maxLng = Math.max(...lngs)
+      const centerLat = (minLat + maxLat) / 2
+      const centerLng = (minLng + maxLng) / 2
 
       return NextResponse.json({
         success: true,

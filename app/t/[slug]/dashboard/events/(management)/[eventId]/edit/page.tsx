@@ -105,6 +105,11 @@ export default async function EditEventPage({ params }: EditEventPageProps) {
           rsvp_deadline: event.rsvp_deadline || "",
           max_attendees: event.max_attendees || null,
           visibility_scope: event.visibility_scope || "community",
+          location_type: event.location_type,
+          location_id: event.location_id,
+          custom_location_name: event.custom_location_name,
+          custom_location_coordinates: event.custom_location_coordinates,
+          custom_location_type: event.custom_location_type,
         }}
         initialNeighborhoods={selectedNeighborhoods}
         initialResidents={selectedResidents}

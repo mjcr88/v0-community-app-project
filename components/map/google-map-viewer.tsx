@@ -261,17 +261,27 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
   )
 
   useEffect(() => {
-    if (!mapInstance || !drawingMode) return
+    if (!mapInstance) return
 
-    console.log("[v0] Setting up place click listener for drawingMode:", drawingMode)
+    console.log(
+      "[v0] Setting up place click listener, enableClickablePlaces:",
+      enableClickablePlaces,
+      "drawingMode:",
+      drawingMode,
+    )
 
-    // Listen for clicks on place icons
+    // Only set up place click handling if explicitly enabled or in drawing mode
+    if (!enableClickablePlaces && !drawingMode) {
+      return
+    }
+
+    // Listen for clicks on place icons - this works across all map types
     const placeClickListener = mapInstance.addListener("click", (e: any) => {
-      console.log("[v0] Map click event:", { placeId: e.placeId, hasLatLng: !!e.latLng })
+      console.log("[v0] Map click event - placeId:", e.placeId, "latLng:", e.latLng)
 
-      // If a place icon was clicked, handle it specially
+      // If a place icon was clicked (has placeId), handle it specially
       if (e.placeId) {
-        console.log("[v0] Place icon clicked, preventing default behavior")
+        console.log("[v0] Place icon clicked with ID:", e.placeId)
         e.stop() // Prevent default info window
         handlePlaceClick(e.placeId)
       }
@@ -283,7 +293,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
         window.google?.maps?.event?.removeListener(placeClickListener)
       }
     }
-  }, [mapInstance, drawingMode, handlePlaceClick])
+  }, [mapInstance, enableClickablePlaces, drawingMode, handlePlaceClick])
 
   const facilityMarkers = useMemo(
     () => initialLocations.filter((loc) => showFacilities && loc.type === "facility" && loc.coordinates),
@@ -451,6 +461,14 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
     [onLocationClick, showInfoCard],
   )
 
+  const handleCustomMarkerClick = useCallback(() => {
+    if (markerPosition) {
+      console.log("[v0] Custom marker clicked, opening Google Maps")
+      const url = `https://www.google.com/maps/search/?api=1&query=${markerPosition.lat},${markerPosition.lng}`
+      window.open(url, "_blank")
+    }
+  }, [markerPosition])
+
   if (!apiKey) {
     return (
       <div className="flex items-center justify-center h-full bg-muted rounded-lg">
@@ -472,7 +490,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
           minZoom={10}
           maxZoom={22}
           restriction={undefined}
-          clickableIcons={enableClickablePlaces || drawingMode === "marker"} // Only make places clickable in marker mode
+          clickableIcons={enableClickablePlaces || drawingMode === "marker"} // Always enable clickable icons when places or drawing is enabled
           {...(mapId ? { mapId } : {})}
           onCenterChanged={(e) => setCenter(e.detail.center)}
           onZoomChanged={(e) => setZoom(e.detail.zoom)}
@@ -785,6 +803,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
             <Marker
               position={markerPosition}
               zIndex={400}
+              onClick={drawingMode ? undefined : handleCustomMarkerClick}
               icon={{
                 url: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='48' viewBox='0 0 32 48'%3E%3Cpath fill='%239333ea' stroke='%23ffffff' strokeWidth='2' d='M16 0C8.8 0 3 5.8 3 13c0 8.5 13 35 13 35s13-26.5 13-35c0-7.2-5.8-13-13-13zm0 18c-2.8 0-5-2.2-5-5s2.2-5 5-5 5 2.2 5 5-2.2 5-5 5z'/%3E%3C/svg%3E",
                 scaledSize: { width: 32, height: 48 },
@@ -853,6 +872,11 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
             <Marker
               position={drawnCoordinates}
               zIndex={350}
+              onClick={() => {
+                console.log("[v0] Saved custom marker clicked, opening Google Maps")
+                const url = `https://www.google.com/maps/search/?api=1&query=${drawnCoordinates.lat},${drawnCoordinates.lng}`
+                window.open(url, "_blank")
+              }}
               icon={{
                 url: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='48' viewBox='0 0 32 48'%3E%3Cpath fill='%239333ea' stroke='%23ffffff' strokeWidth='2' d='M16 0C8.8 0 3 5.8 3 13c0 8.5 13 35 13 35s13-26.5 13-35c0-7.2-5.8-13-13-13zm0 18c-2.8 0-5-2.2-5-5s2.2-5 5-5 5 2.2 5 5-2.2 5-5 5z'/%3E%3C/svg%3E",
                 scaledSize: { width: 32, height: 48 },

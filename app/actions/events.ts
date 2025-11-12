@@ -100,7 +100,7 @@ export async function createEvent(
         end_time: endTime,
         is_all_day: data.is_all_day || false,
         visibility_scope: data.visibility_scope,
-        status: data.status,
+        status: data.status || "published",
         requires_rsvp: data.requires_rsvp || false,
         rsvp_deadline: data.rsvp_deadline || null,
         max_attendees: data.max_attendees || null,

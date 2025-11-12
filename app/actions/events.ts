@@ -1253,17 +1253,14 @@ export async function flagEvent(eventId: string, reason: string, tenantSlug: str
     }
 
     // Verify event exists
-    const { data: event, error: eventError } = await supabase
-      .from("events")
-      .select("id, tenant_id")
-      .eq("id", eventId)
-      .single()
+    const { data: event, error: eventError } = await supabase.from("events").select("id").eq("id", eventId).single()
 
     if (eventError || !event) {
       console.log("[v0] Event not found:", { eventId, error: eventError })
       return { success: false, error: "Event not found" }
     }
 
+    // Check if user has already flagged this event
     const { data: existingFlag, error: checkError } = await supabase
       .from("event_flags")
       .select("id")
@@ -1282,16 +1279,17 @@ export async function flagEvent(eventId: string, reason: string, tenantSlug: str
       return { success: false, error: "You have already flagged this event" }
     }
 
+    // Insert flag without tenant_id
     const { error: insertError } = await supabase.from("event_flags").insert({
       event_id: eventId,
       flagged_by: user.id,
       reason: trimmedReason,
-      tenant_id: event.tenant_id,
     })
 
     if (insertError) {
       console.error("[v0] Error flagging event:", insertError)
 
+      // Handle duplicate key constraint violation
       if (insertError.code === "23505") {
         return { success: false, error: "You have already flagged this event" }
       }
@@ -1301,6 +1299,7 @@ export async function flagEvent(eventId: string, reason: string, tenantSlug: str
 
     console.log("[v0] Flag inserted successfully")
 
+    // Revalidate the event detail page
     revalidatePath(`/t/${tenantSlug}/dashboard/events/${eventId}`)
 
     return { success: true }

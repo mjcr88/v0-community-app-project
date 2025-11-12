@@ -66,7 +66,6 @@ export function FlagEventDialog({
       })
       setOpen(false)
       setReason("")
-      await new Promise((resolve) => setTimeout(resolve, 500))
       router.refresh()
     } else {
       toast({

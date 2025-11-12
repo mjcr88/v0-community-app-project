@@ -1260,6 +1260,17 @@ export async function flagEvent(eventId: string, tenantId: string, tenantSlug: s
       return { success: false, error: "Event not found" }
     }
 
+    const { data: existingFlag } = await supabase
+      .from("event_flags")
+      .select("id")
+      .eq("event_id", eventId)
+      .eq("flagged_by", user.id)
+      .maybeSingle()
+
+    if (existingFlag) {
+      return { success: false, error: "You have already flagged this event" }
+    }
+
     // Insert flag
     const { error: insertError } = await supabase.from("event_flags").insert({
       event_id: eventId,
@@ -1272,12 +1283,10 @@ export async function flagEvent(eventId: string, tenantId: string, tenantSlug: s
       return { success: false, error: insertError.message }
     }
 
-    setTimeout(() => {
-      revalidatePath(`/t/${tenantSlug}/admin/events`)
-      revalidatePath(`/t/${tenantSlug}/dashboard/events/${eventId}`)
-      revalidatePath(`/t/${tenantSlug}/dashboard/events`)
-      revalidatePath(`/t/${tenantSlug}/dashboard`)
-    }, 1000)
+    revalidatePath(`/t/${tenantSlug}/admin/events`)
+    revalidatePath(`/t/${tenantSlug}/dashboard/events/${eventId}`)
+    revalidatePath(`/t/${tenantSlug}/dashboard/events`)
+    revalidatePath(`/t/${tenantSlug}/dashboard`)
 
     return { success: true }
   } catch (error) {

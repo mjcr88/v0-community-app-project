@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { Calendar, Plus, CalendarClock, Lock, Building } from "lucide-react"
+import { Calendar, Plus, CalendarClock, Lock, Building, Flag } from "lucide-react"
 import Link from "next/link"
 import { format, isPast, parseISO } from "date-fns"
 import { EventRsvpQuickAction } from "@/components/event-rsvp-quick-action"
@@ -41,6 +41,7 @@ interface Event {
     name: string
   } | null
   custom_location_name?: string | null
+  flag_count?: number
 }
 
 export function EventsList({
@@ -153,6 +154,12 @@ export function EventsList({
                   {eventIsPast && (
                     <Badge variant="outline" className="text-xs">
                       Past Event
+                    </Badge>
+                  )}
+                  {event.flag_count && event.flag_count > 0 && (
+                    <Badge variant="destructive" className="text-xs gap-1">
+                      <Flag className="h-3 w-3" />
+                      Flagged ({event.flag_count})
                     </Badge>
                   )}
                 </div>

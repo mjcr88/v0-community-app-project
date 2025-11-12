@@ -1272,9 +1272,12 @@ export async function flagEvent(eventId: string, tenantId: string, tenantSlug: s
       return { success: false, error: insertError.message }
     }
 
-    revalidatePath(`/t/${tenantSlug}/admin/events`)
-    revalidatePath(`/t/${tenantSlug}/dashboard/events/${eventId}`)
-    revalidatePath(`/t/${tenantSlug}/dashboard/events`)
+    setTimeout(() => {
+      revalidatePath(`/t/${tenantSlug}/admin/events`)
+      revalidatePath(`/t/${tenantSlug}/dashboard/events/${eventId}`)
+      revalidatePath(`/t/${tenantSlug}/dashboard/events`)
+      revalidatePath(`/t/${tenantSlug}/dashboard`)
+    }, 1000)
 
     return { success: true }
   } catch (error) {

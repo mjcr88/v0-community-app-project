@@ -61,13 +61,17 @@ export function FlagEventDialog({
     setIsSubmitting(true)
 
     try {
+      console.log("[v0] Submitting flag:", { eventId, reasonLength: trimmedReason.length })
+
       const result = await flagEvent(eventId, trimmedReason, tenantSlug)
+
+      console.log("[v0] Flag result:", result)
 
       if (result.success) {
         toast.success("Event flagged. Admins will review.")
         setReason("")
         setOpen(false)
-        router.refresh()
+        window.location.reload()
       } else {
         // Handle specific error messages from server
         toast.error(result.error || "Failed to flag event. Please try again.")

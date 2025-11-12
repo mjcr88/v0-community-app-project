@@ -1244,6 +1244,8 @@ export async function flagEvent(eventId: string, reason: string, tenantSlug: str
       return { success: false, error: "User not authenticated" }
     }
 
+    console.log("[v0] flagEvent called:", { eventId, userId: user.id, reasonLength: reason.trim().length })
+
     // Validate reason
     const trimmedReason = reason.trim()
     if (trimmedReason.length < 10 || trimmedReason.length > 500) {
@@ -1258,6 +1260,7 @@ export async function flagEvent(eventId: string, reason: string, tenantSlug: str
       .single()
 
     if (eventError || !event) {
+      console.log("[v0] Event not found:", { eventId, error: eventError })
       return { success: false, error: "Event not found" }
     }
 
@@ -1268,19 +1271,22 @@ export async function flagEvent(eventId: string, reason: string, tenantSlug: str
       .eq("flagged_by", user.id)
       .maybeSingle()
 
+    console.log("[v0] Existing flag check:", { existingFlag, checkError })
+
     if (checkError) {
       console.error("[v0] Error checking for existing flag:", checkError)
     }
 
     if (existingFlag) {
+      console.log("[v0] User has already flagged this event")
       return { success: false, error: "You have already flagged this event" }
     }
 
-    // Insert flag into event_flags table
     const { error: insertError } = await supabase.from("event_flags").insert({
       event_id: eventId,
       flagged_by: user.id,
       reason: trimmedReason,
+      tenant_id: event.tenant_id,
     })
 
     if (insertError) {
@@ -1292,6 +1298,8 @@ export async function flagEvent(eventId: string, reason: string, tenantSlug: str
 
       return { success: false, error: insertError.message }
     }
+
+    console.log("[v0] Flag inserted successfully")
 
     revalidatePath(`/t/${tenantSlug}/dashboard/events/${eventId}`)
 

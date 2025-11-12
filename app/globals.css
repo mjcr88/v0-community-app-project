@@ -161,4 +161,21 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Increased responsive calendar cell sizing to make it bigger */
+  .rdp {
+    --cell-size: 3rem;
+  }
+
+  @media (min-width: 640px) {
+    .rdp {
+      --cell-size: 4rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .rdp {
+      --cell-size: 5rem;
+    }
+  }
 }

@@ -1,29 +1,83 @@
-import { createClient } from "@/lib/supabase/server"
-import { redirect, notFound } from "next/navigation"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { notFound, redirect } from "next/navigation"
+import { createServerClient } from "@/lib/supabase/server"
+import { getEvent } from "@/app/actions/events"
+import { ArrowLeft, Calendar, Share2, Pencil, Users, Lock } from "lucide-react"
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Calendar, Clock, MapPin, User } from "lucide-react"
-import { format } from "date-fns"
-import { Button } from "@/components/ui/button"
-import Link from "next/link"
+import { DeleteEventButton } from "./delete-event-button"
+import { EventRsvpSection } from "./event-rsvp-section"
+import { SaveEventButton } from "./save-event-button"
+import { EventAttendeesSection } from "./event-attendees-section"
+import { EventLocationSection } from "./event-location-section"
+import { getEventAttendees } from "@/app/actions/events"
+import { canUserViewEvent } from "@/lib/visibility-filter"
 
-export default async function EventDetailPage({
-  params,
-}: {
+interface EventDetailPageProps {
   params: Promise<{ slug: string; eventId: string }>
-}) {
-  const { slug, eventId } = await params
+}
 
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-  const isValidUuid = uuidRegex.test(eventId)
+function formatEventDate(
+  startDate: string,
+  endDate: string | null,
+  startTime: string | null,
+  endTime: string | null,
+  isAllDay: boolean,
+) {
+  const start = new Date(startDate)
+  const end = endDate ? new Date(endDate) : null
 
-  if (!isValidUuid) {
-    notFound()
+  const dateOptions: Intl.DateTimeFormatOptions = {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
   }
 
-  const supabase = await createClient()
+  if (isAllDay) {
+    if (end && endDate !== startDate) {
+      return `${start.toLocaleDateString("en-US", dateOptions)} - ${end.toLocaleDateString("en-US", dateOptions)}`
+    }
+    return start.toLocaleDateString("en-US", dateOptions)
+  }
 
+  const timeOptions: Intl.DateTimeFormatOptions = {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }
+
+  const startTimeStr = startTime ? new Date(`2000-01-01T${startTime}`).toLocaleTimeString("en-US", timeOptions) : ""
+  const endTimeStr = endTime ? new Date(`2000-01-01T${endTime}`).toLocaleTimeString("en-US", timeOptions) : ""
+
+  if (end && endDate !== startDate) {
+    return `${start.toLocaleDateString("en-US", dateOptions)} ${startTimeStr} - ${end.toLocaleDateString("en-US", dateOptions)} ${endTimeStr}`
+  }
+
+  if (startTimeStr && endTimeStr) {
+    return `${start.toLocaleDateString("en-US", dateOptions)} • ${startTimeStr} - ${endTimeStr}`
+  }
+
+  if (startTimeStr) {
+    return `${start.toLocaleDateString("en-US", dateOptions)} • ${startTimeStr}`
+  }
+
+  return start.toLocaleDateString("en-US", dateOptions)
+}
+
+function getInitials(firstName?: string | null, lastName?: string | null): string {
+  const first = firstName?.charAt(0) || ""
+  const last = lastName?.charAt(0) || ""
+  return (first + last).toUpperCase() || "U"
+}
+
+export default async function EventDetailPage({ params }: EventDetailPageProps) {
+  const { slug, eventId } = await params
+
+  const supabase = await createServerClient()
+
+  // Get current user
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -32,134 +86,351 @@ export default async function EventDetailPage({
     redirect(`/t/${slug}/login`)
   }
 
-  const { data: resident } = await supabase
-    .from("users")
-    .select("id, tenant_id")
-    .eq("id", user.id)
-    .eq("role", "resident")
-    .single()
+  // Get tenant
+  const { data: tenant } = await supabase.from("tenants").select("id, name").eq("slug", slug).single()
 
-  if (!resident) {
-    redirect(`/t/${slug}/login`)
+  if (!tenant) {
+    redirect("/")
   }
 
-  const { data: event } = await supabase
-    .from("events")
-    .select(
-      `
-      *,
-      event_categories (
-        name,
-        icon
-      ),
-      creator:users!created_by (
-        first_name,
-        last_name,
-        profile_picture_url
-      )
-    `,
-    )
-    .eq("id", eventId)
-    .eq("tenant_id", resident.tenant_id)
+  const { data: userData } = await supabase
+    .from("users")
+    .select("id, role, is_tenant_admin, lot_id, family_unit_id")
+    .eq("id", user.id)
     .single()
 
-  if (!event) {
+  const canView = await canUserViewEvent(eventId, {
+    userId: user.id,
+    tenantId: tenant.id,
+    userLotId: userData?.lot_id,
+    userFamilyUnitId: userData?.family_unit_id,
+  })
+
+  if (!canView) {
     notFound()
   }
 
-  const creator = event.creator
-  const creatorInitials =
-    creator?.first_name && creator?.last_name ? `${creator.first_name[0]}${creator.last_name[0]}` : "?"
+  // Get event
+  const result = await getEvent(eventId, tenant.id)
 
-  const formatDateTime = (date: string, time?: string) => {
-    if (!time) {
-      return format(new Date(date), "MMM d, yyyy")
+  if (!result.success || !result.data) {
+    notFound()
+  }
+
+  const event = result.data
+  const isPastEvent = new Date(event.start_date) < new Date()
+
+  let canManageEvent = false
+  let isCreator = false
+  if (userData) {
+    isCreator = event.created_by === user.id
+    const isAdmin = userData.is_tenant_admin || userData.role === "super_admin" || userData.role === "tenant_admin"
+    canManageEvent = isCreator || isAdmin
+  }
+
+  const eventTypeLabel = event.event_type === "official" ? "Official Event" : "Community Event"
+  const eventTypeVariant = event.event_type === "official" ? "default" : "secondary"
+
+  const statusLabel =
+    event.status === "cancelled"
+      ? "Cancelled"
+      : event.status === "draft"
+        ? "Draft"
+        : isPastEvent
+          ? "Past Event"
+          : "Upcoming"
+
+  const statusVariant =
+    event.status === "cancelled"
+      ? "destructive"
+      : event.status === "draft"
+        ? "outline"
+        : isPastEvent
+          ? "secondary"
+          : "default"
+
+  let attendees = null
+  if (canManageEvent && event.requires_rsvp) {
+    const attendeesResult = await getEventAttendees(eventId, tenant.id)
+    if (attendeesResult.success && attendeesResult.data) {
+      attendees = attendeesResult.data
     }
-    const dateTimeStr = `${date}T${time}`
-    return format(new Date(dateTimeStr), "MMM d, yyyy 'at' h:mm a")
+  }
+
+  let visibilityDetails = null
+  if (canManageEvent) {
+    if (event.visibility_scope === "neighborhood") {
+      const { data: neighborhoods } = await supabase
+        .from("event_neighborhoods")
+        .select("neighborhood:neighborhoods(id, name)")
+        .eq("event_id", eventId)
+      visibilityDetails = {
+        type: "neighborhood",
+        data: neighborhoods?.map((n: any) => n.neighborhood) || [],
+      }
+    } else if (event.visibility_scope === "private") {
+      const { data: invites } = await supabase
+        .from("event_invites")
+        .select(
+          `
+          invitee:users!invitee_id(id, first_name, last_name),
+          family:family_units!family_unit_id(id, name)
+        `,
+        )
+        .eq("event_id", eventId)
+
+      const individuals = invites?.filter((i: any) => i.invitee).map((i: any) => i.invitee) || []
+      const families = invites?.filter((i: any) => i.family).map((i: any) => i.family) || []
+
+      visibilityDetails = {
+        type: "private",
+        individuals,
+        families,
+      }
+    }
+  }
+
+  let locationData = null
+  if (event.location_type === "community_location" && event.location_id) {
+    const { data: location } = await supabase
+      .from("locations")
+      .select("id, name, type, coordinates, boundary_coordinates, path_coordinates")
+      .eq("id", event.location_id)
+      .single()
+
+    if (location) {
+      locationData = location
+    }
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <Button variant="ghost" asChild>
-          <Link href={`/t/${slug}/dashboard/events`}>← Back to Events</Link>
-        </Button>
-      </div>
+    <div className="min-h-screen bg-background">
+      {/* Hero Section */}
+      <div className="relative bg-gradient-to-br from-primary/10 via-primary/5 to-background border-b">
+        <div className="container mx-auto px-4 py-8 md:py-12">
+          <div className="max-w-4xl mx-auto space-y-6">
+            {/* Back Button */}
+            <Link href={`/t/${slug}/dashboard/events`}>
+              <Button variant="ghost" size="sm" className="gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                Back to Events
+              </Button>
+            </Link>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-start justify-between">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                {event.event_categories?.icon && <span className="text-3xl">{event.event_categories.icon}</span>}
-                <CardTitle className="text-3xl">{event.title}</CardTitle>
+            {/* Title & Badges */}
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center gap-2">
+                {event.category?.icon && (
+                  <span className="text-3xl" aria-hidden="true">
+                    {event.category.icon}
+                  </span>
+                )}
+                <Badge variant="outline" className="text-sm">
+                  {event.category?.name || "Uncategorized"}
+                </Badge>
+                <Badge variant={eventTypeVariant as any}>{eventTypeLabel}</Badge>
+                <Badge variant={statusVariant as any}>{statusLabel}</Badge>
+                {event.visibility_scope === "neighborhood" && (
+                  <Badge variant="secondary" className="gap-1">
+                    <Users className="h-3 w-3" />
+                    Neighborhood
+                  </Badge>
+                )}
+                {event.visibility_scope === "private" && (
+                  <Badge variant="secondary" className="gap-1">
+                    <Lock className="h-3 w-3" />
+                    Private
+                  </Badge>
+                )}
               </div>
-              <CardDescription className="text-base">{event.event_categories?.name || "Uncategorized"}</CardDescription>
+
+              <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-balance">{event.title}</h1>
             </div>
-            <div className="flex gap-2">
-              <Badge variant={event.status === "published" ? "default" : "secondary"}>{event.status}</Badge>
-              <Badge variant="outline">{event.visibility_scope}</Badge>
+
+            {/* Action Buttons */}
+            <div className="flex flex-wrap gap-2">
+              <SaveEventButton eventId={eventId} userId={user?.id || null} />
+              {canManageEvent && (
+                <>
+                  <Link href={`/t/${slug}/dashboard/events/${eventId}/edit`}>
+                    <Button variant="default" size="sm" className="gap-2">
+                      <Pencil className="h-4 w-4" />
+                      Edit Event
+                    </Button>
+                  </Link>
+                  {isCreator && (
+                    <DeleteEventButton
+                      eventId={eventId}
+                      tenantId={tenant.id}
+                      tenantSlug={slug}
+                      eventTitle={event.title}
+                    />
+                  )}
+                </>
+              )}
+              <Button variant="outline" size="sm" className="gap-2 bg-transparent">
+                <Share2 className="h-4 w-4" />
+                Share Event
+              </Button>
             </div>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="flex items-center gap-3">
-              <Calendar className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="text-sm font-medium">Start</p>
-                <p className="text-sm text-muted-foreground">
-                  {formatDateTime(event.start_date, event.start_time || undefined)}
+        </div>
+      </div>
+
+      {/* Content Section */}
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto space-y-8">
+          {canManageEvent && visibilityDetails && (
+            <div className="p-6 border rounded-lg bg-muted/30 space-y-3">
+              <div className="flex items-center gap-2">
+                {visibilityDetails.type === "neighborhood" ? (
+                  <Users className="h-5 w-5 text-primary" />
+                ) : (
+                  <Lock className="h-5 w-5 text-primary" />
+                )}
+                <h3 className="font-semibold">
+                  {visibilityDetails.type === "neighborhood" ? "Neighborhood Visibility" : "Private Event"}
+                </h3>
+              </div>
+              {visibilityDetails.type === "neighborhood" && visibilityDetails.data.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Visible to residents in:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {visibilityDetails.data.map((neighborhood: any) => (
+                      <Badge key={neighborhood.id} variant="outline">
+                        {neighborhood.name}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {visibilityDetails.type === "private" && (
+                <div className="space-y-3">
+                  {visibilityDetails.individuals && visibilityDetails.individuals.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-sm text-muted-foreground">
+                        Invited residents ({visibilityDetails.individuals.length}):
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {visibilityDetails.individuals.slice(0, 5).map((person: any) => (
+                          <Badge key={person.id} variant="outline">
+                            {person.first_name} {person.last_name}
+                          </Badge>
+                        ))}
+                        {visibilityDetails.individuals.length > 5 && (
+                          <Badge variant="outline">+{visibilityDetails.individuals.length - 5} more</Badge>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {visibilityDetails.families && visibilityDetails.families.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-sm text-muted-foreground">
+                        Invited families ({visibilityDetails.families.length}):
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {visibilityDetails.families.map((family: any) => (
+                          <Badge key={family.id} variant="outline">
+                            {family.name}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Description Section */}
+          {event.description && (
+            <div className="space-y-4">
+              <h2 className="text-2xl font-semibold">About This Event</h2>
+              <div className="prose prose-neutral dark:prose-invert max-w-none">
+                <p className="text-muted-foreground whitespace-pre-wrap text-pretty leading-relaxed">
+                  {event.description}
                 </p>
               </div>
             </div>
+          )}
 
-            {event.end_date && (
+          {/* Event Info Grid */}
+          <div className="grid md:grid-cols-2 gap-4">
+            {/* Date & Time Card */}
+            <div className="p-6 border rounded-lg bg-card space-y-3">
               <div className="flex items-center gap-3">
-                <Clock className="h-5 w-5 text-muted-foreground" />
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Calendar className="h-5 w-5 text-primary" />
+                </div>
                 <div>
-                  <p className="text-sm font-medium">End</p>
-                  <p className="text-sm text-muted-foreground">
-                    {formatDateTime(event.end_date, event.end_time || undefined)}
+                  <p className="text-sm text-muted-foreground">When</p>
+                  <p className="font-medium text-pretty">
+                    {formatEventDate(
+                      event.start_date,
+                      event.end_date,
+                      event.start_time,
+                      event.end_time,
+                      event.is_all_day,
+                    )}
                   </p>
                 </div>
               </div>
-            )}
-
-            <div className="flex items-center gap-3">
-              <MapPin className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="text-sm font-medium">Event Type</p>
-                <p className="text-sm text-muted-foreground capitalize">{event.event_type.replace("_", " ")}</p>
-              </div>
+              {event.is_all_day && <p className="text-sm text-muted-foreground pl-13">All-day event</p>}
             </div>
 
-            <div className="flex items-center gap-3">
-              <User className="h-5 w-5 text-muted-foreground" />
-              <div className="flex items-center gap-2">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={creator?.profile_picture_url || undefined} />
-                  <AvatarFallback>{creatorInitials}</AvatarFallback>
+            {/* Organizer Card */}
+            <div className="p-6 border rounded-lg bg-card">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-10 w-10">
+                  <AvatarImage
+                    src={event.creator?.profile_picture_url || undefined}
+                    alt={`${event.creator?.first_name || "User"}'s avatar`}
+                  />
+                  <AvatarFallback>{getInitials(event.creator?.first_name, event.creator?.last_name)}</AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="text-sm font-medium">
-                    {creator?.first_name} {creator?.last_name}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Organizer</p>
+                  <p className="text-sm text-muted-foreground">Organized by</p>
+                  <Link
+                    href={`/t/${slug}/dashboard/neighbours/${event.created_by}`}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    {event.creator?.first_name} {event.creator?.last_name}
+                  </Link>
                 </div>
               </div>
             </div>
           </div>
 
-          {event.description && (
-            <div className="space-y-2">
-              <h3 className="text-lg font-semibold">About this event</h3>
-              <p className="text-muted-foreground whitespace-pre-wrap">{event.description}</p>
+          {/* RSVP Section */}
+          <EventRsvpSection
+            eventId={eventId}
+            tenantId={tenant.id}
+            requiresRsvp={event.requires_rsvp || false}
+            rsvpDeadline={event.rsvp_deadline}
+            maxAttendees={event.max_attendees}
+            userId={user?.id || null}
+          />
+
+          {/* Attendees Section */}
+          {attendees && <EventAttendeesSection attendees={attendees} tenantSlug={slug} />}
+
+          {/* Location Section */}
+          {event.location_type && (
+            <div className="p-6 border rounded-lg bg-card space-y-4">
+              <EventLocationSection
+                locationType={event.location_type}
+                locationId={event.location_id}
+                customLocationName={event.custom_location_name}
+                customLocationCoordinates={event.custom_location_coordinates}
+                customLocationType={event.custom_location_type}
+                location={locationData}
+                tenantSlug={slug}
+                tenantId={tenant.id}
+              />
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   )
 }

@@ -1,14 +1,16 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Calendar, Plus } from "lucide-react"
+import { Plus } from "lucide-react"
 import Link from "next/link"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { format } from "date-fns"
+import { EventsPageClient } from "./events-page-client"
+import { applyVisibilityFilter } from "@/lib/visibility-filter"
 
-export default async function EventsPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function EventsPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>
+}) {
   const { slug } = await params
   const supabase = await createClient()
 
@@ -22,7 +24,7 @@ export default async function EventsPage({ params }: { params: Promise<{ slug: s
 
   const { data: resident } = await supabase
     .from("users")
-    .select("id, tenant_id, lot_id, lots(neighborhoods(id))")
+    .select("id, tenant_id, lot_id, family_unit_id, lots(neighborhoods(id))")
     .eq("id", user.id)
     .eq("role", "resident")
     .single()
@@ -31,12 +33,26 @@ export default async function EventsPage({ params }: { params: Promise<{ slug: s
     redirect(`/t/${slug}/login`)
   }
 
-  const { data: events, error } = await supabase
+  const { data: categories } = await supabase
+    .from("event_categories")
+    .select("id, name, icon")
+    .eq("tenant_id", resident.tenant_id)
+    .order("name")
+
+  const visibleEventIds = await applyVisibilityFilter(resident.tenant_id, {
+    userId: user.id,
+    tenantId: resident.tenant_id,
+    userLotId: resident.lot_id,
+    userFamilyUnitId: resident.family_unit_id,
+  })
+
+  const { data: events } = await supabase
     .from("events")
     .select(
       `
       *,
       event_categories (
+        id,
         name,
         icon
       ),
@@ -44,16 +60,54 @@ export default async function EventsPage({ params }: { params: Promise<{ slug: s
         first_name,
         last_name,
         profile_picture_url
-      )
+      ),
+      location:locations!location_id(id, name, coordinates)
     `,
     )
     .eq("tenant_id", resident.tenant_id)
-    .eq("visibility_scope", "community")
+    .in("id", visibleEventIds)
     .eq("status", "published")
     .order("start_date", { ascending: true })
     .order("start_time", { ascending: true })
 
-  const hasEvents = events && events.length > 0
+  const eventIds = (events || []).map((e) => e.id)
+
+  // Get all attending counts in one query
+  const { data: allRsvps } = await supabase
+    .from("event_rsvps")
+    .select("event_id, rsvp_status, user_id")
+    .in("event_id", eventIds)
+
+  // Get user's saved events in one query
+  const { data: savedEvents } = await supabase
+    .from("saved_events")
+    .select("event_id")
+    .eq("user_id", user.id)
+    .in("event_id", eventIds)
+
+  // Build lookup maps for O(1) access
+  const attendingCountMap = new Map<string, number>()
+  const userRsvpMap = new Map<string, string>()
+  const savedEventsSet = new Set<string>(savedEvents?.map((s) => s.event_id) || [])
+
+  allRsvps?.forEach((rsvp) => {
+    // Count attending
+    if (rsvp.rsvp_status === "yes") {
+      attendingCountMap.set(rsvp.event_id, (attendingCountMap.get(rsvp.event_id) || 0) + 1)
+    }
+    // Track user's RSVP
+    if (rsvp.user_id === user.id) {
+      userRsvpMap.set(rsvp.event_id, rsvp.rsvp_status)
+    }
+  })
+
+  // Map the data efficiently
+  const eventsWithUserData = (events || []).map((event) => ({
+    ...event,
+    attending_count: attendingCountMap.get(event.id) || 0,
+    user_rsvp_status: userRsvpMap.get(event.id) || null,
+    is_saved: savedEventsSet.has(event.id),
+  }))
 
   return (
     <div className="space-y-6">
@@ -63,90 +117,20 @@ export default async function EventsPage({ params }: { params: Promise<{ slug: s
           <p className="text-muted-foreground">Discover and join community events</p>
         </div>
         <Button asChild>
-          <Link href={`/t/${slug}/dashboard/events/new`}>
+          <Link href={`/t/${slug}/dashboard/events/create`}>
             <Plus className="h-4 w-4 mr-2" />
             Create Event
           </Link>
         </Button>
       </div>
 
-      {!hasEvents ? (
-        <Card>
-          <CardHeader className="text-center">
-            <div className="flex justify-center mb-4">
-              <Calendar className="h-12 w-12 text-muted-foreground" />
-            </div>
-            <CardTitle>No events yet</CardTitle>
-            <CardDescription>Be the first to create an event for your community!</CardDescription>
-          </CardHeader>
-          <CardContent className="flex justify-center">
-            <Button asChild>
-              <Link href={`/t/${slug}/dashboard/events/new`}>
-                <Plus className="h-4 w-4 mr-2" />
-                Create First Event
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {events.map((event) => {
-            const dateTimeStr = event.start_time
-              ? `${event.start_date}T${event.start_time}`
-              : `${event.start_date}T00:00:00`
-            const displayDate = event.start_time
-              ? format(new Date(dateTimeStr), "MMM d, yyyy 'at' h:mm a")
-              : format(new Date(event.start_date), "MMM d, yyyy")
-
-            const creatorName =
-              event.creator?.first_name && event.creator?.last_name
-                ? `${event.creator.first_name} ${event.creator.last_name}`
-                : "Unknown"
-            const creatorInitials =
-              event.creator?.first_name && event.creator?.last_name
-                ? `${event.creator.first_name[0]}${event.creator.last_name[0]}`.toUpperCase()
-                : "?"
-
-            return (
-              <Link key={event.id} href={`/t/${slug}/dashboard/events/${event.id}`}>
-                <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <CardTitle className="line-clamp-2">{event.title}</CardTitle>
-                      {event.event_categories?.icon && (
-                        <span className="text-2xl ml-2">{event.event_categories.icon}</span>
-                      )}
-                    </div>
-                    <CardDescription className="line-clamp-1">
-                      {event.event_categories?.name || "Uncategorized"}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span>{displayDate}</span>
-                    </div>
-                    {event.description && (
-                      <p className="text-sm text-muted-foreground line-clamp-2">{event.description}</p>
-                    )}
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary">{event.event_type}</Badge>
-                      <Badge variant="outline">{event.visibility_scope}</Badge>
-                    </div>
-                    <div className="flex items-center gap-2 pt-2 border-t">
-                      <Avatar className="h-6 w-6">
-                        <AvatarImage src={event.creator?.profile_picture_url || undefined} alt={creatorName} />
-                        <AvatarFallback className="text-xs">{creatorInitials}</AvatarFallback>
-                      </Avatar>
-                      <span className="text-xs text-muted-foreground">Organized by {creatorName}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            )
-          })}
-        </div>
-      )}
+      <EventsPageClient
+        events={eventsWithUserData}
+        categories={categories || []}
+        slug={slug}
+        userId={user.id}
+        tenantId={resident.tenant_id}
+      />
     </div>
   )
 }

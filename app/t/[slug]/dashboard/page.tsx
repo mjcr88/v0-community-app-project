@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button"
 import { Users, MapPin, Globe, Languages, PawPrint, Home, Map } from "lucide-react"
 import Link from "next/link"
 import { MapPreviewWidget } from "@/components/map/map-preview-widget"
+import { UpcomingEventsWidget } from "@/components/dashboard/upcoming-events-widget"
+import { getUpcomingEvents } from "@/app/actions/events"
 
 export default async function ResidentDashboardPage({ params }: { params: { slug: string } }) {
   const { slug } = params
@@ -175,6 +177,8 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
     ? { lat: tenant.map_center_coordinates.lat, lng: tenant.map_center_coordinates.lng }
     : null
 
+  const upcomingEvents = await getUpcomingEvents(resident.tenant_id, 5)
+
   return (
     <div className="space-y-6">
       <div>
@@ -194,6 +198,9 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
             </Button>
           )}
           <Button asChild variant="outline">
+            <Link href={`/t/${slug}/dashboard/events/create`}>Create Event</Link>
+          </Button>
+          <Button asChild variant="outline">
             <Link href={`/t/${slug}/dashboard/settings/profile`}>Edit Profile</Link>
           </Button>
           <Button asChild variant="outline">
@@ -209,6 +216,8 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
           )}
         </CardContent>
       </Card>
+
+      <UpcomingEventsWidget events={upcomingEvents} slug={slug} userId={user.id} tenantId={resident.tenant_id} />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {mapEnabled && lotLocation ? (

@@ -1252,20 +1252,37 @@ export async function flagEvent(eventId: string, reason: string, tenantSlug: str
       return { success: false, error: "Reason must be between 10 and 500 characters" }
     }
 
-    // Verify event exists
-    const { data: event, error: eventError } = await supabase.from("events").select("id").eq("id", eventId).single()
+    // Get tenant_id from slug
+    const { data: tenant, error: tenantError } = await supabase
+      .from("tenants")
+      .select("id")
+      .eq("slug", tenantSlug)
+      .single()
+
+    if (tenantError || !tenant) {
+      console.error("[v0] Tenant not found:", { tenantSlug, error: tenantError })
+      return { success: false, error: "Tenant not found" }
+    }
+
+    // Verify event exists and belongs to tenant
+    const { data: event, error: eventError } = await supabase
+      .from("events")
+      .select("id, tenant_id")
+      .eq("id", eventId)
+      .eq("tenant_id", tenant.id)
+      .single()
 
     if (eventError || !event) {
       console.log("[v0] Event not found:", { eventId, error: eventError })
       return { success: false, error: "Event not found" }
     }
 
-    // Check if user has already flagged this event
     const { data: existingFlag, error: checkError } = await supabase
       .from("event_flags")
       .select("id")
       .eq("event_id", eventId)
       .eq("flagged_by", user.id)
+      .eq("tenant_id", tenant.id)
       .maybeSingle()
 
     console.log("[v0] Existing flag check:", { existingFlag, checkError })
@@ -1279,10 +1296,10 @@ export async function flagEvent(eventId: string, reason: string, tenantSlug: str
       return { success: false, error: "You have already flagged this event" }
     }
 
-    // Insert flag without tenant_id
     const { error: insertError } = await supabase.from("event_flags").insert({
       event_id: eventId,
       flagged_by: user.id,
+      tenant_id: tenant.id,
       reason: trimmedReason,
     })
 
@@ -1298,6 +1315,8 @@ export async function flagEvent(eventId: string, reason: string, tenantSlug: str
     }
 
     console.log("[v0] Flag inserted successfully")
+
+    await new Promise((resolve) => setTimeout(resolve, 100))
 
     // Revalidate the event detail page
     revalidatePath(`/t/${tenantSlug}/dashboard/events/${eventId}`)

@@ -213,14 +213,16 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     .from("event_flags")
     .select("*", { count: "exact", head: true })
     .eq("event_id", eventId)
+    .eq("tenant_id", tenant.id)
 
-  console.log("[v0] Flag count for event:", { eventId, flagCount })
+  console.log("[v0] Flag count for event:", { eventId, flagCount: flagCount ?? 0 })
 
   const { data: userFlag } = await supabase
     .from("event_flags")
     .select("id")
     .eq("event_id", eventId)
     .eq("flagged_by", user.id)
+    .eq("tenant_id", tenant.id)
     .maybeSingle()
 
   const hasUserFlagged = !!userFlag
@@ -267,7 +269,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                 </Badge>
                 <Badge variant={eventTypeVariant as any}>{eventTypeLabel}</Badge>
                 <Badge variant={statusVariant as any}>{statusLabel}</Badge>
-                {flagCount && flagCount > 0 && (
+                {(flagCount ?? 0) > 0 && (
                   <Badge variant="destructive" className="gap-1.5">
                     <Flag className="h-3 w-3" />
                     Flagged ({flagCount})
@@ -294,7 +296,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             <div className="flex flex-wrap gap-2">
               <SaveEventButton eventId={eventId} userId={user?.id || null} />
               <FlagEventDialog
-                key={`flag-${hasUserFlagged}`}
+                key={`flag-dialog-${hasUserFlagged}-${flagCount}`}
                 eventId={eventId}
                 tenantSlug={slug}
                 triggerLabel={hasUserFlagged ? "Flagged" : "Flag Event"}

@@ -15,6 +15,8 @@ import { EventImagesGallery } from "./event-images-gallery"
 import { getEventAttendees } from "@/app/actions/events"
 import { canUserViewEvent } from "@/lib/visibility-filter"
 import { FlagEventDialog } from "./flag-event-dialog"
+import { getEventFlagDetails } from "@/app/actions/events"
+import { EventFlagDetails } from "./event-flag-details"
 
 interface EventDetailPageProps {
   params: Promise<{ slug: string; eventId: string }>
@@ -224,6 +226,17 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
 
   const hasUserFlagged = hasUserFlaggedData ?? false
 
+  let flagDetails = null
+  if (canManageEvent && flagCount > 0) {
+    const isAdmin = userData.is_tenant_admin || userData.role === "super_admin" || userData.role === "tenant_admin"
+    if (isAdmin) {
+      const flagDetailsResult = await getEventFlagDetails(eventId, tenant.id)
+      if (flagDetailsResult.success && flagDetailsResult.data) {
+        flagDetails = flagDetailsResult.data
+      }
+    }
+  }
+
   let locationData = null
   if (event.location_type === "community_location" && event.location_id) {
     const { data: location } = await supabase
@@ -330,6 +343,8 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
       {/* Content Section */}
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto space-y-8">
+          {flagDetails && flagDetails.length > 0 && <EventFlagDetails flags={flagDetails} tenantSlug={slug} />}
+
           {canManageEvent && visibilityDetails && (
             <div className="p-6 border rounded-lg bg-muted/30 space-y-3">
               <div className="flex items-center gap-2">

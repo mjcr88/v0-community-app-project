@@ -1316,3 +1316,61 @@ export async function flagEvent(eventId: string, reason: string, tenantSlug: str
     }
   }
 }
+
+// Admin-specific server action to fetch flag details
+export async function getEventFlagDetails(eventId: string, tenantId: string) {
+  try {
+    const supabase = await createServerClient()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: "User not authenticated" }
+    }
+
+    // Verify user is admin
+    const { data: userData } = await supabase.from("users").select("is_tenant_admin, role").eq("id", user.id).single()
+
+    const isAdmin = userData?.is_tenant_admin || userData?.role === "super_admin" || userData?.role === "tenant_admin"
+
+    if (!isAdmin) {
+      return { success: false, error: "You don't have permission to view flag details" }
+    }
+
+    // Fetch all flags for this event with user details
+    const { data: flags, error } = await supabase
+      .from("event_flags")
+      .select(
+        `
+        id,
+        reason,
+        created_at,
+        flagged_by,
+        user:users!flagged_by(
+          id,
+          first_name,
+          last_name,
+          profile_picture_url
+        )
+      `,
+      )
+      .eq("event_id", eventId)
+      .eq("tenant_id", tenantId)
+      .order("created_at", { ascending: false })
+
+    if (error) {
+      console.error("[v0] Error fetching flag details:", error)
+      return { success: false, error: error.message }
+    }
+
+    return { success: true, data: flags || [] }
+  } catch (error) {
+    console.error("[v0] Unexpected error fetching flag details:", error)
+    return {
+      success: false,
+      error: "An unexpected error occurred. Please try again.",
+    }
+  }
+}

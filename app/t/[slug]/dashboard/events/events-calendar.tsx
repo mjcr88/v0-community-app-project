@@ -159,7 +159,7 @@ export function EventsCalendar({
                   <Card
                     key={event.id}
                     className={`hover:shadow-md transition-all ${
-                      event.flag_count && event.flag_count > 0 ? "border-destructive/50" : ""
+                      event.flag_count && event.flag_count > 0 ? "border-destructive/50 border-2" : ""
                     }`}
                   >
                     <Link href={`/t/${slug}/dashboard/events/${event.id}`}>
@@ -167,7 +167,7 @@ export function EventsCalendar({
                         <div className="flex items-start justify-between gap-2">
                           <CardTitle className="text-base line-clamp-2">{event.title}</CardTitle>
                           <div className="flex items-center gap-2">
-                            {event.flag_count && event.flag_count > 0 && (
+                            {event.flag_count !== undefined && event.flag_count > 0 && (
                               <Badge variant="destructive" className="text-xs gap-1 flex-shrink-0">
                                 <Flag className="h-3 w-3" />
                                 {event.flag_count}

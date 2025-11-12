@@ -137,14 +137,14 @@ export function EventsList({
             key={event.id}
             className={`hover:shadow-lg transition-all cursor-pointer h-full ${
               eventIsPast ? "opacity-60 hover:opacity-80" : ""
-            } ${event.flag_count && event.flag_count > 0 ? "border-destructive/50" : ""}`}
+            } ${event.flag_count !== undefined && event.flag_count > 0 ? "border-destructive/50 border-2" : ""}`}
           >
             <Link href={`/t/${slug}/dashboard/events/${event.id}`}>
               <CardHeader>
                 <div className="flex items-start justify-between gap-2">
                   <CardTitle className="line-clamp-2 text-balance">{event.title}</CardTitle>
                   <div className="flex items-center gap-2">
-                    {event.flag_count && event.flag_count > 0 && (
+                    {event.flag_count !== undefined && event.flag_count > 0 && (
                       <Badge variant="destructive" className="text-xs gap-1 flex-shrink-0">
                         <Flag className="h-3 w-3" />
                         {event.flag_count}

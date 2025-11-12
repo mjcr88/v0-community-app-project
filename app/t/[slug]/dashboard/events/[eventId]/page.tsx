@@ -332,6 +332,24 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
       {/* Content Section */}
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto space-y-8">
+          {eventFlagCount > 0 && (
+            <div className="p-6 border-2 border-destructive/50 rounded-lg bg-destructive/5 space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center flex-shrink-0">
+                  <Flag className="h-5 w-5 text-destructive" />
+                </div>
+                <div className="space-y-1 flex-1">
+                  <h3 className="font-semibold text-destructive">This event has been flagged</h3>
+                  <p className="text-sm text-muted-foreground">
+                    This event has been flagged {eventFlagCount} {eventFlagCount === 1 ? "time" : "times"} by community
+                    members for admin review.
+                    {!isAdmin && " Admins have been notified and will review the content."}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {isAdmin && eventFlags && eventFlags.length > 0 && (
             <EventFlagsSection flags={eventFlags} eventId={eventId} tenantId={tenant.id} tenantSlug={slug} />
           )}

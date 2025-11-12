@@ -1287,7 +1287,6 @@ export async function flagEvent(eventId: string, tenantId: string, tenantSlug: s
     }
 
     revalidatePath(`/t/${tenantSlug}/dashboard/events`)
-    revalidatePath(`/t/${tenantSlug}/dashboard/events/${eventId}`)
 
     return { success: true }
   } catch (error) {

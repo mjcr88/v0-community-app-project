@@ -253,7 +253,7 @@ export default async function TenantAdminLayout({
                 {features.events_enabled && (
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
-                      <Link href={`/t/${slug}/admin/events/categories`}>
+                      <Link href={`/t/${slug}/admin/events`}>
                         <Calendar />
                         <span>Events</span>
                       </Link>

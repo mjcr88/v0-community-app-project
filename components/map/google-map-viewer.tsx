@@ -201,15 +201,20 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
       service.getDetails(
         {
           placeId: placeId,
-          fields: ["name", "geometry.location"],
+          fields: ["name", "formatted_address", "geometry.location", "displayName"],
         },
         (place, status) => {
+          console.log("[v0] Place getDetails response - status:", status, "place:", place)
+
           if (status === window.google.maps.places.PlacesServiceStatus.OK && place) {
             const lat = place.geometry?.location?.lat()
             const lng = place.geometry?.location?.lng()
-            const name = place.name
 
-            if (lat && lng && name) {
+            const name = place.name || place.formatted_address?.split(",")[0] || "Custom Location"
+
+            console.log("[v0] Extracted data - lat:", lat, "lng:", lng, "name:", name)
+
+            if (lat !== undefined && lng !== undefined && name) {
               console.log("[v0] Selected place:", { name, lat, lng })
 
               setMarkerPosition({ lat, lng })
@@ -222,8 +227,8 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                 })
               }
 
-              // Also notify parent about the place name
               if (typeof window !== "undefined") {
+                console.log("[v0] Dispatching placeSelected event with name:", name)
                 window.dispatchEvent(
                   new CustomEvent("placeSelected", {
                     detail: { name, lat, lng },
@@ -235,7 +240,11 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
               if (typeof onDrawingModeChange === "function") {
                 onDrawingModeChange(null)
               }
+            } else {
+              console.error("[v0] Missing required place data - lat:", lat, "lng:", lng, "name:", name)
             }
+          } else {
+            console.error("[v0] Place getDetails failed - status:", status)
           }
         },
       )

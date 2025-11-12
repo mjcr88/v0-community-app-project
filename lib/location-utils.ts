@@ -84,3 +84,48 @@ export async function updateTenantBoundary(
     }
   }
 }
+
+export async function updateTenantMapSettings(
+  tenantId: string,
+  mapCenter: { lat: number; lng: number } | null,
+  mapZoom?: number | null,
+): Promise<OperationResult> {
+  try {
+    const supabase = createBrowserClient()
+
+    console.log("[v0] Updating tenant map settings for tenant:", tenantId)
+    console.log("[v0] Map center:", mapCenter)
+    console.log("[v0] Map zoom:", mapZoom)
+
+    const updates: any = {}
+
+    if (mapCenter !== undefined) {
+      updates.map_center_coordinates = mapCenter
+    }
+
+    if (mapZoom !== undefined) {
+      updates.map_default_zoom = mapZoom
+    }
+
+    const { data, error } = await supabase.from("tenants").update(updates).eq("id", tenantId).select()
+
+    console.log("[v0] Tenant map settings update result:", { data, error })
+
+    if (error) {
+      console.error("[v0] Tenant map settings update error:", error)
+      return {
+        success: false,
+        error: error.message,
+      }
+    }
+
+    console.log("[v0] Tenant map settings updated successfully")
+    return { success: true }
+  } catch (error) {
+    console.error("[v0] Unexpected error updating tenant map settings:", error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    }
+  }
+}

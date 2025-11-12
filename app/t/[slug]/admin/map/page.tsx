@@ -7,6 +7,7 @@ import { GeoJSONUploadButton } from "@/components/map/geojson-upload-button"
 import { AdminMapClient } from "./admin-map-client"
 import { redirect } from "next/navigation"
 import { getLocationCounts } from "@/lib/queries/get-locations"
+import { MapSettingsDialog } from "./map-settings-dialog"
 
 export default async function MapManagementPage({
   params,
@@ -66,6 +67,11 @@ export default async function MapManagementPage({
           <p className="text-muted-foreground">Manage locations, boundaries, and walking paths</p>
         </div>
         <div className="flex gap-2">
+          <MapSettingsDialog
+            tenantId={tenant.id}
+            currentCenter={tenant.map_center_coordinates as { lat: number; lng: number } | null}
+            currentZoom={tenant.map_default_zoom}
+          />
           <Button asChild variant="outline">
             <Link href={`/t/${slug}/admin/map/viewer`}>View Map</Link>
           </Button>

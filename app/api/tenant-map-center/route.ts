@@ -24,8 +24,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Failed to fetch tenant" }, { status: 500 })
     }
 
-    // If tenant has map center, use it
     if (tenant.map_center_coordinates) {
+      console.log("[v0] Using explicit tenant map_center_coordinates")
       return NextResponse.json({
         success: true,
         center: tenant.map_center_coordinates,
@@ -33,8 +33,56 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Otherwise, calculate from boundary
+    console.log("[v0] Calculating center from all locations")
+    const { data: locations } = await supabase
+      .from("locations")
+      .select("coordinates, boundary_coordinates, path_coordinates")
+      .eq("tenant_id", tenantId)
+
+    if (locations && locations.length > 0) {
+      const allCoords: Array<{ lat: number; lng: number }> = []
+
+      locations.forEach((loc) => {
+        // Add point coordinates
+        if (loc.coordinates) {
+          allCoords.push(loc.coordinates as { lat: number; lng: number })
+        }
+        // Add boundary coordinates
+        if (loc.boundary_coordinates && Array.isArray(loc.boundary_coordinates)) {
+          loc.boundary_coordinates.forEach((coord: [number, number]) => {
+            allCoords.push({ lat: coord[0], lng: coord[1] })
+          })
+        }
+        // Add path coordinates
+        if (loc.path_coordinates && Array.isArray(loc.path_coordinates)) {
+          loc.path_coordinates.forEach((coord: [number, number]) => {
+            allCoords.push({ lat: coord[0], lng: coord[1] })
+          })
+        }
+      })
+
+      if (allCoords.length > 0) {
+        // Calculate bounding box center from all location coordinates
+        const lats = allCoords.map((c) => c.lat)
+        const lngs = allCoords.map((c) => c.lng)
+        const minLat = Math.min(...lats)
+        const maxLat = Math.max(...lats)
+        const minLng = Math.min(...lngs)
+        const maxLng = Math.max(...lngs)
+        const centerLat = (minLat + maxLat) / 2
+        const centerLng = (minLng + maxLng) / 2
+
+        console.log("[v0] Calculated center from", allCoords.length, "location coordinates")
+        return NextResponse.json({
+          success: true,
+          center: { lat: centerLat, lng: centerLng },
+          zoom: tenant.map_default_zoom || 14,
+        })
+      }
+    }
+
     if (tenant.map_boundary_coordinates && Array.isArray(tenant.map_boundary_coordinates)) {
+      console.log("[v0] Calculating center from tenant boundary")
       const coords = tenant.map_boundary_coordinates as Array<{ lat: number; lng: number }>
       const lats = coords.map((c) => c.lat)
       const lngs = coords.map((c) => c.lng)
@@ -55,6 +103,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fallback to default Costa Rica coordinates
+    console.log("[v0] Using fallback default coordinates")
     return NextResponse.json({
       success: true,
       center: { lat: 9.9567, lng: -84.5333 },

@@ -296,7 +296,6 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             <div className="flex flex-wrap gap-2">
               <SaveEventButton eventId={eventId} userId={user?.id || null} />
               <FlagEventDialog
-                key={`flag-dialog-${hasUserFlagged}-${flagCount}`}
                 eventId={eventId}
                 tenantSlug={slug}
                 triggerLabel={hasUserFlagged ? "Flagged" : "Flag Event"}

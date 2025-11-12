@@ -1316,12 +1316,20 @@ export async function flagEvent(eventId: string, reason: string, tenantSlug: str
 
     console.log("[v0] Flag inserted successfully")
 
-    await new Promise((resolve) => setTimeout(resolve, 100))
+    await new Promise((resolve) => setTimeout(resolve, 300))
+
+    const { count: verifyCount } = await supabase
+      .from("event_flags")
+      .select("*", { count: "exact", head: true })
+      .eq("event_id", eventId)
+      .eq("tenant_id", tenant.id)
+
+    console.log("[v0] Flag count after insert:", { eventId, flagCount: verifyCount })
 
     // Revalidate the event detail page
     revalidatePath(`/t/${tenantSlug}/dashboard/events/${eventId}`)
 
-    return { success: true }
+    return { success: true, flagCount: verifyCount ?? 1 }
   } catch (error) {
     console.error("[v0] Unexpected error flagging event:", error)
     return {

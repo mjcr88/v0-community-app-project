@@ -71,7 +71,7 @@ export function FlagEventDialog({
         toast.success("Event flagged. Admins will review.")
         setReason("")
         setOpen(false)
-        window.location.reload()
+        router.refresh()
       } else {
         // Handle specific error messages from server
         toast.error(result.error || "Failed to flag event. Please try again.")

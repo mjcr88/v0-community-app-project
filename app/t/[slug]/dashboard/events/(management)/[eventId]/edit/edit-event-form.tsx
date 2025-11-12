@@ -236,8 +236,11 @@ export function EditEventForm({
           }, 1000)
         }
 
-        router.push(`/t/${tenantSlug}/dashboard/events/${eventId}`)
         router.refresh()
+
+        await new Promise((resolve) => setTimeout(resolve, 100))
+
+        router.push(`/t/${tenantSlug}/dashboard/events/${eventId}`)
       } else {
         toast({
           title: "Error",

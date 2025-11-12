@@ -1034,6 +1034,8 @@ export async function saveEventImages(
     // If no images to add, return success
     if (imageUrls.length === 0) {
       revalidatePath(`/t/${tenantSlug}/dashboard/events/${eventId}`)
+      revalidatePath(`/t/${tenantSlug}/dashboard/events`)
+      revalidatePath(`/t/${tenantSlug}/dashboard`)
       return { success: true }
     }
 
@@ -1054,6 +1056,8 @@ export async function saveEventImages(
     }
 
     revalidatePath(`/t/${tenantSlug}/dashboard/events/${eventId}`)
+    revalidatePath(`/t/${tenantSlug}/dashboard/events`)
+    revalidatePath(`/t/${tenantSlug}/dashboard`)
     return { success: true }
   } catch (error) {
     console.error("[v0] Unexpected error saving event images:", error)

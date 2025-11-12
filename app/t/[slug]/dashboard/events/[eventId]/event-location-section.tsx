@@ -37,6 +37,7 @@ export function EventLocationSection({
 }: EventLocationSectionProps) {
   const [allLocations, setAllLocations] = useState<any[]>([])
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null)
+  const [showCustomInfo, setShowCustomInfo] = useState(false)
 
   useEffect(() => {
     const loadLocations = async () => {
@@ -69,6 +70,17 @@ export function EventLocationSection({
       loadLocations()
     }
   }, [locationType, location, tenantId])
+
+  const handleCustomMarkerClick = () => {
+    setShowCustomInfo(true)
+  }
+
+  const openInGoogleMaps = () => {
+    if (customLocationCoordinates?.lat && customLocationCoordinates?.lng) {
+      const url = `https://www.google.com/maps/search/?api=1&query=${customLocationCoordinates.lat},${customLocationCoordinates.lng}`
+      window.open(url, "_blank")
+    }
+  }
 
   // No location set
   if (!locationType) {
@@ -121,19 +133,27 @@ export function EventLocationSection({
 
     return (
       <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-full bg-purple-100 dark:bg-purple-900/20 flex items-center justify-center">
-            <MapPin className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-full bg-purple-100 dark:bg-purple-900/20 flex items-center justify-center">
+              <MapPin className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Event Location</p>
+              <p className="font-medium">{customLocationName}</p>
+              <p className="text-xs text-muted-foreground">Custom event location</p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Event Location</p>
-            <p className="font-medium">{customLocationName}</p>
-            <p className="text-xs text-muted-foreground">Custom event location</p>
-          </div>
+          {customCenter && (
+            <Button variant="outline" size="sm" className="gap-2 bg-transparent" onClick={openInGoogleMaps}>
+              <ExternalLink className="h-4 w-4" />
+              Open in Maps
+            </Button>
+          )}
         </div>
 
         {customCenter && (
-          <div className="h-[300px] rounded-lg overflow-hidden border">
+          <div className="relative h-[300px] rounded-lg overflow-hidden border">
             <GoogleMapViewer
               locations={allLocations}
               tenantId={tenantId}
@@ -143,6 +163,43 @@ export function EventLocationSection({
               showInfoCard={false}
               drawnCoordinates={customCenter}
               drawnType="pin"
+            />
+
+            {showCustomInfo && (
+              <div className="absolute top-4 right-4 z-20 bg-card border rounded-lg shadow-lg p-4 max-w-xs">
+                <div className="space-y-3">
+                  <div>
+                    <h3 className="font-semibold text-lg">{customLocationName}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {customCenter.lat.toFixed(6)}, {customCenter.lng.toFixed(6)}
+                    </p>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button size="sm" className="flex-1 gap-2" onClick={openInGoogleMaps}>
+                      <ExternalLink className="h-4 w-4" />
+                      Open in Google Maps
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setShowCustomInfo(false)}>
+                      Close
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <button
+              onClick={handleCustomMarkerClick}
+              className="absolute inset-0 z-10 cursor-pointer bg-transparent"
+              style={{
+                width: "50px",
+                height: "50px",
+                left: "50%",
+                top: "50%",
+                transform: "translate(-50%, -100%)",
+                pointerEvents: "auto",
+              }}
+              aria-label="Show location details"
             />
           </div>
         )}

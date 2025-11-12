@@ -12,12 +12,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { createEvent } from "@/app/actions/events"
+import { createEvent, saveEventImages } from "@/app/actions/events"
 import { Calendar, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { NeighborhoodMultiSelect } from "@/components/event-forms/neighborhood-multi-select"
 import { ResidentInviteSelector } from "@/components/event-forms/resident-invite-selector"
 import { LocationSelector } from "@/components/event-forms/location-selector"
+import { PhotoManager } from "@/components/photo-manager"
 
 type Category = {
   id: string
@@ -35,6 +36,8 @@ export function EventForm({ tenantSlug, tenantId, categories }: EventFormProps) 
   const router = useRouter()
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [photos, setPhotos] = useState<string[]>([])
+  const [heroPhoto, setHeroPhoto] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -155,6 +158,19 @@ export function EventForm({ tenantSlug, tenantId, categories }: EventFormProps) 
       })
 
       if (result.success) {
+        if (photos.length > 0 && result.data?.id) {
+          const imageResult = await saveEventImages(result.data.id, tenantSlug, photos, heroPhoto)
+
+          if (!imageResult.success) {
+            console.error("[v0] Failed to save event images:", imageResult.error)
+            toast({
+              title: "Warning",
+              description: "Event created but some images failed to upload",
+              variant: "destructive",
+            })
+          }
+        }
+
         toast({
           title: "Event created!",
           description: "Your event has been published to the community.",
@@ -258,7 +274,6 @@ export function EventForm({ tenantSlug, tenantId, categories }: EventFormProps) 
                     setFormData({
                       ...formData,
                       start_date: newStartDate,
-                      // Only auto-set end_date if it's empty or earlier than start_date
                       end_date:
                         !formData.end_date || formData.end_date < newStartDate ? newStartDate : formData.end_date,
                     })
@@ -352,6 +367,18 @@ export function EventForm({ tenantSlug, tenantId, categories }: EventFormProps) 
               </div>
             </RadioGroup>
             <p className="text-xs text-muted-foreground">Official events are managed by community administrators</p>
+          </div>
+
+          {/* PhotoManager component for image uploads */}
+          <div className="pt-4 border-t">
+            <PhotoManager
+              photos={photos}
+              heroPhoto={heroPhoto}
+              onPhotosChange={setPhotos}
+              onHeroPhotoChange={setHeroPhoto}
+              maxPhotos={10}
+              entityType="location"
+            />
           </div>
 
           {/* Location Selector */}

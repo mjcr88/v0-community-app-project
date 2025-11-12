@@ -1261,12 +1261,16 @@ export async function flagEvent(eventId: string, reason: string, tenantSlug: str
       return { success: false, error: "Event not found" }
     }
 
-    const { data: existingFlag } = await supabase
+    const { data: existingFlag, error: checkError } = await supabase
       .from("event_flags")
       .select("id")
       .eq("event_id", eventId)
       .eq("flagged_by", user.id)
       .maybeSingle()
+
+    if (checkError) {
+      console.error("[v0] Error checking for existing flag:", checkError)
+    }
 
     if (existingFlag) {
       return { success: false, error: "You have already flagged this event" }
@@ -1289,8 +1293,6 @@ export async function flagEvent(eventId: string, reason: string, tenantSlug: str
       return { success: false, error: insertError.message }
     }
 
-    // Revalidate paths to show updated flag count
-    revalidatePath(`/t/${tenantSlug}/dashboard/events`)
     revalidatePath(`/t/${tenantSlug}/dashboard/events/${eventId}`)
 
     return { success: true }

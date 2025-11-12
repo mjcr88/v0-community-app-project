@@ -17,7 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Link } from "next/link"
+import Link from "next/link"
 import { MapPin, Trash2, Filter, Layers, Locate, Plus } from "lucide-react"
 
 interface Location {

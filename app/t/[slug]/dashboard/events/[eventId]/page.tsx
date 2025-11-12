@@ -241,6 +241,8 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
 
   const eventFlagCount = flagCount || 0
 
+  console.log(`[v0] Event "${event.title}" flag count:`, eventFlagCount)
+
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}

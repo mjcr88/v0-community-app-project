@@ -72,7 +72,6 @@ export default async function EventsPage({
 
   const eventIds = (events || []).map((e) => e.id)
 
-  // Get all attending counts, saved events, and flag counts in parallel
   const [{ data: allRsvps }, { data: savedEvents }, { data: eventFlags }] = await Promise.all([
     supabase.from("event_rsvps").select("event_id, rsvp_status, user_id").in("event_id", eventIds),
     supabase.from("saved_events").select("event_id").eq("user_id", user.id).in("event_id", eventIds),
@@ -88,6 +87,8 @@ export default async function EventsPage({
   eventFlags?.forEach((flag) => {
     flagCountMap.set(flag.event_id, (flagCountMap.get(flag.event_id) || 0) + 1)
   })
+
+  console.log("[v0] Flag counts map:", Object.fromEntries(flagCountMap))
 
   allRsvps?.forEach((rsvp) => {
     // Count attending
@@ -108,6 +109,11 @@ export default async function EventsPage({
     is_saved: savedEventsSet.has(event.id),
     flag_count: flagCountMap.get(event.id) || 0,
   }))
+
+  console.log(
+    "[v0] Events with flag counts:",
+    eventsWithUserData.map((e) => ({ id: e.id, title: e.title, flag_count: e.flag_count })),
+  )
 
   return (
     <div className="space-y-6">

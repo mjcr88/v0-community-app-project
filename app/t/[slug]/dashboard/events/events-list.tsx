@@ -99,6 +99,10 @@ export function EventsList({
         const isMultiDay = endDate && endDate.toDateString() !== startDate.toDateString()
         const eventIsPast = isPast(endDate || startDate)
 
+        if (event.flag_count && event.flag_count > 0) {
+          console.log(`[v0] Event "${event.title}" has ${event.flag_count} flags`)
+        }
+
         let displayDate: string
         if (event.is_all_day) {
           if (isMultiDay) {
@@ -144,7 +148,7 @@ export function EventsList({
                 <div className="flex items-start justify-between gap-2">
                   <CardTitle className="line-clamp-2 text-balance">{event.title}</CardTitle>
                   <div className="flex items-center gap-2">
-                    {event.flag_count !== undefined && event.flag_count > 0 && (
+                    {event.flag_count !== undefined && (
                       <Badge variant="destructive" className="text-xs gap-1 flex-shrink-0">
                         <Flag className="h-3 w-3" />
                         {event.flag_count}

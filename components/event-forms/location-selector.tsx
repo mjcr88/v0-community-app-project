@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Building2, MapPin, XCircle, Loader2, Search, X, ExternalLink } from "lucide-react"
 import { GoogleMapViewer } from "@/components/map/google-map-viewer"
+import { GooglePlacesAutocomplete } from "@/components/map/google-places-autocomplete"
 
 export type LocationType = "community" | "custom" | "none"
 
@@ -107,6 +108,23 @@ export function LocationSelector({
     [onCustomLocationChange],
   )
 
+  const handlePlaceAutocompleteSelect = useCallback(
+    (place: { name: string; lat: number; lng: number; address?: string }) => {
+      console.log("[v0] Place selected from autocomplete:", place)
+
+      // Update location name
+      onCustomLocationNameChange(place.name)
+
+      // Update coordinates and type
+      handleCustomLocationDrawing({
+        coordinates: { lat: place.lat, lng: place.lng },
+        type: "pin",
+        path: null,
+      })
+    },
+    [onCustomLocationNameChange, handleCustomLocationDrawing],
+  )
+
   useEffect(() => {
     const fetchLocations = async () => {
       try {
@@ -174,7 +192,7 @@ export function LocationSelector({
   useEffect(() => {
     const handlePlaceSelected = (event: Event) => {
       const customEvent = event as CustomEvent
-      console.log("[v0] Place selected event received:", customEvent.detail)
+      console.log("[v0] Place selected event received from map:", customEvent.detail)
       const { name, lat, lng } = customEvent.detail
 
       onCustomLocationNameChange(name)
@@ -444,9 +462,17 @@ export function LocationSelector({
               value={customLocationName || ""}
               onChange={(e) => onCustomLocationNameChange(e.target.value)}
             />
-            <p className="text-sm text-muted-foreground">
-              Drop a pin anywhere or click a public location on the map to auto-fill
-            </p>
+            <p className="text-sm text-muted-foreground">Enter manually or use the search box and map below</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Search for a Place</Label>
+            <GooglePlacesAutocomplete
+              onPlaceSelected={handlePlaceAutocompleteSelect}
+              placeholder="Search restaurants, attractions, landmarks..."
+              defaultValue={customLocationName || ""}
+            />
+            <p className="text-sm text-muted-foreground">Or drop a pin directly on the map</p>
           </div>
 
           <div className="h-96 rounded-lg overflow-hidden border">

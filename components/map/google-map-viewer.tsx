@@ -186,9 +186,12 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
 
   const handlePlaceClick = useCallback(
     async (placeId: string) => {
-      if (!mapInstance) return
+      if (!mapInstance) {
+        console.error("[v0] Map instance not available")
+        return
+      }
 
-      console.log("[v0] Place clicked:", placeId)
+      console.log("[v0] Place clicked on map:", placeId)
 
       if (typeof window === "undefined" || !window.google) {
         console.error("[v0] Google Maps API not loaded")
@@ -201,7 +204,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
       service.getDetails(
         {
           placeId: placeId,
-          fields: ["name", "formatted_address", "geometry.location", "displayName"],
+          fields: ["name", "formatted_address", "geometry.location"],
         },
         (place, status) => {
           console.log("[v0] Place getDetails response - status:", status, "place:", place)
@@ -210,9 +213,12 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
             const lat = place.geometry?.location?.lat()
             const lng = place.geometry?.location?.lng()
 
-            const name = place.name || place.formatted_address?.split(",")[0] || "Custom Location"
+            const name =
+              place.name ||
+              (place.formatted_address ? place.formatted_address.split(",")[0] : null) ||
+              "Custom Location"
 
-            console.log("[v0] Extracted data - lat:", lat, "lng:", lng, "name:", name)
+            console.log("[v0] Extracted place data - name:", name, "lat:", lat, "lng:", lng)
 
             if (lat !== undefined && lng !== undefined && name) {
               console.log("[v0] Selected place:", { name, lat, lng })
@@ -241,7 +247,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                 onDrawingModeChange(null)
               }
             } else {
-              console.error("[v0] Missing required place data - lat:", lat, "lng:", lng, "name:", name)
+              console.error("[v0] Missing required place data - name:", name, "lat:", lat, "lng:", lng)
             }
           } else {
             console.error("[v0] Place getDetails failed - status:", status)
@@ -255,18 +261,24 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
   useEffect(() => {
     if (!mapInstance || !drawingMode) return
 
-    console.log("[v0] Setting up place click listener")
+    console.log("[v0] Setting up place click listener for drawingMode:", drawingMode)
 
-    const listener = mapInstance.addListener("click", (e: any) => {
+    // Listen for clicks on place icons
+    const placeClickListener = mapInstance.addListener("click", (e: any) => {
+      console.log("[v0] Map click event:", { placeId: e.placeId, hasLatLng: !!e.latLng })
+
+      // If a place icon was clicked, handle it specially
       if (e.placeId) {
-        e.stop()
+        console.log("[v0] Place icon clicked, preventing default behavior")
+        e.stop() // Prevent default info window
         handlePlaceClick(e.placeId)
       }
     })
 
     return () => {
-      if (listener) {
-        window.google?.maps?.event?.removeListener(listener)
+      console.log("[v0] Cleaning up place click listener")
+      if (placeClickListener) {
+        window.google?.maps?.event?.removeListener(placeClickListener)
       }
     }
   }, [mapInstance, drawingMode, handlePlaceClick])
@@ -458,7 +470,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
           minZoom={10}
           maxZoom={22}
           restriction={undefined}
-          clickableIcons={true}
+          clickableIcons={drawingMode === "marker"} // Only make places clickable in marker mode
           {...(mapId ? { mapId } : {})}
           onCenterChanged={(e) => setCenter(e.detail.center)}
           onZoomChanged={(e) => setZoom(e.detail.zoom)}

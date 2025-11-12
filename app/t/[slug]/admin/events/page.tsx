@@ -27,6 +27,12 @@ export default async function AdminEventsPage({
     redirect("/backoffice/login")
   }
 
+  const { data: categories } = await supabase
+    .from("event_categories")
+    .select("id, name, icon")
+    .eq("tenant_id", tenant.id)
+    .order("name")
+
   // Fetch all events for the tenant with necessary joins
   const { data: events, error: eventsError } = await supabase
     .from("events")
@@ -137,7 +143,7 @@ export default async function AdminEventsPage({
           </Button>
         </div>
       ) : (
-        <AdminEventsTable events={enrichedEvents} slug={slug} />
+        <AdminEventsTable events={enrichedEvents} slug={slug} tenantId={tenant.id} categories={categories || []} />
       )}
     </div>
   )

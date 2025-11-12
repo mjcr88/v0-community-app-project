@@ -1093,3 +1093,141 @@ export async function getEventImages(eventId: string) {
     }
   }
 }
+
+// Admin-specific server actions for bulk operations
+
+export async function adminDeleteEvents(eventIds: string[], tenantId: string, tenantSlug: string) {
+  try {
+    const supabase = await createServerClient()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: "User not authenticated" }
+    }
+
+    // Verify user is admin
+    const { data: userData } = await supabase.from("users").select("is_tenant_admin, role").eq("id", user.id).single()
+
+    const isAdmin = userData?.is_tenant_admin || userData?.role === "super_admin" || userData?.role === "tenant_admin"
+
+    if (!isAdmin) {
+      return { success: false, error: "You don't have permission to delete events" }
+    }
+
+    // Delete events (cascading deletes will handle related records)
+    const { error } = await supabase.from("events").delete().in("id", eventIds).eq("tenant_id", tenantId)
+
+    if (error) {
+      console.error("[v0] Error deleting events:", error)
+      return { success: false, error: error.message }
+    }
+
+    revalidatePath(`/t/${tenantSlug}/admin/events`)
+    revalidatePath(`/t/${tenantSlug}/dashboard/events`)
+    revalidatePath(`/t/${tenantSlug}/dashboard`)
+
+    return { success: true }
+  } catch (error) {
+    console.error("[v0] Unexpected error deleting events:", error)
+    return {
+      success: false,
+      error: "An unexpected error occurred. Please try again.",
+    }
+  }
+}
+
+export async function adminCancelEvent(eventId: string, tenantId: string, tenantSlug: string, reason: string) {
+  try {
+    const supabase = await createServerClient()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: "User not authenticated" }
+    }
+
+    // Verify user is admin
+    const { data: userData } = await supabase.from("users").select("is_tenant_admin, role").eq("id", user.id).single()
+
+    const isAdmin = userData?.is_tenant_admin || userData?.role === "super_admin" || userData?.role === "tenant_admin"
+
+    if (!isAdmin) {
+      return { success: false, error: "You don't have permission to cancel events" }
+    }
+
+    // Update event status to cancelled
+    const { error } = await supabase
+      .from("events")
+      .update({
+        status: "cancelled",
+        cancellation_reason: reason,
+      })
+      .eq("id", eventId)
+      .eq("tenant_id", tenantId)
+
+    if (error) {
+      console.error("[v0] Error cancelling event:", error)
+      return { success: false, error: error.message }
+    }
+
+    revalidatePath(`/t/${tenantSlug}/admin/events`)
+    revalidatePath(`/t/${tenantSlug}/dashboard/events/${eventId}`)
+    revalidatePath(`/t/${tenantSlug}/dashboard/events`)
+    revalidatePath(`/t/${tenantSlug}/dashboard`)
+
+    return { success: true }
+  } catch (error) {
+    console.error("[v0] Unexpected error cancelling event:", error)
+    return {
+      success: false,
+      error: "An unexpected error occurred. Please try again.",
+    }
+  }
+}
+
+export async function adminUnflagEvent(eventId: string, tenantId: string, tenantSlug: string) {
+  try {
+    const supabase = await createServerClient()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: "User not authenticated" }
+    }
+
+    // Verify user is admin
+    const { data: userData } = await supabase.from("users").select("is_tenant_admin, role").eq("id", user.id).single()
+
+    const isAdmin = userData?.is_tenant_admin || userData?.role === "super_admin" || userData?.role === "tenant_admin"
+
+    if (!isAdmin) {
+      return { success: false, error: "You don't have permission to unflag events" }
+    }
+
+    // Delete all flags for this event
+    const { error } = await supabase.from("event_flags").delete().eq("event_id", eventId)
+
+    if (error) {
+      console.error("[v0] Error unflagging event:", error)
+      return { success: false, error: error.message }
+    }
+
+    revalidatePath(`/t/${tenantSlug}/admin/events`)
+    revalidatePath(`/t/${tenantSlug}/dashboard/events/${eventId}`)
+
+    return { success: true }
+  } catch (error) {
+    console.error("[v0] Unexpected error unflagging event:", error)
+    return {
+      success: false,
+      error: "An unexpected error occurred. Please try again.",
+    }
+  }
+}

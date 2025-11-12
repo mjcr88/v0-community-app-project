@@ -7,9 +7,33 @@ import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Pencil, Eye, ArrowUpDown, Flag, Users, MapPin, Search } from "lucide-react"
+import { Pencil, Eye, ArrowUpDown, Flag, Users, MapPin, Search, X, Filter, Trash2, XCircle } from "lucide-react"
 import Link from "next/link"
 import { formatDate } from "date-fns"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
+import { adminDeleteEvents, adminCancelEvent, adminUnflagEvent } from "@/app/actions/events"
+import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 
 type AdminEvent = {
   id: string
@@ -28,6 +52,7 @@ type AdminEvent = {
   max_attendees: number | null
   requires_rsvp: boolean
   created_at: string
+  category_id: string | null
   event_categories: {
     id: string
     name: string
@@ -44,32 +69,128 @@ type AdminEvent = {
   hero_image: string | null
 }
 
-export function AdminEventsTable({ events, slug }: { events: AdminEvent[]; slug: string }) {
+type Category = {
+  id: string
+  name: string
+  icon: string | null
+}
+
+export function AdminEventsTable({
+  events,
+  slug,
+  tenantId,
+  categories,
+}: {
+  events: AdminEvent[]
+  slug: string
+  tenantId: string
+  categories: Category[]
+}) {
+  const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
   const [sortedEvents, setSortedEvents] = useState<AdminEvent[]>(events)
   const [sortField, setSortField] = useState<string>("start_date")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
   const [selectedEvents, setSelectedEvents] = useState<string[]>([])
 
-  const filteredEvents = useMemo(() => {
-    if (!searchQuery.trim()) return events
+  // Advanced filtering state
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
+  const [eventTypeFilter, setEventTypeFilter] = useState<string>("all")
+  const [statusFilter, setStatusFilter] = useState<string>("all")
+  const [visibilityFilter, setVisibilityFilter] = useState<string>("all")
+  const [dateRangeFilter, setDateRangeFilter] = useState<string>("all")
+  const [flaggedOnlyFilter, setFlaggedOnlyFilter] = useState(false)
 
-    const query = searchQuery.toLowerCase()
-    return events.filter((event) => {
-      if (event.title.toLowerCase().includes(query)) return true
-      if (event.description?.toLowerCase().includes(query)) return true
-      if (event.event_categories?.name.toLowerCase().includes(query)) return true
-      if (event.users) {
-        const creatorName = `${event.users.first_name} ${event.users.last_name}`.toLowerCase()
-        if (creatorName.includes(query)) return true
-      }
-      if (event.event_type.toLowerCase().includes(query)) return true
-      if (event.visibility_scope.toLowerCase().includes(query)) return true
-      if (event.status.toLowerCase().includes(query)) return true
-      if (event.location_name?.toLowerCase().includes(query)) return true
-      return false
-    })
-  }, [events, searchQuery])
+  // Bulk action states
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [showCancelDialog, setShowCancelDialog] = useState(false)
+  const [cancelReason, setCancelReason] = useState("")
+  const [isProcessing, setIsProcessing] = useState(false)
+
+  const filteredEvents = useMemo(() => {
+    let filtered = events
+
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      filtered = filtered.filter((event) => {
+        if (event.title.toLowerCase().includes(query)) return true
+        if (event.description?.toLowerCase().includes(query)) return true
+        if (event.event_categories?.name.toLowerCase().includes(query)) return true
+        if (event.users) {
+          const creatorName = `${event.users.first_name} ${event.users.last_name}`.toLowerCase()
+          if (creatorName.includes(query)) return true
+        }
+        if (event.event_type.toLowerCase().includes(query)) return true
+        if (event.visibility_scope.toLowerCase().includes(query)) return true
+        if (event.status.toLowerCase().includes(query)) return true
+        if (event.location_name?.toLowerCase().includes(query)) return true
+        return false
+      })
+    }
+
+    if (selectedCategories.length > 0) {
+      filtered = filtered.filter((event) => event.category_id && selectedCategories.includes(event.category_id))
+    }
+
+    if (eventTypeFilter !== "all") {
+      filtered = filtered.filter((event) => event.event_type === eventTypeFilter)
+    }
+
+    if (statusFilter !== "all") {
+      filtered = filtered.filter((event) => event.status === statusFilter)
+    }
+
+    if (visibilityFilter !== "all") {
+      filtered = filtered.filter((event) => event.visibility_scope === visibilityFilter)
+    }
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    if (dateRangeFilter !== "all") {
+      filtered = filtered.filter((event) => {
+        const eventDate = new Date(event.start_date)
+        eventDate.setHours(0, 0, 0, 0)
+
+        switch (dateRangeFilter) {
+          case "past":
+            return eventDate < today
+          case "today":
+            return eventDate.getTime() === today.getTime()
+          case "upcoming":
+            return eventDate > today
+          case "this_week": {
+            const weekFromNow = new Date(today)
+            weekFromNow.setDate(weekFromNow.getDate() + 7)
+            return eventDate >= today && eventDate <= weekFromNow
+          }
+          case "this_month": {
+            const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
+            const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+            return eventDate >= startOfMonth && eventDate <= endOfMonth
+          }
+          default:
+            return true
+        }
+      })
+    }
+
+    if (flaggedOnlyFilter) {
+      filtered = filtered.filter((event) => event.flag_count > 0)
+    }
+
+    return filtered
+  }, [
+    events,
+    searchQuery,
+    selectedCategories,
+    eventTypeFilter,
+    statusFilter,
+    visibilityFilter,
+    dateRangeFilter,
+    flaggedOnlyFilter,
+  ])
 
   useEffect(() => {
     setSortedEvents(filteredEvents)
@@ -125,6 +246,144 @@ export function AdminEventsTable({ events, slug }: { events: AdminEvent[]; slug:
     }
   }
 
+  // Clear all filters
+  const clearFilters = () => {
+    setSearchQuery("")
+    setSelectedCategories([])
+    setEventTypeFilter("all")
+    setStatusFilter("all")
+    setVisibilityFilter("all")
+    setDateRangeFilter("all")
+    setFlaggedOnlyFilter(false)
+  }
+
+  const hasActiveFilters =
+    searchQuery.trim() !== "" ||
+    selectedCategories.length > 0 ||
+    eventTypeFilter !== "all" ||
+    statusFilter !== "all" ||
+    visibilityFilter !== "all" ||
+    dateRangeFilter !== "all" ||
+    flaggedOnlyFilter
+
+  // Bulk delete handler
+  const handleBulkDelete = async () => {
+    setIsProcessing(true)
+    try {
+      const result = await adminDeleteEvents(selectedEvents, tenantId, slug)
+      if (result.success) {
+        toast.success(`${selectedEvents.length} event(s) deleted successfully`)
+        setSelectedEvents([])
+        setShowDeleteDialog(false)
+        router.refresh()
+      } else {
+        toast.error(result.error || "Failed to delete events")
+      }
+    } catch (error) {
+      toast.error("An unexpected error occurred")
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  // Bulk cancel handler
+  const handleBulkCancel = async () => {
+    if (!cancelReason.trim()) {
+      toast.error("Please provide a cancellation reason")
+      return
+    }
+
+    setIsProcessing(true)
+    try {
+      let successCount = 0
+      let failCount = 0
+
+      for (const eventId of selectedEvents) {
+        const result = await adminCancelEvent(eventId, tenantId, slug, cancelReason)
+        if (result.success) {
+          successCount++
+        } else {
+          failCount++
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success(`${successCount} event(s) cancelled successfully`)
+      }
+      if (failCount > 0) {
+        toast.error(`Failed to cancel ${failCount} event(s)`)
+      }
+
+      setSelectedEvents([])
+      setCancelReason("")
+      setShowCancelDialog(false)
+      router.refresh()
+    } catch (error) {
+      toast.error("An unexpected error occurred")
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  // Bulk unflag handler
+  const handleBulkUnflag = async () => {
+    const flaggedEvents = selectedEvents.filter((id) => {
+      const event = sortedEvents.find((e) => e.id === id)
+      return event && event.flag_count > 0
+    })
+
+    if (flaggedEvents.length === 0) {
+      toast.error("No flagged events selected")
+      return
+    }
+
+    setIsProcessing(true)
+    try {
+      let successCount = 0
+      let failCount = 0
+
+      for (const eventId of flaggedEvents) {
+        const result = await adminUnflagEvent(eventId, tenantId, slug)
+        if (result.success) {
+          successCount++
+        } else {
+          failCount++
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success(`${successCount} event(s) unflagged successfully`)
+      }
+      if (failCount > 0) {
+        toast.error(`Failed to unflag ${failCount} event(s)`)
+      }
+
+      setSelectedEvents([])
+      router.refresh()
+    } catch (error) {
+      toast.error("An unexpected error occurred")
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  const handleUnflagEvent = async (eventId: string) => {
+    setIsProcessing(true)
+    try {
+      const result = await adminUnflagEvent(eventId, tenantId, slug)
+      if (result.success) {
+        toast.success("Event unflagged successfully")
+        router.refresh()
+      } else {
+        toast.error(result.error || "Failed to unflag event")
+      }
+    } catch (error) {
+      toast.error("An unexpected error occurred")
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
   const getEventDate = (event: AdminEvent) => {
     try {
       const date = new Date(event.start_date)
@@ -163,28 +422,156 @@ export function AdminEventsTable({ events, slug }: { events: AdminEvent[]; slug:
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search events by title, description, category, creator..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        {searchQuery && (
-          <div className="text-sm text-muted-foreground">
-            {filteredEvents.length} of {events.length} event{events.length !== 1 ? "s" : ""}
+      {/* Filter controls */}
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search events by title, description, category, creator..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
           </div>
-        )}
+          {searchQuery && (
+            <div className="text-sm text-muted-foreground">
+              {filteredEvents.length} of {events.length} event{events.length !== 1 ? "s" : ""}
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Category filter */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 bg-transparent">
+                <Filter className="mr-2 h-4 w-4" />
+                Category
+                {selectedCategories.length > 0 && (
+                  <Badge variant="secondary" className="ml-2">
+                    {selectedCategories.length}
+                  </Badge>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              <DropdownMenuLabel>Filter by category</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {categories.map((category) => (
+                <DropdownMenuCheckboxItem
+                  key={category.id}
+                  checked={selectedCategories.includes(category.id)}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      setSelectedCategories([...selectedCategories, category.id])
+                    } else {
+                      setSelectedCategories(selectedCategories.filter((id) => id !== category.id))
+                    }
+                  }}
+                >
+                  {category.icon && <span className="mr-2">{category.icon}</span>}
+                  {category.name}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Event type filter */}
+          <Select value={eventTypeFilter} onValueChange={setEventTypeFilter}>
+            <SelectTrigger className="h-8 w-[130px]">
+              <SelectValue placeholder="Event type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All types</SelectItem>
+              <SelectItem value="community">Community</SelectItem>
+              <SelectItem value="virtual">Virtual</SelectItem>
+              <SelectItem value="hybrid">Hybrid</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Status filter */}
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="h-8 w-[130px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All status</SelectItem>
+              <SelectItem value="published">Published</SelectItem>
+              <SelectItem value="cancelled">Cancelled</SelectItem>
+              <SelectItem value="draft">Draft</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Visibility filter */}
+          <Select value={visibilityFilter} onValueChange={setVisibilityFilter}>
+            <SelectTrigger className="h-8 w-[130px]">
+              <SelectValue placeholder="Visibility" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All scopes</SelectItem>
+              <SelectItem value="community">Community</SelectItem>
+              <SelectItem value="neighborhood">Neighborhood</SelectItem>
+              <SelectItem value="private">Private</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Date range filter */}
+          <Select value={dateRangeFilter} onValueChange={setDateRangeFilter}>
+            <SelectTrigger className="h-8 w-[140px]">
+              <SelectValue placeholder="Date range" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All dates</SelectItem>
+              <SelectItem value="past">Past</SelectItem>
+              <SelectItem value="today">Today</SelectItem>
+              <SelectItem value="upcoming">Upcoming</SelectItem>
+              <SelectItem value="this_week">This week</SelectItem>
+              <SelectItem value="this_month">This month</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Flagged only filter */}
+          <Button
+            variant={flaggedOnlyFilter ? "default" : "outline"}
+            size="sm"
+            className="h-8"
+            onClick={() => setFlaggedOnlyFilter(!flaggedOnlyFilter)}
+          >
+            <Flag className="mr-2 h-4 w-4" />
+            Flagged only
+          </Button>
+
+          {/* Clear filters */}
+          {hasActiveFilters && (
+            <Button variant="ghost" size="sm" className="h-8" onClick={clearFilters}>
+              <X className="mr-2 h-4 w-4" />
+              Clear filters
+            </Button>
+          )}
+        </div>
       </div>
 
+      {/* Bulk action buttons */}
       {selectedEvents.length > 0 && (
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">
+        <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+          <span className="text-sm font-medium">
             {selectedEvents.length} event{selectedEvents.length > 1 ? "s" : ""} selected
           </span>
+          <div className="flex gap-2 ml-auto">
+            <Button variant="destructive" size="sm" onClick={() => setShowDeleteDialog(true)} disabled={isProcessing}>
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setShowCancelDialog(true)} disabled={isProcessing}>
+              <XCircle className="mr-2 h-4 w-4" />
+              Cancel
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleBulkUnflag} disabled={isProcessing}>
+              <Flag className="mr-2 h-4 w-4" />
+              Unflag
+            </Button>
+          </div>
         </div>
       )}
 
@@ -245,7 +632,7 @@ export function AdminEventsTable({ events, slug }: { events: AdminEvent[]; slug:
             {sortedEvents.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={12} className="text-center text-muted-foreground">
-                  {searchQuery ? "No events found matching your search" : "No events found"}
+                  {hasActiveFilters ? "No events found matching your filters" : "No events found"}
                 </TableCell>
               </TableRow>
             ) : (
@@ -279,10 +666,18 @@ export function AdminEventsTable({ events, slug }: { events: AdminEvent[]; slug:
                         </Link>
                       </div>
                       {event.flag_count > 0 && (
-                        <Badge variant="destructive" className="shrink-0">
-                          <Flag className="h-3 w-3 mr-1" />
-                          {event.flag_count}
-                        </Badge>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2"
+                          onClick={() => handleUnflagEvent(event.id)}
+                          disabled={isProcessing}
+                        >
+                          <Badge variant="destructive" className="shrink-0">
+                            <Flag className="h-3 w-3 mr-1" />
+                            {event.flag_count}
+                          </Badge>
+                        </Button>
                       )}
                     </div>
                   </TableCell>
@@ -361,6 +756,58 @@ export function AdminEventsTable({ events, slug }: { events: AdminEvent[]; slug:
           </TableBody>
         </Table>
       </div>
+
+      {/* Bulk delete confirmation dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selectedEvents.length} event(s)?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the selected events and all associated data
+              including RSVPs, images, and flags.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isProcessing}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBulkDelete}
+              disabled={isProcessing}
+              className="bg-destructive text-destructive-foreground"
+            >
+              {isProcessing ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk cancel confirmation dialog */}
+      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel {selectedEvents.length} event(s)?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Please provide a reason for cancelling these events. This will be visible to attendees.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <Label htmlFor="cancel-reason">Cancellation Reason</Label>
+            <Textarea
+              id="cancel-reason"
+              placeholder="e.g., Due to weather conditions, Due to low attendance, etc."
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              className="mt-2"
+              rows={3}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isProcessing}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBulkCancel} disabled={isProcessing || !cancelReason.trim()}>
+              {isProcessing ? "Cancelling..." : "Cancel Events"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

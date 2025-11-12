@@ -1,6 +1,7 @@
 import type React from "react"
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
+import { headers } from "next/headers"
 import {
   Sidebar,
   SidebarContent,
@@ -50,7 +51,16 @@ export default async function ResidentDashboardLayout({
   const isTenantAdmin = userData?.role === "tenant_admin" && userData?.tenant_id === tenant.id
 
   if (isSuperAdmin || isTenantAdmin) {
-    redirect(`/t/${slug}/admin/dashboard`)
+    const headersList = await headers()
+    const pathname = headersList.get("x-pathname") || headersList.get("referer") || ""
+    const isEventDetailPage = pathname.includes("/dashboard/events/") && !pathname.endsWith("/dashboard/events")
+
+    console.log("[v0] Admin accessing dashboard:", { pathname, isEventDetailPage, isTenantAdmin, isSuperAdmin })
+
+    // Only redirect if not accessing event detail pages
+    if (!isEventDetailPage) {
+      redirect(`/t/${slug}/admin/dashboard`)
+    }
   }
 
   const { data: resident } = await supabase

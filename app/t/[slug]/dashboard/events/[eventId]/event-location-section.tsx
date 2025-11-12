@@ -37,7 +37,6 @@ export function EventLocationSection({
 }: EventLocationSectionProps) {
   const [allLocations, setAllLocations] = useState<any[]>([])
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null)
-  const [showCustomInfo, setShowCustomInfo] = useState(false)
 
   useEffect(() => {
     const loadLocations = async () => {
@@ -51,7 +50,7 @@ export function EventLocationSection({
         setAllLocations(locations)
       }
 
-      if (location) {
+      if (locationType === "community_location" && location) {
         if (location.coordinates) {
           setMapCenter(location.coordinates)
         } else if (location.boundary_coordinates && location.boundary_coordinates.length > 0) {
@@ -63,17 +62,17 @@ export function EventLocationSection({
         } else if (location.path_coordinates && location.path_coordinates.length > 0) {
           setMapCenter({ lat: location.path_coordinates[0][0], lng: location.path_coordinates[0][1] })
         }
+      } else if (
+        locationType === "custom_temporary" &&
+        customLocationCoordinates?.lat &&
+        customLocationCoordinates?.lng
+      ) {
+        setMapCenter({ lat: customLocationCoordinates.lat, lng: customLocationCoordinates.lng })
       }
     }
 
-    if (locationType === "community_location" && location) {
-      loadLocations()
-    }
-  }, [locationType, location, tenantId])
-
-  const handleCustomMarkerClick = () => {
-    setShowCustomInfo(true)
-  }
+    loadLocations()
+  }, [locationType, location, customLocationCoordinates, tenantId])
 
   const openInGoogleMaps = () => {
     if (customLocationCoordinates?.lat && customLocationCoordinates?.lng) {
@@ -118,6 +117,7 @@ export function EventLocationSection({
             mapZoom={16}
             minimal={true}
             showInfoCard={false}
+            enableClickablePlaces={true}
           />
         </div>
       </div>
@@ -153,7 +153,7 @@ export function EventLocationSection({
         </div>
 
         {customCenter && (
-          <div className="relative h-[300px] rounded-lg overflow-hidden border">
+          <div className="h-[300px] rounded-lg overflow-hidden border">
             <GoogleMapViewer
               locations={allLocations}
               tenantId={tenantId}
@@ -163,43 +163,7 @@ export function EventLocationSection({
               showInfoCard={false}
               drawnCoordinates={customCenter}
               drawnType="pin"
-            />
-
-            {showCustomInfo && (
-              <div className="absolute top-4 right-4 z-20 bg-card border rounded-lg shadow-lg p-4 max-w-xs">
-                <div className="space-y-3">
-                  <div>
-                    <h3 className="font-semibold text-lg">{customLocationName}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {customCenter.lat.toFixed(6)}, {customCenter.lng.toFixed(6)}
-                    </p>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Button size="sm" className="flex-1 gap-2" onClick={openInGoogleMaps}>
-                      <ExternalLink className="h-4 w-4" />
-                      Open in Google Maps
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => setShowCustomInfo(false)}>
-                      Close
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <button
-              onClick={handleCustomMarkerClick}
-              className="absolute inset-0 z-10 cursor-pointer bg-transparent"
-              style={{
-                width: "50px",
-                height: "50px",
-                left: "50%",
-                top: "50%",
-                transform: "translate(-50%, -100%)",
-                pointerEvents: "auto",
-              }}
-              aria-label="Show location details"
+              enableClickablePlaces={true}
             />
           </div>
         )}

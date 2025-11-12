@@ -57,6 +57,7 @@ interface GoogleMapViewerProps {
   drawnCoordinates?: { lat: number; lng: number } | null
   drawnPath?: Array<{ lat: number; lng: number }> | null
   drawnType?: "pin" | "polygon" | null
+  enableClickablePlaces?: boolean
 }
 
 export const GoogleMapViewer = React.memo(function GoogleMapViewer({
@@ -76,6 +77,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
   drawnCoordinates,
   drawnPath,
   drawnType,
+  enableClickablePlaces = false,
 }: GoogleMapViewerProps) {
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null)
   const [initialHighlightId] = useState<string | undefined>(highlightLocationId)
@@ -470,7 +472,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
           minZoom={10}
           maxZoom={22}
           restriction={undefined}
-          clickableIcons={drawingMode === "marker"} // Only make places clickable in marker mode
+          clickableIcons={enableClickablePlaces || drawingMode === "marker"} // Only make places clickable in marker mode
           {...(mapId ? { mapId } : {})}
           onCenterChanged={(e) => setCenter(e.detail.center)}
           onZoomChanged={(e) => setZoom(e.detail.zoom)}

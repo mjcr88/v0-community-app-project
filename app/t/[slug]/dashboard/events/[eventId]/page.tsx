@@ -100,6 +100,14 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     .eq("id", user.id)
     .single()
 
+  console.log("[v0] Event detail page - user data:", {
+    userId: user.id,
+    role: userData?.role,
+    isTenantAdmin: userData?.is_tenant_admin,
+    lotId: userData?.lot_id,
+    familyUnitId: userData?.family_unit_id,
+  })
+
   const canView = await canUserViewEvent(eventId, {
     userId: user.id,
     tenantId: tenant.id,
@@ -107,7 +115,10 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     userFamilyUnitId: userData?.family_unit_id,
   })
 
+  console.log("[v0] Can view event result:", canView)
+
   if (!canView) {
+    console.log("[v0] Access denied - redirecting to notFound")
     notFound()
   }
 

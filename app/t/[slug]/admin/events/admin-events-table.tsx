@@ -90,6 +90,9 @@ export function AdminEventsTable({ events, slug }: { events: AdminEvent[]; slug:
       } else if (field === "creator") {
         aVal = `${a.users?.last_name} ${a.users?.first_name}`.toLowerCase()
         bVal = `${b.users?.last_name} ${b.users?.first_name}`.toLowerCase()
+      } else if (field === "location_name") {
+        aVal = a.location_name?.toLowerCase() || ""
+        bVal = b.location_name?.toLowerCase() || ""
       } else if (typeof aVal === "string") {
         aVal = aVal.toLowerCase()
       }
@@ -203,6 +206,12 @@ export function AdminEventsTable({ events, slug }: { events: AdminEvent[]; slug:
                 </Button>
               </TableHead>
               <TableHead>
+                <Button variant="ghost" size="sm" onClick={() => handleSort("location_name")} className="-ml-3">
+                  Location
+                  <ArrowUpDown className="ml-2 h-4 w-4" />
+                </Button>
+              </TableHead>
+              <TableHead>
                 <Button variant="ghost" size="sm" onClick={() => handleSort("creator")} className="-ml-3">
                   Creator
                   <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -235,7 +244,7 @@ export function AdminEventsTable({ events, slug }: { events: AdminEvent[]; slug:
           <TableBody>
             {sortedEvents.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={11} className="text-center text-muted-foreground">
+                <TableCell colSpan={12} className="text-center text-muted-foreground">
                   {searchQuery ? "No events found matching your search" : "No events found"}
                 </TableCell>
               </TableRow>
@@ -268,12 +277,6 @@ export function AdminEventsTable({ events, slug }: { events: AdminEvent[]; slug:
                         >
                           {event.title}
                         </Link>
-                        {event.location_name && (
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
-                            <MapPin className="h-3 w-3" />
-                            <span className="line-clamp-1">{event.location_name}</span>
-                          </div>
-                        )}
                       </div>
                       {event.flag_count > 0 && (
                         <Badge variant="destructive" className="shrink-0">
@@ -282,6 +285,16 @@ export function AdminEventsTable({ events, slug }: { events: AdminEvent[]; slug:
                         </Badge>
                       )}
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    {event.location_name ? (
+                      <div className="flex items-center gap-1 text-sm">
+                        <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="line-clamp-1">{event.location_name}</span>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">—</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">

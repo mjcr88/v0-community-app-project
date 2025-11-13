@@ -291,6 +291,10 @@ export async function getActiveCheckIns(tenantId: string) {
             title: checkIns[0].title,
             location_type: checkIns[0].location_type,
             location_id: checkIns[0].location_id,
+            custom_location_name: checkIns[0].custom_location_name,
+            custom_location_coordinates: checkIns[0].custom_location_coordinates,
+            start_time: checkIns[0].start_time,
+            duration_minutes: checkIns[0].duration_minutes,
             has_location_data: !!checkIns[0].location,
             location_coordinates: checkIns[0].location?.coordinates || null,
             location_boundary_coordinates: checkIns[0].location?.boundary_coordinates || null,
@@ -309,12 +313,25 @@ export async function getActiveCheckIns(tenantId: string) {
       return []
     }
 
-    // This ensures consistency until the database function is executed
     const now = new Date()
     const nonExpiredCheckIns = checkIns.filter((checkIn) => {
       const expiresAt = new Date(checkIn.start_time)
-      expiresAt.setMinutes(expiresAt.getMinutes() + checkIn.duration_minutes)
-      return expiresAt > now
+      expiresAt.setMinutes(expiresAt.getMinutes() + checkIn.duration_minutes + 5) // Add 5 minute buffer
+      const isExpired = expiresAt <= now
+      
+      if (isExpired) {
+        console.log("[v0] Filtering out expired check-in:", {
+          id: checkIn.id,
+          title: checkIn.title,
+          start_time: checkIn.start_time,
+          duration_minutes: checkIn.duration_minutes,
+          expires_at: expiresAt.toISOString(),
+          now: now.toISOString(),
+          difference_minutes: Math.round((expiresAt.getTime() - now.getTime()) / 60000)
+        })
+      }
+      
+      return !isExpired
     })
 
     // Filter by visibility (application-level)

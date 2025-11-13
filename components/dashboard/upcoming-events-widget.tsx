@@ -4,13 +4,14 @@ import type React from "react"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Calendar, Plus, Heart, Check, HelpCircle, X } from "lucide-react"
+import { Calendar, Plus, Heart, Check, HelpCircle, X, Flag } from "lucide-react"
 import Link from "next/link"
 import { format, parseISO } from "date-fns"
 import { useState } from "react"
 import { rsvpToEvent, saveEvent, unsaveEvent } from "@/app/actions/events"
 import { useRouter } from "next/navigation"
 import { LocationBadge } from "@/components/events/location-badge"
+import { Badge } from "@/components/ui/badge"
 
 interface Event {
   id: string
@@ -37,6 +38,7 @@ interface Event {
     name: string
   } | null
   custom_location_name?: string | null
+  flag_count?: number
 }
 
 export function UpcomingEventsWidget({
@@ -165,6 +167,12 @@ export function UpcomingEventsWidget({
                       </p>
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-xs text-muted-foreground">{event.event_categories?.name || "Event"}</p>
+                        {event.flag_count && event.flag_count > 0 && (
+                          <Badge variant="destructive" className="text-xs gap-1">
+                            <Flag className="h-3 w-3" />
+                            {event.flag_count}
+                          </Badge>
+                        )}
                         <LocationBadge
                           locationType={event.location_type || null}
                           locationName={event.location?.name}

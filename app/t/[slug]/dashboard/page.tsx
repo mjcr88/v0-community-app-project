@@ -179,6 +179,23 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
 
   const upcomingEvents = await getUpcomingEvents(resident.tenant_id, 5)
 
+  const eventIds = upcomingEvents.map((e) => e.id)
+  const { data: flagCounts } = await supabase
+    .from("event_flags")
+    .select("event_id")
+    .in("event_id", eventIds)
+    .eq("tenant_id", resident.tenant_id)
+
+  const flagCountMap = new Map<string, number>()
+  flagCounts?.forEach((flag) => {
+    flagCountMap.set(flag.event_id, (flagCountMap.get(flag.event_id) || 0) + 1)
+  })
+
+  const upcomingEventsWithFlags = upcomingEvents.map((event) => ({
+    ...event,
+    flag_count: flagCountMap.get(event.id) || 0,
+  }))
+
   return (
     <div className="space-y-6">
       <div>
@@ -217,7 +234,12 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
         </CardContent>
       </Card>
 
-      <UpcomingEventsWidget events={upcomingEvents} slug={slug} userId={user.id} tenantId={resident.tenant_id} />
+      <UpcomingEventsWidget
+        events={upcomingEventsWithFlags}
+        slug={slug}
+        userId={user.id}
+        tenantId={resident.tenant_id}
+      />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {mapEnabled && lotLocation ? (

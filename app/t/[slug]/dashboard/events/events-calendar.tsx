@@ -4,7 +4,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { CalendarClock, Plus, Lock, Building } from "lucide-react"
+import { CalendarClock, Plus, Lock, Building, Flag } from "lucide-react"
 import Link from "next/link"
 import { format, parseISO } from "date-fns"
 import { useState } from "react"
@@ -39,6 +39,7 @@ interface Event {
     name: string
   } | null
   custom_location_name?: string | null
+  flag_count?: number
 }
 
 export function EventsCalendar({
@@ -183,6 +184,12 @@ export function EventsCalendar({
                             <Badge variant="outline" className="text-xs gap-1">
                               <Lock className="h-3 w-3" />
                               Private
+                            </Badge>
+                          )}
+                          {event.flag_count && event.flag_count > 0 && (
+                            <Badge variant="destructive" className="text-xs gap-1">
+                              <Flag className="h-3 w-3" />
+                              {event.flag_count}
                             </Badge>
                           )}
                           <LocationBadge

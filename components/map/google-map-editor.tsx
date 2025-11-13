@@ -1946,7 +1946,7 @@ export function GoogleMapEditor({
                   location={selectedLocation}
                   onClose={handleCloseLocationInfo}
                   eventCount={loadingEventCount ? undefined : selectedLocationEventCount}
-                  tenantSlug={tenantId} // Assuming tenantId is the correct prop to pass as tenantSlug
+                  tenantSlug={tenantSlug}
                 />
               </div>
             )}

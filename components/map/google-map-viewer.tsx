@@ -40,6 +40,7 @@ interface Location {
 interface GoogleMapViewerProps {
   locations: Location[]
   tenantId?: string // Make tenantId optional
+  tenantSlug?: string // Add tenantSlug prop for proper link generation
   mapCenter?: { lat: number; lng: number } | null
   mapZoom?: number
   isAdmin?: boolean
@@ -64,6 +65,7 @@ interface GoogleMapViewerProps {
 export const GoogleMapViewer = React.memo(function GoogleMapViewer({
   locations: initialLocations = [],
   tenantId, // Now optional
+  tenantSlug, // Destructure tenantSlug prop
   mapCenter,
   mapZoom = 11,
   isAdmin = false,
@@ -926,7 +928,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
             onClose={handleCloseInfoCard}
             minimal={minimal}
             eventCount={loadingEventCount ? undefined : selectedLocationEventCount}
-            tenantSlug={tenantId}
+            tenantSlug={tenantSlug} // Pass tenantSlug instead of tenantId
           />
         </div>
       )}

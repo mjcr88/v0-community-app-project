@@ -156,7 +156,7 @@ export function EventsList({
                       Past Event
                     </Badge>
                   )}
-                  {event.flag_count && event.flag_count > 0 && (
+                  {event.flag_count !== undefined && event.flag_count > 0 && (
                     <Badge variant="destructive" className="text-xs gap-1">
                       <Flag className="h-3 w-3" />
                       {event.flag_count}
@@ -191,12 +191,6 @@ export function EventsList({
                     <Badge variant="outline" className="text-xs gap-1">
                       <Lock className="h-3 w-3" />
                       Private
-                    </Badge>
-                  )}
-                  {event.flag_count && event.flag_count > 0 && (
-                    <Badge variant="destructive" className="text-xs gap-1">
-                      <Flag className="h-3 w-3" />
-                      {event.flag_count}
                     </Badge>
                   )}
                   <LocationBadge

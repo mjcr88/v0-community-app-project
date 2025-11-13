@@ -167,7 +167,7 @@ export function UpcomingEventsWidget({
                       </p>
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-xs text-muted-foreground">{event.event_categories?.name || "Event"}</p>
-                        {event.flag_count && event.flag_count > 0 && (
+                        {event.flag_count !== undefined && event.flag_count > 0 && (
                           <Badge variant="destructive" className="text-xs gap-1">
                             <Flag className="h-3 w-3" />
                             {event.flag_count}

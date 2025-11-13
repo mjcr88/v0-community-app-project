@@ -174,7 +174,7 @@ export async function getCheckInById(checkInId: string, tenantId: string) {
       .select(
         `
         *,
-        created_by_user:users!created_by(id, first_name, last_name, profile_picture_url, avatar_url),
+        created_by_user:users!created_by(id, first_name, last_name, profile_picture_url),
         location:locations!location_id(id, name, coordinates)
       `,
       )
@@ -222,7 +222,7 @@ export async function getActiveCheckIns(tenantId: string) {
       .select(
         `
         *,
-        created_by_user:users!created_by(id, first_name, last_name, profile_picture_url, avatar_url),
+        created_by_user:users!created_by(id, first_name, last_name, profile_picture_url),
         location:locations!location_id(id, name, coordinates)
       `,
       )

@@ -7,8 +7,6 @@ import { Button } from "@/components/ui/button"
 import { MapPin, Users, ArrowLeft, Home, MapIcon, Calendar, Star } from "lucide-react"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
-import { LocationEventsSection } from "./location-events-section"
-import { getEventsByLocation } from "@/app/actions/events"
 
 export default async function LocationDetailsPage({ params }: { params: { slug: string; id: string } }) {
   const { slug, id } = params
@@ -99,9 +97,6 @@ export default async function LocationDetailsPage({ params }: { params: { slug: 
   }
 
   const isAdmin = currentUser.role === "tenant_admin" || currentUser.role === "super_admin"
-
-  const eventsResult = await getEventsByLocation(id, currentUser.tenant_id)
-  const locationEvents = eventsResult.success ? eventsResult.data : []
 
   const getTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
@@ -490,16 +485,6 @@ export default async function LocationDetailsPage({ params }: { params: { slug: 
           </CardContent>
         </Card>
       )}
-
-      {/* Events Section */}
-      <LocationEventsSection
-        events={locationEvents}
-        tenantSlug={slug}
-        locationName={location.name}
-        locationId={id}
-        userId={currentUser.id}
-        tenantId={currentUser.tenant_id}
-      />
 
       {/* Photo Gallery - Show all photos in gallery */}
       {galleryPhotos.length > 1 && (

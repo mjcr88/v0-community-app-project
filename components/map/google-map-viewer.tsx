@@ -817,6 +817,11 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
 
   const handleLocationClick = useCallback(
     async (location: Location) => {
+      if (drawingMode) {
+        console.log("[v0] Ignoring location click - drawing mode active")
+        return
+      }
+
       console.log("[v0] Location clicked:", location.name, location.id, "type:", location.type)
 
       if (onLocationClick) {
@@ -849,7 +854,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
         }
       }
     },
-    [onLocationClick, showInfoCard, tenantId],
+    [onLocationClick, showInfoCard, tenantId, drawingMode],
   )
 
   const handleCheckInClick = useCallback((checkIn: any) => {
@@ -927,7 +932,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                 strokeWeight={2}
                 fillColor="transparent"
                 fillOpacity={0}
-                clickable={!isHighlighted}
+                clickable={!drawingMode}
                 onClick={() => handleLocationClick(location)}
                 zIndex={2}
               />
@@ -946,7 +951,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                 strokeWeight={2}
                 fillColor="transparent"
                 fillOpacity={0}
-                clickable={!isHighlighted}
+                clickable={!drawingMode}
                 onClick={() => handleLocationClick(location)}
                 zIndex={2}
               />
@@ -968,6 +973,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeWeight={12}
                   fillColor="transparent"
                   fillOpacity={0}
+                  clickable={!drawingMode}
                   onClick={() => handleLocationClick(location)}
                   zIndex={zIndex}
                 />
@@ -979,6 +985,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeWeight={2}
                   fillColor={isSelected ? "#ef4444" : isHighlighted ? "#60a5fa" : "#e9d5ff"}
                   fillOpacity={isSelected ? 0.4 : isHighlighted ? 0.3 : 0.6}
+                  clickable={!drawingMode}
                   onClick={() => handleLocationClick(location)}
                   zIndex={zIndex + 1}
                 />
@@ -998,6 +1005,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeColor="transparent"
                   strokeOpacity={0}
                   strokeWeight={12}
+                  clickable={!drawingMode}
                   onClick={() => handleLocationClick(location)}
                   zIndex={zIndex}
                 />
@@ -1006,6 +1014,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeColor={isSelected ? "#ef4444" : isHighlighted ? "#fca5a5" : "#fbbf24"}
                   strokeOpacity={1}
                   strokeWeight={2}
+                  clickable={!drawingMode}
                   onClick={() => handleLocationClick(location)}
                   zIndex={zIndex + 1}
                 />
@@ -1027,6 +1036,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeWeight={12}
                   fillColor="transparent"
                   fillOpacity={0}
+                  clickable={!drawingMode}
                   onClick={() => handleLocationClick(location)}
                   zIndex={zIndex}
                 />
@@ -1037,6 +1047,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeWeight={2}
                   fillColor={isSelected ? "#ef4444" : isHighlighted ? "#60a5fa" : "#fef3c7"}
                   fillOpacity={isSelected ? 0.4 : isHighlighted ? 0.3 : 0.4}
+                  clickable={!drawingMode}
                   onClick={() => handleLocationClick(location)}
                   zIndex={zIndex + 1}
                 />
@@ -1059,6 +1070,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeWeight={12}
                   fillColor="transparent"
                   fillOpacity={0}
+                  clickable={!drawingMode}
                   onClick={() => handleLocationClick(location)}
                   zIndex={zIndex}
                 />
@@ -1069,6 +1081,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeWeight={2}
                   fillColor={isSelected ? "#ef4444" : isHighlighted ? "#60a5fa" : "#86efac"}
                   fillOpacity={isSelected ? 0.15 : isHighlighted ? 0.15 : 0.15}
+                  clickable={!drawingMode}
                   onClick={() => handleLocationClick(location)}
                   zIndex={zIndex + 1}
                 />
@@ -1088,6 +1101,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeColor="transparent"
                   strokeOpacity={0}
                   strokeWeight={12}
+                  clickable={!drawingMode}
                   onClick={() => handleLocationClick(location)}
                   zIndex={zIndex}
                 />
@@ -1096,6 +1110,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeColor={isSelected ? "#ef4444" : isHighlighted ? "#fca5a5" : "#10b981"}
                   strokeOpacity={1}
                   strokeWeight={2}
+                  clickable={!drawingMode}
                   onClick={() => handleLocationClick(location)}
                   zIndex={zIndex + 1}
                 />
@@ -1117,6 +1132,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeWeight={12}
                   fillColor="transparent"
                   fillOpacity={0}
+                  clickable={!drawingMode}
                   onClick={() => handleLocationClick(location)}
                   zIndex={zIndex}
                 />
@@ -1127,6 +1143,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeWeight={2}
                   fillColor={isSelected ? "#ef4444" : isHighlighted ? "#60a5fa" : "#fed7aa"}
                   fillOpacity={isSelected ? 0.15 : isHighlighted ? 0.15 : 0.4}
+                  clickable={!drawingMode}
                   onClick={() => handleLocationClick(location)}
                   zIndex={zIndex + 1}
                 />
@@ -1146,6 +1163,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeColor="transparent"
                   strokeOpacity={0}
                   strokeWeight={12}
+                  clickable={!drawingMode}
                   onClick={() => handleLocationClick(location)}
                   zIndex={zIndex}
                 />
@@ -1154,6 +1172,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeColor={isSelected ? "#ef4444" : isHighlighted ? "#fca5a5" : "#f97316"}
                   strokeOpacity={1}
                   strokeWeight={2}
+                  clickable={!drawingMode}
                   onClick={() => handleLocationClick(location)}
                   zIndex={zIndex + 1}
                 />
@@ -1173,6 +1192,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeColor="transparent"
                   strokeOpacity={0}
                   strokeWeight={12}
+                  clickable={!drawingMode}
                   onClick={() => handleLocationClick(location)}
                   zIndex={zIndex}
                 />
@@ -1181,6 +1201,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeColor={isSelected ? "#ef4444" : isHighlighted ? "#fca5a5" : "#84cc16"}
                   strokeOpacity={1}
                   strokeWeight={2}
+                  clickable={!drawingMode}
                   onClick={() => handleLocationClick(location)}
                   zIndex={zIndex + 1}
                 />

@@ -7,6 +7,10 @@ import { MapPreviewWidget } from "@/components/map/map-preview-widget"
 import { UpcomingEventsWidget } from "@/components/dashboard/upcoming-events-widget"
 import { getUpcomingEvents } from "@/app/actions/events"
 import { CreateCheckInButton } from "@/components/check-ins/create-check-in-button"
+import { CheckInsCountWidget } from "@/components/dashboard/checkins-count-widget"
+import { LiveCheckInsWidget } from "@/components/dashboard/live-checkins-widget"
+import { getActiveCheckIns } from "@/app/actions/check-ins"
+import { filterActiveCheckIns } from "@/lib/utils/filter-expired-checkins"
 
 export default async function ResidentDashboardPage({ params }: { params: { slug: string } }) {
   const { slug } = params
@@ -194,6 +198,13 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
     }),
   )
 
+  let activeCheckIns: any[] = []
+  if (checkinsEnabled) {
+    const allCheckIns = await getActiveCheckIns(resident.tenant_id)
+    // Filter expired check-ins server-side
+    activeCheckIns = filterActiveCheckIns(allCheckIns)
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -239,6 +250,15 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
         userId={user.id}
         tenantId={resident.tenant_id}
       />
+
+      {checkinsEnabled && activeCheckIns.length > 0 && (
+        <LiveCheckInsWidget
+          initialCheckIns={activeCheckIns}
+          tenantSlug={slug}
+          tenantId={resident.tenant_id}
+          userId={user.id}
+        />
+      )}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {mapEnabled && lotLocation ? (
@@ -292,6 +312,8 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
             </p>
           </CardContent>
         </Card>
+
+        {checkinsEnabled && <CheckInsCountWidget initialCount={activeCheckIns.length} />}
 
         {familyUnitId && (
           <Card className="lg:col-span-1">

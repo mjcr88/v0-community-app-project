@@ -259,7 +259,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
       .from("users")
       .select("id, first_name, last_name, role, is_tenant_admin")
       .eq("id", event.cancelled_by)
-      .single()
+      .maybeSingle()
 
     if (cancelledBy) {
       const isAdmin =
@@ -273,6 +273,13 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
       cancellationDetails = {
         cancelledBy: displayName,
         cancelledByRole: isAdmin ? "Admin" : "Creator",
+        cancelledAt: event.cancelled_at,
+        reason: event.cancellation_reason,
+      }
+    } else {
+      cancellationDetails = {
+        cancelledBy: "Admin",
+        cancelledByRole: "Admin",
         cancelledAt: event.cancelled_at,
         reason: event.cancellation_reason,
       }

@@ -20,8 +20,8 @@ import {
 import Link from "next/link"
 import { MapPin, Trash2, Filter, Layers, Locate, Plus } from "lucide-react"
 import { getLocationEventCount } from "@/app/actions/events"
-import { CheckInDetailModal } from "@/components/check-ins/check-in-detail-modal"
 import { filterActiveCheckIns } from "@/lib/utils/filter-expired-checkins"
+import { CheckInDetailModal } from "@/components/check-ins/check-in-detail-modal" // Declare the CheckInDetailModal variable
 
 interface Location {
   id: string
@@ -339,7 +339,21 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
   )
 
   const activeCheckIns = useMemo(() => {
-    return filterActiveCheckIns(initialCheckIns)
+    const filtered = filterActiveCheckIns(initialCheckIns)
+    console.log("[v0] GoogleMapViewer - activeCheckIns filtered:", {
+      initialCount: initialCheckIns.length,
+      activeCount: filtered.length,
+      checkIns: filtered.map((c) => ({
+        id: c.id,
+        title: c.title,
+        location_type: c.location_type,
+        has_community_location: !!c.location?.coordinates,
+        has_custom_location: !!c.custom_location_coordinates,
+        creator_name: c.created_by_user?.first_name,
+        creator_avatar: c.created_by_user?.profile_picture_url || c.created_by_user?.avatar_url,
+      })),
+    })
+    return filtered
   }, [initialCheckIns])
 
   const handleMapClick = useCallback(
@@ -839,21 +853,53 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
               coordinates = checkIn.custom_location_coordinates
             }
 
-            if (!coordinates) return null
+            if (!coordinates) {
+              console.log("[v0] Check-in skipped - no coordinates:", checkIn.title)
+              return null
+            }
+
+            const creatorAvatar = checkIn.created_by_user?.profile_picture_url || checkIn.created_by_user?.avatar_url
+            const creatorName = checkIn.created_by_user?.first_name || "User"
+            const attendingCount = checkIn.attending_count || 0
+
+            console.log("[v0] Rendering check-in marker:", {
+              title: checkIn.title,
+              coordinates,
+              creatorAvatar,
+              creatorName,
+              attendingCount,
+            })
 
             return (
-              <Marker
-                key={checkIn.id}
-                position={coordinates}
-                onClick={() => handleCheckInClick(checkIn)}
-                zIndex={200}
-                icon={{
-                  url: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='48' viewBox='0 0 32 48'%3E%3Cpath fill='%2310b981' stroke='%23ffffff' strokeWidth='2' d='M16 0C8.8 0 3 5.8 3 13c0 8.5 13 35 13 35s13-26.5 13-35c0-7.2-5.8-13-13-13zm0 18c-2.8 0-5-2.2-5-5s2.2-5 5-5 5 2.2 5 5-2.2 5-5 5z'/%3E%3C/svg%3E",
-                  scaledSize: { width: 28, height: 42 },
-                  anchor: { x: 14, y: 42 },
-                }}
-                title={`${checkIn.title} • ${checkIn.attending_count} coming`}
-              />
+              <Marker key={checkIn.id} position={coordinates} onClick={() => handleCheckInClick(checkIn)} zIndex={200}>
+                {/* Custom marker content with profile picture */}
+                <div className="relative flex flex-col items-center cursor-pointer">
+                  {/* Profile picture in a circle with border */}
+                  <div className="w-12 h-12 rounded-full border-3 border-green-500 bg-white shadow-lg overflow-hidden">
+                    {creatorAvatar ? (
+                      <img
+                        src={creatorAvatar || "/placeholder.svg"}
+                        alt={creatorName}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-green-500 flex items-center justify-center text-white font-semibold text-lg">
+                        {creatorName[0]?.toUpperCase() || "?"}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Attending count badge */}
+                  {attendingCount > 0 && (
+                    <div className="absolute -bottom-2 bg-green-600 text-white text-xs font-bold rounded-full px-2 py-0.5 shadow-md border-2 border-white">
+                      {attendingCount}
+                    </div>
+                  )}
+
+                  {/* Pointer/stem pointing down to location */}
+                  <div className="w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[12px] border-t-green-500" />
+                </div>
+              </Marker>
             )
           })}
 

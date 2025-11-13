@@ -19,7 +19,7 @@ import {
   DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu"
 import Link from "next/link"
-import { MapPin, Trash2, Filter, Layers, Locate, Plus } from "lucide-react"
+import { MapPin, Trash2, Filter, Layers, Locate, Plus } from 'lucide-react'
 import { getLocationEventCount } from "@/app/actions/events"
 import { CheckInDetailModal } from "@/components/check-ins/check-in-detail-modal" // Declare the CheckInDetailModal variable
 
@@ -167,16 +167,23 @@ function distributePointsAlongPath(
 
   const positions: Array<{ lat: number; lng: number }> = []
 
-  // Distribute evenly along the path based on check-in ID hash
-  checkInIds.forEach((checkInId, index) => {
-    // Create deterministic position from check-in ID
-    const idHash = checkInId.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0)
-    const pathIndex = (idHash + index) % path.length
+  // Calculate evenly spaced intervals along the path
+  const step = Math.max(1, Math.floor(path.length / count))
 
-    positions.push({
+  checkInIds.forEach((checkInId, index) => {
+    // Use index primarily for spacing, add ID hash for minor variation
+    const idHash = checkInId.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0)
+    const baseIndex = (index * step) % path.length
+    const offset = (idHash % 3) - 1 // -1, 0, or 1 for slight variation
+    const pathIndex = Math.max(0, Math.min(path.length - 1, baseIndex + offset))
+
+    const position = {
       lat: path[pathIndex][0],
       lng: path[pathIndex][1],
-    })
+    }
+
+    positions.push(position)
+    console.log(`[v0] Check-in ${index + 1}/${count} assigned to path point ${pathIndex}:`, position)
   })
 
   return positions
@@ -608,10 +615,12 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
           // Distribute inside boundary polygon
           positions = distributePointsInBoundary(location.boundary_coordinates, checkIns.length, checkInIds)
           console.log("[v0] Distributed", checkIns.length, "check-ins in boundary:", location.name)
+          positions.forEach((pos, i) => console.log(`  Position ${i}:`, pos))
         } else if (location.path_coordinates && location.path_coordinates.length >= 2) {
           // Distribute along path
           positions = distributePointsAlongPath(location.path_coordinates, checkIns.length, checkInIds)
           console.log("[v0] Distributed", checkIns.length, "check-ins along path:", location.name)
+          positions.forEach((pos, i) => console.log(`  Position ${i}:`, pos))
         } else if (location.coordinates) {
           // Single point - all markers at same location (fallback)
           positions = Array(checkIns.length).fill(location.coordinates)

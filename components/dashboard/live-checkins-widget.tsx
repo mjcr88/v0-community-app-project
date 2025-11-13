@@ -1,11 +1,12 @@
 "use client"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Activity } from "lucide-react"
+import { Activity } from 'lucide-react'
 import { CheckInCard } from "@/components/check-ins/check-in-card"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { CreateCheckInButton } from "@/components/check-ins/create-check-in-button"
 import { CheckInDetailModal } from "@/components/check-ins/check-in-detail-modal"
+import { createBrowserClient } from "@/lib/supabase/client"
 
 interface CheckIn {
   id: string
@@ -38,9 +39,57 @@ interface LiveCheckInsWidgetProps {
 }
 
 export function LiveCheckInsWidget({ initialCheckIns, tenantSlug, tenantId, userId }: LiveCheckInsWidgetProps) {
-  const [checkIns] = useState(initialCheckIns)
+  const [checkIns, setCheckIns] = useState<CheckIn[]>(initialCheckIns)
   const [selectedCheckInId, setSelectedCheckInId] = useState<string | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
+
+  useEffect(() => {
+    const loadCheckIns = async () => {
+      const supabase = createBrowserClient()
+      
+      // Calculate time 8 hours ago (max check-in duration)
+      const eightHoursAgo = new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString()
+
+      const { data, error } = await supabase
+        .from("check_ins")
+        .select(`
+          *,
+          creator:users!created_by(id, first_name, last_name, profile_picture_url),
+          location:locations!location_id(id, name)
+        `)
+        .eq("tenant_id", tenantId)
+        .eq("status", "active")
+        .gte("start_time", eightHoursAgo)
+        .order("start_time", { ascending: false })
+
+      if (error) {
+        console.error("[v0] Error loading check-ins:", error)
+        return
+      }
+
+      if (!data) {
+        setCheckIns([])
+        return
+      }
+
+      // Filter expired check-ins client-side
+      const now = new Date()
+      const activeCheckIns = data.filter((checkIn) => {
+        const expiresAt = new Date(checkIn.start_time)
+        expiresAt.setMinutes(expiresAt.getMinutes() + checkIn.duration_minutes)
+        return expiresAt > now
+      })
+
+      setCheckIns(activeCheckIns as CheckIn[])
+    }
+
+    loadCheckIns()
+
+    // Refresh every 30 seconds to show new/deleted check-ins
+    const interval = setInterval(loadCheckIns, 30000)
+
+    return () => clearInterval(interval)
+  }, [tenantId])
 
   function handleCheckInClick(checkInId: string) {
     setSelectedCheckInId(checkInId)

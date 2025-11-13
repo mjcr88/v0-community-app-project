@@ -10,6 +10,7 @@ interface MapPreviewWidgetProps {
   tenantSlug: string
   tenantId: string
   locations: any[]
+  checkIns?: any[]
   mapCenter: { lat: number; lng: number } | null
   highlightLocationId?: string
   mapZoom?: number
@@ -19,6 +20,7 @@ export function MapPreviewWidget({
   tenantSlug,
   tenantId,
   locations,
+  checkIns = [],
   mapCenter,
   highlightLocationId,
   mapZoom = 12,
@@ -42,6 +44,8 @@ export function MapPreviewWidget({
           <GoogleMapViewer
             locations={locations}
             tenantId={tenantId}
+            tenantSlug={tenantSlug}
+            checkIns={checkIns}
             mapCenter={mapCenter}
             mapZoom={mapZoom}
             isAdmin={false}

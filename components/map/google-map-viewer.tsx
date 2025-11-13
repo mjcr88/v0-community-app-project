@@ -20,6 +20,8 @@ import {
 import Link from "next/link"
 import { MapPin, Trash2, Filter, Layers, Locate, Plus } from "lucide-react"
 import { getLocationEventCount } from "@/app/actions/events"
+import { CheckInDetailModal } from "@/components/check-ins/check-in-detail-modal"
+import { filterActiveCheckIns } from "@/lib/utils/filter-expired-checkins"
 
 interface Location {
   id: string
@@ -41,6 +43,7 @@ interface GoogleMapViewerProps {
   locations: Location[]
   tenantId?: string // Make tenantId optional
   tenantSlug?: string // Add tenantSlug prop for proper link generation
+  checkIns?: any[] // Add checkIns prop
   mapCenter?: { lat: number; lng: number } | null
   mapZoom?: number
   isAdmin?: boolean
@@ -66,6 +69,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
   locations: initialLocations = [],
   tenantId, // Now optional
   tenantSlug, // Destructure tenantSlug prop
+  checkIns: initialCheckIns = [], // Destructure checkIns with default empty array
   mapCenter,
   mapZoom = 11,
   isAdmin = false,
@@ -113,6 +117,9 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
 
   const [selectedLocationEventCount, setSelectedLocationEventCount] = useState<number | null>(null)
   const [loadingEventCount, setLoadingEventCount] = useState(false)
+
+  const [selectedCheckIn, setSelectedCheckIn] = useState<any | null>(null)
+  const [checkInModalOpen, setCheckInModalOpen] = useState(false)
 
   useEffect(() => {
     console.log("[v0] GoogleMapViewer mounted with:", {
@@ -331,6 +338,10 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
     [initialLocations],
   )
 
+  const activeCheckIns = useMemo(() => {
+    return filterActiveCheckIns(initialCheckIns)
+  }, [initialCheckIns])
+
   const handleMapClick = useCallback(
     (e: any) => {
       console.log("[v0] Map clicked, drawingMode:", drawingMode, "latLng:", e.detail?.latLng)
@@ -468,6 +479,12 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
     },
     [onLocationClick, showInfoCard, tenantId],
   )
+
+  const handleCheckInClick = useCallback((checkIn: any) => {
+    console.log("[v0] Check-in marker clicked:", checkIn.title)
+    setSelectedCheckIn(checkIn)
+    setCheckInModalOpen(true)
+  }, [])
 
   const handleCustomMarkerClick = useCallback(() => {
     if (markerPosition) {
@@ -812,6 +829,34 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
             )
           })}
 
+          {activeCheckIns.map((checkIn) => {
+            // Determine coordinates based on location type
+            let coordinates: { lat: number; lng: number } | null = null
+
+            if (checkIn.location_type === "community_location" && checkIn.location?.coordinates) {
+              coordinates = checkIn.location.coordinates
+            } else if (checkIn.location_type === "custom_temporary" && checkIn.custom_location_coordinates) {
+              coordinates = checkIn.custom_location_coordinates
+            }
+
+            if (!coordinates) return null
+
+            return (
+              <Marker
+                key={checkIn.id}
+                position={coordinates}
+                onClick={() => handleCheckInClick(checkIn)}
+                zIndex={200}
+                icon={{
+                  url: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='48' viewBox='0 0 32 48'%3E%3Cpath fill='%2310b981' stroke='%23ffffff' strokeWidth='2' d='M16 0C8.8 0 3 5.8 3 13c0 8.5 13 35 13 35s13-26.5 13-35c0-7.2-5.8-13-13-13zm0 18c-2.8 0-5-2.2-5-5s2.2-5 5-5 5 2.2 5 5-2.2 5-5 5z'/%3E%3C/svg%3E",
+                  scaledSize: { width: 28, height: 42 },
+                  anchor: { x: 14, y: 42 },
+                }}
+                title={`${checkIn.title} • ${checkIn.attending_count} coming`}
+              />
+            )
+          })}
+
           {markerPosition && drawingMode && (
             <Marker
               position={markerPosition}
@@ -931,6 +976,17 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
             tenantSlug={tenantSlug} // Pass tenantSlug instead of tenantId
           />
         </div>
+      )}
+
+      {selectedCheckIn && (
+        <CheckInDetailModal
+          checkIn={selectedCheckIn}
+          open={checkInModalOpen}
+          onOpenChange={setCheckInModalOpen}
+          tenantSlug={tenantSlug || ""}
+          userId={tenantId || ""}
+          tenantId={tenantId || ""}
+        />
       )}
 
       {drawingMode && (

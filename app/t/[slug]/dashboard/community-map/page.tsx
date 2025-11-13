@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { getLocations, getLocationCounts } from "@/lib/queries/get-locations"
 import { CommunityMapClient } from "./community-map-client"
+import { getActiveCheckIns } from "@/app/actions/check-ins"
 
 export default async function ResidentCommunityMapPage({
   params,
@@ -99,6 +100,8 @@ export default async function ResidentCommunityMapPage({
     else calculatedZoom = 13 // Small community
   }
 
+  const checkIns = await getActiveCheckIns(tenant.id)
+
   return (
     <CommunityMapClient
       slug={slug}
@@ -116,6 +119,7 @@ export default async function ResidentCommunityMapPage({
         recreationalZones: counts.recreational_zone || 0,
       }}
       locations={locations}
+      checkIns={checkIns}
       mapCenter={calculatedCenter}
       boundaryLocationId={boundaryLocation?.id}
       mapZoom={calculatedZoom}

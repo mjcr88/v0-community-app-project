@@ -849,3 +849,139 @@ export async function getCheckInRsvpCounts(checkInId: string) {
     }
   }
 }
+
+export async function getCheckInsByLocation(locationId: string, tenantId: string) {
+  try {
+    const supabase = await createServerClient()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      console.log("[v0] getCheckInsByLocation - No authenticated user")
+      return []
+    }
+
+    console.log("[v0] getCheckInsByLocation - Fetching check-ins for location:", locationId)
+
+    // Fetch check-ins for this specific location
+    const { data: checkIns, error } = await supabase
+      .from("check_ins")
+      .select(
+        `
+        *,
+        creator:users!created_by(id, first_name, last_name, profile_picture_url),
+        location:locations!location_id(id, name, coordinates, boundary_coordinates, path_coordinates)
+      `,
+      )
+      .eq("tenant_id", tenantId)
+      .eq("location_id", locationId)
+      .eq("location_type", "community_location")
+      .eq("status", "active")
+      .filter("start_time", "gte", new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString())
+      .order("start_time", { ascending: false })
+
+    if (error) {
+      console.error("[v0] Error fetching location check-ins:", error)
+      return []
+    }
+
+    if (!checkIns || checkIns.length === 0) {
+      console.log("[v0] getCheckInsByLocation - No check-ins found for location")
+      return []
+    }
+
+    // Filter out expired check-ins
+    const now = new Date()
+    const nonExpiredCheckIns = checkIns.filter((checkIn) => {
+      const expiresAt = new Date(checkIn.start_time)
+      expiresAt.setMinutes(expiresAt.getMinutes() + checkIn.duration_minutes)
+      return expiresAt > now
+    })
+
+    // Filter by visibility
+    const visibleCheckIns = nonExpiredCheckIns.filter((checkIn) => {
+      if (checkIn.visibility_scope === "community") {
+        return true
+      }
+      if (checkIn.created_by === user.id) {
+        return true
+      }
+      return false
+    })
+
+    console.log("[v0] getCheckInsByLocation - Visible check-ins:", visibleCheckIns.length)
+
+    // Get RSVP data
+    const checkInIds = visibleCheckIns.map((c) => c.id)
+
+    if (checkInIds.length === 0) {
+      return []
+    }
+
+    const [{ data: userRsvps }, { data: allRsvps }] = await Promise.all([
+      supabase
+        .from("check_in_rsvps")
+        .select("check_in_id, rsvp_status")
+        .eq("user_id", user.id)
+        .in("check_in_id", checkInIds),
+      supabase.from("check_in_rsvps").select("check_in_id, rsvp_status, attending_count").in("check_in_id", checkInIds),
+    ])
+
+    const rsvpMap = new Map(userRsvps?.map((r) => [r.check_in_id, r.rsvp_status]) || [])
+
+    const attendingCountMap = new Map<string, number>()
+    allRsvps?.forEach((rsvp) => {
+      if (rsvp.rsvp_status === "yes") {
+        const current = attendingCountMap.get(rsvp.check_in_id) || 0
+        attendingCountMap.set(rsvp.check_in_id, current + (rsvp.attending_count || 1))
+      }
+    })
+
+    const checkInsWithUserData = visibleCheckIns.map((checkIn) => ({
+      id: checkIn.id,
+      tenant_id: checkIn.tenant_id,
+      created_by: checkIn.created_by,
+      title: checkIn.title,
+      activity_type: checkIn.activity_type,
+      description: checkIn.description,
+      location_type: checkIn.location_type,
+      location_id: checkIn.location_id,
+      custom_location_name: checkIn.custom_location_name,
+      custom_location_coordinates: checkIn.custom_location_coordinates,
+      custom_location_type: checkIn.custom_location_type,
+      start_time: checkIn.start_time,
+      duration_minutes: checkIn.duration_minutes,
+      status: checkIn.status,
+      visibility_scope: checkIn.visibility_scope,
+      created_at: checkIn.created_at,
+      updated_at: checkIn.updated_at,
+      ended_at: checkIn.ended_at,
+      creator: checkIn.creator
+        ? {
+            id: checkIn.creator.id,
+            first_name: checkIn.creator.first_name,
+            last_name: checkIn.creator.last_name,
+            profile_picture_url: checkIn.creator.profile_picture_url,
+          }
+        : null,
+      location: checkIn.location
+        ? {
+            id: checkIn.location.id,
+            name: checkIn.location.name,
+            coordinates: checkIn.location.coordinates,
+            boundary_coordinates: checkIn.location.boundary_coordinates,
+            path_coordinates: checkIn.location.path_coordinates,
+          }
+        : null,
+      user_rsvp_status: rsvpMap.get(checkIn.id) || null,
+      attending_count: attendingCountMap.get(checkIn.id) || 0,
+    }))
+
+    return checkInsWithUserData
+  } catch (error) {
+    console.error("[v0] Unexpected error fetching location check-ins:", error)
+    return []
+  }
+}

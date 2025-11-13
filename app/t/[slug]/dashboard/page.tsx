@@ -6,6 +6,7 @@ import Link from "next/link"
 import { MapPreviewWidget } from "@/components/map/map-preview-widget"
 import { UpcomingEventsWidget } from "@/components/dashboard/upcoming-events-widget"
 import { getUpcomingEvents } from "@/app/actions/events"
+import { CreateCheckInModal } from "@/components/check-ins/create-check-in-modal"
 
 export default async function ResidentDashboardPage({ params }: { params: { slug: string } }) {
   const { slug } = params
@@ -61,6 +62,7 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
   const { data: tenant } = await supabase.from("tenants").select("*").eq("id", resident.tenant_id).single()
 
   const petsEnabled = tenant?.features?.pets === true
+  const checkinsEnabled = tenant?.checkins_enabled === true
   const defaultFeatures = {
     map: true,
   }
@@ -213,6 +215,7 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
           <Button asChild variant="outline">
             <Link href={`/t/${slug}/dashboard/events/create`}>Create Event</Link>
           </Button>
+          {checkinsEnabled && <CreateCheckInModal tenantId={resident.tenant_id} tenantSlug={slug} userId={user.id} />}
           <Button asChild variant="outline">
             <Link href={`/t/${slug}/dashboard/settings/profile`}>Edit Profile</Link>
           </Button>

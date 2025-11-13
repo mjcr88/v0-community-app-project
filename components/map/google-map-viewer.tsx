@@ -439,6 +439,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
       total: checkIns.length,
       active: activeCheckIns.length,
       expired: 0, // Already filtered in useEffect
+      currentZoom: zoom,
     })
 
     // Extract coordinates
@@ -494,45 +495,57 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
       })
       .filter((checkIn) => checkIn.coordinates !== null)
 
-    // const coordsMap = new globalThis.Map<string, any[]>()
+    // At lower zoom levels (zoomed out), group markers that are close together
+    // At higher zoom levels (zoomed in), show individual markers
 
-    // checkInsWithBaseCoords.forEach((checkIn) => {
-    //   // Round to 7 decimal places for grouping (~1cm precision)
-    //   const key = `${checkIn.coordinates.lat.toFixed(7)},${checkIn.coordinates.lng.toFixed(7)}`
-    //   if (!coordsMap.has(key)) {
-    //     coordsMap.set(key, [])
-    //   }
-    //   coordsMap.get(key)!.push(checkIn)
-    // })
+    const CLUSTER_ZOOM_THRESHOLD = 16 // Below this zoom, cluster markers
 
-    // const offsetCheckIns: any[] = []
-    // coordsMap.forEach((group) => {
-    //   if (group.length === 1) {
-    //     // Single marker - no offset needed
-    //     offsetCheckIns.push(group[0])
-    //   } else {
-    //     // Multiple markers at same location - apply minimal circular offset
-    //     console.log("[v0] Offsetting", group.length, "overlapping markers at", group[0].coordinates)
-    //     group.forEach((checkIn, index) => {
-    //       const angle = (index / group.length) * 2 * Math.PI // Distribute evenly in circle
-    //       const offset = 0.00003
-    //       const offsetLat = checkIn.coordinates.lat + offset * Math.cos(angle)
-    //       const offsetLng = checkIn.coordinates.lng + offset * Math.sin(angle)
+    if (zoom < CLUSTER_ZOOM_THRESHOLD) {
+      // Group markers by rounded coordinates (clustering)
+      // Precision decreases as we zoom out
+      const precision = Math.max(3, Math.min(6, Math.floor(zoom / 3)))
+      const coordsMap = new globalThis.Map<string, any[]>()
 
-    //       offsetCheckIns.push({
-    //         ...checkIn,
-    //         coordinates: { lat: offsetLat, lng: offsetLng },
-    //       })
-    //     })
-    //   }
-    // })
+      checkInsWithBaseCoords.forEach((checkIn) => {
+        const key = `${checkIn.coordinates.lat.toFixed(precision)},${checkIn.coordinates.lng.toFixed(precision)}`
+        if (!coordsMap.has(key)) {
+          coordsMap.set(key, [])
+        }
+        coordsMap.get(key)!.push(checkIn)
+      })
 
-    // console.log("[v0] Final check-ins with offset coords:", offsetCheckIns.length)
-    // return offsetCheckIns
+      const clusteredCheckIns: any[] = []
+      coordsMap.forEach((group) => {
+        if (group.length === 1) {
+          // Single marker - no clustering needed
+          clusteredCheckIns.push(group[0])
+        } else {
+          // Multiple markers - create a cluster marker
+          const centerLat = group.reduce((sum, c) => sum + c.coordinates.lat, 0) / group.length
+          const centerLng = group.reduce((sum, c) => sum + c.coordinates.lng, 0) / group.length
 
-    console.log("[v0] Check-ins with coordinates:", checkInsWithBaseCoords.length)
-    return checkInsWithBaseCoords
-  }, [checkIns])
+          clusteredCheckIns.push({
+            ...group[0], // Use first check-in as base
+            coordinates: { lat: centerLat, lng: centerLng },
+            isCluster: true,
+            clusterCount: group.length,
+            clusterCheckIns: group, // Store all check-ins in cluster
+          })
+        }
+      })
+
+      console.log("[v0] Clustered markers:", {
+        original: checkInsWithBaseCoords.length,
+        clustered: clusteredCheckIns.length,
+        zoom,
+      })
+      return clusteredCheckIns
+    } else {
+      // At high zoom, show individual markers without clustering
+      console.log("[v0] Individual markers (no clustering):", checkInsWithBaseCoords.length)
+      return checkInsWithBaseCoords
+    }
+  }, [checkIns, zoom])
 
   const handleMapClick = useCallback(
     (e: any) => {
@@ -715,10 +728,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
           clickableIcons={enableClickablePlaces || drawingMode === "marker"} // Always enable clickable icons when places or drawing is enabled
           {...(mapId ? { mapId } : {})}
           onCenterChanged={(e) => setCenter(e.detail.center)}
-          onZoomChanged={(e) => {
-            console.log("[v0] Zoom changed to:", e.detail.zoom)
-            setZoom(e.detail.zoom)
-          }}
+          onZoomChanged={(e) => setZoom(e.detail.zoom)}
           onClick={handleMapClick}
           onLoad={(map) => {
             console.log("[v0] Map loaded, setting instance")
@@ -1025,6 +1035,42 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
           })}
 
           {checkInsWithCoords.map((checkIn) => {
+            if (checkIn.isCluster) {
+              // Cluster marker showing count
+              return (
+                <AdvancedMarker
+                  key={`cluster-${checkIn.id}`}
+                  position={checkIn.coordinates}
+                  onClick={() => {
+                    // Zoom in to show individual markers
+                    setCenter(checkIn.coordinates)
+                    setZoom(17)
+                  }}
+                  zIndex={200}
+                >
+                  <div className="relative cursor-pointer" style={{ transform: "translateY(-100%)" }}>
+                    {/* Cluster Circle */}
+                    <div className="relative w-12 h-12 rounded-full border-4 border-green-500 bg-green-600 overflow-hidden shadow-lg hover:border-green-600 transition-colors flex items-center justify-center">
+                      <span className="text-white font-bold text-lg">{checkIn.clusterCount}</span>
+                    </div>
+
+                    {/* Pointer Stem */}
+                    <div
+                      className="absolute left-1/2 -translate-x-1/2"
+                      style={{
+                        width: 0,
+                        height: 0,
+                        borderLeft: "8px solid transparent",
+                        borderRight: "8px solid transparent",
+                        borderTop: "8px solid rgb(34, 197, 94)", // green-500
+                      }}
+                    />
+                  </div>
+                </AdvancedMarker>
+              )
+            }
+
+            // Individual marker
             const firstName = checkIn.created_by_user?.first_name || ""
             const lastName = checkIn.created_by_user?.last_name || ""
             const initials = (firstName.charAt(0) + lastName.charAt(0)).toUpperCase() || "?"

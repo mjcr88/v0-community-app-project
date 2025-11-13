@@ -317,7 +317,6 @@ export async function getActiveCheckIns(tenantId: string) {
     })
 
     const checkInsWithUserData = visibleCheckIns.map((checkIn) => {
-      // Convert to plain object and ensure all nested data is serializable
       const plainCheckIn = {
         id: checkIn.id,
         tenant_id: checkIn.tenant_id,
@@ -337,7 +336,16 @@ export async function getActiveCheckIns(tenantId: string) {
         created_at: checkIn.created_at,
         updated_at: checkIn.updated_at,
         ended_at: checkIn.ended_at,
-        // Flatten creator data
+        // Return as 'creator' for CheckInCard compatibility
+        creator: checkIn.creator
+          ? {
+              id: checkIn.creator.id,
+              first_name: checkIn.creator.first_name,
+              last_name: checkIn.creator.last_name,
+              profile_picture_url: checkIn.creator.profile_picture_url,
+            }
+          : null,
+        // Also include as created_by_user for map markers
         created_by_user: checkIn.creator
           ? {
               id: checkIn.creator.id,

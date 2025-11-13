@@ -39,6 +39,7 @@ interface Event {
   } | null
   custom_location_name?: string | null
   flag_count?: number
+  status?: "draft" | "published" | "cancelled"
 }
 
 export function UpcomingEventsWidget({
@@ -147,10 +148,13 @@ export function UpcomingEventsWidget({
             const startTime = event.start_time ? format(parseISO(`2000-01-01T${event.start_time}`), "h:mm a") : null
             const isSaved = event.is_saved || false
             const userRsvpStatus = event.user_rsvp_status as "yes" | "maybe" | "no" | null
+            const isCancelled = event.status === "cancelled"
 
             return (
               <Link key={event.id} href={`/t/${slug}/dashboard/events/${event.id}`}>
-                <div className="flex gap-4 p-4 rounded-lg border hover:bg-accent transition-colors cursor-pointer">
+                <div
+                  className={`flex gap-4 p-4 rounded-lg border hover:bg-accent transition-colors cursor-pointer ${isCancelled ? "opacity-60" : ""}`}
+                >
                   {/* Date box on left */}
                   <div className="flex flex-col items-center justify-center bg-primary/10 rounded-md px-3 py-2 min-w-[4rem] flex-shrink-0">
                     <div className="text-xs font-medium text-primary uppercase">{format(startDate, "MMM")}</div>
@@ -167,6 +171,11 @@ export function UpcomingEventsWidget({
                       </p>
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-xs text-muted-foreground">{event.event_categories?.name || "Event"}</p>
+                        {isCancelled && (
+                          <Badge variant="destructive" className="text-xs">
+                            Cancelled
+                          </Badge>
+                        )}
                         {event.flag_count !== undefined && event.flag_count > 0 && (
                           <Badge variant="destructive" className="text-xs gap-1">
                             <Flag className="h-3 w-3" />
@@ -185,7 +194,7 @@ export function UpcomingEventsWidget({
                       )}
 
                       {/* RSVP quick actions for RSVP events */}
-                      {userId && tenantId && event.requires_rsvp && (
+                      {userId && tenantId && event.requires_rsvp && !isCancelled && (
                         <div className="flex items-center gap-1 pt-2" onClick={(e) => e.preventDefault()}>
                           <Button
                             size="sm"

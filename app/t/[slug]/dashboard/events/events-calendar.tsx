@@ -40,6 +40,7 @@ interface Event {
   } | null
   custom_location_name?: string | null
   flag_count?: number
+  status?: "draft" | "published" | "cancelled"
 }
 
 export function EventsCalendar({
@@ -146,9 +147,10 @@ export function EventsCalendar({
               {selectedEvents.map((event) => {
                 const startTime = event.start_time ? format(parseISO(`2000-01-01T${event.start_time}`), "h:mm a") : null
                 const endTime = event.end_time ? format(parseISO(`2000-01-01T${event.end_time}`), "h:mm a") : null
+                const isCancelled = event.status === "cancelled"
 
                 return (
-                  <Card key={event.id} className="hover:shadow-md transition-all">
+                  <Card key={event.id} className={`hover:shadow-md transition-all ${isCancelled ? "opacity-60" : ""}`}>
                     <Link href={`/t/${slug}/dashboard/events/${event.id}`}>
                       <CardHeader className="pb-3">
                         <div className="flex items-start justify-between gap-2">
@@ -169,6 +171,11 @@ export function EventsCalendar({
                           </div>
                         )}
                         <div className="flex items-center gap-2 flex-wrap">
+                          {isCancelled && (
+                            <Badge variant="destructive" className="text-xs">
+                              Cancelled
+                            </Badge>
+                          )}
                           {event.is_all_day && (
                             <Badge variant="outline" className="text-xs">
                               All Day

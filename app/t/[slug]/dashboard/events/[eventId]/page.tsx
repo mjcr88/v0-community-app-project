@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation"
 import { createServerClient } from "@/lib/supabase/server"
 import { getEvent } from "@/app/actions/events"
-import { ArrowLeft, Calendar, Share2, Pencil, Users, Lock, Flag } from "lucide-react"
+import { ArrowLeft, Calendar, Share2, Pencil, Users, Lock, Flag, AlertTriangle } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -19,6 +19,7 @@ import { getEventFlagDetails } from "@/app/actions/events"
 import { EventFlagDetails } from "./event-flag-details"
 import { CancelEventDialog } from "./cancel-event-dialog"
 import { UncancelEventButton } from "./uncancel-event-button"
+import { format } from "date-fns"
 
 interface EventDetailPageProps {
   params: Promise<{ slug: string; eventId: string }>
@@ -252,6 +253,26 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     }
   }
 
+  let cancellationDetails = null
+  if (event.status === "cancelled" && event.cancelled_by) {
+    const { data: cancelledBy } = await supabase
+      .from("users")
+      .select("id, first_name, last_name, role, is_tenant_admin")
+      .eq("id", event.cancelled_by)
+      .single()
+
+    if (cancelledBy) {
+      const isAdmin =
+        cancelledBy.is_tenant_admin || cancelledBy.role === "super_admin" || cancelledBy.role === "tenant_admin"
+      cancellationDetails = {
+        cancelledBy: `${cancelledBy.first_name} ${cancelledBy.last_name}`,
+        cancelledByRole: isAdmin ? "Admin" : "Creator",
+        cancelledAt: event.cancelled_at,
+        reason: event.cancellation_reason,
+      }
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
@@ -351,6 +372,33 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
       {/* Content Section */}
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto space-y-8">
+          {event.status === "cancelled" && cancellationDetails && (
+            <div className="p-6 border-2 border-destructive rounded-lg bg-destructive/5 space-y-3">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="h-6 w-6 text-destructive" />
+                <h3 className="font-semibold text-lg text-destructive">Event Cancelled</h3>
+              </div>
+              <div className="space-y-2 text-sm">
+                <p>
+                  <span className="font-medium">Cancelled by:</span> {cancellationDetails.cancelledBy} (
+                  {cancellationDetails.cancelledByRole})
+                </p>
+                {cancellationDetails.cancelledAt && (
+                  <p>
+                    <span className="font-medium">Cancelled on:</span>{" "}
+                    {format(new Date(cancellationDetails.cancelledAt), "MMMM d, yyyy 'at' h:mm a")}
+                  </p>
+                )}
+                {cancellationDetails.reason && (
+                  <div className="pt-2 border-t border-destructive/20">
+                    <p className="font-medium mb-1">Reason:</p>
+                    <p className="text-muted-foreground whitespace-pre-wrap">{cancellationDetails.reason}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {flagDetails && flagDetails.length > 0 && <EventFlagDetails flags={flagDetails} tenantSlug={slug} />}
 
           {canManageEvent && visibilityDetails && (
@@ -485,6 +533,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             rsvpDeadline={event.rsvp_deadline}
             maxAttendees={event.max_attendees}
             userId={user?.id || null}
+            eventStatus={event.status as "draft" | "published" | "cancelled"}
           />
 
           {/* Attendees Section */}

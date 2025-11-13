@@ -562,6 +562,7 @@ export async function getUpcomingEvents(tenantId: string, limit = 5) {
         requires_rsvp,
         max_attendees,
         rsvp_deadline,
+        status,
         event_categories (
           name,
           icon
@@ -575,7 +576,7 @@ export async function getUpcomingEvents(tenantId: string, limit = 5) {
       `,
       )
       .eq("tenant_id", tenantId)
-      .eq("status", "published")
+      .in("status", ["published", "cancelled"])
       .gte("start_date", today)
       .in("id", accessiblePersonalEventIds)
       .order("start_date", { ascending: true })

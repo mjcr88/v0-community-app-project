@@ -66,7 +66,7 @@ export default async function EventsPage({
     )
     .eq("tenant_id", resident.tenant_id)
     .in("id", visibleEventIds)
-    .eq("status", "published")
+    .in("status", ["published", "cancelled"])
     .order("start_date", { ascending: true })
     .order("start_time", { ascending: true })
 

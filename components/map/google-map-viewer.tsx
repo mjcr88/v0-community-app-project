@@ -691,16 +691,36 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
 
   const handleMapClick = useCallback(
     (e: any) => {
-      console.log("[v0] Map clicked, drawingMode:", drawingMode, "latLng:", e.detail?.latLng)
+      console.log("[v0] Map clicked - RAW EVENT:", {
+        hasDetail: !!e.detail,
+        detail: e.detail,
+        hasLatLng: !!(e.detail?.latLng || e.latLng),
+        drawingMode,
+      })
 
-      if (drawingMode === "marker" && e.detail?.latLng) {
-        const lat = e.detail.latLng.lat
-        const lng = e.detail.latLng.lng
+      let lat: number | undefined
+      let lng: number | undefined
 
+      if (e.detail?.latLng) {
+        lat = e.detail.latLng.lat
+        lng = e.detail.latLng.lng
+      } else if (e.detail?.lat && e.detail?.lng) {
+        lat = e.detail.lat
+        lng = e.detail.lng
+      } else if (e.latLng) {
+        // Try direct latLng property
+        lat = typeof e.latLng.lat === "function" ? e.latLng.lat() : e.latLng.lat
+        lng = typeof e.latLng.lng === "function" ? e.latLng.lng() : e.latLng.lng
+      }
+
+      console.log("[v0] Extracted coordinates:", { lat, lng })
+
+      if (drawingMode === "marker" && lat !== undefined && lng !== undefined) {
         console.log("[v0] Dropping custom pin at:", { lat, lng })
         setMarkerPosition({ lat, lng })
 
         if (typeof onDrawingComplete === "function") {
+          console.log("[v0] Calling onDrawingComplete with coordinates")
           onDrawingComplete({
             coordinates: { lat, lng },
             type: "pin",
@@ -711,6 +731,11 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
         console.log("[v0] Map clicked - clearing selection")
         setDynamicHighlightId(undefined)
         setSelectedLocation(null)
+      } else {
+        console.log("[v0] Map clicked but no action taken:", {
+          drawingMode,
+          hasCoordinates: lat !== undefined && lng !== undefined,
+        })
       }
     },
     [drawingMode, onDrawingComplete],
@@ -1268,6 +1293,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
             <Marker
               position={markerPosition}
               zIndex={400}
+              onClick={handleCustomMarkerClick}
               icon={{
                 url: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='48' viewBox='0 0 32 48'%3E%3Cpath fill='%239333ea' stroke='%23ffffff' strokeWidth='2' d='M16 0C8.8 0 3 5.8 3 13c0 8.5 13 35 13 35s13-26.5 13-35c0-7.2-5.8-13-13-13zm0 18c-2.8 0-5-2.2-5-5s2.2-5 5-5 5 2.2 5 5-2.2 5-5 5z'/%3E%3C/svg%3E",
                 scaledSize: { width: 32, height: 48 },

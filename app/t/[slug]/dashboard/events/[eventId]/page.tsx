@@ -3,7 +3,7 @@
 import { notFound, redirect } from "next/navigation"
 import { createServerClient } from "@/lib/supabase/server"
 import { getEvent } from "@/app/actions/events"
-import { ArrowLeft, Calendar, Share2, Pencil, Users, Lock, Flag, Ban } from "lucide-react"
+import { ArrowLeft, Calendar, Share2, Pencil, Users, Lock, Flag } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -20,8 +20,7 @@ import { FlagEventDialog } from "./flag-event-dialog"
 import { getEventFlagDetails } from "@/app/actions/events"
 import { EventFlagDetails } from "./event-flag-details"
 import { CancelEventDialog } from "./cancel-event-dialog"
-import { toast } from "react-toastify"
-import { cancelEvent } from "@/app/actions/events"
+import { UncancelEventButton } from "./uncancel-event-button"
 
 interface EventDetailPageProps {
   params: Promise<{ slug: string; eventId: string }>
@@ -328,23 +327,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                 </>
               )}
               {canManageEvent && event.status === "cancelled" && userData?.is_tenant_admin && (
-                <Button
-                  variant="default"
-                  size="sm"
-                  className="gap-2"
-                  onClick={async () => {
-                    const result = await cancelEvent(eventId, slug, "", true)
-                    if (result.success) {
-                      toast.success(result.message || "Event has been uncancelled")
-                      window.location.reload()
-                    } else {
-                      toast.error(result.error || "Failed to uncancel event")
-                    }
-                  }}
-                >
-                  <Ban className="h-4 w-4" />
-                  Uncancel Event
-                </Button>
+                <UncancelEventButton eventId={eventId} tenantSlug={slug} />
               )}
               <Button variant="outline" size="sm" className="gap-2 bg-transparent">
                 <Share2 className="h-4 w-4" />

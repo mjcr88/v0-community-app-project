@@ -83,9 +83,7 @@ export function LiveCheckInsWidget({ initialCheckIns, tenantSlug, tenantId, user
       setCheckIns(activeCheckIns as CheckIn[])
     }
 
-    loadCheckIns()
-
-    // Refresh every 30 seconds to show new/deleted check-ins
+    // Refresh every 30 seconds - don't call immediately on mount
     const interval = setInterval(loadCheckIns, 30000)
 
     return () => clearInterval(interval)

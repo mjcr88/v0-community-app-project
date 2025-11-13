@@ -228,11 +228,16 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
   const [tenantBoundary, setTenantBoundary] = useState<Array<{ lat: number; lng: number }> | null>(null)
   const [boundaryLocationsFromTable, setBoundaryLocationsFromTable] = useState<Location[] | null>(null)
 
-  const [checkIns, setCheckIns] = useState<any[]>([])
+  const [checkIns, setCheckIns] = useState<any[]>(initialCheckIns || [])
   const [loadingCheckIns, setLoadingCheckIns] = useState(false)
 
-  // Fetch check-ins on mount (following events pattern)
   useEffect(() => {
+    // Initialize check-ins from prop
+    if (initialCheckIns && initialCheckIns.length > 0) {
+      setCheckIns(initialCheckIns)
+      return
+    }
+
     if (!tenantId) {
       console.log("[v0] No tenantId provided, skipping check-ins load")
       return
@@ -243,7 +248,6 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
         console.log("[v0] Loading check-ins client-side for tenant:", tenantId)
         const supabase = createBrowserClient()
 
-        // Calculate time 8 hours ago (max check-in duration)
         const eightHoursAgo = new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString()
 
         const { data, error } = await supabase
@@ -271,7 +275,6 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
           return
         }
 
-        // Filter expired check-ins client-side (calculating: start_time + duration_minutes < NOW())
         const now = new Date()
         const activeCheckIns = data.filter((checkIn) => {
           const expiresAt = new Date(checkIn.start_time)
@@ -298,13 +301,11 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
       }
     }
 
-    loadCheckIns()
-
-    // This reduces client-side processing while keeping data reasonably fresh
+    // Only refresh periodically, don't fetch immediately on mount
     const interval = setInterval(loadCheckIns, 120000) // 2 minutes
 
     return () => clearInterval(interval)
-  }, [tenantId])
+  }, [tenantId, initialCheckIns])
 
   const [markerPosition, setMarkerPosition] = useState<{ lat: number; lng: number } | null>(drawnCoordinates || null)
   const [polygonPoints, setPolygonPoints] = useState<Array<{ lat: number; lng: number }>>(drawnPath || [])

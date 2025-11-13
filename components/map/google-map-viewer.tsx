@@ -473,19 +473,19 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
       })
       .filter((checkIn) => checkIn.coordinates !== null)
 
-    const coordsGroupMap = new Map<string, any[]>()
+    const coordsMap = new globalThis.Map<string, any[]>()
 
     checkInsWithBaseCoords.forEach((checkIn) => {
       // Round to 6 decimal places to group nearby markers (~0.1m precision)
       const key = `${checkIn.coordinates.lat.toFixed(6)},${checkIn.coordinates.lng.toFixed(6)}`
-      if (!coordsGroupMap.has(key)) {
-        coordsGroupMap.set(key, [])
+      if (!coordsMap.has(key)) {
+        coordsMap.set(key, [])
       }
-      coordsGroupMap.get(key)!.push(checkIn)
+      coordsMap.get(key)!.push(checkIn)
     })
 
     const offsetCheckIns: any[] = []
-    coordsGroupMap.forEach((group) => {
+    coordsMap.forEach((group) => {
       if (group.length === 1) {
         // Single marker - no offset needed
         offsetCheckIns.push(group[0])
@@ -1011,6 +1011,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                     src={
                       checkIn.created_by_user?.profile_picture_url ||
                       "/placeholder.svg?height=48&width=48&query=user+avatar" ||
+                      "/placeholder.svg" ||
                       "/placeholder.svg" ||
                       "/placeholder.svg" ||
                       "/placeholder.svg" ||

@@ -1,20 +1,7 @@
 import { notFound, redirect } from "next/navigation"
 import { createServerClient } from "@/lib/supabase/server"
 import { getEvent } from "@/app/actions/events"
-import {
-  ArrowLeft,
-  Calendar,
-  Share2,
-  Pencil,
-  Users,
-  Lock,
-  Flag,
-  AlertTriangle,
-  FileText,
-  Phone,
-  Mail,
-  ExternalLink,
-} from "lucide-react"
+import { ArrowLeft, Calendar, Share2, Pencil, Users, Lock, Flag, AlertTriangle } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -22,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { DeleteEventButton } from "./delete-event-button"
 import { EventRsvpSection } from "./event-rsvp-section"
 import { SaveEventButton } from "./save-event-button"
+import { EventAttendeesSection } from "./event-attendees-section"
 import { EventLocationSection } from "./event-location-section"
 import { EventImagesGallery } from "./event-images-gallery"
 import { getEventAttendees } from "@/app/actions/events"
@@ -504,17 +492,6 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             </div>
           )}
 
-          {/* Additional Information Section */}
-          {event.additional_notes && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-muted-foreground" />
-                <h2 className="text-xl font-semibold">Additional Information</h2>
-              </div>
-              <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed">{event.additional_notes}</p>
-            </div>
-          )}
-
           {/* Event Info Grid */}
           <div className="grid md:grid-cols-2 gap-4">
             {/* Date & Time Card */}
@@ -562,34 +539,6 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             </div>
           </div>
 
-          {/* Creator Contact Information Section */}
-          {!event.hide_creator_contact && event.creator && (event.creator.phone || event.creator.email) && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Phone className="h-5 w-5 text-muted-foreground" />
-                <h2 className="text-xl font-semibold">Contact Organizer</h2>
-              </div>
-              <div className="p-4 border rounded-lg bg-card space-y-3">
-                {event.creator.phone && (
-                  <div className="flex items-center gap-3">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <a href={`tel:${event.creator.phone}`} className="text-sm hover:underline text-primary">
-                      {event.creator.phone}
-                    </a>
-                  </div>
-                )}
-                {event.creator.email && (
-                  <div className="flex items-center gap-3">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <a href={`mailto:${event.creator.email}`} className="text-sm hover:underline text-primary">
-                      {event.creator.email}
-                    </a>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
           {/* RSVP Section */}
           <EventRsvpSection
             eventId={eventId}
@@ -601,17 +550,8 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             eventStatus={event.status as "draft" | "published" | "cancelled"}
           />
 
-          {/* External Link Button */}
-          {event.external_url && (
-            <div>
-              <Button asChild variant="outline" className="w-full gap-2 bg-transparent">
-                <a href={event.external_url} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="h-4 w-4" />
-                  More Information
-                </a>
-              </Button>
-            </div>
-          )}
+          {/* Attendees Section */}
+          {attendees && <EventAttendeesSection attendees={attendees} tenantSlug={slug} />}
 
           {/* Location Section */}
           {event.location_type && (

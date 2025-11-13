@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Users, MapPin, Globe, Languages, PawPrint, Home, Map } from "lucide-react"
+import { Users, MapPin, Globe, Languages, PawPrint, Home, MapIcon } from "lucide-react"
 import Link from "next/link"
 import { MapPreviewWidget } from "@/components/map/map-preview-widget"
 import { UpcomingEventsWidget } from "@/components/dashboard/upcoming-events-widget"
@@ -226,7 +226,7 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
           {mapEnabled && (
             <Button asChild variant="outline">
               <Link href={`/t/${slug}/dashboard/map`}>
-                <Map className="h-4 w-4 mr-2" />
+                <MapIcon className="h-4 w-4 mr-2" />
                 View Community Map
               </Link>
             </Button>

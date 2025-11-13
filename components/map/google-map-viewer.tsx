@@ -170,7 +170,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
   const [selectedLocationEventCount, setSelectedLocationEventCount] = useState<number | null>(null)
   const [loadingEventCount, setLoadingEventCount] = useState(false)
 
-  const [selectedCheckIn, setSelectedCheckIn] = useState<any | null>(null)
+  const [selectedCheckIn, setSelectedCheckIn] = useState<string | null>(null) // Changed to string for checkInId
   const [checkInModalOpen, setCheckInModalOpen] = useState(false)
 
   useEffect(() => {
@@ -650,7 +650,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
 
   const handleCheckInClick = useCallback((checkIn: any) => {
     console.log("[v0] Check-in marker clicked:", checkIn.title)
-    setSelectedCheckIn(checkIn)
+    setSelectedCheckIn(checkIn.id)
     setCheckInModalOpen(true)
   }, [])
 
@@ -997,54 +997,57 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
             )
           })}
 
-          {checkInsWithCoords.map((checkIn) => (
-            <AdvancedMarker
-              key={checkIn.id}
-              position={checkIn.coordinates}
-              onClick={() => handleCheckInClick(checkIn)}
-              zIndex={200}
-            >
-              <div className="relative cursor-pointer" style={{ transform: "translateY(-100%)" }}>
-                {/* Profile Picture Circle */}
-                <div className="relative w-12 h-12 rounded-full border-4 border-green-500 bg-white overflow-hidden shadow-lg hover:border-green-600 transition-colors">
-                  <img
-                    src={
-                      checkIn.created_by_user?.profile_picture_url ||
-                      "/placeholder.svg?height=48&width=48&query=user+avatar" ||
-                      "/placeholder.svg" ||
-                      "/placeholder.svg" ||
-                      "/placeholder.svg" ||
-                      "/placeholder.svg" ||
-                      "/placeholder.svg" ||
-                      "/placeholder.svg" ||
-                      "/placeholder.svg"
-                    }
-                    alt={checkIn.title}
-                    className="w-full h-full object-cover"
+          {checkInsWithCoords.map((checkIn) => {
+            const firstName = checkIn.created_by_user?.first_name || ""
+            const lastName = checkIn.created_by_user?.last_name || ""
+            const initials = (firstName.charAt(0) + lastName.charAt(0)).toUpperCase() || "?"
+            const hasProfilePicture = checkIn.created_by_user?.profile_picture_url
+
+            return (
+              <AdvancedMarker
+                key={checkIn.id}
+                position={checkIn.coordinates}
+                onClick={() => handleCheckInClick(checkIn)}
+                zIndex={200}
+              >
+                <div className="relative cursor-pointer" style={{ transform: "translateY(-100%)" }}>
+                  {/* Profile Picture Circle */}
+                  <div className="relative w-12 h-12 rounded-full border-4 border-green-500 bg-white overflow-hidden shadow-lg hover:border-green-600 transition-colors">
+                    {hasProfilePicture ? (
+                      <img
+                        src={checkIn.created_by_user.profile_picture_url || "/placeholder.svg"}
+                        alt={checkIn.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-white text-green-600 font-bold text-lg">
+                        {initials}
+                      </div>
+                    )}
+
+                    {/* Attending Count Badge */}
+                    {checkIn.attending_count > 0 && (
+                      <div className="absolute -top-1 -right-1 bg-green-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center border-2 border-white">
+                        {checkIn.attending_count}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Pointer Stem */}
+                  <div
+                    className="absolute left-1/2 -translate-x-1/2"
+                    style={{
+                      width: 0,
+                      height: 0,
+                      borderLeft: "8px solid transparent",
+                      borderRight: "8px solid transparent",
+                      borderTop: "8px solid rgb(34, 197, 94)", // green-500
+                    }}
                   />
-
-                  {/* Attending Count Badge */}
-                  {checkIn.attending_count > 0 && (
-                    <div className="absolute -top-1 -right-1 bg-green-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center border-2 border-white">
-                      {checkIn.attending_count}
-                    </div>
-                  )}
                 </div>
-
-                {/* Pointer Stem */}
-                <div
-                  className="absolute left-1/2 -translate-x-1/2"
-                  style={{
-                    width: 0,
-                    height: 0,
-                    borderLeft: "8px solid transparent",
-                    borderRight: "8px solid transparent",
-                    borderTop: "8px solid rgb(34, 197, 94)", // green-500
-                  }}
-                />
-              </div>
-            </AdvancedMarker>
-          ))}
+              </AdvancedMarker>
+            )
+          })}
 
           {markerPosition && drawingMode && (
             <Marker
@@ -1169,11 +1172,11 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
 
       {selectedCheckIn && (
         <CheckInDetailModal
-          checkIn={selectedCheckIn}
+          checkInId={selectedCheckIn}
           open={checkInModalOpen}
           onOpenChange={setCheckInModalOpen}
           tenantSlug={tenantSlug || ""}
-          userId={tenantId || ""}
+          userId={tenantId || ""} // Assuming userId should be tenantId based on context
           tenantId={tenantId || ""}
         />
       )}

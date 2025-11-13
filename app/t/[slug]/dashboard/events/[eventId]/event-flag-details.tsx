@@ -1,9 +1,16 @@
-import { AlertTriangle, Flag, Calendar } from "lucide-react"
+"use client"
+
+import { AlertTriangle, Flag, Calendar, X } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
+import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import { useState } from "react"
+import { dismissEventFlag } from "@/app/actions/events"
+import { toast } from "sonner"
+import { useRouter } from "next/navigation"
 
 interface FlagDetail {
   id: string
@@ -41,7 +48,33 @@ function formatDate(dateString: string) {
 }
 
 export function EventFlagDetails({ flags, tenantSlug }: EventFlagDetailsProps) {
-  if (flags.length === 0) {
+  const router = useRouter()
+  const [dismissingFlags, setDismissingFlags] = useState<Set<string>>(new Set())
+  const [localFlags, setLocalFlags] = useState(flags)
+
+  const handleDismiss = async (flagId: string) => {
+    setDismissingFlags((prev) => new Set(prev).add(flagId))
+
+    setLocalFlags((prev) => prev.filter((f) => f.id !== flagId))
+
+    const result = await dismissEventFlag(flagId, tenantSlug)
+
+    if (result.success) {
+      toast.success("Flag dismissed successfully")
+      router.refresh()
+    } else {
+      setLocalFlags(flags)
+      toast.error(result.error || "Failed to dismiss flag")
+    }
+
+    setDismissingFlags((prev) => {
+      const next = new Set(prev)
+      next.delete(flagId)
+      return next
+    })
+  }
+
+  if (localFlags.length === 0) {
     return null
   }
 
@@ -55,7 +88,8 @@ export function EventFlagDetails({ flags, tenantSlug }: EventFlagDetailsProps) {
           <div>
             <h3 className="text-lg font-semibold text-destructive">Event Flagged by Residents</h3>
             <p className="text-sm text-muted-foreground">
-              This event has been flagged {flags.length} {flags.length === 1 ? "time" : "times"} for admin review
+              This event has been flagged {localFlags.length} {localFlags.length === 1 ? "time" : "times"} for admin
+              review
             </p>
           </div>
         </div>
@@ -63,9 +97,20 @@ export function EventFlagDetails({ flags, tenantSlug }: EventFlagDetailsProps) {
         <Separator />
 
         <div className="space-y-4">
-          {flags.map((flag) => (
-            <div key={flag.id} className="space-y-3 p-4 rounded-lg bg-background border">
-              <div className="flex items-start justify-between gap-4">
+          {localFlags.map((flag) => (
+            <div key={flag.id} className="space-y-3 p-4 rounded-lg bg-background border relative">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-2 right-2 h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                onClick={() => handleDismiss(flag.id)}
+                disabled={dismissingFlags.has(flag.id)}
+                title="Dismiss this flag"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+
+              <div className="flex items-start justify-between gap-4 pr-10">
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <Avatar className="h-8 w-8 flex-shrink-0">
                     <AvatarImage

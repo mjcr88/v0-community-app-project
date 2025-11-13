@@ -1374,3 +1374,56 @@ export async function getEventFlagDetails(eventId: string, tenantId: string) {
     }
   }
 }
+
+export async function dismissEventFlag(flagId: string, tenantSlug: string) {
+  try {
+    const supabase = await createServerClient()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: "User not authenticated" }
+    }
+
+    // Verify user is admin
+    const { data: userData } = await supabase.from("users").select("is_tenant_admin, role").eq("id", user.id).single()
+
+    const isAdmin = userData?.is_tenant_admin || userData?.role === "super_admin" || userData?.role === "tenant_admin"
+
+    if (!isAdmin) {
+      return { success: false, error: "You don't have permission to dismiss flags" }
+    }
+
+    // Get the flag to find the event_id for revalidation
+    const { data: flag, error: flagError } = await supabase
+      .from("event_flags")
+      .select("id, event_id")
+      .eq("id", flagId)
+      .single()
+
+    if (flagError || !flag) {
+      return { success: false, error: "Flag not found" }
+    }
+
+    // Delete the flag
+    const { error: deleteError } = await supabase.from("event_flags").delete().eq("id", flagId)
+
+    if (deleteError) {
+      console.error("[v0] Error dismissing flag:", deleteError)
+      return { success: false, error: deleteError.message }
+    }
+
+    // Revalidate the event detail page to update flag count and list
+    revalidatePath(`/t/${tenantSlug}/dashboard/events/${flag.event_id}`)
+
+    return { success: true }
+  } catch (error) {
+    console.error("[v0] Unexpected error dismissing flag:", error)
+    return {
+      success: false,
+      error: "An unexpected error occurred. Please try again.",
+    }
+  }
+}

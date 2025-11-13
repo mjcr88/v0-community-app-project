@@ -307,14 +307,55 @@ export async function getActiveCheckIns(tenantId: string) {
       }
     })
 
-    // Enhance check-ins with user data
-    const checkInsWithUserData = visibleCheckIns.map((checkIn) => ({
-      ...checkIn,
-      user_rsvp_status: rsvpMap.get(checkIn.id) || null,
-      attending_count: attendingCountMap.get(checkIn.id) || 0,
-    }))
+    const checkInsWithUserData = visibleCheckIns.map((checkIn) => {
+      // Convert to plain object and ensure all nested data is serializable
+      const plainCheckIn = {
+        id: checkIn.id,
+        tenant_id: checkIn.tenant_id,
+        created_by: checkIn.created_by,
+        title: checkIn.title,
+        activity_type: checkIn.activity_type,
+        description: checkIn.description,
+        location_type: checkIn.location_type,
+        location_id: checkIn.location_id,
+        custom_location_name: checkIn.custom_location_name,
+        custom_location_coordinates: checkIn.custom_location_coordinates,
+        custom_location_type: checkIn.custom_location_type,
+        start_time: checkIn.start_time,
+        duration_minutes: checkIn.duration_minutes,
+        status: checkIn.status,
+        visibility_scope: checkIn.visibility_scope,
+        created_at: checkIn.created_at,
+        updated_at: checkIn.updated_at,
+        ended_at: checkIn.ended_at,
+        // Flatten creator data
+        created_by_user: checkIn.creator
+          ? {
+              id: checkIn.creator.id,
+              first_name: checkIn.creator.first_name,
+              last_name: checkIn.creator.last_name,
+              profile_picture_url: checkIn.creator.profile_picture_url,
+            }
+          : null,
+        // Flatten location data
+        location: checkIn.location
+          ? {
+              id: checkIn.location.id,
+              name: checkIn.location.name,
+              coordinates: checkIn.location.coordinates,
+              boundary_coordinates: checkIn.location.boundary_coordinates,
+              path_coordinates: checkIn.location.path_coordinates,
+            }
+          : null,
+        // Add RSVP data
+        user_rsvp_status: rsvpMap.get(checkIn.id) || null,
+        attending_count: attendingCountMap.get(checkIn.id) || 0,
+      }
 
-    console.log("[v0] getActiveCheckIns - Returning enhanced check-ins:", {
+      return plainCheckIn
+    })
+
+    console.log("[v0] getActiveCheckIns - Returning serialized check-ins:", {
       count: checkInsWithUserData.length,
       titles: checkInsWithUserData.map((c) => c.title),
     })

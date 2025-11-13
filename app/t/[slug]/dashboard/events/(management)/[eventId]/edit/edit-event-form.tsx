@@ -52,6 +52,9 @@ type EditEventFormProps = {
     custom_location_name: string | null
     custom_location_coordinates: { lat: number; lng: number } | null
     custom_location_type: "pin" | "polygon" | null
+    hide_creator_contact: boolean
+    additional_notes: string
+    external_url: string
   }
   initialNeighborhoods: string[]
   initialResidents: string[]
@@ -91,6 +94,9 @@ export function EditEventForm({
     location_type: mapDbToFormLocationType(initialData.location_type),
     location_id: initialData.location_id,
     custom_location_name: initialData.custom_location_name || "",
+    hide_creator_contact: initialData.hide_creator_contact ?? false,
+    additional_notes: initialData.additional_notes || "",
+    external_url: initialData.external_url || "",
   })
 
   const [showVisibilityWarning, setShowVisibilityWarning] = useState(false)
@@ -193,6 +199,9 @@ export function EditEventForm({
         location_type: formData.location_type,
         location_id: formData.location_type === "community" ? formData.location_id : null,
         custom_location_name: formData.location_type === "custom" ? formData.custom_location_name : null,
+        hide_creator_contact: formData.hide_creator_contact,
+        additional_notes: formData.additional_notes || null,
+        external_url: formData.external_url || null,
       })
 
       if (result.success) {
@@ -293,6 +302,36 @@ export function EditEventForm({
               rows={4}
             />
             <p className="text-xs text-muted-foreground">Optional: Add more details about what to expect</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="additional_notes">Additional Information</Label>
+            <Textarea
+              id="additional_notes"
+              placeholder="Important details, what to bring, parking instructions, etc."
+              value={formData.additional_notes}
+              onChange={(e) => setFormData({ ...formData, additional_notes: e.target.value })}
+              rows={3}
+              maxLength={1000}
+            />
+            <p className="text-xs text-muted-foreground">
+              Optional: Add any extra details attendees should know ({formData.additional_notes.length}/1000 characters)
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="external_url">Event Website or Link</Label>
+            <Input
+              id="external_url"
+              type="url"
+              placeholder="https://example.com/event-details"
+              value={formData.external_url}
+              onChange={(e) => setFormData({ ...formData, external_url: e.target.value })}
+              maxLength={2000}
+            />
+            <p className="text-xs text-muted-foreground">
+              Optional: Link to external registration, tickets, or more information
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -605,6 +644,29 @@ export function EditEventForm({
                 </div>
               </div>
             )}
+          </div>
+
+          <div className="border-t pt-4 space-y-4">
+            <div className="space-y-2">
+              <h3 className="text-base font-semibold">Contact Information</h3>
+              <div className="flex items-start gap-2">
+                <Checkbox
+                  id="hide_creator_contact"
+                  checked={formData.hide_creator_contact}
+                  onCheckedChange={(checked) => {
+                    setFormData({ ...formData, hide_creator_contact: checked === true })
+                  }}
+                />
+                <div className="space-y-1">
+                  <Label htmlFor="hide_creator_contact" className="font-normal cursor-pointer">
+                    Hide my contact information from attendees
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    When unchecked, your phone and email will be visible to event attendees
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="flex gap-3 pt-4">

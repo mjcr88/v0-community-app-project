@@ -6,7 +6,7 @@ import Link from "next/link"
 import { MapPreviewWidget } from "@/components/map/map-preview-widget"
 import { UpcomingEventsWidget } from "@/components/dashboard/upcoming-events-widget"
 import { getUpcomingEvents } from "@/app/actions/events"
-import { CreateCheckInModal } from "@/components/check-ins/create-check-in-modal"
+import { CreateCheckInButton } from "@/components/check-ins/create-check-in-button"
 
 export default async function ResidentDashboardPage({ params }: { params: { slug: string } }) {
   const { slug } = params
@@ -63,17 +63,16 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
 
   const petsEnabled = tenant?.features?.pets === true
   const checkinsEnabled = tenant?.checkins_enabled === true
-  console.log("[v0] Dashboard checkins enabled:", checkinsEnabled)
   const defaultFeatures = {
     map: true,
   }
   const mergedFeatures = { ...defaultFeatures, ...(tenant?.features || {}) }
   const mapEnabled = mergedFeatures.map === true
 
-  console.log("[v0] Dashboard map feature check:", {
-    tenantFeatures: tenant?.features,
-    mapEnabled,
-    mergedFeatures,
+  console.log("[v0] Dashboard features:", {
+    checkinsEnabled,
+    eventsEnabled: tenant?.events_enabled,
+    tenantCheckinsColumn: tenant?.checkins_enabled,
   })
 
   let lotLocation = null
@@ -216,7 +215,7 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
           <Button asChild variant="outline">
             <Link href={`/t/${slug}/dashboard/events/create`}>Create Event</Link>
           </Button>
-          {checkinsEnabled && <CreateCheckInModal tenantId={resident.tenant_id} tenantSlug={slug} userId={user.id} />}
+          {checkinsEnabled && <CreateCheckInButton tenantSlug={slug} tenantId={resident.tenant_id} />}
           <Button asChild variant="outline">
             <Link href={`/t/${slug}/dashboard/settings/profile`}>Edit Profile</Link>
           </Button>

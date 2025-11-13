@@ -1427,3 +1427,131 @@ export async function dismissEventFlag(flagId: string, tenantSlug: string) {
     }
   }
 }
+
+export async function cancelEvent(
+  eventId: string,
+  tenantSlug: string,
+  cancellationReason: string,
+  uncancelInstead = false,
+) {
+  try {
+    const supabase = await createServerClient()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: "User not authenticated" }
+    }
+
+    // Get tenant_id from slug
+    const { data: tenant, error: tenantError } = await supabase
+      .from("tenants")
+      .select("id")
+      .eq("slug", tenantSlug)
+      .single()
+
+    if (tenantError || !tenant) {
+      return { success: false, error: "Tenant not found" }
+    }
+
+    // Get event to check ownership and current status
+    const { data: event, error: eventError } = await supabase
+      .from("events")
+      .select("id, created_by, status, tenant_id")
+      .eq("id", eventId)
+      .eq("tenant_id", tenant.id)
+      .single()
+
+    if (eventError || !event) {
+      return { success: false, error: "Event not found" }
+    }
+
+    // Check if user can cancel (creator or admin)
+    const { data: userData } = await supabase
+      .from("users")
+      .select("id, role, is_tenant_admin, first_name, last_name")
+      .eq("id", user.id)
+      .single()
+
+    const isCreator = event.created_by === user.id
+    const isAdmin = userData?.is_tenant_admin || userData?.role === "super_admin" || userData?.role === "tenant_admin"
+
+    if (!isCreator && !isAdmin) {
+      return { success: false, error: "You don't have permission to cancel this event" }
+    }
+
+    // Handle uncancelling (admin-only)
+    if (uncancelInstead) {
+      if (!isAdmin) {
+        return { success: false, error: "Only admins can uncancel events" }
+      }
+
+      if (event.status !== "cancelled") {
+        return { success: false, error: "Event is not cancelled" }
+      }
+
+      const { error: updateError } = await supabase
+        .from("events")
+        .update({
+          status: "published",
+          cancelled_at: null,
+          cancellation_reason: null,
+          cancelled_by: null,
+        })
+        .eq("id", eventId)
+
+      if (updateError) {
+        console.error("[v0] Error uncancelling event:", updateError)
+        return { success: false, error: updateError.message }
+      }
+
+      revalidatePath(`/t/${tenantSlug}/dashboard/events/${eventId}`)
+      revalidatePath(`/t/${tenantSlug}/dashboard/events`)
+      revalidatePath(`/t/${tenantSlug}/dashboard`)
+      revalidatePath(`/t/${tenantSlug}/admin/events`)
+
+      return { success: true, message: "Event has been uncancelled" }
+    }
+
+    // Check if event is already cancelled
+    if (event.status === "cancelled") {
+      return { success: false, error: "Event is already cancelled" }
+    }
+
+    // Validate cancellation reason
+    const trimmedReason = cancellationReason.trim()
+    if (trimmedReason.length < 10 || trimmedReason.length > 500) {
+      return { success: false, error: "Cancellation reason must be between 10 and 500 characters" }
+    }
+
+    const { error: updateError } = await supabase
+      .from("events")
+      .update({
+        status: "cancelled",
+        cancelled_at: new Date().toISOString(),
+        cancellation_reason: trimmedReason,
+        cancelled_by: user.id,
+      })
+      .eq("id", eventId)
+
+    if (updateError) {
+      console.error("[v0] Error cancelling event:", updateError)
+      return { success: false, error: updateError.message }
+    }
+
+    revalidatePath(`/t/${tenantSlug}/dashboard/events/${eventId}`)
+    revalidatePath(`/t/${tenantSlug}/dashboard/events`)
+    revalidatePath(`/t/${tenantSlug}/dashboard`)
+    revalidatePath(`/t/${tenantSlug}/admin/events`)
+
+    return { success: true }
+  } catch (error) {
+    console.error("[v0] Unexpected error cancelling event:", error)
+    return {
+      success: false,
+      error: "An unexpected error occurred. Please try again.",
+    }
+  }
+}

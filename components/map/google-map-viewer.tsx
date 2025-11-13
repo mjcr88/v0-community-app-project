@@ -406,7 +406,6 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
   }, [initialCheckIns])
 
   const checkInsWithCoords = useMemo(() => {
-    // Filter out expired check-ins
     const now = new Date()
     const activeCheckIns = checkIns.filter((checkIn) => {
       if (!checkIn.end_time) return true
@@ -414,13 +413,14 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
       return endTime > now
     })
 
-    console.log("[v0] Active check-ins after filtering:", {
+    console.log("[v0] Active check-ins after expiration filtering:", {
       total: checkIns.length,
       active: activeCheckIns.length,
+      expired: checkIns.length - activeCheckIns.length,
     })
 
     // Extract coordinates
-    return activeCheckIns
+    const checkInsWithBaseCoords = activeCheckIns
       .map((checkIn) => {
         let coordinates: { lat: number; lng: number } | null = null
 
@@ -428,13 +428,19 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
         if (checkIn.location_type === "community_location" && checkIn.location) {
           if (checkIn.location.coordinates) {
             coordinates = checkIn.location.coordinates
+            console.log("[v0] Check-in has direct coordinates:", checkIn.title, coordinates)
           } else if (
             checkIn.location.path_coordinates &&
             Array.isArray(checkIn.location.path_coordinates) &&
             checkIn.location.path_coordinates.length > 0
           ) {
-            const [lat, lng] = checkIn.location.path_coordinates[0]
-            coordinates = { lat, lng }
+            const lats = checkIn.location.path_coordinates.map((c) => c[0])
+            const lngs = checkIn.location.path_coordinates.map((c) => c[1])
+            coordinates = {
+              lat: lats.reduce((a, b) => a + b, 0) / lats.length,
+              lng: lngs.reduce((a, b) => a + b, 0) / lngs.length,
+            }
+            console.log("[v0] Check-in using path_coordinates center:", checkIn.title, coordinates)
           } else if (
             checkIn.location.boundary_coordinates &&
             Array.isArray(checkIn.location.boundary_coordinates) &&
@@ -446,16 +452,16 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
               lat: lats.reduce((a, b) => a + b, 0) / lats.length,
               lng: lngs.reduce((a, b) => a + b, 0) / lngs.length,
             }
+            console.log("[v0] Check-in using boundary_coordinates center:", checkIn.title, coordinates)
           }
         }
         // Custom location
         else if (checkIn.location_type === "custom_temporary" && checkIn.custom_location_coordinates) {
           coordinates = checkIn.custom_location_coordinates
+          console.log("[v0] Check-in using custom coordinates:", checkIn.title, coordinates)
         }
 
-        if (coordinates) {
-          console.log("[v0] Check-in with coords:", checkIn.title, coordinates)
-        } else {
+        if (!coordinates) {
           console.log("[v0] Check-in WITHOUT coords:", checkIn.title, {
             location_type: checkIn.location_type,
             has_location: !!checkIn.location,
@@ -465,6 +471,42 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
         return { ...checkIn, coordinates }
       })
       .filter((checkIn) => checkIn.coordinates !== null)
+
+    const coordinateMap = new Map<string, any[]>()
+
+    checkInsWithBaseCoords.forEach((checkIn) => {
+      // Round to 6 decimal places to group nearby markers (~0.1m precision)
+      const key = `${checkIn.coordinates.lat.toFixed(6)},${checkIn.coordinates.lng.toFixed(6)}`
+      if (!coordinateMap.has(key)) {
+        coordinateMap.set(key, [])
+      }
+      coordinateMap.get(key)!.push(checkIn)
+    })
+
+    const offsetCheckIns: any[] = []
+    coordinateMap.forEach((group) => {
+      if (group.length === 1) {
+        // Single marker - no offset needed
+        offsetCheckIns.push(group[0])
+      } else {
+        // Multiple markers at same location - apply circular offset
+        console.log("[v0] Offsetting", group.length, "overlapping markers at", group[0].coordinates)
+        group.forEach((checkIn, index) => {
+          const angle = (index / group.length) * 2 * Math.PI // Distribute evenly in circle
+          const offset = 0.00015 // ~17 meters offset radius
+          const offsetLat = checkIn.coordinates.lat + offset * Math.cos(angle)
+          const offsetLng = checkIn.coordinates.lng + offset * Math.sin(angle)
+
+          offsetCheckIns.push({
+            ...checkIn,
+            coordinates: { lat: offsetLat, lng: offsetLng },
+          })
+        })
+      }
+    })
+
+    console.log("[v0] Final check-ins with offset coords:", offsetCheckIns.length)
+    return offsetCheckIns
   }, [checkIns])
 
   const handleMapClick = useCallback(
@@ -968,6 +1010,8 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                     src={
                       checkIn.created_by_user?.profile_picture_url ||
                       "/placeholder.svg?height=48&width=48&query=user+avatar" ||
+                      "/placeholder.svg" ||
+                      "/placeholder.svg" ||
                       "/placeholder.svg" ||
                       "/placeholder.svg" ||
                       "/placeholder.svg"

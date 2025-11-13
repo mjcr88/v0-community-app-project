@@ -494,41 +494,44 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
       })
       .filter((checkIn) => checkIn.coordinates !== null)
 
-    const coordsMap = new globalThis.Map<string, any[]>()
+    // const coordsMap = new globalThis.Map<string, any[]>()
 
-    checkInsWithBaseCoords.forEach((checkIn) => {
-      // Round to 7 decimal places for grouping (~1cm precision)
-      const key = `${checkIn.coordinates.lat.toFixed(7)},${checkIn.coordinates.lng.toFixed(7)}`
-      if (!coordsMap.has(key)) {
-        coordsMap.set(key, [])
-      }
-      coordsMap.get(key)!.push(checkIn)
-    })
+    // checkInsWithBaseCoords.forEach((checkIn) => {
+    //   // Round to 7 decimal places for grouping (~1cm precision)
+    //   const key = `${checkIn.coordinates.lat.toFixed(7)},${checkIn.coordinates.lng.toFixed(7)}`
+    //   if (!coordsMap.has(key)) {
+    //     coordsMap.set(key, [])
+    //   }
+    //   coordsMap.get(key)!.push(checkIn)
+    // })
 
-    const offsetCheckIns: any[] = []
-    coordsMap.forEach((group) => {
-      if (group.length === 1) {
-        // Single marker - no offset needed
-        offsetCheckIns.push(group[0])
-      } else {
-        // Multiple markers at same location - apply minimal circular offset
-        console.log("[v0] Offsetting", group.length, "overlapping markers at", group[0].coordinates)
-        group.forEach((checkIn, index) => {
-          const angle = (index / group.length) * 2 * Math.PI // Distribute evenly in circle
-          const offset = 0.00003
-          const offsetLat = checkIn.coordinates.lat + offset * Math.cos(angle)
-          const offsetLng = checkIn.coordinates.lng + offset * Math.sin(angle)
+    // const offsetCheckIns: any[] = []
+    // coordsMap.forEach((group) => {
+    //   if (group.length === 1) {
+    //     // Single marker - no offset needed
+    //     offsetCheckIns.push(group[0])
+    //   } else {
+    //     // Multiple markers at same location - apply minimal circular offset
+    //     console.log("[v0] Offsetting", group.length, "overlapping markers at", group[0].coordinates)
+    //     group.forEach((checkIn, index) => {
+    //       const angle = (index / group.length) * 2 * Math.PI // Distribute evenly in circle
+    //       const offset = 0.00003
+    //       const offsetLat = checkIn.coordinates.lat + offset * Math.cos(angle)
+    //       const offsetLng = checkIn.coordinates.lng + offset * Math.sin(angle)
 
-          offsetCheckIns.push({
-            ...checkIn,
-            coordinates: { lat: offsetLat, lng: offsetLng },
-          })
-        })
-      }
-    })
+    //       offsetCheckIns.push({
+    //         ...checkIn,
+    //         coordinates: { lat: offsetLat, lng: offsetLng },
+    //       })
+    //     })
+    //   }
+    // })
 
-    console.log("[v0] Final check-ins with offset coords:", offsetCheckIns.length)
-    return offsetCheckIns
+    // console.log("[v0] Final check-ins with offset coords:", offsetCheckIns.length)
+    // return offsetCheckIns
+
+    console.log("[v0] Check-ins with coordinates:", checkInsWithBaseCoords.length)
+    return checkInsWithBaseCoords
   }, [checkIns])
 
   const handleMapClick = useCallback(
@@ -712,7 +715,10 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
           clickableIcons={enableClickablePlaces || drawingMode === "marker"} // Always enable clickable icons when places or drawing is enabled
           {...(mapId ? { mapId } : {})}
           onCenterChanged={(e) => setCenter(e.detail.center)}
-          onZoomChanged={(e) => setZoom(e.detail.zoom)}
+          onZoomChanged={(e) => {
+            console.log("[v0] Zoom changed to:", e.detail.zoom)
+            setZoom(e.detail.zoom)
+          }}
           onClick={handleMapClick}
           onLoad={(map) => {
             console.log("[v0] Map loaded, setting instance")

@@ -174,6 +174,8 @@ export function CreateCheckInModal({
       const startTime = new Date()
       startTime.setMinutes(startTime.getMinutes() + formData.start_time_offset)
 
+      const dbLocationType = formData.location_type === "community" ? "community_location" : "custom_temporary"
+
       const result = await createCheckIn(tenantSlug, tenantId, {
         title: formData.title,
         activity_type: formData.activity_type,
@@ -184,7 +186,7 @@ export function CreateCheckInModal({
         neighborhood_ids: formData.selected_neighborhoods,
         invitee_ids: formData.selected_residents,
         family_unit_ids: formData.selected_families,
-        location_type: formData.location_type,
+        location_type: dbLocationType,
         location_id: formData.location_type === "community" ? formData.location_id : null,
         custom_location_name: formData.location_type === "custom" ? formData.custom_location_name : null,
         custom_location_coordinates: formData.location_type === "custom" ? formData.custom_location_coordinates : null,

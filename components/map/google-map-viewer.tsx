@@ -21,7 +21,7 @@ import Link from "next/link"
 import { MapPin, Trash2, Filter, Layers, Locate, Plus } from "lucide-react"
 import { getLocationEventCount } from "@/app/actions/events"
 import { filterActiveCheckIns } from "@/lib/utils/filter-expired-checkins"
-import { CheckInDetailModal } from "./check-in-detail-modal" // Declare the CheckInDetailModal variable
+import { CheckInDetailModal } from "@/components/check-ins/check-in-detail-modal" // Declare the CheckInDetailModal variable
 
 interface Location {
   id: string

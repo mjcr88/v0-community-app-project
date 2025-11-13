@@ -63,6 +63,7 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
 
   const petsEnabled = tenant?.features?.pets === true
   const checkinsEnabled = tenant?.checkins_enabled === true
+  console.log("[v0] Dashboard checkins enabled:", checkinsEnabled)
   const defaultFeatures = {
     map: true,
   }

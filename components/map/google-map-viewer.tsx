@@ -41,9 +41,9 @@ interface Location {
 
 interface GoogleMapViewerProps {
   locations: Location[]
-  tenantId?: string // Make tenantId optional
-  tenantSlug?: string // Add tenantSlug prop for proper link generation
-  checkIns?: any[] // Add checkIns prop
+  tenantId?: string
+  tenantSlug?: string
+  checkIns?: any[]
   mapCenter?: { lat: number; lng: number } | null
   mapZoom?: number
   isAdmin?: boolean
@@ -56,12 +56,12 @@ interface GoogleMapViewerProps {
   onDrawingModeChange?: (mode: "marker" | "polygon" | null) => void
   onDrawingComplete?: (data: {
     coordinates?: { lat: number; lng: number } | null
-    type?: "pin" | "polygon" | null
+    type?: "marker" | "polygon" | null
     path?: Array<{ lat: number; lng: number }> | null
   }) => void
   drawnCoordinates?: { lat: number; lng: number } | null
   drawnPath?: Array<{ lat: number; lng: number }> | null
-  drawnType?: "pin" | "polygon" | null
+  drawnType?: "marker" | "polygon" | null
   enableClickablePlaces?: boolean
 }
 
@@ -462,7 +462,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   if (typeof onDrawingComplete === "function") {
                     onDrawingComplete({
                       coordinates: { lat, lng },
-                      type: "pin",
+                      type: "marker",
                       path: null,
                     })
                   }
@@ -723,7 +723,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
           console.log("[v0] Calling onDrawingComplete with coordinates")
           onDrawingComplete({
             coordinates: { lat, lng },
-            type: "pin",
+            type: "marker",
             path: null,
           })
         }
@@ -1379,7 +1379,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
             />
           )}
 
-          {!drawingMode && drawnType === "pin" && drawnCoordinates && (
+          {!drawingMode && drawnType === "marker" && drawnCoordinates && (
             <Marker
               position={drawnCoordinates}
               zIndex={350}

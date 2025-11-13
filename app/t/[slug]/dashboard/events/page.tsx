@@ -85,17 +85,24 @@ export default async function EventsPage({
     .eq("user_id", user.id)
     .in("event_id", eventIds)
 
-  const { data: flagCounts } = await supabase
-    .from("event_flags")
-    .select("event_id")
-    .in("event_id", eventIds)
-    .eq("tenant_id", resident.tenant_id)
+  const flagCountResults = await Promise.all(
+    eventIds.map(async (eventId) => {
+      const { data: count } = await supabase.rpc("get_event_flag_count", {
+        p_event_id: eventId,
+        p_tenant_id: resident.tenant_id,
+      })
+      return { eventId, count: count ?? 0 }
+    }),
+  )
 
   // Build lookup maps for O(1) access
   const attendingCountMap = new Map<string, number>()
   const userRsvpMap = new Map<string, string>()
   const savedEventsSet = new Set<string>(savedEvents?.map((s) => s.event_id) || [])
   const flagCountMap = new Map<string, number>()
+  flagCountResults.forEach(({ eventId, count }) => {
+    flagCountMap.set(eventId, count)
+  })
 
   allRsvps?.forEach((rsvp) => {
     // Count attending
@@ -106,10 +113,6 @@ export default async function EventsPage({
     if (rsvp.user_id === user.id) {
       userRsvpMap.set(rsvp.event_id, rsvp.rsvp_status)
     }
-  })
-
-  flagCounts?.forEach((flag) => {
-    flagCountMap.set(flag.event_id, (flagCountMap.get(flag.event_id) || 0) + 1)
   })
 
   // Map the data efficiently

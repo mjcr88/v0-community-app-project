@@ -1,3 +1,5 @@
+"use client"
+
 import { createClient } from "@/lib/supabase/server"
 import { redirect, notFound } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -7,6 +9,8 @@ import { Button } from "@/components/ui/button"
 import { MapPin, Users, ArrowLeft, Home, MapIcon, Calendar, Star } from "lucide-react"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
+import { LocationEventsSection } from "./location-events-section"
+import { getEventsByLocation } from "@/app/actions/events"
 
 export default async function LocationDetailsPage({ params }: { params: { slug: string; id: string } }) {
   const { slug, id } = params
@@ -97,6 +101,20 @@ export default async function LocationDetailsPage({ params }: { params: { slug: 
   }
 
   const isAdmin = currentUser.role === "tenant_admin" || currentUser.role === "super_admin"
+
+  const { data: tenant } = await supabase
+    .from("tenants")
+    .select("events_enabled")
+    .eq("id", currentUser.tenant_id)
+    .single()
+
+  const eventsEnabled = tenant?.events_enabled === true
+  const canCreateEvents = isAdmin || eventsEnabled
+
+  let locationEvents: any[] = []
+  if (eventsEnabled) {
+    locationEvents = await getEventsByLocation(location.id, currentUser.tenant_id, user.id)
+  }
 
   const getTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
@@ -484,6 +502,21 @@ export default async function LocationDetailsPage({ params }: { params: { slug: 
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Events Section */}
+      {eventsEnabled && (locationEvents.length > 0 || canCreateEvents) && (
+        <div id="events">
+          <LocationEventsSection
+            events={locationEvents}
+            slug={slug}
+            userId={user.id}
+            tenantId={currentUser.tenant_id}
+            locationName={location.name}
+            locationId={location.id}
+            canCreateEvents={canCreateEvents}
+          />
+        </div>
       )}
 
       {/* Photo Gallery - Show all photos in gallery */}

@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import Link from "next/link"
 import { MapPin, Trash2, Filter, Layers, Locate, Plus } from "lucide-react"
+import { getLocationEventCount } from "@/app/actions/events"
 
 interface Location {
   id: string
@@ -107,6 +108,9 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
 
   const activeHighlightId = dynamicHighlightId || initialHighlightId
   const activeSelectedId = selectedLocationId
+
+  const [selectedLocationEventCount, setSelectedLocationEventCount] = useState<number | null>(null)
+  const [loadingEventCount, setLoadingEventCount] = useState(false)
 
   useEffect(() => {
     console.log("[v0] GoogleMapViewer mounted with:", {
@@ -427,7 +431,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
   }, [drawingMode, polygonPoints])
 
   const handleLocationClick = useCallback(
-    (location: Location) => {
+    async (location: Location) => {
       console.log("[v0] Location clicked:", location.name, location.id, "type:", location.type)
 
       if (onLocationClick) {
@@ -445,8 +449,22 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
 
       setDynamicHighlightId(location.id)
       setSelectedLocation(location)
+
+      if (tenantId && location.id) {
+        setLoadingEventCount(true)
+        try {
+          const count = await getLocationEventCount(location.id, tenantId)
+          console.log("[v0] Event count for location:", location.name, "=", count)
+          setSelectedLocationEventCount(count)
+        } catch (error) {
+          console.error("[v0] Error fetching event count:", error)
+          setSelectedLocationEventCount(null)
+        } finally {
+          setLoadingEventCount(false)
+        }
+      }
     },
-    [onLocationClick, showInfoCard],
+    [onLocationClick, showInfoCard, tenantId],
   )
 
   const handleCustomMarkerClick = useCallback(() => {
@@ -456,6 +474,11 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
       window.open(url, "_blank")
     }
   }, [markerPosition])
+
+  const handleCloseInfoCard = useCallback(() => {
+    setSelectedLocation(null)
+    setSelectedLocationEventCount(null)
+  }, [])
 
   if (!apiKey) {
     return (
@@ -898,7 +921,13 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
 
       {selectedLocation && (
         <div className="absolute top-4 right-4 z-20 max-w-sm">
-          <LocationInfoCard location={selectedLocation} onClose={() => setSelectedLocation(null)} minimal={minimal} />
+          <LocationInfoCard
+            location={selectedLocation}
+            onClose={handleCloseInfoCard}
+            minimal={minimal}
+            eventCount={loadingEventCount ? undefined : selectedLocationEventCount}
+            tenantSlug={tenantId}
+          />
         </div>
       )}
 

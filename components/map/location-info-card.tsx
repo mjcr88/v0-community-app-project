@@ -1,6 +1,6 @@
 "use client"
 
-import { X, MapPin, Home, ExternalLink } from "lucide-react"
+import { X, MapPin, Home, ExternalLink, Calendar } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -35,6 +35,8 @@ interface LocationInfoCardProps {
   }
   onClose: () => void
   minimal?: boolean // Added minimal prop
+  eventCount?: number | null // Added eventCount prop
+  tenantSlug?: string // Added tenantSlug prop
 }
 
 interface Resident {
@@ -60,7 +62,13 @@ interface Pet {
   profile_picture_url?: string | null
 }
 
-export function LocationInfoCard({ location, onClose, minimal = false }: LocationInfoCardProps) {
+export function LocationInfoCard({
+  location,
+  onClose,
+  minimal = false,
+  eventCount,
+  tenantSlug: propTenantSlug,
+}: LocationInfoCardProps) {
   console.log("[v0] LocationInfoCard rendering for location:", location.name, location.id)
   console.log("[v0] Location data:", {
     type: location.type,
@@ -73,7 +81,7 @@ export function LocationInfoCard({ location, onClose, minimal = false }: Locatio
   const [residents, setResidents] = useState<Resident[]>([])
   const [familyUnit, setFamilyUnit] = useState<FamilyUnit | null>(null)
   const [pets, setPets] = useState<Pet[]>([])
-  const [tenantSlug, setTenantSlug] = useState<string>("")
+  const [tenantSlug, setTenantSlug] = useState<string>(propTenantSlug || "")
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -90,14 +98,16 @@ export function LocationInfoCard({ location, onClose, minimal = false }: Locatio
       console.log("[v0] Starting to fetch related data...")
       const supabase = createBrowserClient()
 
-      const { data: userData } = await supabase.auth.getUser()
-      if (userData.user) {
-        const { data: user } = await supabase.from("users").select("tenant_id").eq("id", userData.user.id).single()
-        if (user?.tenant_id) {
-          const { data: tenant } = await supabase.from("tenants").select("slug").eq("id", user.tenant_id).single()
-          if (tenant) {
-            console.log("[v0] Tenant slug set:", tenant.slug)
-            setTenantSlug(tenant.slug)
+      if (!propTenantSlug) {
+        const { data: userData } = await supabase.auth.getUser()
+        if (userData.user) {
+          const { data: user } = await supabase.from("users").select("tenant_id").eq("id", userData.user.id).single()
+          if (user?.tenant_id) {
+            const { data: tenant } = await supabase.from("tenants").select("slug").eq("id", user.tenant_id).single()
+            if (tenant) {
+              console.log("[v0] Tenant slug set:", tenant.slug)
+              setTenantSlug(tenant.slug)
+            }
           }
         }
       }
@@ -175,7 +185,7 @@ export function LocationInfoCard({ location, onClose, minimal = false }: Locatio
     }
 
     fetchRelatedData()
-  }, [location.id, location.neighborhood_id, location.lot_id, location.type])
+  }, [location.id, location.neighborhood_id, location.lot_id, location.type, propTenantSlug])
 
   console.log("[v0] LocationInfoCard render state:", {
     loading,
@@ -276,6 +286,12 @@ export function LocationInfoCard({ location, onClose, minimal = false }: Locatio
                 </Badge>
               )}
               {location.status && location.type !== "lot" && getStatusBadge(location.status)}
+              {eventCount !== undefined && eventCount !== null && eventCount > 0 && (
+                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 gap-1">
+                  <Calendar className="h-3 w-3" />
+                  {eventCount} event{eventCount !== 1 ? "s" : ""}
+                </Badge>
+              )}
             </div>
           </div>
           <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 shrink-0">
@@ -283,9 +299,11 @@ export function LocationInfoCard({ location, onClose, minimal = false }: Locatio
           </Button>
         </div>
         <Button asChild className="w-full mt-3" size="sm" variant="default">
-          <Link href={`/t/${tenantSlug}/dashboard/locations/${location.id}`}>
+          <Link
+            href={`/t/${tenantSlug || propTenantSlug}/dashboard/locations/${location.id}${eventCount && eventCount > 0 ? "#events" : ""}`}
+          >
             <ExternalLink className="h-4 w-4 mr-2" />
-            View Full Details
+            {eventCount && eventCount > 0 ? `View Events & Details` : "View Full Details"}
           </Link>
         </Button>
       </CardHeader>

@@ -19,9 +19,10 @@ CREATE POLICY residents_can_view_checkins ON check_ins
         AND id IN (
           SELECT cin.check_in_id 
           FROM check_in_neighborhoods cin
-          JOIN family_units fu ON fu.neighborhood_id = cin.neighborhood_id
-          JOIN family_members fm ON fm.family_unit_id = fu.id
-          WHERE fm.user_id = auth.uid()
+          -- Fixed join to use lots table which has neighborhood_id
+          JOIN lots l ON l.neighborhood_id = cin.neighborhood_id
+          JOIN users u ON u.lot_id = l.id
+          WHERE u.id = auth.uid()
         )
       )
       -- Private check-ins visible if user is invited
@@ -34,8 +35,9 @@ CREATE POLICY residents_can_view_checkins ON check_ins
           OR id IN (
             SELECT ci.check_in_id
             FROM check_in_invites ci
-            JOIN family_members fm ON fm.family_unit_id = ci.family_unit_id
-            WHERE fm.user_id = auth.uid()
+            -- Removed family_members join, using users.family_unit_id directly
+            JOIN users u ON u.family_unit_id = ci.family_unit_id
+            WHERE u.id = auth.uid()
           )
         )
       )

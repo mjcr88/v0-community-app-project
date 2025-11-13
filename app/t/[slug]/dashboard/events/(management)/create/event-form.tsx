@@ -30,14 +30,21 @@ type EventFormProps = {
   tenantSlug: string
   tenantId: string
   categories: Category[]
+  initialLocation?: {
+    id: string
+    name: string
+    type: string
+    coordinates: { lat: number; lng: number } | null
+  } | null
 }
 
-export function EventForm({ tenantSlug, tenantId, categories }: EventFormProps) {
+export function EventForm({ tenantSlug, tenantId, categories, initialLocation }: EventFormProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [photos, setPhotos] = useState<string[]>([])
   const [heroPhoto, setHeroPhoto] = useState<string | null>(null)
+
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -55,8 +62,8 @@ export function EventForm({ tenantSlug, tenantId, categories }: EventFormProps) 
     selected_neighborhoods: [] as string[],
     selected_residents: [] as string[],
     selected_families: [] as string[],
-    location_type: "none" as "community" | "custom" | "none",
-    location_id: null as string | null,
+    location_type: (initialLocation ? "community" : "none") as "community" | "custom" | "none",
+    location_id: initialLocation?.id || null,
     custom_location_name: "",
     custom_location_coordinates: null as { lat: number; lng: number } | null,
     custom_location_type: null as "pin" | "polygon" | null,

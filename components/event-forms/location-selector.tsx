@@ -31,14 +31,14 @@ interface LocationSelectorProps {
   communityLocationId?: string | null
   customLocationName?: string | null
   customLocationCoordinates?: { lat: number; lng: number } | null
-  customLocationType?: "pin" | "polygon" | null
+  customLocationType?: "marker" | "polygon" | null
   customLocationPath?: Array<{ lat: number; lng: number }> | null
   onLocationTypeChange: (type: LocationType) => void
   onCommunityLocationChange: (locationId: string) => void
   onCustomLocationNameChange: (name: string) => void
   onCustomLocationChange: (data: {
     coordinates?: { lat: number; lng: number } | null
-    type?: "pin" | "polygon" | null
+    type?: "marker" | "polygon" | null
     path?: Array<{ lat: number; lng: number }> | null
   }) => void
 }
@@ -99,7 +99,7 @@ export function LocationSelector({
   const handleCustomLocationDrawing = useCallback(
     (data: {
       coordinates?: { lat: number; lng: number } | null
-      type?: "pin" | "polygon" | null
+      type?: "marker" | "polygon" | null
       path?: Array<{ lat: number; lng: number }> | null
     }) => {
       console.log("[v0] Custom location drawn - FULL DATA:", {
@@ -128,7 +128,7 @@ export function LocationSelector({
       // Update coordinates and type
       handleCustomLocationDrawing({
         coordinates: { lat: place.lat, lng: place.lng },
-        type: "pin",
+        type: "marker",
         path: null,
       })
     },
@@ -211,7 +211,7 @@ export function LocationSelector({
       onCustomLocationNameChange(name)
       handleCustomLocationDrawing({
         coordinates: { lat, lng },
-        type: "pin",
+        type: "marker",
         path: null,
       })
     }

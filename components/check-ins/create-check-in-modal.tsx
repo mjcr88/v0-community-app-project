@@ -57,7 +57,7 @@ export function CreateCheckInModal({
     location_id: initialLocation?.id || null,
     custom_location_name: "",
     custom_location_coordinates: null as { lat: number; lng: number } | null,
-    custom_location_type: null as "pin" | "polygon" | null,
+    custom_location_type: null as "marker" | "polygon" | null,
     custom_location_path: null as Array<{ lat: number; lng: number }> | null,
   })
 
@@ -69,7 +69,7 @@ export function CreateCheckInModal({
   const handleCustomLocationChange = useCallback(
     (data: {
       coordinates?: { lat: number; lng: number } | null
-      type?: "pin" | "polygon" | null
+      type?: "marker" | "polygon" | null
       path?: Array<{ lat: number; lng: number }> | null
     }) => {
       console.log("[v0] Custom location data changed in modal:", {

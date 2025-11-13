@@ -497,8 +497,8 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
     const coordsMap = new globalThis.Map<string, any[]>()
 
     checkInsWithBaseCoords.forEach((checkIn) => {
-      // Round to 6 decimal places to group nearby markers (~0.1m precision)
-      const key = `${checkIn.coordinates.lat.toFixed(6)},${checkIn.coordinates.lng.toFixed(6)}`
+      // Round to 7 decimal places for grouping (~1cm precision)
+      const key = `${checkIn.coordinates.lat.toFixed(7)},${checkIn.coordinates.lng.toFixed(7)}`
       if (!coordsMap.has(key)) {
         coordsMap.set(key, [])
       }
@@ -511,11 +511,11 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
         // Single marker - no offset needed
         offsetCheckIns.push(group[0])
       } else {
-        // Multiple markers at same location - apply circular offset
+        // Multiple markers at same location - apply minimal circular offset
         console.log("[v0] Offsetting", group.length, "overlapping markers at", group[0].coordinates)
         group.forEach((checkIn, index) => {
           const angle = (index / group.length) * 2 * Math.PI // Distribute evenly in circle
-          const offset = 0.00015 // ~17 meters offset radius
+          const offset = 0.00003
           const offsetLat = checkIn.coordinates.lat + offset * Math.cos(angle)
           const offsetLng = checkIn.coordinates.lng + offset * Math.sin(angle)
 

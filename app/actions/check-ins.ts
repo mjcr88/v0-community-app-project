@@ -174,8 +174,8 @@ export async function getCheckInById(checkInId: string, tenantId: string) {
       .select(
         `
         *,
-        created_by_user:users!created_by(id, first_name, last_name, profile_picture_url),
-        location:locations!location_id(id, name, coordinates, boundary_coordinates, path_coordinates)
+        creator:users!created_by(id, first_name, last_name, profile_picture_url),
+        location:locations!location_id(id, name, coordinates)
       `,
       )
       .eq("id", checkInId)
@@ -210,11 +210,14 @@ export async function getActiveCheckIns(tenantId: string) {
     } = await supabase.auth.getUser()
 
     if (!user) {
+      console.log("[v0] getActiveCheckIns - No authenticated user")
       return []
     }
 
     // Get user context for visibility
     const { data: userData } = await supabase.from("users").select("lot_id, family_unit_id").eq("id", user.id).single()
+
+    console.log("[v0] getActiveCheckIns - Fetching check-ins for tenant:", tenantId)
 
     // Fetch all active check-ins
     const { data: checkIns, error } = await supabase
@@ -222,7 +225,7 @@ export async function getActiveCheckIns(tenantId: string) {
       .select(
         `
         *,
-        created_by_user:users!created_by(id, first_name, last_name, profile_picture_url),
+        creator:users!created_by(id, first_name, last_name, profile_picture_url),
         location:locations!location_id(id, name, coordinates, boundary_coordinates, path_coordinates)
       `,
       )
@@ -231,8 +234,8 @@ export async function getActiveCheckIns(tenantId: string) {
       .order("start_time", { ascending: false })
 
     console.log("[v0] getActiveCheckIns - Raw Supabase response:", {
+      error: error ? error.message : null,
       checkInsCount: checkIns?.length || 0,
-      error: error?.message,
       sampleCheckIn: checkIns?.[0]
         ? {
             id: checkIns[0].id,
@@ -240,11 +243,9 @@ export async function getActiveCheckIns(tenantId: string) {
             location_type: checkIns[0].location_type,
             location_id: checkIns[0].location_id,
             has_location_data: !!checkIns[0].location,
-            location_coordinates: checkIns[0].location?.coordinates,
-            location_boundary_coordinates: checkIns[0].location?.boundary_coordinates,
-            location_path_coordinates: checkIns[0].location?.path_coordinates,
-            custom_location_coordinates: checkIns[0].custom_location_coordinates,
-            created_by_user: checkIns[0].created_by_user,
+            location_coordinates: checkIns[0].location?.coordinates || null,
+            location_boundary_coordinates: checkIns[0].location?.boundary_coordinates || null,
+            location_path_coordinates: checkIns[0].location?.path_coordinates || null,
           }
         : null,
     })
@@ -255,6 +256,7 @@ export async function getActiveCheckIns(tenantId: string) {
     }
 
     if (!checkIns || checkIns.length === 0) {
+      console.log("[v0] getActiveCheckIns - No active check-ins found")
       return []
     }
 
@@ -271,10 +273,16 @@ export async function getActiveCheckIns(tenantId: string) {
       return false
     })
 
+    console.log("[v0] getActiveCheckIns - After visibility filter:", {
+      initialCount: checkIns.length,
+      visibleCount: visibleCheckIns.length,
+    })
+
     // Get RSVP data for these check-ins
     const checkInIds = visibleCheckIns.map((c) => c.id)
 
     if (checkInIds.length === 0) {
+      console.log("[v0] getActiveCheckIns - No visible check-ins after filtering")
       return []
     }
 
@@ -305,6 +313,11 @@ export async function getActiveCheckIns(tenantId: string) {
       user_rsvp_status: rsvpMap.get(checkIn.id) || null,
       attending_count: attendingCountMap.get(checkIn.id) || 0,
     }))
+
+    console.log("[v0] getActiveCheckIns - Returning enhanced check-ins:", {
+      count: checkInsWithUserData.length,
+      titles: checkInsWithUserData.map((c) => c.title),
+    })
 
     return checkInsWithUserData
   } catch (error) {

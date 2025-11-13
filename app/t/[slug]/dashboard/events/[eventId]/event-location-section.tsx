@@ -50,7 +50,7 @@ export function EventLocationSection({
         setAllLocations(locations)
       }
 
-      if (location) {
+      if (locationType === "community_location" && location) {
         if (location.coordinates) {
           setMapCenter(location.coordinates)
         } else if (location.boundary_coordinates && location.boundary_coordinates.length > 0) {
@@ -62,13 +62,24 @@ export function EventLocationSection({
         } else if (location.path_coordinates && location.path_coordinates.length > 0) {
           setMapCenter({ lat: location.path_coordinates[0][0], lng: location.path_coordinates[0][1] })
         }
+      } else if (
+        locationType === "custom_temporary" &&
+        customLocationCoordinates?.lat &&
+        customLocationCoordinates?.lng
+      ) {
+        setMapCenter({ lat: customLocationCoordinates.lat, lng: customLocationCoordinates.lng })
       }
     }
 
-    if (locationType === "community_location" && location) {
-      loadLocations()
+    loadLocations()
+  }, [locationType, location, customLocationCoordinates, tenantId])
+
+  const openInGoogleMaps = () => {
+    if (customLocationCoordinates?.lat && customLocationCoordinates?.lng) {
+      const url = `https://www.google.com/maps/search/?api=1&query=${customLocationCoordinates.lat},${customLocationCoordinates.lng}`
+      window.open(url, "_blank")
     }
-  }, [locationType, location, tenantId])
+  }
 
   // No location set
   if (!locationType) {
@@ -106,6 +117,7 @@ export function EventLocationSection({
             mapZoom={16}
             minimal={true}
             showInfoCard={false}
+            enableClickablePlaces={true}
           />
         </div>
       </div>
@@ -121,15 +133,23 @@ export function EventLocationSection({
 
     return (
       <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-full bg-purple-100 dark:bg-purple-900/20 flex items-center justify-center">
-            <MapPin className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-full bg-purple-100 dark:bg-purple-900/20 flex items-center justify-center">
+              <MapPin className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Event Location</p>
+              <p className="font-medium">{customLocationName}</p>
+              <p className="text-xs text-muted-foreground">Custom event location</p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Event Location</p>
-            <p className="font-medium">{customLocationName}</p>
-            <p className="text-xs text-muted-foreground">Custom event location</p>
-          </div>
+          {customCenter && (
+            <Button variant="outline" size="sm" className="gap-2 bg-transparent" onClick={openInGoogleMaps}>
+              <ExternalLink className="h-4 w-4" />
+              Open in Maps
+            </Button>
+          )}
         </div>
 
         {customCenter && (
@@ -143,6 +163,7 @@ export function EventLocationSection({
               showInfoCard={false}
               drawnCoordinates={customCenter}
               drawnType="pin"
+              enableClickablePlaces={true}
             />
           </div>
         )}

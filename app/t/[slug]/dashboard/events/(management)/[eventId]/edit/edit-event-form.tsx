@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,13 +12,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { updateEvent } from "@/app/actions/events"
+import { updateEvent, saveEventImages } from "@/app/actions/events"
 import { Calendar, Loader2, AlertTriangle, CheckCircle2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { NeighborhoodMultiSelect } from "@/components/event-forms/neighborhood-multi-select"
 import { ResidentInviteSelector } from "@/components/event-forms/resident-invite-selector"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { LocationSelector } from "@/components/event-forms/location-selector"
+import { PhotoManager } from "@/components/photo-manager"
 
 type Category = {
   id: string
@@ -55,6 +56,8 @@ type EditEventFormProps = {
   initialNeighborhoods: string[]
   initialResidents: string[]
   initialFamilies: string[]
+  initialPhotos?: string[]
+  initialHeroPhoto?: string | null
 }
 
 export function EditEventForm({
@@ -66,6 +69,8 @@ export function EditEventForm({
   initialNeighborhoods,
   initialResidents,
   initialFamilies,
+  initialPhotos = [],
+  initialHeroPhoto = null,
 }: EditEventFormProps) {
   const router = useRouter()
   const { toast } = useToast()
@@ -90,6 +95,29 @@ export function EditEventForm({
 
   const [showVisibilityWarning, setShowVisibilityWarning] = useState(false)
   const [visibilityChangeType, setVisibilityChangeType] = useState<"expanding" | "reducing" | null>(null)
+
+  const [photos, setPhotos] = useState<string[]>(initialPhotos)
+  const [heroPhoto, setHeroPhoto] = useState<string | null>(initialHeroPhoto)
+
+  const handleCustomLocationNameChange = useCallback((name: string) => {
+    setFormData((prev) => ({ ...prev, custom_location_name: name }))
+  }, [])
+
+  const handleCustomLocationChange = useCallback(
+    (data: {
+      coordinates?: { lat: number; lng: number } | null
+      type?: "pin" | "polygon" | null
+      path?: Array<{ lat: number; lng: number }> | null
+    }) => {
+      console.log("[v0] Custom location updated in form:", data)
+      setFormData((prev) => ({
+        ...prev,
+        custom_location_coordinates: data.coordinates || null,
+        custom_location_type: data.type || null,
+      }))
+    },
+    [],
+  )
 
   useEffect(() => {
     const original = initialData.visibility_scope
@@ -168,6 +196,17 @@ export function EditEventForm({
       })
 
       if (result.success) {
+        const imageResult = await saveEventImages(eventId, tenantSlug, photos, heroPhoto)
+
+        if (!imageResult.success) {
+          console.error("[v0] Failed to save event images:", imageResult.error)
+          toast({
+            title: "Warning",
+            description: "Event updated but some images failed to save",
+            variant: "destructive",
+          })
+        }
+
         let description = "Your changes have been saved successfully."
 
         if (visibilityChangeType === "expanding") {
@@ -197,8 +236,11 @@ export function EditEventForm({
           }, 1000)
         }
 
-        router.push(`/t/${tenantSlug}/dashboard/events/${eventId}`)
         router.refresh()
+
+        await new Promise((resolve) => setTimeout(resolve, 100))
+
+        router.push(`/t/${tenantSlug}/dashboard/events/${eventId}`)
       } else {
         toast({
           title: "Error",
@@ -386,6 +428,17 @@ export function EditEventForm({
             <p className="text-xs text-muted-foreground">Official events are managed by community administrators</p>
           </div>
 
+          <div className="pt-4 border-t">
+            <PhotoManager
+              photos={photos}
+              heroPhoto={heroPhoto}
+              onPhotosChange={setPhotos}
+              onHeroPhotoChange={setHeroPhoto}
+              maxPhotos={10}
+              entityType="location"
+            />
+          </div>
+
           <LocationSelector
             tenantId={tenantId}
             locationType={formData.location_type}
@@ -398,15 +451,8 @@ export function EditEventForm({
               setFormData({ ...formData, location_type: type, location_id: null, custom_location_name: "" })
             }
             onCommunityLocationChange={(locationId) => setFormData({ ...formData, location_id: locationId })}
-            onCustomLocationNameChange={(name) => setFormData({ ...formData, custom_location_name: name })}
-            onCustomLocationChange={(data) => {
-              console.log("[v0] Custom location updated in form:", data)
-              setFormData({
-                ...formData,
-                custom_location_coordinates: data.coordinates || null,
-                custom_location_type: data.type || null,
-              })
-            }}
+            onCustomLocationNameChange={handleCustomLocationNameChange}
+            onCustomLocationChange={handleCustomLocationChange}
           />
 
           <div className="space-y-4 pt-4 border-t">

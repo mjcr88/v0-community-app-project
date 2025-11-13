@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,12 +12,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { createEvent } from "@/app/actions/events"
+import { createEvent, saveEventImages } from "@/app/actions/events"
 import { Calendar, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { NeighborhoodMultiSelect } from "@/components/event-forms/neighborhood-multi-select"
 import { ResidentInviteSelector } from "@/components/event-forms/resident-invite-selector"
 import { LocationSelector } from "@/components/event-forms/location-selector"
+import { PhotoManager } from "@/components/photo-manager"
 
 type Category = {
   id: string
@@ -29,12 +30,21 @@ type EventFormProps = {
   tenantSlug: string
   tenantId: string
   categories: Category[]
+  initialLocation?: {
+    id: string
+    name: string
+    type: string
+    coordinates: { lat: number; lng: number } | null
+  } | null
 }
 
-export function EventForm({ tenantSlug, tenantId, categories }: EventFormProps) {
+export function EventForm({ tenantSlug, tenantId, categories, initialLocation }: EventFormProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [photos, setPhotos] = useState<string[]>([])
+  const [heroPhoto, setHeroPhoto] = useState<string | null>(null)
+
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -52,13 +62,33 @@ export function EventForm({ tenantSlug, tenantId, categories }: EventFormProps) 
     selected_neighborhoods: [] as string[],
     selected_residents: [] as string[],
     selected_families: [] as string[],
-    location_type: "none" as "community" | "custom" | "none",
-    location_id: null as string | null,
+    location_type: (initialLocation ? "community" : "none") as "community" | "custom" | "none",
+    location_id: initialLocation?.id || null,
     custom_location_name: "",
     custom_location_coordinates: null as { lat: number; lng: number } | null,
     custom_location_type: null as "pin" | "polygon" | null,
     custom_location_path: null as Array<{ lat: number; lng: number }> | null,
   })
+
+  const handleCustomLocationNameChange = useCallback((name: string) => {
+    setFormData((prev) => ({ ...prev, custom_location_name: name }))
+  }, [])
+
+  const handleCustomLocationChange = useCallback(
+    (data: {
+      coordinates?: { lat: number; lng: number } | null
+      type?: "pin" | "polygon" | null
+      path?: Array<{ lat: number; lng: number }> | null
+    }) => {
+      setFormData((prev) => ({
+        ...prev,
+        custom_location_coordinates: data.coordinates || null,
+        custom_location_type: data.type || null,
+        custom_location_path: data.path || null,
+      }))
+    },
+    [],
+  )
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -135,6 +165,19 @@ export function EventForm({ tenantSlug, tenantId, categories }: EventFormProps) 
       })
 
       if (result.success) {
+        if (photos.length > 0 && result.data?.id) {
+          const imageResult = await saveEventImages(result.data.id, tenantSlug, photos, heroPhoto)
+
+          if (!imageResult.success) {
+            console.error("[v0] Failed to save event images:", imageResult.error)
+            toast({
+              title: "Warning",
+              description: "Event created but some images failed to upload",
+              variant: "destructive",
+            })
+          }
+        }
+
         toast({
           title: "Event created!",
           description: "Your event has been published to the community.",
@@ -238,7 +281,6 @@ export function EventForm({ tenantSlug, tenantId, categories }: EventFormProps) 
                     setFormData({
                       ...formData,
                       start_date: newStartDate,
-                      // Only auto-set end_date if it's empty or earlier than start_date
                       end_date:
                         !formData.end_date || formData.end_date < newStartDate ? newStartDate : formData.end_date,
                     })
@@ -334,6 +376,18 @@ export function EventForm({ tenantSlug, tenantId, categories }: EventFormProps) 
             <p className="text-xs text-muted-foreground">Official events are managed by community administrators</p>
           </div>
 
+          {/* PhotoManager component for image uploads */}
+          <div className="pt-4 border-t">
+            <PhotoManager
+              photos={photos}
+              heroPhoto={heroPhoto}
+              onPhotosChange={setPhotos}
+              onHeroPhotoChange={setHeroPhoto}
+              maxPhotos={10}
+              entityType="location"
+            />
+          </div>
+
           {/* Location Selector */}
           <LocationSelector
             tenantId={tenantId}
@@ -355,15 +409,8 @@ export function EventForm({ tenantSlug, tenantId, categories }: EventFormProps) 
               })
             }
             onCommunityLocationChange={(locationId) => setFormData({ ...formData, location_id: locationId })}
-            onCustomLocationNameChange={(name) => setFormData({ ...formData, custom_location_name: name })}
-            onCustomLocationChange={(data) =>
-              setFormData({
-                ...formData,
-                custom_location_coordinates: data.coordinates || null,
-                custom_location_type: data.type || null,
-                custom_location_path: data.path || null,
-              })
-            }
+            onCustomLocationNameChange={handleCustomLocationNameChange}
+            onCustomLocationChange={handleCustomLocationChange}
           />
 
           <div className="space-y-4 pt-4 border-t">

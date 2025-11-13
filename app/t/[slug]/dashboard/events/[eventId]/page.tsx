@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation"
 import { createServerClient } from "@/lib/supabase/server"
 import { getEvent } from "@/app/actions/events"
-import { ArrowLeft, Calendar, Share2, Pencil, Users, Lock } from "lucide-react"
+import { ArrowLeft, Calendar, Share2, Pencil, Users, Lock, Flag, AlertTriangle } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -11,8 +11,15 @@ import { EventRsvpSection } from "./event-rsvp-section"
 import { SaveEventButton } from "./save-event-button"
 import { EventAttendeesSection } from "./event-attendees-section"
 import { EventLocationSection } from "./event-location-section"
+import { EventImagesGallery } from "./event-images-gallery"
 import { getEventAttendees } from "@/app/actions/events"
 import { canUserViewEvent } from "@/lib/visibility-filter"
+import { FlagEventDialog } from "./flag-event-dialog"
+import { getEventFlagDetails } from "@/app/actions/events"
+import { EventFlagDetails } from "./event-flag-details"
+import { CancelEventDialog } from "./cancel-event-dialog"
+import { UncancelEventButton } from "./uncancel-event-button"
+import { format } from "date-fns"
 
 interface EventDetailPageProps {
   params: Promise<{ slug: string; eventId: string }>
@@ -99,6 +106,14 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     .eq("id", user.id)
     .single()
 
+  console.log("[v0] Event detail page - user data:", {
+    userId: user.id,
+    role: userData?.role,
+    isTenantAdmin: userData?.is_tenant_admin,
+    lotId: userData?.lot_id,
+    familyUnitId: userData?.family_unit_id,
+  })
+
   const canView = await canUserViewEvent(eventId, {
     userId: user.id,
     tenantId: tenant.id,
@@ -106,7 +121,10 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     userFamilyUnitId: userData?.family_unit_id,
   })
 
+  console.log("[v0] Can view event result:", canView)
+
   if (!canView) {
+    console.log("[v0] Access denied - redirecting to notFound")
     notFound()
   }
 
@@ -190,6 +208,38 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     }
   }
 
+  const { data: eventImages } = await supabase
+    .from("event_images")
+    .select("id, image_url, is_hero, display_order")
+    .eq("event_id", eventId)
+    .order("display_order")
+
+  const { data: flagCountData, error: flagCountError } = await supabase.rpc("get_event_flag_count", {
+    p_event_id: eventId,
+    p_tenant_id: tenant.id,
+  })
+
+  const flagCount = flagCountData ?? 0
+
+  const { data: hasUserFlaggedData, error: userFlagError } = await supabase.rpc("has_user_flagged_event", {
+    p_event_id: eventId,
+    p_user_id: user.id,
+    p_tenant_id: tenant.id,
+  })
+
+  const hasUserFlagged = hasUserFlaggedData ?? false
+
+  let flagDetails = null
+  if (canManageEvent && flagCount > 0) {
+    const isAdmin = userData.is_tenant_admin || userData.role === "super_admin" || userData.role === "tenant_admin"
+    if (isAdmin) {
+      const flagDetailsResult = await getEventFlagDetails(eventId, tenant.id)
+      if (flagDetailsResult.success && flagDetailsResult.data) {
+        flagDetails = flagDetailsResult.data
+      }
+    }
+  }
+
   let locationData = null
   if (event.location_type === "community_location" && event.location_id) {
     const { data: location } = await supabase
@@ -200,6 +250,39 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
 
     if (location) {
       locationData = location
+    }
+  }
+
+  let cancellationDetails = null
+  if (event.status === "cancelled" && event.cancelled_by) {
+    const { data: cancelledBy } = await supabase
+      .from("users")
+      .select("id, first_name, last_name, role, is_tenant_admin")
+      .eq("id", event.cancelled_by)
+      .maybeSingle()
+
+    if (cancelledBy) {
+      const isAdmin =
+        cancelledBy.is_tenant_admin || cancelledBy.role === "super_admin" || cancelledBy.role === "tenant_admin"
+      const displayName =
+        cancelledBy.first_name && cancelledBy.last_name
+          ? `${cancelledBy.first_name} ${cancelledBy.last_name}`
+          : isAdmin
+            ? "Admin"
+            : "Creator"
+      cancellationDetails = {
+        cancelledBy: displayName,
+        cancelledByRole: isAdmin ? "Admin" : "Creator",
+        cancelledAt: event.cancelled_at,
+        reason: event.cancellation_reason,
+      }
+    } else {
+      cancellationDetails = {
+        cancelledBy: "Admin",
+        cancelledByRole: "Admin",
+        cancelledAt: event.cancelled_at,
+        reason: event.cancellation_reason,
+      }
     }
   }
 
@@ -230,6 +313,12 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                 </Badge>
                 <Badge variant={eventTypeVariant as any}>{eventTypeLabel}</Badge>
                 <Badge variant={statusVariant as any}>{statusLabel}</Badge>
+                {flagCount > 0 && (
+                  <Badge variant="destructive" className="gap-1.5">
+                    <Flag className="h-3 w-3" />
+                    Flagged ({flagCount})
+                  </Badge>
+                )}
                 {event.visibility_scope === "neighborhood" && (
                   <Badge variant="secondary" className="gap-1">
                     <Users className="h-3 w-3" />
@@ -250,7 +339,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             {/* Action Buttons */}
             <div className="flex flex-wrap gap-2">
               <SaveEventButton eventId={eventId} userId={user?.id || null} />
-              {canManageEvent && (
+              {canManageEvent && event.status !== "cancelled" && (
                 <>
                   <Link href={`/t/${slug}/dashboard/events/${eventId}/edit`}>
                     <Button variant="default" size="sm" className="gap-2">
@@ -258,6 +347,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                       Edit Event
                     </Button>
                   </Link>
+                  <CancelEventDialog eventId={eventId} tenantSlug={slug} eventTitle={event.title} />
                   {isCreator && (
                     <DeleteEventButton
                       eventId={eventId}
@@ -268,10 +358,25 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                   )}
                 </>
               )}
+              {canManageEvent && event.status === "cancelled" && userData?.is_tenant_admin && (
+                <UncancelEventButton eventId={eventId} tenantSlug={slug} />
+              )}
               <Button variant="outline" size="sm" className="gap-2 bg-transparent">
                 <Share2 className="h-4 w-4" />
                 Share Event
               </Button>
+              {event.status !== "cancelled" && (
+                <FlagEventDialog
+                  eventId={eventId}
+                  tenantSlug={slug}
+                  triggerLabel={hasUserFlagged ? "Flagged" : "Flag Event"}
+                  triggerVariant={hasUserFlagged ? "secondary" : "outline"}
+                  triggerSize="sm"
+                  disabled={hasUserFlagged}
+                  initialFlagCount={flagCount}
+                  initialHasUserFlagged={hasUserFlagged}
+                />
+              )}
             </div>
           </div>
         </div>
@@ -280,6 +385,36 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
       {/* Content Section */}
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto space-y-8">
+          {event.status === "cancelled" && cancellationDetails && (
+            <div className="p-6 border-2 border-destructive rounded-lg bg-destructive/5 space-y-3">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="h-6 w-6 text-destructive" />
+                <h3 className="font-semibold text-lg text-destructive">Event Cancelled</h3>
+              </div>
+              <div className="space-y-2 text-sm">
+                <p>
+                  <span className="font-medium">Cancelled by:</span> {cancellationDetails.cancelledBy}
+                  {cancellationDetails.cancelledBy !== cancellationDetails.cancelledByRole &&
+                    ` (${cancellationDetails.cancelledByRole})`}
+                </p>
+                {cancellationDetails.cancelledAt && (
+                  <p>
+                    <span className="font-medium">Cancelled on:</span>{" "}
+                    {format(new Date(cancellationDetails.cancelledAt), "MMMM d, yyyy 'at' h:mm a")}
+                  </p>
+                )}
+                {cancellationDetails.reason && (
+                  <div className="pt-2 border-t border-destructive/20">
+                    <p className="font-medium mb-1">Reason:</p>
+                    <p className="text-muted-foreground whitespace-pre-wrap">{cancellationDetails.reason}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {flagDetails && flagDetails.length > 0 && <EventFlagDetails flags={flagDetails} tenantSlug={slug} />}
+
           {canManageEvent && visibilityDetails && (
             <div className="p-6 border rounded-lg bg-muted/30 space-y-3">
               <div className="flex items-center gap-2">
@@ -341,6 +476,9 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
               )}
             </div>
           )}
+
+          {/* Image Gallery Section */}
+          {eventImages && eventImages.length > 0 && <EventImagesGallery images={eventImages} />}
 
           {/* Description Section */}
           {event.description && (
@@ -409,6 +547,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             rsvpDeadline={event.rsvp_deadline}
             maxAttendees={event.max_attendees}
             userId={user?.id || null}
+            eventStatus={event.status as "draft" | "published" | "cancelled"}
           />
 
           {/* Attendees Section */}

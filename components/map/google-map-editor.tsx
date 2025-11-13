@@ -4,7 +4,7 @@ import React from "react"
 
 // import type React from "react" // Removed to fix redeclaration error
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { APIProvider, Map, Marker, useMap } from "@vis.gl/react-google-maps"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -23,6 +23,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { createLocation, updateLocation, deleteLocation } from "@/app/actions/locations"
+import { getLocationEventCount } from "@/app/actions/events"
 import { useRouter, useSearchParams } from "next/navigation"
 import {
   Loader2,
@@ -225,6 +226,8 @@ export function GoogleMapEditor({
   // State for hover and selection
   const [hoveredLocationId, setHoveredLocationId] = useState<string | null>(null)
   const [selectedLocation, setSelectedLocation] = useState<any | null>(null)
+  const [selectedLocationEventCount, setSelectedLocationEventCount] = useState<number | null>(null)
+  const [loadingEventCount, setLoadingEventCount] = useState(false)
   const [highlightedLocationId, setHighlightedLocationId] = useState<string | undefined>(undefined)
   const [editingLocationId, setEditingLocationId] = useState<string | null>(null)
 
@@ -1252,6 +1255,37 @@ export function GoogleMapEditor({
 
   const boundaryLocation = savedLocations.find((loc) => loc.type === "boundary")
 
+  // Define handleLocationSelect and handleCloseLocationInfo here
+  const handleLocationSelect = useCallback(
+    async (location: any) => {
+      console.log("[v0] Location selected:", location.name, location.id)
+      setSelectedLocation(location)
+      setEditingLocationId(null) // Ensure editing state is cleared
+      setHighlightedLocationId(location.id)
+
+      if (tenantId && location.id) {
+        setLoadingEventCount(true)
+        try {
+          const count = await getLocationEventCount(location.id, tenantId)
+          console.log("[v0] Event count for location:", location.name, "=", count)
+          setSelectedLocationEventCount(count)
+        } catch (error) {
+          console.error("[v0] Error fetching event count:", error)
+          setSelectedLocationEventCount(null)
+        } finally {
+          setLoadingEventCount(false)
+        }
+      }
+    },
+    [tenantId], // Dependencies for useCallback
+  )
+
+  const handleCloseLocationInfo = useCallback(() => {
+    setSelectedLocation(null)
+    setSelectedLocationEventCount(null)
+    setHighlightedLocationId(undefined)
+  }, [])
+
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_400px]">
       <Card>
@@ -1908,7 +1942,12 @@ export function GoogleMapEditor({
 
             {mode === "view" && selectedLocation && (
               <div className="absolute bottom-20 left-3 right-3 md:left-auto md:right-3 md:w-80">
-                <LocationInfoCard location={selectedLocation} onClose={() => setSelectedLocation(null)} />
+                <LocationInfoCard
+                  location={selectedLocation}
+                  onClose={handleCloseLocationInfo}
+                  eventCount={loadingEventCount ? undefined : selectedLocationEventCount}
+                  tenantSlug={tenantSlug}
+                />
               </div>
             )}
           </div>

@@ -1,6 +1,6 @@
 import { createServerClient } from "@/lib/supabase/server"
 import { redirect, notFound } from "next/navigation"
-import { getEvent } from "@/app/actions/events"
+import { getEvent, getEventImages } from "@/app/actions/events"
 import { EditEventForm } from "./edit-event-form"
 
 interface EditEventPageProps {
@@ -78,6 +78,13 @@ export default async function EditEventPage({ params }: EditEventPageProps) {
   const selectedFamilies =
     eventInvites?.filter((ei) => ei.family_unit_id).map((ei) => ei.family_unit_id as string) || []
 
+  const imageResult = await getEventImages(eventId)
+  const eventImages = imageResult.success ? imageResult.data : []
+
+  const initialPhotos = eventImages.map((img) => img.image_url)
+  const heroImage = eventImages.find((img) => img.is_hero)
+  const initialHeroPhoto = heroImage?.image_url || (initialPhotos.length > 0 ? initialPhotos[0] : null)
+
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div>
@@ -105,10 +112,17 @@ export default async function EditEventPage({ params }: EditEventPageProps) {
           rsvp_deadline: event.rsvp_deadline || "",
           max_attendees: event.max_attendees || null,
           visibility_scope: event.visibility_scope || "community",
+          location_type: event.location_type,
+          location_id: event.location_id,
+          custom_location_name: event.custom_location_name,
+          custom_location_coordinates: event.custom_location_coordinates,
+          custom_location_type: event.custom_location_type,
         }}
         initialNeighborhoods={selectedNeighborhoods}
         initialResidents={selectedResidents}
         initialFamilies={selectedFamilies}
+        initialPhotos={initialPhotos}
+        initialHeroPhoto={initialHeroPhoto}
       />
     </div>
   )

@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Users, MapPin, Globe, Languages, PawPrint, Home, Map } from "lucide-react"
+import { Users, MapPin, Globe, Languages, PawPrint, Home, MapIcon } from "lucide-react"
 import Link from "next/link"
 import { MapPreviewWidget } from "@/components/map/map-preview-widget"
 import { UpcomingEventsWidget } from "@/components/dashboard/upcoming-events-widget"
@@ -179,6 +179,19 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
 
   const upcomingEvents = await getUpcomingEvents(resident.tenant_id, 5)
 
+  const upcomingEventsWithFlags = await Promise.all(
+    upcomingEvents.map(async (event) => {
+      const { data: flagCount } = await supabase.rpc("get_event_flag_count", {
+        p_event_id: event.id,
+        p_tenant_id: resident.tenant_id,
+      })
+      return {
+        ...event,
+        flag_count: flagCount ?? 0,
+      }
+    }),
+  )
+
   return (
     <div className="space-y-6">
       <div>
@@ -209,7 +222,7 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
           {mapEnabled && (
             <Button asChild variant="outline">
               <Link href={`/t/${slug}/dashboard/map`}>
-                <Map className="h-4 w-4 mr-2" />
+                <MapIcon className="h-4 w-4 mr-2" />
                 View Community Map
               </Link>
             </Button>
@@ -217,7 +230,12 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
         </CardContent>
       </Card>
 
-      <UpcomingEventsWidget events={upcomingEvents} slug={slug} userId={user.id} tenantId={resident.tenant_id} />
+      <UpcomingEventsWidget
+        events={upcomingEventsWithFlags}
+        slug={slug}
+        userId={user.id}
+        tenantId={resident.tenant_id}
+      />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {mapEnabled && lotLocation ? (

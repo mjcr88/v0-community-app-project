@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Check, HelpCircle, X, Users, Clock } from "lucide-react"
+import { Check, HelpCircle, X, Users, Clock, AlertCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { rsvpToEvent, getUserRsvpStatus, getEventRsvpCounts } from "@/app/actions/events"
 import { toast } from "sonner"
@@ -15,6 +15,7 @@ interface EventRsvpSectionProps {
   rsvpDeadline: string | null
   maxAttendees: number | null
   userId: string | null
+  eventStatus?: "draft" | "published" | "cancelled"
 }
 
 export function EventRsvpSection({
@@ -24,11 +25,14 @@ export function EventRsvpSection({
   rsvpDeadline,
   maxAttendees,
   userId,
+  eventStatus,
 }: EventRsvpSectionProps) {
   const router = useRouter()
   const [currentStatus, setCurrentStatus] = useState<string | null>(null)
   const [counts, setCounts] = useState({ yes: 0, maybe: 0, no: 0 })
   const [isLoading, setIsLoading] = useState(false)
+
+  const isCancelled = eventStatus === "cancelled"
 
   // Check if RSVP deadline has passed
   const isDeadlinePassed = rsvpDeadline ? new Date(rsvpDeadline) < new Date() : false
@@ -37,8 +41,8 @@ export function EventRsvpSection({
   const totalAttending = counts.yes
   const isFull = maxAttendees ? totalAttending >= maxAttendees : false
 
-  // User can RSVP if: authenticated, deadline not passed, and (not full OR already attending)
-  const canRsvp = userId && !isDeadlinePassed && (!isFull || currentStatus === "yes")
+  // User can RSVP if: authenticated, deadline not passed, and (not full OR already attending), and NOT cancelled
+  const canRsvp = userId && !isDeadlinePassed && (!isFull || currentStatus === "yes") && !isCancelled
 
   useEffect(() => {
     if (!userId) return
@@ -69,7 +73,7 @@ export function EventRsvpSection({
     }
 
     setIsLoading(true)
-    const result = await rsvpToEvent(eventId, status)
+    const result = await rsvpToEvent(eventId, tenantId, status)
 
     if (result.success) {
       setCurrentStatus(status)
@@ -95,12 +99,19 @@ export function EventRsvpSection({
   }
 
   return (
-    <div className="p-6 border rounded-lg bg-card space-y-4">
+    <div className={`p-6 border rounded-lg space-y-4 ${isCancelled ? "bg-muted/50 opacity-60" : "bg-card"}`}>
       <div className="space-y-2">
         <div className="flex items-center gap-3">
           <Users className="h-5 w-5 text-primary" />
           <h3 className="font-semibold text-lg">RSVP</h3>
         </div>
+
+        {isCancelled && (
+          <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 p-3 rounded-md">
+            <AlertCircle className="h-4 w-4 flex-shrink-0" />
+            <span>RSVPs are closed for cancelled events</span>
+          </div>
+        )}
 
         {/* Attendee Counts */}
         <div className="flex flex-wrap items-center gap-3 text-sm">
@@ -145,7 +156,7 @@ export function EventRsvpSection({
       </div>
 
       {/* RSVP Buttons */}
-      {userId ? (
+      {userId && !isCancelled ? (
         <div className="flex flex-wrap gap-2">
           <Button
             variant={currentStatus === "yes" ? "default" : "outline"}
@@ -178,12 +189,14 @@ export function EventRsvpSection({
             Not Attending
           </Button>
         </div>
-      ) : (
+      ) : !userId ? (
         <p className="text-sm text-muted-foreground">Please sign in to RSVP to this event</p>
-      )}
+      ) : null}
 
       {/* Status Messages */}
-      {isFull && currentStatus !== "yes" && <p className="text-sm text-destructive">This event is at full capacity</p>}
+      {!isCancelled && isFull && currentStatus !== "yes" && (
+        <p className="text-sm text-destructive">This event is at full capacity</p>
+      )}
     </div>
   )
 }

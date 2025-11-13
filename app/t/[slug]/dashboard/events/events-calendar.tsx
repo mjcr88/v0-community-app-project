@@ -4,7 +4,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { CalendarClock, Plus, Lock, Building } from "lucide-react"
+import { CalendarClock, Plus, Lock, Building, Flag } from "lucide-react"
 import Link from "next/link"
 import { format, parseISO } from "date-fns"
 import { useState } from "react"
@@ -39,6 +39,8 @@ interface Event {
     name: string
   } | null
   custom_location_name?: string | null
+  flag_count?: number
+  status?: "draft" | "published" | "cancelled"
 }
 
 export function EventsCalendar({
@@ -145,9 +147,10 @@ export function EventsCalendar({
               {selectedEvents.map((event) => {
                 const startTime = event.start_time ? format(parseISO(`2000-01-01T${event.start_time}`), "h:mm a") : null
                 const endTime = event.end_time ? format(parseISO(`2000-01-01T${event.end_time}`), "h:mm a") : null
+                const isCancelled = event.status === "cancelled"
 
                 return (
-                  <Card key={event.id} className="hover:shadow-md transition-all">
+                  <Card key={event.id} className={`hover:shadow-md transition-all ${isCancelled ? "opacity-60" : ""}`}>
                     <Link href={`/t/${slug}/dashboard/events/${event.id}`}>
                       <CardHeader className="pb-3">
                         <div className="flex items-start justify-between gap-2">
@@ -168,6 +171,11 @@ export function EventsCalendar({
                           </div>
                         )}
                         <div className="flex items-center gap-2 flex-wrap">
+                          {isCancelled && (
+                            <Badge variant="destructive" className="text-xs">
+                              Cancelled
+                            </Badge>
+                          )}
                           {event.is_all_day && (
                             <Badge variant="outline" className="text-xs">
                               All Day
@@ -183,6 +191,12 @@ export function EventsCalendar({
                             <Badge variant="outline" className="text-xs gap-1">
                               <Lock className="h-3 w-3" />
                               Private
+                            </Badge>
+                          )}
+                          {event.flag_count !== undefined && event.flag_count > 0 && (
+                            <Badge variant="destructive" className="text-xs gap-1">
+                              <Flag className="h-3 w-3" />
+                              {event.flag_count}
                             </Badge>
                           )}
                           <LocationBadge

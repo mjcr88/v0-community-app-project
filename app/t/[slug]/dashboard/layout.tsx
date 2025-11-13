@@ -49,10 +49,6 @@ export default async function ResidentDashboardLayout({
   const isSuperAdmin = userData?.role === "super_admin"
   const isTenantAdmin = userData?.role === "tenant_admin" && userData?.tenant_id === tenant.id
 
-  if (isSuperAdmin || isTenantAdmin) {
-    redirect(`/t/${slug}/admin/dashboard`)
-  }
-
   const { data: resident } = await supabase
     .from("users")
     .select(
@@ -69,15 +65,14 @@ export default async function ResidentDashboardLayout({
     `,
     )
     .eq("id", user.id)
-    .eq("role", "resident")
     .eq("tenant_id", tenant.id)
     .maybeSingle()
 
-  if (!resident) {
+  if (!resident && !isTenantAdmin && !isSuperAdmin) {
     redirect(`/t/${slug}/login`)
   }
 
-  const isAdmin = resident.is_tenant_admin === true
+  const isAdmin = resident?.is_tenant_admin === true || isTenantAdmin || isSuperAdmin
 
   const defaultFeatures = { map: true }
   const mergedFeatures = { ...defaultFeatures, ...(tenant?.features || {}) }
@@ -148,10 +143,10 @@ export default async function ResidentDashboardLayout({
         <SidebarFooter className="border-t border-sidebar-border p-2">
           <UserAvatarMenu
             user={{
-              firstName: resident.first_name,
-              lastName: resident.last_name,
-              email: resident.email,
-              profilePictureUrl: resident.profile_picture_url,
+              firstName: resident?.first_name,
+              lastName: resident?.last_name,
+              email: resident?.email,
+              profilePictureUrl: resident?.profile_picture_url,
             }}
             tenantSlug={slug}
             showAdminView={isAdmin}

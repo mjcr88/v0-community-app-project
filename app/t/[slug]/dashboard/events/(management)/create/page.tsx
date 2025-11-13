@@ -4,10 +4,13 @@ import { EventForm } from "./event-form"
 
 export default async function CreateEventPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>
+  searchParams: Promise<{ locationId?: string }>
 }) {
   const { slug } = await params
+  const { locationId } = await searchParams
   const supabase = await createClient()
 
   const {
@@ -36,6 +39,18 @@ export default async function CreateEventPage({
     .eq("tenant_id", resident.tenant_id)
     .order("name")
 
+  let initialLocation = null
+  if (locationId) {
+    const { data: location } = await supabase
+      .from("locations")
+      .select("id, name, type, coordinates")
+      .eq("id", locationId)
+      .eq("tenant_id", resident.tenant_id)
+      .single()
+
+    initialLocation = location
+  }
+
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div>
@@ -43,7 +58,12 @@ export default async function CreateEventPage({
         <p className="text-muted-foreground">Share an event with your community</p>
       </div>
 
-      <EventForm tenantSlug={slug} tenantId={resident.tenant_id} categories={categories || []} />
+      <EventForm
+        tenantSlug={slug}
+        tenantId={resident.tenant_id}
+        categories={categories || []}
+        initialLocation={initialLocation}
+      />
     </div>
   )
 }

@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { Calendar, Plus, CalendarClock, Lock, Building } from "lucide-react"
+import { Calendar, Plus, CalendarClock, Lock, Building, Flag } from "lucide-react"
 import Link from "next/link"
 import { format, isPast, parseISO } from "date-fns"
 import { EventRsvpQuickAction } from "@/components/event-rsvp-quick-action"
@@ -41,6 +41,8 @@ interface Event {
     name: string
   } | null
   custom_location_name?: string | null
+  flag_count?: number
+  status?: "draft" | "published" | "cancelled"
 }
 
 export function EventsList({
@@ -97,6 +99,7 @@ export function EventsList({
         const endDate = event.end_date ? parseISO(event.end_date) : null
         const isMultiDay = endDate && endDate.toDateString() !== startDate.toDateString()
         const eventIsPast = isPast(endDate || startDate)
+        const isCancelled = event.status === "cancelled"
 
         let displayDate: string
         if (event.is_all_day) {
@@ -135,7 +138,7 @@ export function EventsList({
           <Card
             key={event.id}
             className={`hover:shadow-lg transition-all cursor-pointer h-full ${
-              eventIsPast ? "opacity-60 hover:opacity-80" : ""
+              eventIsPast || isCancelled ? "opacity-60 hover:opacity-80" : ""
             }`}
           >
             <Link href={`/t/${slug}/dashboard/events/${event.id}`}>
@@ -150,9 +153,20 @@ export function EventsList({
                   <CardDescription className="line-clamp-1">
                     {event.event_categories?.name || "Uncategorized"}
                   </CardDescription>
-                  {eventIsPast && (
+                  {isCancelled && (
+                    <Badge variant="destructive" className="text-xs">
+                      Cancelled
+                    </Badge>
+                  )}
+                  {eventIsPast && !isCancelled && (
                     <Badge variant="outline" className="text-xs">
                       Past Event
+                    </Badge>
+                  )}
+                  {event.flag_count !== undefined && event.flag_count > 0 && (
+                    <Badge variant="destructive" className="text-xs gap-1">
+                      <Flag className="h-3 w-3" />
+                      {event.flag_count}
                     </Badge>
                   )}
                 </div>

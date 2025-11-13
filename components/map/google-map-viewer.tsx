@@ -16,6 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu"
 import Link from "next/link"
 import { MapPin, Trash2, Filter, Layers, Locate, Plus } from "lucide-react"
@@ -472,19 +473,19 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
       })
       .filter((checkIn) => checkIn.coordinates !== null)
 
-    const coordinateMap = new Map<string, any[]>()
+    const coordsGroupMap = new Map<string, any[]>()
 
     checkInsWithBaseCoords.forEach((checkIn) => {
       // Round to 6 decimal places to group nearby markers (~0.1m precision)
       const key = `${checkIn.coordinates.lat.toFixed(6)},${checkIn.coordinates.lng.toFixed(6)}`
-      if (!coordinateMap.has(key)) {
-        coordinateMap.set(key, [])
+      if (!coordsGroupMap.has(key)) {
+        coordsGroupMap.set(key, [])
       }
-      coordinateMap.get(key)!.push(checkIn)
+      coordsGroupMap.get(key)!.push(checkIn)
     })
 
     const offsetCheckIns: any[] = []
-    coordinateMap.forEach((group) => {
+    coordsGroupMap.forEach((group) => {
       if (group.length === 1) {
         // Single marker - no offset needed
         offsetCheckIns.push(group[0])
@@ -1014,6 +1015,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                       "/placeholder.svg" ||
                       "/placeholder.svg" ||
                       "/placeholder.svg" ||
+                      "/placeholder.svg" ||
                       "/placeholder.svg"
                     }
                     alt={checkIn.title}
@@ -1267,7 +1269,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => setMapType("satellite")}>Satellite</DropdownMenuItem>
             <DropdownMenuItem onClick={() => setMapType("terrain")}>Terrain</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setMapType("roadmap")}>Street</DropdownMenuItem>
+            <DropdownMenuRadioItem onClick={() => setMapType("roadmap")}>Street</DropdownMenuRadioItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

@@ -24,6 +24,15 @@ export async function createCheckIn(
   },
 ) {
   try {
+    console.log("[v0] createCheckIn - RECEIVED DATA:", {
+      location_type: data.location_type,
+      location_id: data.location_id,
+      custom_location_name: data.custom_location_name,
+      has_custom_coordinates: !!data.custom_location_coordinates,
+      custom_coordinates_detail: data.custom_location_coordinates,
+      custom_location_type: data.custom_location_type,
+    })
+
     const supabase = await createServerClient()
 
     const {
@@ -62,36 +71,75 @@ export async function createCheckIn(
       return { success: false, error: "Community location is required" }
     }
 
-    if (data.location_type === "custom_temporary" && !data.custom_location_name) {
-      return { success: false, error: "Custom location name is required" }
+    if (data.location_type === "custom_temporary") {
+      console.log("[v0] Validating custom_temporary location:", {
+        has_name: !!data.custom_location_name,
+        name: data.custom_location_name,
+        has_coordinates: !!data.custom_location_coordinates,
+        coordinates: data.custom_location_coordinates,
+      })
+
+      if (!data.custom_location_name) {
+        console.error("[v0] VALIDATION FAILED: custom_location_name is missing")
+        return { success: false, error: "Custom location name is required" }
+      }
+
+      if (!data.custom_location_coordinates) {
+        console.error("[v0] VALIDATION FAILED: custom_location_coordinates is missing")
+        return { success: false, error: "Custom location coordinates are required. Please drop a marker on the map." }
+      }
+
+      if (!data.custom_location_coordinates.lat || !data.custom_location_coordinates.lng) {
+        console.error("[v0] VALIDATION FAILED: Invalid coordinates:", data.custom_location_coordinates)
+        return { success: false, error: "Invalid location coordinates. Please drop a new marker on the map." }
+      }
     }
+
+    // Prepare insert data
+    const insertData = {
+      tenant_id: tenantId,
+      created_by: user.id,
+      title: data.title.trim(),
+      activity_type: data.activity_type,
+      description: data.description?.trim() || null,
+      location_type: data.location_type,
+      location_id: data.location_id || null,
+      custom_location_name: data.custom_location_name || null,
+      custom_location_coordinates: data.custom_location_coordinates || null,
+      custom_location_type: data.custom_location_type || null,
+      start_time: data.start_time,
+      duration_minutes: data.duration_minutes,
+      status: "active",
+      visibility_scope: data.visibility_scope,
+    }
+
+    console.log("[v0] createCheckIn - DATA BEING INSERTED INTO DATABASE:", {
+      ...insertData,
+      custom_coordinates_is_null: insertData.custom_location_coordinates === null,
+      custom_coordinates_value: insertData.custom_location_coordinates,
+      custom_name_is_null: insertData.custom_location_name === null,
+      custom_name_value: insertData.custom_location_name,
+    })
 
     // Create check-in
     const { data: checkIn, error } = await supabase
       .from("check_ins")
-      .insert({
-        tenant_id: tenantId,
-        created_by: user.id,
-        title: data.title.trim(),
-        activity_type: data.activity_type,
-        description: data.description?.trim() || null,
-        location_type: data.location_type,
-        location_id: data.location_id || null,
-        custom_location_name: data.custom_location_name || null,
-        custom_location_coordinates: data.custom_location_coordinates || null,
-        custom_location_type: data.custom_location_type || null,
-        start_time: data.start_time,
-        duration_minutes: data.duration_minutes,
-        status: "active",
-        visibility_scope: data.visibility_scope,
-      })
+      .insert(insertData)
       .select()
       .single()
 
     if (error) {
-      console.error("[v0] Error creating check-in:", error)
+      console.error("[v0] Error creating check-in - SUPABASE ERROR:", {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        insertedData: insertData,
+      })
       return { success: false, error: error.message }
     }
+
+    console.log("[v0] Check-in created successfully:", checkIn.id)
 
     // Handle neighborhood visibility
     if (data.visibility_scope === "neighborhood" && data.neighborhood_ids && data.neighborhood_ids.length > 0) {

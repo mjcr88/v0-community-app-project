@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState, useCallback } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Card, CardContent } from "@/components/ui/card"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { createCheckIn } from "@/app/actions/check-ins"
-import { Loader2, Plus, Minus } from "lucide-react"
+import { Loader2, Plus, Minus } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { NeighborhoodMultiSelect } from "@/components/event-forms/neighborhood-multi-select"
 import { ResidentInviteSelector } from "@/components/event-forms/resident-invite-selector"
@@ -62,6 +62,7 @@ export function CreateCheckInModal({
   })
 
   const handleCustomLocationNameChange = useCallback((name: string) => {
+    console.log("[v0] Custom location name changed:", name)
     setFormData((prev) => ({ ...prev, custom_location_name: name }))
   }, [])
 
@@ -71,6 +72,13 @@ export function CreateCheckInModal({
       type?: "pin" | "polygon" | null
       path?: Array<{ lat: number; lng: number }> | null
     }) => {
+      console.log("[v0] Custom location data changed in modal:", {
+        hasCoordinates: !!data.coordinates,
+        coordinates: data.coordinates,
+        type: data.type,
+        hasPath: !!data.path,
+        pathLength: data.path?.length || 0,
+      })
       setFormData((prev) => ({
         ...prev,
         custom_location_coordinates: data.coordinates || null,
@@ -171,12 +179,45 @@ export function CreateCheckInModal({
         return
       }
 
+      if (formData.location_type === "custom") {
+        console.log("[v0] SUBMITTING CUSTOM CHECK-IN - VALIDATION:", {
+          locationName: formData.custom_location_name,
+          hasCoordinates: !!formData.custom_location_coordinates,
+          coordinates: formData.custom_location_coordinates,
+          locationType: formData.custom_location_type,
+          hasPath: !!formData.custom_location_path,
+          pathLength: formData.custom_location_path?.length || 0,
+        })
+
+        if (!formData.custom_location_coordinates) {
+          console.error("[v0] ERROR: No coordinates set for custom location!")
+          toast({
+            title: "Location marker required",
+            description: "Please drop a marker on the map to set your location",
+            variant: "destructive",
+          })
+          setIsSubmitting(false)
+          return
+        }
+
+        if (!formData.custom_location_coordinates.lat || !formData.custom_location_coordinates.lng) {
+          console.error("[v0] ERROR: Invalid coordinates:", formData.custom_location_coordinates)
+          toast({
+            title: "Invalid location coordinates",
+            description: "Please drop a new marker on the map",
+            variant: "destructive",
+          })
+          setIsSubmitting(false)
+          return
+        }
+      }
+
       const startTime = new Date()
       startTime.setMinutes(startTime.getMinutes() + formData.start_time_offset)
 
       const dbLocationType = formData.location_type === "community" ? "community_location" : "custom_temporary"
 
-      const result = await createCheckIn(tenantSlug, tenantId, {
+      const checkInData = {
         title: formData.title,
         activity_type: formData.activity_type,
         description: formData.description || null,
@@ -191,7 +232,15 @@ export function CreateCheckInModal({
         custom_location_name: formData.location_type === "custom" ? formData.custom_location_name : null,
         custom_location_coordinates: formData.location_type === "custom" ? formData.custom_location_coordinates : null,
         custom_location_type: formData.location_type === "custom" ? formData.custom_location_type : null,
+      }
+
+      console.log("[v0] CHECK-IN DATA BEING SENT TO SERVER:", {
+        ...checkInData,
+        hasCustomCoordinates: !!checkInData.custom_location_coordinates,
+        customCoordinatesDetail: checkInData.custom_location_coordinates,
       })
+
+      const result = await createCheckIn(tenantSlug, tenantId, checkInData)
 
       if (result.success) {
         toast({
@@ -201,6 +250,10 @@ export function CreateCheckInModal({
         onOpenChange(false)
         router.refresh()
       } else {
+        console.error("[v0] CHECK-IN CREATION FAILED:", {
+          error: result.error,
+          sentData: checkInData,
+        })
         toast({
           title: "Error",
           description: result.error || "Failed to create check-in",
@@ -208,6 +261,7 @@ export function CreateCheckInModal({
         })
       }
     } catch (error) {
+      console.error("[v0] CHECK-IN CREATION EXCEPTION:", error)
       toast({
         title: "Error",
         description: "An unexpected error occurred",

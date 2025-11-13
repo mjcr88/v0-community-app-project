@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Building2, MapPin, XCircle, Loader2, Search, X, ExternalLink } from "lucide-react"
+import { Building2, MapPin, XCircle, Loader2, Search, X, ExternalLink } from 'lucide-react'
 import { GoogleMapViewer } from "@/components/map/google-map-viewer"
 import { GooglePlacesAutocomplete } from "@/components/map/google-places-autocomplete"
 
@@ -102,7 +102,13 @@ export function LocationSelector({
       type?: "pin" | "polygon" | null
       path?: Array<{ lat: number; lng: number }> | null
     }) => {
-      console.log("[v0] Custom location drawn:", data)
+      console.log("[v0] Custom location drawn - FULL DATA:", {
+        hasCoordinates: !!data.coordinates,
+        coordinates: data.coordinates,
+        type: data.type,
+        hasPath: !!data.path,
+        pathLength: data.path?.length || 0,
+      })
       onCustomLocationChange(data)
     },
     [onCustomLocationChange],
@@ -110,7 +116,11 @@ export function LocationSelector({
 
   const handlePlaceAutocompleteSelect = useCallback(
     (place: { name: string; lat: number; lng: number; address?: string }) => {
-      console.log("[v0] Place selected from autocomplete:", place)
+      console.log("[v0] Place selected from autocomplete - DETAILS:", {
+        placeName: place.name,
+        coordinates: { lat: place.lat, lng: place.lng },
+        hasAddress: !!place.address,
+      })
 
       // Update location name
       onCustomLocationNameChange(place.name)
@@ -192,7 +202,10 @@ export function LocationSelector({
   useEffect(() => {
     const handlePlaceSelected = (event: Event) => {
       const customEvent = event as CustomEvent
-      console.log("[v0] Place selected event received from map:", customEvent.detail)
+      console.log("[v0] Place selected event received from map - EVENT DETAIL:", {
+        hasDetail: !!customEvent.detail,
+        detail: customEvent.detail,
+      })
       const { name, lat, lng } = customEvent.detail
 
       onCustomLocationNameChange(name)
@@ -212,9 +225,13 @@ export function LocationSelector({
 
   useEffect(() => {
     if (locationType === "custom" && customLocationCoordinates) {
-      console.log("[v0] Loading saved custom location:", customLocationCoordinates)
+      console.log("[v0] Loading saved custom location - COORDINATES:", {
+        coordinates: customLocationCoordinates,
+        type: customLocationType,
+        hasPath: !!customLocationPath,
+      })
     }
-  }, [locationType, customLocationCoordinates])
+  }, [locationType, customLocationCoordinates, customLocationType, customLocationPath])
 
   const handleMapLocationClick = (locationId: string) => {
     console.log("[v0] Map location clicked, setting highlight:", locationId)

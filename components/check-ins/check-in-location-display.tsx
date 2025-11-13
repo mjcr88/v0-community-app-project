@@ -9,7 +9,8 @@ interface CheckInLocationDisplayProps {
   locationId?: string | null
   locationName?: string | null
   customLocationName?: string | null
-  slug: string
+  slug?: string
+  tenantSlug?: string
   compact?: boolean
   className?: string
 }
@@ -20,9 +21,12 @@ export function CheckInLocationDisplay({
   locationName,
   customLocationName,
   slug,
+  tenantSlug,
   compact = false,
   className,
 }: CheckInLocationDisplayProps) {
+  const routeSlug = tenantSlug || slug
+
   const displayName = locationType === "community_location" ? locationName : customLocationName
 
   if (!displayName) {
@@ -37,10 +41,10 @@ export function CheckInLocationDisplay({
   )
 
   // If it's a community location, make it a link to the map
-  if (locationType === "community_location" && locationId) {
+  if (locationType === "community_location" && locationId && routeSlug) {
     return (
       <Link
-        href={`/t/${slug}/dashboard/map?locationId=${locationId}`}
+        href={`/t/${routeSlug}/dashboard/map?locationId=${locationId}`}
         className="hover:text-foreground transition-colors"
         onClick={(e) => e.stopPropagation()}
       >

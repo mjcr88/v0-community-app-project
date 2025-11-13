@@ -24,26 +24,30 @@ interface CheckInCardProps {
       name: string
     } | null
     custom_location_name?: string | null
-    created_by: string
+    created_by?: string
     creator?: {
       id: string
       first_name: string
       last_name: string
       avatar_url?: string | null
+      profile_picture_url?: string | null
     } | null
-    rsvp_count?: number
+    attending_count?: number
     user_rsvp_status?: string | null
   }
-  slug: string
+  tenantSlug: string
+  tenantId: string
+  userId: string | null
   onClick?: () => void
   className?: string
 }
 
-export function CheckInCard({ checkIn, slug, onClick, className }: CheckInCardProps) {
+export function CheckInCard({ checkIn, tenantSlug, tenantId, userId, onClick, className }: CheckInCardProps) {
   const creatorName = checkIn.creator ? `${checkIn.creator.first_name} ${checkIn.creator.last_name}` : "Unknown"
   const creatorInitials = checkIn.creator ? `${checkIn.creator.first_name[0]}${checkIn.creator.last_name[0]}` : "?"
 
-  const rsvpCount = checkIn.rsvp_count || 0
+  const attendingCount = checkIn.attending_count || 0
+  const avatarUrl = checkIn.creator?.avatar_url || checkIn.creator?.profile_picture_url
 
   return (
     <Card className={cn("p-4 hover:bg-accent transition-colors cursor-pointer", className)} onClick={onClick}>
@@ -52,7 +56,7 @@ export function CheckInCard({ checkIn, slug, onClick, className }: CheckInCardPr
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <Avatar className="h-8 w-8 flex-shrink-0">
-              <AvatarImage src={checkIn.creator?.avatar_url || undefined} />
+              <AvatarImage src={avatarUrl || undefined} />
               <AvatarFallback>{creatorInitials}</AvatarFallback>
             </Avatar>
             <div className="min-w-0">
@@ -83,13 +87,13 @@ export function CheckInCard({ checkIn, slug, onClick, className }: CheckInCardPr
             locationId={checkIn.location_id || checkIn.location?.id}
             locationName={checkIn.location?.name}
             customLocationName={checkIn.custom_location_name}
-            slug={slug}
+            tenantSlug={tenantSlug}
             compact
           />
-          {rsvpCount > 0 && (
+          {attendingCount > 0 && (
             <Badge variant="secondary" className="gap-1 flex-shrink-0">
               <Users className="h-3 w-3" />
-              {rsvpCount}
+              {attendingCount}
             </Badge>
           )}
         </div>

@@ -6,6 +6,7 @@ import { CheckInCard } from "@/components/check-ins/check-in-card"
 import { filterActiveCheckIns } from "@/lib/utils/filter-expired-checkins"
 import { useEffect, useState } from "react"
 import { CreateCheckInButton } from "@/components/check-ins/create-check-in-button"
+import { CheckInDetailModal } from "@/components/check-ins/check-in-detail-modal"
 
 interface CheckIn {
   id: string
@@ -39,6 +40,8 @@ interface LiveCheckInsWidgetProps {
 
 export function LiveCheckInsWidget({ initialCheckIns, tenantSlug, tenantId, userId }: LiveCheckInsWidgetProps) {
   const [checkIns, setCheckIns] = useState(initialCheckIns)
+  const [selectedCheckInId, setSelectedCheckInId] = useState<string | null>(null)
+  const [isDetailOpen, setIsDetailOpen] = useState(false)
 
   // Filter out expired check-ins client-side
   useEffect(() => {
@@ -54,6 +57,11 @@ export function LiveCheckInsWidget({ initialCheckIns, tenantSlug, tenantId, user
 
     return () => clearInterval(interval)
   }, [initialCheckIns])
+
+  function handleCheckInClick(checkInId: string) {
+    setSelectedCheckInId(checkInId)
+    setIsDetailOpen(true)
+  }
 
   if (checkIns.length === 0) {
     return (
@@ -74,29 +82,43 @@ export function LiveCheckInsWidget({ initialCheckIns, tenantSlug, tenantId, user
   }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0">
-        <div>
-          <CardTitle>Live Check-ins</CardTitle>
-          <CardDescription>
-            {checkIns.length} {checkIns.length === 1 ? "resident" : "residents"} active now
-          </CardDescription>
-        </div>
-        <CreateCheckInButton tenantSlug={tenantSlug} tenantId={tenantId} />
-      </CardHeader>
-      <CardContent>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {checkIns.map((checkIn) => (
-            <CheckInCard
-              key={checkIn.id}
-              checkIn={checkIn}
-              tenantSlug={tenantSlug}
-              userId={userId}
-              tenantId={tenantId}
-            />
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+    <>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <div>
+            <CardTitle>Live Check-ins</CardTitle>
+            <CardDescription>
+              {checkIns.length} {checkIns.length === 1 ? "resident" : "residents"} active now
+            </CardDescription>
+          </div>
+          <CreateCheckInButton tenantSlug={tenantSlug} tenantId={tenantId} />
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {checkIns.map((checkIn) => (
+              <CheckInCard
+                key={checkIn.id}
+                checkIn={checkIn}
+                tenantSlug={tenantSlug}
+                userId={userId}
+                tenantId={tenantId}
+                onClick={() => handleCheckInClick(checkIn.id)}
+              />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {selectedCheckInId && (
+        <CheckInDetailModal
+          checkInId={selectedCheckInId}
+          tenantId={tenantId}
+          tenantSlug={tenantSlug}
+          userId={userId}
+          open={isDetailOpen}
+          onOpenChange={setIsDetailOpen}
+        />
+      )}
+    </>
   )
 }

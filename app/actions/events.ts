@@ -34,7 +34,7 @@ export async function createEvent(
   },
 ) {
   try {
-    const supabase = await createServerClient()
+    const supabase = createServerClient()
 
     const {
       data: { user },
@@ -182,7 +182,7 @@ export async function createEvent(
 
 export async function getEvent(eventId: string, tenantId: string) {
   try {
-    const supabase = await createServerClient()
+    const supabase = createServerClient()
 
     const {
       data: { user },
@@ -241,7 +241,7 @@ export async function getEvent(eventId: string, tenantId: string) {
 
 export async function deleteEvent(eventId: string, tenantId: string, tenantSlug: string) {
   try {
-    const supabase = await createServerClient()
+    const supabase = createServerClient()
 
     const {
       data: { user },
@@ -320,7 +320,7 @@ export async function updateEvent(
   },
 ) {
   try {
-    const supabase = await createServerClient()
+    const supabase = createServerClient()
 
     const {
       data: { user },
@@ -506,7 +506,7 @@ export async function updateEvent(
 
 export async function getUpcomingEvents(tenantId: string, limit = 5) {
   try {
-    const supabase = await createServerClient()
+    const supabase = createServerClient()
 
     const {
       data: { user },
@@ -629,7 +629,7 @@ export async function getUpcomingEvents(tenantId: string, limit = 5) {
 
 export async function rsvpToEvent(eventId: string, tenantId: string, status: "yes" | "maybe" | "no") {
   try {
-    const supabase = await createServerClient()
+    const supabase = createServerClient()
 
     const {
       data: { user },
@@ -728,7 +728,7 @@ export async function rsvpToEvent(eventId: string, tenantId: string, status: "ye
 
 export async function getUserRsvpStatus(eventId: string) {
   try {
-    const supabase = await createServerClient()
+    const supabase = createServerClient()
 
     const {
       data: { user },
@@ -759,7 +759,7 @@ export async function getUserRsvpStatus(eventId: string) {
 
 export async function getEventRsvpCounts(eventId: string) {
   try {
-    const supabase = await createServerClient()
+    const supabase = createServerClient()
 
     const { data: rsvps, error } = await supabase
       .from("event_rsvps")
@@ -810,7 +810,7 @@ export async function getEventRsvpCounts(eventId: string) {
 
 export async function saveEvent(eventId: string, tenantId: string) {
   try {
-    const supabase = await createServerClient()
+    const supabase = createServerClient()
 
     const {
       data: { user },
@@ -854,7 +854,7 @@ export async function saveEvent(eventId: string, tenantId: string) {
 
 export async function unsaveEvent(eventId: string, tenantId: string) {
   try {
-    const supabase = await createServerClient()
+    const supabase = createServerClient()
 
     const {
       data: { user },
@@ -891,7 +891,7 @@ export async function unsaveEvent(eventId: string, tenantId: string) {
 
 export async function getUserSavedEvents(userId: string, tenantId: string) {
   try {
-    const supabase = await createServerClient()
+    const supabase = createServerClient()
 
     const { data: savedEvents, error } = await supabase.from("saved_events").select("event_id").eq("user_id", userId)
 
@@ -909,7 +909,7 @@ export async function getUserSavedEvents(userId: string, tenantId: string) {
 
 export async function isEventSaved(eventId: string) {
   try {
-    const supabase = await createServerClient()
+    const supabase = createServerClient()
 
     const {
       data: { user },
@@ -940,7 +940,7 @@ export async function isEventSaved(eventId: string) {
 
 export async function getEventAttendees(eventId: string, tenantId: string) {
   try {
-    const supabase = await createServerClient()
+    const supabase = createServerClient()
 
     const { data: rsvps, error } = await supabase
       .from("event_rsvps")
@@ -999,7 +999,7 @@ export async function saveEventImages(
   heroImageUrl: string | null,
 ) {
   try {
-    const supabase = await createServerClient()
+    const supabase = createServerClient()
 
     const {
       data: { user },
@@ -1071,7 +1071,7 @@ export async function saveEventImages(
 
 export async function getEventImages(eventId: string) {
   try {
-    const supabase = await createServerClient()
+    const supabase = createServerClient()
 
     const { data: images, error } = await supabase
       .from("event_images")
@@ -1099,7 +1099,7 @@ export async function getEventImages(eventId: string) {
 
 export async function adminDeleteEvents(eventIds: string[], tenantId: string, tenantSlug: string) {
   try {
-    const supabase = await createServerClient()
+    const supabase = createServerClient()
 
     const {
       data: { user },
@@ -1142,7 +1142,7 @@ export async function adminDeleteEvents(eventIds: string[], tenantId: string, te
 
 export async function adminCancelEvent(eventId: string, tenantId: string, tenantSlug: string, reason: string) {
   try {
-    const supabase = await createServerClient()
+    const supabase = createServerClient()
 
     const {
       data: { user },
@@ -1193,7 +1193,7 @@ export async function adminCancelEvent(eventId: string, tenantId: string, tenant
 
 export async function adminUnflagEvent(eventId: string, tenantId: string, tenantSlug: string) {
   try {
-    const supabase = await createServerClient()
+    const supabase = createServerClient()
 
     const {
       data: { user },
@@ -1235,7 +1235,7 @@ export async function adminUnflagEvent(eventId: string, tenantId: string, tenant
 
 export async function flagEvent(eventId: string, reason: string, tenantSlug: string) {
   try {
-    const supabase = await createServerClient()
+    const supabase = createServerClient()
 
     const {
       data: { user },
@@ -1321,7 +1321,7 @@ export async function flagEvent(eventId: string, reason: string, tenantSlug: str
 // Admin-specific server action to fetch flag details
 export async function getEventFlagDetails(eventId: string, tenantId: string) {
   try {
-    const supabase = await createServerClient()
+    const supabase = createServerClient()
 
     const {
       data: { user },
@@ -1378,7 +1378,7 @@ export async function getEventFlagDetails(eventId: string, tenantId: string) {
 
 export async function dismissEventFlag(flagId: string, tenantSlug: string) {
   try {
-    const supabase = await createServerClient()
+    const supabase = createServerClient()
 
     const {
       data: { user },
@@ -1436,7 +1436,7 @@ export async function cancelEvent(
   uncancelInstead = false,
 ) {
   try {
-    const supabase = await createServerClient()
+    const supabase = createServerClient()
 
     const {
       data: { user },
@@ -1554,5 +1554,156 @@ export async function cancelEvent(
       success: false,
       error: "An unexpected error occurred. Please try again.",
     }
+  }
+}
+
+export async function getEventsByLocation(locationId: string, tenantId: string) {
+  try {
+    const supabase = createServerClient()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: "User not authenticated", data: [] }
+    }
+
+    // Get user context for visibility filtering
+    const { data: userData } = await supabase.from("users").select("lot_id, family_unit_id").eq("id", user.id).single()
+
+    const today = new Date().toISOString().split("T")[0]
+
+    // Query events for this location (only upcoming, published events)
+    const { data: events, error } = await supabase
+      .from("events")
+      .select(
+        `
+        id,
+        title,
+        description,
+        start_date,
+        end_date,
+        start_time,
+        end_time,
+        is_all_day,
+        event_type,
+        status,
+        visibility_scope,
+        requires_rsvp,
+        max_attendees,
+        rsvp_deadline,
+        tenant_id,
+        location_type,
+        location_id,
+        custom_location_name,
+        event_categories (
+          name,
+          icon
+        ),
+        creator:users!created_by(
+          id,
+          first_name,
+          last_name,
+          profile_picture_url
+        ),
+        location:locations!location_id(id, name, coordinates)
+      `,
+      )
+      .eq("location_id", locationId)
+      .eq("tenant_id", tenantId)
+      .eq("status", "published")
+      .gte("start_date", today)
+      .order("start_date", { ascending: true })
+      .order("start_time", { ascending: true, nullsFirst: false })
+
+    if (error) {
+      console.error("[v0] Error fetching events by location:", error)
+      return { success: false, error: error.message, data: [] }
+    }
+
+    if (!events || events.length === 0) {
+      return { success: true, data: [] }
+    }
+
+    const eventIds = events.map((e) => e.id)
+
+    // Get RSVP data
+    const [{ data: userRsvpStatuses }, { data: allRsvps }, { data: savedEvents }] = await Promise.all([
+      supabase.from("event_rsvps").select("event_id, rsvp_status").eq("user_id", user.id).in("event_id", eventIds),
+      supabase.from("event_rsvps").select("event_id, rsvp_status, attending_count").in("event_id", eventIds),
+      supabase.from("saved_events").select("event_id").eq("user_id", user.id).in("event_id", eventIds),
+    ])
+
+    // Get flag counts for all events using RPC
+    const flagCountsPromises = eventIds.map((eventId) =>
+      supabase.rpc("get_event_flag_count", {
+        p_event_id: eventId,
+        p_tenant_id: tenantId,
+      }),
+    )
+
+    const flagCountsResults = await Promise.all(flagCountsPromises)
+    const flagCountsMap = new Map<string, number>()
+    eventIds.forEach((eventId, index) => {
+      flagCountsMap.set(eventId, flagCountsResults[index]?.data ?? 0)
+    })
+
+    // Create lookup maps
+    const rsvpMap = new Map(userRsvpStatuses?.map((r) => [r.event_id, r.rsvp_status]) || [])
+    const savedSet = new Set(savedEvents?.map((s) => s.event_id) || [])
+
+    // Calculate attending counts per event
+    const attendingCountMap = new Map<string, number>()
+    allRsvps?.forEach((rsvp) => {
+      if (rsvp.rsvp_status === "yes") {
+        const current = attendingCountMap.get(rsvp.event_id) || 0
+        attendingCountMap.set(rsvp.event_id, current + (rsvp.attending_count || 1))
+      }
+    })
+
+    // Enhance events with user data
+    const eventsWithUserData = events.map((event) => ({
+      ...event,
+      user_rsvp_status: rsvpMap.get(event.id) || null,
+      is_saved: savedSet.has(event.id),
+      attending_count: attendingCountMap.get(event.id) || 0,
+      flag_count: flagCountsMap.get(event.id) || 0,
+    }))
+
+    return { success: true, data: eventsWithUserData }
+  } catch (error) {
+    console.error("[v0] Unexpected error fetching events by location:", error)
+    return {
+      success: false,
+      error: "An unexpected error occurred. Please try again.",
+      data: [],
+    }
+  }
+}
+
+export async function getLocationEventCount(locationId: string, tenantId: string) {
+  try {
+    const supabase = createServerClient()
+
+    const today = new Date().toISOString().split("T")[0]
+
+    const { count, error } = await supabase
+      .from("events")
+      .select("*", { count: "exact", head: true })
+      .eq("location_id", locationId)
+      .eq("tenant_id", tenantId)
+      .eq("status", "published")
+      .gte("start_date", today)
+
+    if (error) {
+      console.error("[v0] Error counting events by location:", error)
+      return 0
+    }
+
+    return count || 0
+  } catch (error) {
+    console.error("[v0] Unexpected error counting events by location:", error)
+    return 0
   }
 }

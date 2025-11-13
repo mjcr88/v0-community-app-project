@@ -232,80 +232,22 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
   const [loadingCheckIns, setLoadingCheckIns] = useState(false)
 
   useEffect(() => {
-    // Initialize check-ins from prop
-    if (initialCheckIns && initialCheckIns.length > 0) {
-      setCheckIns(initialCheckIns)
-      return
-    }
-
-    if (!tenantId) {
-      console.log("[v0] No tenantId provided, skipping check-ins load")
-      return
-    }
-
-    const loadCheckIns = async () => {
-      try {
-        console.log("[v0] Loading check-ins client-side for tenant:", tenantId)
-        const supabase = createBrowserClient()
-
-        const eightHoursAgo = new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString()
-
-        const { data, error } = await supabase
-          .from("check_ins")
-          .select(
-            `
-            *,
-            created_by_user:users!created_by(id, first_name, last_name, profile_picture_url),
-            location:locations!location_id(id, name, coordinates, boundary_coordinates, path_coordinates)
-          `,
-          )
-          .eq("tenant_id", tenantId)
-          .eq("status", "active")
-          .gte("start_time", eightHoursAgo)
-          .order("start_time", { ascending: false })
-
-        if (error) {
-          console.error("[v0] Error loading check-ins:", error)
-          return
-        }
-
-        if (!data) {
-          console.log("[v0] No check-ins data returned")
-          setCheckIns([])
-          return
-        }
-
-        const now = new Date()
-        const activeCheckIns = data.filter((checkIn) => {
-          const expiresAt = new Date(checkIn.start_time)
-          expiresAt.setMinutes(expiresAt.getMinutes() + checkIn.duration_minutes)
-          return expiresAt > now
-        })
-
-        console.log("[v0] Check-ins loaded successfully:", {
-          count: activeCheckIns.length,
-          sample: activeCheckIns[0]
-            ? {
-                id: activeCheckIns[0].id,
-                title: activeCheckIns[0].title,
-                location_type: activeCheckIns[0].location_type,
-                has_location: !!activeCheckIns[0].location,
-                has_creator: !!activeCheckIns[0].created_by_user,
-              }
-            : null,
-        })
-
-        setCheckIns(activeCheckIns)
-      } catch (error) {
-        console.error("[v0] Error loading check-ins:", error)
-      }
-    }
-
-    // Only refresh periodically, don't fetch immediately on mount
-    const interval = setInterval(loadCheckIns, 120000) // 2 minutes
-
-    return () => clearInterval(interval)
-  }, [tenantId, initialCheckIns])
+    console.log("[v0] GoogleMapViewer - initialCheckIns prop received:", {
+      count: initialCheckIns.length,
+      checkIns: initialCheckIns.map((c) => ({
+        id: c.id,
+        title: c.title,
+        location_type: c.location_type,
+        has_location: !!c.location,
+        has_custom_coords: !!c.custom_location_coordinates,
+        location_coords: c.location?.coordinates || null,
+        location_boundary: c.location?.boundary_coordinates || null,
+        location_path: c.location?.path_coordinates || null,
+      })),
+    })
+    
+    setCheckIns(initialCheckIns)
+  }, [initialCheckIns])
 
   const [markerPosition, setMarkerPosition] = useState<{ lat: number; lng: number } | null>(drawnCoordinates || null)
   const [polygonPoints, setPolygonPoints] = useState<Array<{ lat: number; lng: number }>>(drawnPath || [])

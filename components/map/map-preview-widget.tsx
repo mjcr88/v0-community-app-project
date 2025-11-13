@@ -3,7 +3,7 @@
 import { GoogleMapViewer } from "@/components/map/google-map-viewer"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import Link from "next/link"
-import { ExternalLink } from "lucide-react"
+import { ExternalLink } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 
 interface MapPreviewWidgetProps {
@@ -13,6 +13,7 @@ interface MapPreviewWidgetProps {
   mapCenter: { lat: number; lng: number } | null
   highlightLocationId?: string
   mapZoom?: number
+  checkIns?: any[] // Add checkIns prop
 }
 
 export function MapPreviewWidget({
@@ -22,6 +23,7 @@ export function MapPreviewWidget({
   mapCenter,
   highlightLocationId,
   mapZoom = 12,
+  checkIns = [], // Add checkIns with default empty array
 }: MapPreviewWidgetProps) {
   return (
     <Card>
@@ -43,6 +45,7 @@ export function MapPreviewWidget({
             locations={locations}
             tenantId={tenantId}
             tenantSlug={tenantSlug}
+            checkIns={checkIns}
             mapCenter={mapCenter}
             mapZoom={mapZoom}
             isAdmin={false}

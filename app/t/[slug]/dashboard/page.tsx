@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Users, MapPin, Globe, Languages, PawPrint, Home, MapIcon } from "lucide-react"
+import { Users, MapPin, Globe, Languages, PawPrint, Home, MapIcon } from 'lucide-react'
 import Link from "next/link"
 import { MapPreviewWidget } from "@/components/map/map-preview-widget"
 import { UpcomingEventsWidget } from "@/components/dashboard/upcoming-events-widget"
@@ -275,6 +275,7 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
                 locations={allLocations}
                 mapCenter={mapCenter}
                 highlightLocationId={lotLocation?.lot_id ? lotLocation.id : undefined}
+                checkIns={activeCheckIns}
               />
               <p className="text-xs text-center text-muted-foreground">
                 Interact with map or click expand button to view full map

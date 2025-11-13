@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback } from "react"
-import { APIProvider, Map, Marker, OverlayView } from "@vis.gl/react-google-maps"
+import { APIProvider, Map, Marker, AdvancedMarker } from "@vis.gl/react-google-maps"
 import { Polygon } from "./polygon"
 import { Polyline } from "./polyline"
 import { createBrowserClient } from "@/lib/supabase/client"
@@ -955,18 +955,22 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
           })}
 
           {checkInsWithCoords.map((checkIn) => (
-            <OverlayView key={checkIn.id} position={checkIn.coordinates} mapPaneName="overlayMouseTarget">
-              <div
-                className="relative cursor-pointer"
-                onClick={() => handleCheckInClick(checkIn)}
-                style={{ transform: "translate(-50%, -100%)" }}
-              >
+            <AdvancedMarker
+              key={checkIn.id}
+              position={checkIn.coordinates}
+              onClick={() => handleCheckInClick(checkIn)}
+              zIndex={200}
+            >
+              <div className="relative cursor-pointer" style={{ transform: "translateY(-100%)" }}>
                 {/* Profile Picture Circle */}
                 <div className="relative w-12 h-12 rounded-full border-4 border-green-500 bg-white overflow-hidden shadow-lg hover:border-green-600 transition-colors">
                   <img
                     src={
                       checkIn.created_by_user?.profile_picture_url ||
-                      "/placeholder.svg?height=48&width=48&query=user+avatar"
+                      "/placeholder.svg?height=48&width=48&query=user+avatar" ||
+                      "/placeholder.svg" ||
+                      "/placeholder.svg" ||
+                      "/placeholder.svg"
                     }
                     alt={checkIn.title}
                     className="w-full h-full object-cover"
@@ -992,7 +996,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   }}
                 />
               </div>
-            </OverlayView>
+            </AdvancedMarker>
           ))}
 
           {markerPosition && drawingMode && (

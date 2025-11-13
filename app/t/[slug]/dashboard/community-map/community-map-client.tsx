@@ -20,7 +20,6 @@ interface CommunityMapClientProps {
     recreationalZones: number
   }
   locations: any[]
-  checkIns: any[]
   mapCenter: { lat: number; lng: number } | null
   boundaryLocationId?: string
   mapZoom?: number
@@ -32,7 +31,6 @@ export function CommunityMapClient({
   tenantId,
   counts,
   locations,
-  checkIns,
   mapCenter,
   boundaryLocationId,
   mapZoom = 14,
@@ -62,7 +60,6 @@ export function CommunityMapClient({
         tenantSlug={slug}
         tenantId={tenantId}
         locations={locations}
-        checkIns={checkIns}
         mapCenter={mapCenter}
         highlightLocationId={boundaryLocationId}
         mapZoom={mapZoom}

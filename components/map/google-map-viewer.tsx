@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback } from "react"
-import { APIProvider, Map, Marker } from "@vis.gl/react-google-maps"
+import { APIProvider, Map, Marker, OverlayView } from "@vis.gl/react-google-maps"
 import { Polygon } from "./polygon"
 import { Polyline } from "./polyline"
 import { createBrowserClient } from "@/lib/supabase/client"
@@ -20,7 +20,6 @@ import {
 import Link from "next/link"
 import { MapPin, Trash2, Filter, Layers, Locate, Plus } from "lucide-react"
 import { getLocationEventCount } from "@/app/actions/events"
-import { filterActiveCheckIns } from "@/lib/utils/filter-expired-checkins"
 import { CheckInDetailModal } from "@/components/check-ins/check-in-detail-modal" // Declare the CheckInDetailModal variable
 
 interface Location {
@@ -103,6 +102,58 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
   const [showBoundary, setShowBoundary] = useState(true)
   const [tenantBoundary, setTenantBoundary] = useState<Array<{ lat: number; lng: number }> | null>(null)
   const [boundaryLocationsFromTable, setBoundaryLocationsFromTable] = useState<Location[] | null>(null)
+
+  const [checkIns, setCheckIns] = useState<any[]>([])
+  const [loadingCheckIns, setLoadingCheckIns] = useState(false)
+
+  // Fetch check-ins on mount (following events pattern)
+  useEffect(() => {
+    if (!tenantId) {
+      console.log("[v0] No tenantId provided, skipping check-ins load")
+      return
+    }
+
+    const loadCheckIns = async () => {
+      setLoadingCheckIns(true)
+      console.log("[v0] Loading check-ins client-side for tenant:", tenantId)
+
+      const supabase = createBrowserClient()
+      const { data, error } = await supabase
+        .from("check_ins")
+        .select(`
+          *,
+          created_by_user:users!created_by(id, first_name, last_name, profile_picture_url),
+          location:locations!location_id(id, name, coordinates, boundary_coordinates, path_coordinates)
+        `)
+        .eq("tenant_id", tenantId)
+        .eq("status", "active")
+        .order("start_time", { ascending: false })
+
+      if (error) {
+        console.error("[v0] Error loading check-ins:", error)
+        setLoadingCheckIns(false)
+        return
+      }
+
+      console.log("[v0] Check-ins loaded successfully:", {
+        count: data?.length || 0,
+        sample: data?.[0]
+          ? {
+              id: data[0].id,
+              title: data[0].title,
+              location_type: data[0].location_type,
+              has_location: !!data[0].location,
+              has_creator: !!data[0].created_by_user,
+            }
+          : null,
+      })
+
+      setCheckIns(data || [])
+      setLoadingCheckIns(false)
+    }
+
+    loadCheckIns()
+  }, [tenantId])
 
   const [markerPosition, setMarkerPosition] = useState<{ lat: number; lng: number } | null>(drawnCoordinates || null)
   const [polygonPoints, setPolygonPoints] = useState<Array<{ lat: number; lng: number }>>(drawnPath || [])
@@ -354,21 +405,67 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
     })
   }, [initialCheckIns])
 
-  const activeCheckIns = useMemo(() => {
-    const filtered = filterActiveCheckIns(initialCheckIns)
-    console.log("[v0] GoogleMapViewer - activeCheckIns filtered:", {
-      initialCount: initialCheckIns.length,
-      activeCount: filtered.length,
-      checkIns: filtered.map((c) => ({
-        id: c.id,
-        title: c.title,
-        location_type: c.location_type,
-        has_location: !!c.location,
-        has_custom_coords: !!c.custom_location_coordinates,
-      })),
+  const checkInsWithCoords = useMemo(() => {
+    // Filter out expired check-ins
+    const now = new Date()
+    const activeCheckIns = checkIns.filter((checkIn) => {
+      if (!checkIn.end_time) return true
+      const endTime = new Date(checkIn.end_time)
+      return endTime > now
     })
-    return filtered
-  }, [initialCheckIns])
+
+    console.log("[v0] Active check-ins after filtering:", {
+      total: checkIns.length,
+      active: activeCheckIns.length,
+    })
+
+    // Extract coordinates
+    return activeCheckIns
+      .map((checkIn) => {
+        let coordinates: { lat: number; lng: number } | null = null
+
+        // Community location
+        if (checkIn.location_type === "community_location" && checkIn.location) {
+          if (checkIn.location.coordinates) {
+            coordinates = checkIn.location.coordinates
+          } else if (
+            checkIn.location.path_coordinates &&
+            Array.isArray(checkIn.location.path_coordinates) &&
+            checkIn.location.path_coordinates.length > 0
+          ) {
+            const [lat, lng] = checkIn.location.path_coordinates[0]
+            coordinates = { lat, lng }
+          } else if (
+            checkIn.location.boundary_coordinates &&
+            Array.isArray(checkIn.location.boundary_coordinates) &&
+            checkIn.location.boundary_coordinates.length > 0
+          ) {
+            const lats = checkIn.location.boundary_coordinates.map((c) => c[0])
+            const lngs = checkIn.location.boundary_coordinates.map((c) => c[1])
+            coordinates = {
+              lat: lats.reduce((a, b) => a + b, 0) / lats.length,
+              lng: lngs.reduce((a, b) => a + b, 0) / lngs.length,
+            }
+          }
+        }
+        // Custom location
+        else if (checkIn.location_type === "custom_temporary" && checkIn.custom_location_coordinates) {
+          coordinates = checkIn.custom_location_coordinates
+        }
+
+        if (coordinates) {
+          console.log("[v0] Check-in with coords:", checkIn.title, coordinates)
+        } else {
+          console.log("[v0] Check-in WITHOUT coords:", checkIn.title, {
+            location_type: checkIn.location_type,
+            has_location: !!checkIn.location,
+          })
+        }
+
+        return { ...checkIn, coordinates }
+      })
+      .filter((checkIn) => checkIn.coordinates !== null)
+  }, [checkIns])
 
   const handleMapClick = useCallback(
     (e: any) => {
@@ -857,56 +954,46 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
             )
           })}
 
-          {activeCheckIns.map((checkIn) => {
-            // Determine coordinates based on location type
-            let coordinates: { lat: number; lng: number } | null = null
-
-            if (checkIn.location_type === "community_location" && checkIn.location?.coordinates) {
-              coordinates = checkIn.location.coordinates
-              console.log("[v0] Check-in has direct coordinates:", checkIn.title, coordinates)
-            } else if (checkIn.location_type === "community_location" && checkIn.location?.path_coordinates) {
-              const [lat, lng] = checkIn.location.path_coordinates[0]
-              coordinates = { lat, lng }
-              console.log("[v0] Check-in using path_coordinates first point:", checkIn.title, coordinates)
-            } else if (checkIn.location_type === "community_location" && checkIn.location?.boundary_coordinates) {
-              const lats = checkIn.location.boundary_coordinates.map((c) => c[0])
-              const lngs = checkIn.location.boundary_coordinates.map((c) => c[1])
-              coordinates = {
-                lat: lats.reduce((a, b) => a + b, 0) / lats.length,
-                lng: lngs.reduce((a, b) => a + b, 0) / lngs.length,
-              }
-              console.log("[v0] Check-in using boundary_coordinates center:", checkIn.title, coordinates)
-            } else if (checkIn.location_type === "custom_temporary" && checkIn.custom_location_coordinates) {
-              coordinates = checkIn.custom_location_coordinates
-              console.log("[v0] Check-in has custom coordinates:", checkIn.title, coordinates)
-            }
-
-            if (!coordinates) {
-              console.log("[v0] Check-in skipped - no coordinates:", checkIn.title, {
-                location_type: checkIn.location_type,
-                has_location: !!checkIn.location,
-                has_custom_coords: !!checkIn.custom_location_coordinates,
-              })
-              return null
-            }
-
-            console.log("[v0] Rendering check-in marker:", checkIn.title, "at", coordinates)
-
-            return (
-              <Marker
-                key={checkIn.id}
-                position={coordinates}
+          {checkInsWithCoords.map((checkIn) => (
+            <OverlayView key={checkIn.id} position={checkIn.coordinates} mapPaneName="overlayMouseTarget">
+              <div
+                className="relative cursor-pointer"
                 onClick={() => handleCheckInClick(checkIn)}
-                zIndex={200}
-                icon={{
-                  url: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='48' viewBox='0 0 32 48'%3E%3Cpath fill='%2310b981' stroke='%23ffffff' strokeWidth='2' d='M16 0C8.8 0 3 5.8 3 13c0 8.5 13 35 13 35s13-26.5 13-35c0-7.2-5.8-13-13-13zm0 18c-2.8 0-5-2.2-5-5s2.2-5 5-5 5 2.2 5 5-2.2 5-5 5z'/%3E%3C/svg%3E",
-                  scaledSize: { width: 28, height: 42 },
-                  anchor: { x: 14, y: 42 },
-                }}
-                title={`${checkIn.title} • ${checkIn.attending_count} coming`}
-              />
-            )
-          })}
+                style={{ transform: "translate(-50%, -100%)" }}
+              >
+                {/* Profile Picture Circle */}
+                <div className="relative w-12 h-12 rounded-full border-4 border-green-500 bg-white overflow-hidden shadow-lg hover:border-green-600 transition-colors">
+                  <img
+                    src={
+                      checkIn.created_by_user?.profile_picture_url ||
+                      "/placeholder.svg?height=48&width=48&query=user+avatar"
+                    }
+                    alt={checkIn.title}
+                    className="w-full h-full object-cover"
+                  />
+
+                  {/* Attending Count Badge */}
+                  {checkIn.attending_count > 0 && (
+                    <div className="absolute -top-1 -right-1 bg-green-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center border-2 border-white">
+                      {checkIn.attending_count}
+                    </div>
+                  )}
+                </div>
+
+                {/* Pointer Stem */}
+                <div
+                  className="absolute left-1/2 -translate-x-1/2"
+                  style={{
+                    width: 0,
+                    height: 0,
+                    borderLeft: "8px solid transparent",
+                    borderRight: "8px solid transparent",
+                    borderTop: "8px solid rgb(34, 197, 94)", // green-500
+                  }}
+                />
+              </div>
+            </OverlayView>
+          ))}
 
           {markerPosition && drawingMode && (
             <Marker

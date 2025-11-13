@@ -264,8 +264,14 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     if (cancelledBy) {
       const isAdmin =
         cancelledBy.is_tenant_admin || cancelledBy.role === "super_admin" || cancelledBy.role === "tenant_admin"
+      const displayName =
+        cancelledBy.first_name && cancelledBy.last_name
+          ? `${cancelledBy.first_name} ${cancelledBy.last_name}`
+          : isAdmin
+            ? "Admin"
+            : "Creator"
       cancellationDetails = {
-        cancelledBy: `${cancelledBy.first_name} ${cancelledBy.last_name}`,
+        cancelledBy: displayName,
         cancelledByRole: isAdmin ? "Admin" : "Creator",
         cancelledAt: event.cancelled_at,
         reason: event.cancellation_reason,
@@ -380,8 +386,9 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
               </div>
               <div className="space-y-2 text-sm">
                 <p>
-                  <span className="font-medium">Cancelled by:</span> {cancellationDetails.cancelledBy} (
-                  {cancellationDetails.cancelledByRole})
+                  <span className="font-medium">Cancelled by:</span> {cancellationDetails.cancelledBy}
+                  {cancellationDetails.cancelledBy !== cancellationDetails.cancelledByRole &&
+                    ` (${cancellationDetails.cancelledByRole})`}
                 </p>
                 {cancellationDetails.cancelledAt && (
                   <p>

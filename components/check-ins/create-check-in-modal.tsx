@@ -18,7 +18,7 @@ import { useToast } from "@/hooks/use-toast"
 import { NeighborhoodMultiSelect } from "@/components/event-forms/neighborhood-multi-select"
 import { ResidentInviteSelector } from "@/components/event-forms/resident-invite-selector"
 import { LocationSelector } from "@/components/event-forms/location-selector"
-import { CHECK_IN_ACTIVITIES, getActivityIcon } from "@/lib/check-in-activities"
+import { CHECK_IN_ACTIVITIES } from "@/lib/check-in-activities"
 
 interface CreateCheckInModalProps {
   open: boolean
@@ -256,11 +256,11 @@ export function CreateCheckInModal({
                   </SelectTrigger>
                   <SelectContent>
                     {CHECK_IN_ACTIVITIES.map((activity) => {
-                      const Icon = getActivityIcon(activity.value)
+                      const IconComponent = activity.icon
                       return (
                         <SelectItem key={activity.value} value={activity.value}>
                           <span className="flex items-center gap-2">
-                            <Icon className="h-4 w-4" />
+                            <IconComponent className="h-4 w-4" />
                             {activity.label}
                           </span>
                         </SelectItem>

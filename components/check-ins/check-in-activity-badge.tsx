@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge"
-import { getActivityIcon } from "@/lib/check-in-activities"
+import { getActivityIcon, getActivityLabel } from "@/lib/check-in-activities"
+import { cn } from "@/lib/utils"
 
 interface CheckInActivityBadgeProps {
   activityType: string
@@ -7,12 +8,13 @@ interface CheckInActivityBadgeProps {
 }
 
 export function CheckInActivityBadge({ activityType, className }: CheckInActivityBadgeProps) {
-  const { icon: Icon, label } = getActivityIcon(activityType)
+  const IconComponent = getActivityIcon(activityType)
+  const label = getActivityLabel(activityType)
 
   return (
-    <Badge variant="outline" className={`gap-1 text-xs bg-blue-50 text-blue-700 border-blue-200 ${className || ""}`}>
-      <Icon className="h-3 w-3" />
-      {label}
+    <Badge variant="outline" className={cn("flex items-center gap-1.5 text-blue-600 border-blue-200", className)}>
+      <IconComponent className="h-3.5 w-3.5" />
+      <span className="text-xs font-medium">{label}</span>
     </Badge>
   )
 }

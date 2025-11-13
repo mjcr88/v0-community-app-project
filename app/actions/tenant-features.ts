@@ -66,3 +66,20 @@ export async function toggleEventsFeature(tenantId: string, enabled: boolean) {
   revalidatePath("/backoffice/dashboard/tenants", "layout")
   return { success: true }
 }
+
+/**
+ * Toggle check-ins feature for a tenant
+ */
+export async function toggleCheckInsFeature(tenantId: string, enabled: boolean) {
+  const supabase = await createServerClient()
+
+  const { error } = await supabase.from("tenants").update({ checkins_enabled: enabled }).eq("id", tenantId)
+
+  if (error) {
+    console.error("[v0] Error toggling check-ins feature:", error)
+    throw new Error(error.message)
+  }
+
+  revalidatePath("/backoffice/dashboard/tenants", "layout")
+  return { success: true }
+}

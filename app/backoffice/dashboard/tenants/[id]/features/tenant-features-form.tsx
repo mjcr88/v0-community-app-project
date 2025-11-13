@@ -142,7 +142,7 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
     onboarding: true,
     map: true,
     events: false,
-    checkins: false, // Added default for check-ins
+    checkins: false,
     location_types: {
       facility: true,
       lot: true,
@@ -169,7 +169,7 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
     onboarding?: boolean
     map?: boolean
     events?: boolean
-    checkins?: boolean // Added to state type
+    checkins?: boolean
     location_types?: {
       facility?: boolean
       lot?: boolean
@@ -186,6 +186,8 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
   }>({
     ...defaultFeatures,
     ...tenant.features,
+    events: tenant.events_enabled ?? false, // Read from tenant.events_enabled column
+    checkins: tenant.checkins_enabled ?? false, // Read from tenant.checkins_enabled column
     location_types: {
       ...defaultFeatures.location_types,
       ...(tenant.features?.location_types || {}),
@@ -193,6 +195,8 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
   })
 
   console.log("[v0] Tenant features from DB:", tenant.features)
+  console.log("[v0] Tenant events_enabled:", tenant.events_enabled)
+  console.log("[v0] Tenant checkins_enabled:", tenant.checkins_enabled)
   console.log("[v0] Initialized form state:", features)
 
   const [visibilityScope, setVisibilityScope] = useState<"neighborhood" | "tenant">(

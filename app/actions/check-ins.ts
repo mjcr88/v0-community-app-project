@@ -219,7 +219,7 @@ export async function getActiveCheckIns(tenantId: string) {
 
     console.log("[v0] getActiveCheckIns - Fetching check-ins for tenant:", tenantId)
 
-    // Fetch all active check-ins
+    // The database will filter out expired check-ins: start_time + duration_minutes < NOW()
     const { data: checkIns, error } = await supabase
       .from("check_ins")
       .select(
@@ -231,6 +231,7 @@ export async function getActiveCheckIns(tenantId: string) {
       )
       .eq("tenant_id", tenantId)
       .eq("status", "active")
+      .filter("start_time", "gte", new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString()) // Only check-ins from last 8 hours (max duration)
       .order("start_time", { ascending: false })
 
     console.log("[v0] getActiveCheckIns - Raw Supabase response:", {
@@ -260,9 +261,16 @@ export async function getActiveCheckIns(tenantId: string) {
       return []
     }
 
+    // This ensures consistency until the database function is executed
+    const now = new Date()
+    const nonExpiredCheckIns = checkIns.filter((checkIn) => {
+      const expiresAt = new Date(checkIn.start_time)
+      expiresAt.setMinutes(expiresAt.getMinutes() + checkIn.duration_minutes)
+      return expiresAt > now
+    })
+
     // Filter by visibility (application-level)
-    // Note: Will be enhanced with proper visibility filter similar to events
-    const visibleCheckIns = checkIns.filter((checkIn) => {
+    const visibleCheckIns = nonExpiredCheckIns.filter((checkIn) => {
       if (checkIn.visibility_scope === "community") {
         return true
       }
@@ -273,8 +281,9 @@ export async function getActiveCheckIns(tenantId: string) {
       return false
     })
 
-    console.log("[v0] getActiveCheckIns - After visibility filter:", {
+    console.log("[v0] getActiveCheckIns - After filtering:", {
       initialCount: checkIns.length,
+      nonExpiredCount: nonExpiredCheckIns.length,
       visibleCount: visibleCheckIns.length,
     })
 

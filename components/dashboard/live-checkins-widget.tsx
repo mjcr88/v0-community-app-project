@@ -3,8 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Activity } from "lucide-react"
 import { CheckInCard } from "@/components/check-ins/check-in-card"
-import { filterActiveCheckIns } from "@/lib/utils/filter-expired-checkins"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { CreateCheckInButton } from "@/components/check-ins/create-check-in-button"
 import { CheckInDetailModal } from "@/components/check-ins/check-in-detail-modal"
 
@@ -39,24 +38,9 @@ interface LiveCheckInsWidgetProps {
 }
 
 export function LiveCheckInsWidget({ initialCheckIns, tenantSlug, tenantId, userId }: LiveCheckInsWidgetProps) {
-  const [checkIns, setCheckIns] = useState(initialCheckIns)
+  const [checkIns] = useState(initialCheckIns)
   const [selectedCheckInId, setSelectedCheckInId] = useState<string | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
-
-  // Filter out expired check-ins client-side
-  useEffect(() => {
-    // Filter on mount
-    const active = filterActiveCheckIns(initialCheckIns)
-    setCheckIns(active)
-
-    // Re-filter every minute to auto-remove expired check-ins
-    const interval = setInterval(() => {
-      const stillActive = filterActiveCheckIns(checkIns)
-      setCheckIns(stillActive)
-    }, 60000) // 1 minute
-
-    return () => clearInterval(interval)
-  }, [initialCheckIns])
 
   function handleCheckInClick(checkInId: string) {
     setSelectedCheckInId(checkInId)

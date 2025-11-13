@@ -10,7 +10,6 @@ import { CreateCheckInButton } from "@/components/check-ins/create-check-in-butt
 import { CheckInsCountWidget } from "@/components/dashboard/checkins-count-widget"
 import { LiveCheckInsWidget } from "@/components/dashboard/live-checkins-widget"
 import { getActiveCheckIns } from "@/app/actions/check-ins"
-import { filterActiveCheckIns } from "@/lib/utils/filter-expired-checkins"
 
 export default async function ResidentDashboardPage({ params }: { params: { slug: string } }) {
   const { slug } = params
@@ -200,9 +199,7 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
 
   let activeCheckIns: any[] = []
   if (checkinsEnabled) {
-    const allCheckIns = await getActiveCheckIns(resident.tenant_id)
-    // Filter expired check-ins server-side
-    activeCheckIns = filterActiveCheckIns(allCheckIns)
+    activeCheckIns = await getActiveCheckIns(resident.tenant_id)
   }
 
   return (

@@ -115,45 +115,71 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
     }
 
     const loadCheckIns = async () => {
-      setLoadingCheckIns(true)
-      console.log("[v0] Loading check-ins client-side for tenant:", tenantId)
+      try {
+        console.log("[v0] Loading check-ins client-side for tenant:", tenantId)
+        const supabase = createBrowserClient()
 
-      const supabase = createBrowserClient()
-      const { data, error } = await supabase
-        .from("check_ins")
-        .select(`
-          *,
-          created_by_user:users!created_by(id, first_name, last_name, profile_picture_url),
-          location:locations!location_id(id, name, coordinates, boundary_coordinates, path_coordinates)
-        `)
-        .eq("tenant_id", tenantId)
-        .eq("status", "active")
-        .order("start_time", { ascending: false })
+        // Calculate time 8 hours ago (max check-in duration)
+        const eightHoursAgo = new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString()
 
-      if (error) {
+        const { data, error } = await supabase
+          .from("check_ins")
+          .select(
+            `
+            *,
+            created_by_user:users!created_by(id, first_name, last_name, profile_picture_url),
+            location:locations!location_id(id, name, coordinates, boundary_coordinates, path_coordinates)
+          `,
+          )
+          .eq("tenant_id", tenantId)
+          .eq("status", "active")
+          .gte("start_time", eightHoursAgo)
+          .order("start_time", { ascending: false })
+
+        if (error) {
+          console.error("[v0] Error loading check-ins:", error)
+          return
+        }
+
+        if (!data) {
+          console.log("[v0] No check-ins data returned")
+          setCheckIns([])
+          return
+        }
+
+        // Filter expired check-ins client-side (calculating: start_time + duration_minutes < NOW())
+        const now = new Date()
+        const activeCheckIns = data.filter((checkIn) => {
+          const expiresAt = new Date(checkIn.start_time)
+          expiresAt.setMinutes(expiresAt.getMinutes() + checkIn.duration_minutes)
+          return expiresAt > now
+        })
+
+        console.log("[v0] Check-ins loaded successfully:", {
+          count: activeCheckIns.length,
+          sample: activeCheckIns[0]
+            ? {
+                id: activeCheckIns[0].id,
+                title: activeCheckIns[0].title,
+                location_type: activeCheckIns[0].location_type,
+                has_location: !!activeCheckIns[0].location,
+                has_creator: !!activeCheckIns[0].created_by_user,
+              }
+            : null,
+        })
+
+        setCheckIns(activeCheckIns)
+      } catch (error) {
         console.error("[v0] Error loading check-ins:", error)
-        setLoadingCheckIns(false)
-        return
       }
-
-      console.log("[v0] Check-ins loaded successfully:", {
-        count: data?.length || 0,
-        sample: data?.[0]
-          ? {
-              id: data[0].id,
-              title: data[0].title,
-              location_type: data[0].location_type,
-              has_location: !!data[0].location,
-              has_creator: !!data[0].created_by_user,
-            }
-          : null,
-      })
-
-      setCheckIns(data || [])
-      setLoadingCheckIns(false)
     }
 
     loadCheckIns()
+
+    // This reduces client-side processing while keeping data reasonably fresh
+    const interval = setInterval(loadCheckIns, 120000) // 2 minutes
+
+    return () => clearInterval(interval)
   }, [tenantId])
 
   const [markerPosition, setMarkerPosition] = useState<{ lat: number; lng: number } | null>(drawnCoordinates || null)
@@ -407,17 +433,12 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
   }, [initialCheckIns])
 
   const checkInsWithCoords = useMemo(() => {
-    const now = new Date()
-    const activeCheckIns = checkIns.filter((checkIn) => {
-      if (!checkIn.end_time) return true
-      const endTime = new Date(checkIn.end_time)
-      return endTime > now
-    })
+    const activeCheckIns = checkIns
 
     console.log("[v0] Active check-ins after expiration filtering:", {
       total: checkIns.length,
       active: activeCheckIns.length,
-      expired: checkIns.length - activeCheckIns.length,
+      expired: 0, // Already filtered in useEffect
     })
 
     // Extract coordinates

@@ -1,5 +1,3 @@
-"use client"
-
 import { notFound, redirect } from "next/navigation"
 import { createServerClient } from "@/lib/supabase/server"
 import { getEvent } from "@/app/actions/events"

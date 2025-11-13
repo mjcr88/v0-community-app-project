@@ -175,7 +175,7 @@ export async function getCheckInById(checkInId: string, tenantId: string) {
         `
         *,
         created_by_user:users!created_by(id, first_name, last_name, profile_picture_url),
-        location:locations!location_id(id, name, coordinates)
+        location:locations!location_id(id, name, coordinates, boundary_coordinates, path_coordinates)
       `,
       )
       .eq("id", checkInId)
@@ -223,7 +223,7 @@ export async function getActiveCheckIns(tenantId: string) {
         `
         *,
         created_by_user:users!created_by(id, first_name, last_name, profile_picture_url),
-        location:locations!location_id(id, name, coordinates)
+        location:locations!location_id(id, name, coordinates, boundary_coordinates, path_coordinates)
       `,
       )
       .eq("tenant_id", tenantId)
@@ -241,6 +241,8 @@ export async function getActiveCheckIns(tenantId: string) {
             location_id: checkIns[0].location_id,
             has_location_data: !!checkIns[0].location,
             location_coordinates: checkIns[0].location?.coordinates,
+            location_boundary_coordinates: checkIns[0].location?.boundary_coordinates,
+            location_path_coordinates: checkIns[0].location?.path_coordinates,
             custom_location_coordinates: checkIns[0].custom_location_coordinates,
             created_by_user: checkIns[0].created_by_user,
           }

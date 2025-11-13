@@ -22,6 +22,7 @@ import { MapPin, Trash2, Filter, Layers, Locate, Plus } from "lucide-react"
 import { getLocationEventCount } from "@/app/actions/events"
 import { filterActiveCheckIns } from "@/lib/utils/filter-expired-checkins"
 import { CheckInDetailModal } from "@/components/check-ins/check-in-detail-modal" // Declare the CheckInDetailModal variable
+import { getLocationCoordinates } from "@/lib/utils/get-location-coordinates"
 
 interface Location {
   id: string
@@ -844,11 +845,10 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
           })}
 
           {activeCheckIns.map((checkIn) => {
-            // Determine coordinates based on location type
             let coordinates: { lat: number; lng: number } | null = null
 
-            if (checkIn.location_type === "community_location" && checkIn.location?.coordinates) {
-              coordinates = checkIn.location.coordinates
+            if (checkIn.location_type === "community_location" && checkIn.location) {
+              coordinates = getLocationCoordinates(checkIn.location)
             } else if (checkIn.location_type === "custom_temporary" && checkIn.custom_location_coordinates) {
               coordinates = checkIn.custom_location_coordinates
             }
@@ -858,12 +858,13 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                 title: checkIn.title,
                 location_type: checkIn.location_type,
                 has_location: !!checkIn.location,
+                location_data: checkIn.location,
                 has_custom_coords: !!checkIn.custom_location_coordinates,
               })
               return null
             }
 
-            const creatorAvatar = checkIn.created_by_user?.profile_picture_url || checkIn.created_by_user?.avatar_url
+            const creatorAvatar = checkIn.created_by_user?.profile_picture_url
             const creatorName = checkIn.created_by_user?.first_name || "User"
             const attendingCount = checkIn.attending_count || 0
 
@@ -877,7 +878,6 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
 
             return (
               <Marker key={checkIn.id} position={coordinates} onClick={() => handleCheckInClick(checkIn)} zIndex={200}>
-                {/* Custom marker content with profile picture */}
                 <div className="relative flex flex-col items-center cursor-pointer">
                   {/* Profile picture in a circle with border */}
                   <div className="w-12 h-12 rounded-full border-3 border-green-500 bg-white shadow-lg overflow-hidden">

@@ -854,7 +854,12 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
             }
 
             if (!coordinates) {
-              console.log("[v0] Check-in skipped - no coordinates:", checkIn.title)
+              console.log("[v0] Check-in skipped - no coordinates:", {
+                title: checkIn.title,
+                location_type: checkIn.location_type,
+                has_location: !!checkIn.location,
+                has_custom_coords: !!checkIn.custom_location_coordinates,
+              })
               return null
             }
 

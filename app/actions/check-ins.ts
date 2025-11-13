@@ -174,7 +174,7 @@ export async function getCheckInById(checkInId: string, tenantId: string) {
       .select(
         `
         *,
-        creator:users!created_by(id, first_name, last_name, profile_picture_url),
+        created_by_user:users!created_by(id, first_name, last_name, profile_picture_url, avatar_url),
         location:locations!location_id(id, name, coordinates)
       `,
       )
@@ -222,13 +222,30 @@ export async function getActiveCheckIns(tenantId: string) {
       .select(
         `
         *,
-        creator:users!created_by(id, first_name, last_name, profile_picture_url),
+        created_by_user:users!created_by(id, first_name, last_name, profile_picture_url, avatar_url),
         location:locations!location_id(id, name, coordinates)
       `,
       )
       .eq("tenant_id", tenantId)
       .eq("status", "active")
       .order("start_time", { ascending: false })
+
+    console.log("[v0] getActiveCheckIns - Raw Supabase response:", {
+      checkInsCount: checkIns?.length || 0,
+      error: error?.message,
+      sampleCheckIn: checkIns?.[0]
+        ? {
+            id: checkIns[0].id,
+            title: checkIns[0].title,
+            location_type: checkIns[0].location_type,
+            location_id: checkIns[0].location_id,
+            has_location_data: !!checkIns[0].location,
+            location_coordinates: checkIns[0].location?.coordinates,
+            custom_location_coordinates: checkIns[0].custom_location_coordinates,
+            created_by_user: checkIns[0].created_by_user,
+          }
+        : null,
+    })
 
     if (error) {
       console.error("[v0] Error fetching active check-ins:", error)

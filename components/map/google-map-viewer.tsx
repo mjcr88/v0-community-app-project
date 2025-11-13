@@ -65,6 +65,123 @@ interface GoogleMapViewerProps {
   enableClickablePlaces?: boolean
 }
 
+function isPointInPolygon(point: { lat: number; lng: number }, polygon: Array<[number, number]>): boolean {
+  let inside = false
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i][1],
+      yi = polygon[i][0]
+    const xj = polygon[j][1],
+      yj = polygon[j][0]
+
+    const intersect = yi > point.lat !== yj > point.lat && point.lng < ((xj - xi) * (point.lat - yi)) / (yj - yi) + xi
+    if (intersect) inside = !inside
+  }
+  return inside
+}
+
+function distributePointsInBoundary(
+  boundary: Array<[number, number]>,
+  count: number,
+  checkInIds: string[],
+): Array<{ lat: number; lng: number }> {
+  if (count === 1) {
+    // Single check-in: use center
+    const lats = boundary.map((c) => c[0])
+    const lngs = boundary.map((c) => c[1])
+    return [
+      {
+        lat: lats.reduce((a, b) => a + b, 0) / lats.length,
+        lng: lngs.reduce((a, b) => a + b, 0) / lngs.length,
+      },
+    ]
+  }
+
+  // Calculate bounding box
+  const lats = boundary.map((c) => c[0])
+  const lngs = boundary.map((c) => c[1])
+  const minLat = Math.min(...lats)
+  const maxLat = Math.max(...lats)
+  const minLng = Math.min(...lngs)
+  const maxLng = Math.max(...lngs)
+
+  const positions: Array<{ lat: number; lng: number }> = []
+
+  // Generate deterministic grid points inside polygon
+  const gridSize = Math.ceil(Math.sqrt(count * 2)) // Oversample to ensure enough valid points
+  const latStep = (maxLat - minLat) / (gridSize + 1)
+  const lngStep = (maxLng - minLng) / (gridSize + 1)
+
+  const candidatePoints: Array<{ lat: number; lng: number; hash: number }> = []
+
+  // Generate grid of candidate points
+  for (let i = 1; i <= gridSize; i++) {
+    for (let j = 1; j <= gridSize; j++) {
+      const lat = minLat + i * latStep
+      const lng = minLng + j * lngStep
+      const point = { lat, lng }
+
+      if (isPointInPolygon(point, boundary)) {
+        // Create deterministic hash for this grid position
+        const hash = i * 1000 + j
+        candidatePoints.push({ ...point, hash })
+      }
+    }
+  }
+
+  if (candidatePoints.length === 0) {
+    // Fallback: use center if no valid points found
+    console.warn("[v0] No valid points found inside boundary, using center")
+    const centerLat = lats.reduce((a, b) => a + b, 0) / lats.length
+    const centerLng = lngs.reduce((a, b) => a + b, 0) / lngs.length
+    return Array(count).fill({ lat: centerLat, lng: centerLng })
+  }
+
+  // Sort candidate points by hash for consistency
+  candidatePoints.sort((a, b) => a.hash - b.hash)
+
+  // Assign each check-in to a position based on its ID hash
+  checkInIds.forEach((checkInId, index) => {
+    // Create deterministic index from check-in ID
+    const idHash = checkInId.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0)
+    const pointIndex = (idHash + index) % candidatePoints.length
+
+    positions.push({
+      lat: candidatePoints[pointIndex].lat,
+      lng: candidatePoints[pointIndex].lng,
+    })
+  })
+
+  return positions
+}
+
+function distributePointsAlongPath(
+  path: Array<[number, number]>,
+  count: number,
+  checkInIds: string[],
+): Array<{ lat: number; lng: number }> {
+  if (count === 1 || path.length < 2) {
+    // Single check-in or short path: use midpoint
+    const midIndex = Math.floor(path.length / 2)
+    return [{ lat: path[midIndex][0], lng: path[midIndex][1] }]
+  }
+
+  const positions: Array<{ lat: number; lng: number }> = []
+
+  // Distribute evenly along the path based on check-in ID hash
+  checkInIds.forEach((checkInId, index) => {
+    // Create deterministic position from check-in ID
+    const idHash = checkInId.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0)
+    const pathIndex = (idHash + index) % path.length
+
+    positions.push({
+      lat: path[pathIndex][0],
+      lng: path[pathIndex][1],
+    })
+  })
+
+  return positions
+}
+
 export const GoogleMapViewer = React.memo(function GoogleMapViewer({
   locations: initialLocations = [],
   tenantId, // Now optional
@@ -435,78 +552,95 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
   const checkInsWithCoords = useMemo(() => {
     const activeCheckIns = checkIns
 
-    console.log("[v0] Active check-ins after expiration filtering:", {
-      total: checkIns.length,
-      active: activeCheckIns.length,
-      expired: 0, // Already filtered in useEffect
+    console.log("[v0] Processing check-ins for markers:", {
+      total: activeCheckIns.length,
       currentZoom: zoom,
     })
 
-    // Extract coordinates
-    const checkInsWithBaseCoords = activeCheckIns
-      .map((checkIn) => {
-        let coordinates: { lat: number; lng: number } | null = null
+    const locationGroups = new globalThis.Map<string, any[]>()
 
-        // Community location
-        if (checkIn.location_type === "community_location" && checkIn.location) {
-          if (checkIn.location.coordinates) {
-            coordinates = checkIn.location.coordinates
-            console.log("[v0] Check-in has direct coordinates:", checkIn.title, coordinates)
-          } else if (
-            checkIn.location.path_coordinates &&
-            Array.isArray(checkIn.location.path_coordinates) &&
-            checkIn.location.path_coordinates.length > 0
-          ) {
-            const lats = checkIn.location.path_coordinates.map((c) => c[0])
-            const lngs = checkIn.location.path_coordinates.map((c) => c[1])
-            coordinates = {
-              lat: lats.reduce((a, b) => a + b, 0) / lats.length,
-              lng: lngs.reduce((a, b) => a + b, 0) / lngs.length,
-            }
-            console.log("[v0] Check-in using path_coordinates center:", checkIn.title, coordinates)
-          } else if (
-            checkIn.location.boundary_coordinates &&
-            Array.isArray(checkIn.location.boundary_coordinates) &&
-            checkIn.location.boundary_coordinates.length > 0
-          ) {
-            const lats = checkIn.location.boundary_coordinates.map((c) => c[0])
-            const lngs = checkIn.location.boundary_coordinates.map((c) => c[1])
-            coordinates = {
-              lat: lats.reduce((a, b) => a + b, 0) / lats.length,
-              lng: lngs.reduce((a, b) => a + b, 0) / lngs.length,
-            }
-            console.log("[v0] Check-in using boundary_coordinates center:", checkIn.title, coordinates)
-          }
-        }
-        // Custom location
-        else if (checkIn.location_type === "custom_temporary" && checkIn.custom_location_coordinates) {
-          coordinates = checkIn.custom_location_coordinates
-          console.log("[v0] Check-in using custom coordinates:", checkIn.title, coordinates)
-        }
+    activeCheckIns.forEach((checkIn) => {
+      const locationKey =
+        checkIn.location_type === "community_location" && checkIn.location?.id
+          ? checkIn.location.id
+          : `custom-${checkIn.id}`
 
-        if (!coordinates) {
-          console.log("[v0] Check-in WITHOUT coords:", checkIn.title, {
-            location_type: checkIn.location_type,
-            has_location: !!checkIn.location,
+      if (!locationGroups.has(locationKey)) {
+        locationGroups.set(locationKey, [])
+      }
+      locationGroups.get(locationKey)!.push(checkIn)
+    })
+
+    console.log("[v0] Check-ins grouped by location:", {
+      locationCount: locationGroups.size,
+      groups: Array.from(locationGroups.entries()).map(([key, items]) => ({
+        locationId: key,
+        count: items.length,
+      })),
+    })
+
+    const checkInsWithDistributedCoords: any[] = []
+
+    locationGroups.forEach((checkIns, locationKey) => {
+      if (locationKey.startsWith("custom-")) {
+        // Custom location - use exact coordinates
+        const checkIn = checkIns[0]
+        if (checkIn.custom_location_coordinates) {
+          checkInsWithDistributedCoords.push({
+            ...checkIn,
+            coordinates: checkIn.custom_location_coordinates,
           })
+          console.log("[v0] Custom location check-in:", checkIn.title, checkIn.custom_location_coordinates)
+        }
+      } else {
+        // Community location - distribute within boundary/path
+        const location = checkIns[0].location
+
+        if (!location) {
+          console.warn("[v0] Check-in missing location data:", checkIns[0].title)
+          return
         }
 
-        return { ...checkIn, coordinates }
-      })
-      .filter((checkIn) => checkIn.coordinates !== null)
+        let positions: Array<{ lat: number; lng: number }> = []
+        const checkInIds = checkIns.map((c) => c.id)
 
-    // At lower zoom levels (zoomed out), group markers that are close together
-    // At higher zoom levels (zoomed in), show individual markers
+        if (location.boundary_coordinates && location.boundary_coordinates.length >= 3) {
+          // Distribute inside boundary polygon
+          positions = distributePointsInBoundary(location.boundary_coordinates, checkIns.length, checkInIds)
+          console.log("[v0] Distributed", checkIns.length, "check-ins in boundary:", location.name)
+        } else if (location.path_coordinates && location.path_coordinates.length >= 2) {
+          // Distribute along path
+          positions = distributePointsAlongPath(location.path_coordinates, checkIns.length, checkInIds)
+          console.log("[v0] Distributed", checkIns.length, "check-ins along path:", location.name)
+        } else if (location.coordinates) {
+          // Single point - all markers at same location (fallback)
+          positions = Array(checkIns.length).fill(location.coordinates)
+          console.log("[v0] Using single point for", checkIns.length, "check-ins:", location.name)
+        } else {
+          console.warn("[v0] Location has no coordinates:", location.name)
+          return
+        }
 
-    const CLUSTER_ZOOM_THRESHOLD = 16 // Below this zoom, cluster markers
+        // Assign positions to check-ins
+        checkIns.forEach((checkIn, index) => {
+          checkInsWithDistributedCoords.push({
+            ...checkIn,
+            coordinates: positions[index],
+          })
+        })
+      }
+    })
+
+    console.log("[v0] Check-ins with distributed coordinates:", checkInsWithDistributedCoords.length)
+
+    const CLUSTER_ZOOM_THRESHOLD = 16
 
     if (zoom < CLUSTER_ZOOM_THRESHOLD) {
-      // Group markers by rounded coordinates (clustering)
-      // Precision decreases as we zoom out
+      // Group markers by rounded coordinates (clustering for distant view)
       const precision = Math.max(3, Math.min(6, Math.floor(zoom / 3)))
       const coordsMap = new globalThis.Map<string, any[]>()
 
-      checkInsWithBaseCoords.forEach((checkIn) => {
+      checkInsWithDistributedCoords.forEach((checkIn) => {
         const key = `${checkIn.coordinates.lat.toFixed(precision)},${checkIn.coordinates.lng.toFixed(precision)}`
         if (!coordsMap.has(key)) {
           coordsMap.set(key, [])
@@ -534,16 +668,15 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
         }
       })
 
-      console.log("[v0] Clustered markers:", {
-        original: checkInsWithBaseCoords.length,
+      console.log("[v0] Clustered markers at zoom", zoom, ":", {
+        original: checkInsWithDistributedCoords.length,
         clustered: clusteredCheckIns.length,
-        zoom,
       })
       return clusteredCheckIns
     } else {
       // At high zoom, show individual markers without clustering
-      console.log("[v0] Individual markers (no clustering):", checkInsWithBaseCoords.length)
-      return checkInsWithBaseCoords
+      console.log("[v0] Individual markers (no clustering) at zoom", zoom, ":", checkInsWithDistributedCoords.length)
+      return checkInsWithDistributedCoords
     }
   }, [checkIns, zoom])
 

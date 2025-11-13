@@ -1,269 +1,494 @@
-// Declare variables before using them
-const v0 = "some value"
-const no = "some value"
-const op = "some value"
-const code = "some value"
-const block = "some value"
-const prefix = "some value"
+"use server"
 
-// Import createServerClient
-import { createServerClient } from "./path/to/createServerClient" // Adjust the path as necessary
+import { createClient } from "@/lib/supabase/server"
+import { revalidatePath } from "next/cache"
+import type { Database } from "@/lib/database.types"
 
-// Existing code block
-async function handleEvent(event) {
-  // Logic to handle the event
-  console.log("Event handled:", event)
+type Event = Database["public"]["Tables"]["events"]["Row"]
+type EventInsert = Database["public"]["Tables"]["events"]["Insert"]
+type EventUpdate = Database["public"]["Tables"]["events"]["Update"]
 
-  // Insert updated code here
-  // Example: Use the declared variables
-  console.log(v0, no, op, code, block, prefix)
-
+export async function getEvents(tenantId: string, filters?: { categoryId?: string; status?: string }) {
   try {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
-    // Fetch event details using eventId and tenantId
-    const { data, error } = await supabase.from("events").select("*").eq("id", event.id).eq("tenant_id", event.tenantId)
+    let query = supabase
+      .from("events")
+      .select(`
+        *,
+        category:event_categories(id, name, color),
+        creator:users!events_created_by_user_id_fkey(id, first_name, last_name),
+        location:locations!location_id(id, name, coordinates)
+      `)
+      .eq("tenant_id", tenantId)
+      .in("status", ["published", "cancelled"])
+      .order("start_date", { ascending: true })
+      .order("start_time", { ascending: true })
 
-    if (error) {
-      console.error("Error fetching event:", error)
-    } else {
-      console.log("Fetched event:", data)
-    }
-  } catch (error) {
-    console.error("Error in handleEvent:", error)
-  }
-
-  /** rest of code here **/
-}
-
-export async function getEvents(tenantId: string, filters?: { categoryId?: string }) {
-  try {
-    const supabase = await createServerClient()
-
-    // Fetch events using tenantId and optional filters
-    const query = supabase.from("events").select("*").eq("tenant_id", tenantId)
     if (filters?.categoryId) {
-      query.eq("category_id", filters.categoryId)
+      query = query.eq("category_id", filters.categoryId)
     }
+
+    if (filters?.status) {
+      query = query.eq("status", filters.status)
+    }
+
     const { data, error } = await query
 
     if (error) {
-      console.error("Error fetching events:", error)
-    } else {
-      console.log("Fetched events:", data)
+      console.error("[v0] Error fetching events:", error)
+      return { success: false, events: [], error: error.message }
     }
+
+    // Get RSVP counts and flag counts for each event
+    const eventsWithCounts = await Promise.all(
+      (data || []).map(async (event) => {
+        const [rsvpResult, flagResult] = await Promise.all([
+          supabase.rpc("get_event_rsvp_counts", { event_id_input: event.id }),
+          supabase.rpc("get_event_flag_count", { event_id_input: event.id }),
+        ])
+
+        return {
+          ...event,
+          rsvp_counts: rsvpResult.data || { going: 0, interested: 0, not_going: 0 },
+          flag_count: flagResult.data || 0,
+        }
+      }),
+    )
+
+    return { success: true, events: eventsWithCounts, error: null }
   } catch (error) {
-    console.error("Error in getEvents:", error)
+    console.error("[v0] Unexpected error fetching events:", error)
+    return { success: false, events: [], error: "An unexpected error occurred" }
+  }
+}
+
+export async function getEvent(eventId: string, tenantId: string) {
+  try {
+    const supabase = await createClient()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    const { data, error } = await supabase
+      .from("events")
+      .select(`
+        *,
+        category:event_categories(id, name, color),
+        creator:users!events_created_by_user_id_fkey(id, first_name, last_name, profile_image_url),
+        location:locations!location_id(id, name, type, coordinates, description, amenities, photos, hero_photo)
+      `)
+      .eq("id", eventId)
+      .eq("tenant_id", tenantId)
+      .single()
+
+    if (error) {
+      console.error("[v0] Error fetching event:", error)
+      return { success: false, event: null, error: error.message }
+    }
+
+    // Get RSVP counts, flag count, and user's RSVP status
+    const [rsvpResult, flagResult, userRsvpResult] = await Promise.all([
+      supabase.rpc("get_event_rsvp_counts", { event_id_input: eventId }),
+      supabase.rpc("get_event_flag_count", { event_id_input: eventId }),
+      user
+        ? supabase.from("event_rsvps").select("status").eq("event_id", eventId).eq("user_id", user.id).maybeSingle()
+        : Promise.resolve({ data: null }),
+    ])
+
+    const eventWithDetails = {
+      ...data,
+      rsvp_counts: rsvpResult.data || { going: 0, interested: 0, not_going: 0 },
+      flag_count: flagResult.data || 0,
+      user_rsvp_status: userRsvpResult.data?.status || null,
+    }
+
+    return { success: true, event: eventWithDetails, error: null }
+  } catch (error) {
+    console.error("[v0] Unexpected error fetching event:", error)
+    return { success: false, event: null, error: "An unexpected error occurred" }
+  }
+}
+
+export async function createEvent(
+  tenantSlug: string,
+  data: EventInsert & {
+    neighborhood_ids?: string[]
+    invitee_ids?: string[]
+    family_unit_ids?: string[]
+  },
+) {
+  try {
+    const supabase = await createClient()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, event: null, error: "Unauthorized" }
+    }
+
+    const { neighborhood_ids, invitee_ids, family_unit_ids, ...eventData } = data
+
+    const { data: newEvent, error } = await supabase
+      .from("events")
+      .insert({
+        ...eventData,
+        created_by_user_id: user.id,
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error("[v0] Error creating event:", error)
+      return { success: false, event: null, error: error.message }
+    }
+
+    revalidatePath(`/t/${tenantSlug}/dashboard/events`)
+    return { success: true, event: newEvent, error: null }
+  } catch (error) {
+    console.error("[v0] Unexpected error creating event:", error)
+    return { success: false, event: null, error: "An unexpected error occurred" }
   }
 }
 
 export async function updateEvent(
   eventId: string,
   tenantSlug: string,
-  tenantId: string,
-  data: {
-    title?: string
-    description?: string | null
-    category_id?: string
-    start_date?: string
-    start_time?: string | null
-    end_date?: string | null
-    end_time?: string | null
-    is_all_day?: boolean
-    visibility_scope?: "community" | "neighborhood" | "private"
-    status?: "draft" | "published" | "cancelled"
-    requires_rsvp?: boolean
-    rsvp_deadline?: string | null
-    max_attendees?: number | null
+  data: Partial<EventUpdate> & {
     neighborhood_ids?: string[]
     invitee_ids?: string[]
     family_unit_ids?: string[]
-    location_type?: "community" | "custom" | "none"
-    location_id?: string | null
-    custom_location_name?: string | null
-    custom_location_coordinates?: { lat: number; lng: number } | null
-    custom_location_type?: "pin" | "polygon" | null
-    custom_location_path?: Array<{ lat: number; lng: number }> | null
   },
 ) {
   try {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
-    // Update event logic here
-    const { data, error } = await supabase.from("events").update(data).eq("id", eventId).eq("tenant_id", tenantId)
+    const { neighborhood_ids, invitee_ids, family_unit_ids, ...eventData } = data
+
+    const { error } = await supabase.from("events").update(eventData).eq("id", eventId)
 
     if (error) {
-      console.error("Error updating event:", error)
-    } else {
-      console.log("Updated event:", data)
+      console.error("[v0] Error updating event:", error)
+      return { success: false, error: error.message }
     }
+
+    revalidatePath(`/t/${tenantSlug}/dashboard/events`)
+    revalidatePath(`/t/${tenantSlug}/dashboard/events/${eventId}`)
+    return { success: true, error: null }
   } catch (error) {
-    console.error("Error in updateEvent:", error)
+    console.error("[v0] Unexpected error updating event:", error)
+    return { success: false, error: "An unexpected error occurred" }
   }
 }
 
-export async function deleteEvent(eventId: string, tenantSlug: string, tenantId: string) {
+export async function deleteEvent(eventId: string, tenantSlug: string) {
   try {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
-    // Delete event logic here
-    const { data, error } = await supabase.from("events").delete().eq("id", eventId).eq("tenant_id", tenantId)
+    const { error } = await supabase.from("events").delete().eq("id", eventId)
 
     if (error) {
-      console.error("Error deleting event:", error)
-    } else {
-      console.log("Deleted event:", data)
+      console.error("[v0] Error deleting event:", error)
+      return { success: false, error: error.message }
     }
+
+    revalidatePath(`/t/${tenantSlug}/dashboard/events`)
+    return { success: true, error: null }
   } catch (error) {
-    console.error("Error in deleteEvent:", error)
+    console.error("[v0] Unexpected error deleting event:", error)
+    return { success: false, error: "An unexpected error occurred" }
   }
 }
 
-export async function rsvpToEvent(
-  eventId: string,
-  tenantId: string,
-  status: "going" | "interested" | "not_going" | "cancelled",
-) {
+export async function rsvpToEvent(eventId: string, tenantId: string, status: "going" | "interested" | "not_going") {
   try {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
-    // RSVP to event logic here
-    const { data, error } = await supabase
-      .from("rsvps")
-      .update({ status })
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: "Unauthorized" }
+    }
+
+    const { data: existingRsvp } = await supabase
+      .from("event_rsvps")
+      .select("id")
       .eq("event_id", eventId)
-      .eq("tenant_id", tenantId)
+      .eq("user_id", user.id)
+      .maybeSingle()
 
-    if (error) {
-      console.error("Error RSVPing to event:", error)
+    if (existingRsvp) {
+      const { error } = await supabase.from("event_rsvps").update({ status }).eq("id", existingRsvp.id)
+
+      if (error) {
+        console.error("[v0] Error updating RSVP:", error)
+        return { success: false, error: error.message }
+      }
     } else {
-      console.log("RSVP to event:", data)
+      const { error } = await supabase.from("event_rsvps").insert({
+        event_id: eventId,
+        user_id: user.id,
+        tenant_id: tenantId,
+        status,
+      })
+
+      if (error) {
+        console.error("[v0] Error creating RSVP:", error)
+        return { success: false, error: error.message }
+      }
     }
+
+    revalidatePath(`/t/[slug]/dashboard/events/${eventId}`)
+    return { success: true, error: null }
   } catch (error) {
-    console.error("Error in rsvpToEvent:", error)
+    console.error("[v0] Unexpected error RSVPing to event:", error)
+    return { success: false, error: "An unexpected error occurred" }
   }
 }
 
-export async function getUpcomingEvents(tenantId: string) {
+export async function getUpcomingEvents(tenantId: string, limit?: number) {
   try {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
-    // Fetch upcoming events using tenantId
-    const { data, error } = await supabase
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, events: [], error: "Unauthorized" }
+    }
+
+    const today = new Date().toISOString().split("T")[0]
+
+    let query = supabase
       .from("events")
-      .select("*")
+      .select(`
+        id,
+        title,
+        start_date,
+        start_time,
+        end_date,
+        end_time,
+        is_all_day,
+        status,
+        category:event_categories(id, name, color),
+        location:locations!location_id(id, name)
+      `)
       .eq("tenant_id", tenantId)
-      .gte("start_date", new Date().toISOString())
+      .eq("status", "published")
+      .gte("start_date", today)
+      .order("start_date", { ascending: true })
+      .order("start_time", { ascending: true })
+
+    if (limit) {
+      query = query.limit(limit)
+    }
+
+    const { data, error } = await query
 
     if (error) {
-      console.error("Error fetching upcoming events:", error)
-    } else {
-      console.log("Fetched upcoming events:", data)
+      console.error("[v0] Error fetching upcoming events:", error)
+      return { success: false, events: [], error: error.message }
     }
+
+    // Get RSVP and flag counts
+    const eventsWithCounts = await Promise.all(
+      (data || []).map(async (event) => {
+        const [rsvpResult, flagResult] = await Promise.all([
+          supabase.rpc("get_event_rsvp_counts", { event_id_input: event.id }),
+          supabase.rpc("get_event_flag_count", { event_id_input: event.id }),
+        ])
+
+        return {
+          ...event,
+          rsvp_counts: rsvpResult.data || { going: 0, interested: 0, not_going: 0 },
+          flag_count: flagResult.data || 0,
+        }
+      }),
+    )
+
+    return { success: true, events: eventsWithCounts, error: null }
   } catch (error) {
-    console.error("Error in getUpcomingEvents:", error)
+    console.error("[v0] Unexpected error fetching upcoming events:", error)
+    return { success: false, events: [], error: "An unexpected error occurred" }
   }
 }
 
-export async function flagEvent(eventId: string, tenantId: string, reason: string) {
+export async function flagEvent(eventId: string, tenantSlug: string, reason: string) {
   try {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
-    // Flag event logic here
-    const { data, error } = await supabase
-      .from("flagged_events")
-      .insert({ event_id: eventId, tenant_id: tenantId, reason: reason })
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: "Unauthorized" }
+    }
+
+    // Check if user already flagged this event
+    const { data: existingFlag } = await supabase
+      .from("event_flags")
+      .select("id")
+      .eq("event_id", eventId)
+      .eq("reported_by_user_id", user.id)
+      .maybeSingle()
+
+    if (existingFlag) {
+      return { success: false, error: "You have already flagged this event" }
+    }
+
+    const { error } = await supabase.from("event_flags").insert({
+      event_id: eventId,
+      reported_by_user_id: user.id,
+      reason,
+      status: "pending",
+    })
 
     if (error) {
-      console.error("Error flagging event:", error)
-    } else {
-      console.log("Flagged event:", data)
+      console.error("[v0] Error flagging event:", error)
+      return { success: false, error: error.message }
     }
+
+    revalidatePath(`/t/${tenantSlug}/dashboard/events/${eventId}`)
+    revalidatePath(`/t/${tenantSlug}/admin/events`)
+    return { success: true, error: null }
   } catch (error) {
-    console.error("Error in flagEvent:", error)
+    console.error("[v0] Unexpected error flagging event:", error)
+    return { success: false, error: "An unexpected error occurred" }
   }
 }
 
-export async function dismissEventFlag(flagId: string, tenantId: string) {
+export async function dismissEventFlag(flagId: string, tenantSlug: string) {
   try {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
-    // Dismiss event flag logic here
-    const { data, error } = await supabase.from("flagged_events").delete().eq("id", flagId).eq("tenant_id", tenantId)
+    const { error } = await supabase.from("event_flags").update({ status: "dismissed" }).eq("id", flagId)
 
     if (error) {
-      console.error("Error dismissing event flag:", error)
-    } else {
-      console.log("Dismissed event flag:", data)
+      console.error("[v0] Error dismissing flag:", error)
+      return { success: false, error: error.message }
     }
+
+    revalidatePath(`/t/${tenantSlug}/admin/events`)
+    return { success: true, error: null }
   } catch (error) {
-    console.error("Error in dismissEventFlag:", error)
+    console.error("[v0] Unexpected error dismissing flag:", error)
+    return { success: false, error: "An unexpected error occurred" }
   }
 }
 
 export async function cancelEvent(eventId: string, tenantSlug: string, cancellationReason: string, uncancel = false) {
   try {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
-    // Cancel event logic here
-    const { data, error } = await supabase
-      .from("events")
-      .update({ status: uncancel ? "published" : "cancelled", cancellation_reason: cancellationReason })
-      .eq("id", eventId)
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: "Unauthorized" }
+    }
+
+    const updateData: any = {
+      status: uncancel ? "published" : "cancelled",
+      cancellation_reason: uncancel ? null : cancellationReason,
+      cancelled_at: uncancel ? null : new Date().toISOString(),
+      cancelled_by: uncancel ? null : user.id,
+    }
+
+    const { error } = await supabase.from("events").update(updateData).eq("id", eventId)
 
     if (error) {
-      console.error("Error cancelling event:", error)
-    } else {
-      console.log("Cancelled event:", data)
+      console.error("[v0] Error cancelling event:", error)
+      return { success: false, error: error.message }
     }
+
+    revalidatePath(`/t/${tenantSlug}/dashboard/events`)
+    revalidatePath(`/t/${tenantSlug}/dashboard/events/${eventId}`)
+    return { success: true, error: null }
   } catch (error) {
-    console.error("Error in cancelEvent:", error)
+    console.error("[v0] Unexpected error cancelling event:", error)
+    return { success: false, error: "An unexpected error occurred" }
   }
 }
 
 export async function getEventsByLocation(locationId: string, tenantId: string) {
   try {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
-    // Fetch events by location using locationId and tenantId
+    const today = new Date().toISOString().split("T")[0]
+
     const { data, error } = await supabase
       .from("events")
-      .select("*")
+      .select(`
+        *,
+        category:event_categories(id, name, color),
+        creator:users!events_created_by_user_id_fkey(id, first_name, last_name),
+        location:locations!location_id(id, name)
+      `)
       .eq("location_id", locationId)
       .eq("tenant_id", tenantId)
+      .eq("status", "published")
+      .gte("start_date", today)
+      .order("start_date", { ascending: true })
+      .order("start_time", { ascending: true })
 
     if (error) {
-      console.error("Error fetching events by location:", error)
-    } else {
-      console.log("Fetched events by location:", data)
+      console.error("[v0] Error fetching events by location:", error)
+      return { success: false, events: [], error: error.message }
     }
+
+    // Get RSVP and flag counts
+    const eventsWithCounts = await Promise.all(
+      (data || []).map(async (event) => {
+        const [rsvpResult, flagResult] = await Promise.all([
+          supabase.rpc("get_event_rsvp_counts", { event_id_input: event.id }),
+          supabase.rpc("get_event_flag_count", { event_id_input: event.id }),
+        ])
+
+        return {
+          ...event,
+          rsvp_counts: rsvpResult.data || { going: 0, interested: 0, not_going: 0 },
+          flag_count: flagResult.data || 0,
+        }
+      }),
+    )
+
+    return { success: true, events: eventsWithCounts, error: null }
   } catch (error) {
-    console.error("Error in getEventsByLocation:", error)
+    console.error("[v0] Unexpected error fetching events by location:", error)
+    return { success: false, events: [], error: "An unexpected error occurred" }
   }
 }
 
 export async function getLocationEventCount(locationId: string, tenantId: string): Promise<number> {
   try {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
-    // Fetch event count by location using locationId and tenantId
+    const today = new Date().toISOString().split("T")[0]
+
     const { count, error } = await supabase
       .from("events")
-      .select("*", { count: "exact" })
+      .select("*", { count: "exact", head: true })
       .eq("location_id", locationId)
       .eq("tenant_id", tenantId)
+      .eq("status", "published")
+      .gte("start_date", today)
 
     if (error) {
-      console.error("Error fetching event count by location:", error)
+      console.error("[v0] Error fetching event count:", error)
       return 0
-    } else {
-      console.log("Fetched event count by location:", count)
-      return count || 0
     }
+
+    return count || 0
   } catch (error) {
-    console.error("Error in getLocationEventCount:", error)
+    console.error("[v0] Unexpected error fetching event count:", error)
     return 0
   }
 }
-
-export default handleEvent

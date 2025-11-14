@@ -177,8 +177,7 @@ export function CreateExchangeListingModal({
           location_name: "",
           status: "draft",
         })
-        console.log("[v0] Form reset complete, manually refreshing page")
-        router.refresh()
+        console.log("[v0] Form reset complete - relying on revalidatePath for updates")
       } else {
         toast({
           title: "Error",

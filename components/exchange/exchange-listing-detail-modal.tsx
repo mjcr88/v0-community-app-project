@@ -96,10 +96,13 @@ export function ExchangeListingDetailModal({
         hasLocationObject: !!result.data.location,
         locationId: result.data.location?.id,
         locationName: result.data.location?.name,
+        locationType: result.data.location?.type,
         coordinatesRaw: result.data.location?.coordinates,
         coordinatesType: typeof result.data.location?.coordinates,
-        coordinatesKeys: result.data.location?.coordinates ? Object.keys(result.data.location.coordinates) : null,
-        coordinatesStringified: result.data.location?.coordinates ? JSON.stringify(result.data.location.coordinates) : null,
+        pathCoordinatesRaw: result.data.location?.path_coordinates,
+        pathCoordinatesType: typeof result.data.location?.path_coordinates,
+        boundaryCoordinatesRaw: result.data.location?.boundary_coordinates,
+        boundaryCoordinatesType: typeof result.data.location?.boundary_coordinates,
         customLat: result.data.custom_location_lat,
         customLatType: typeof result.data.custom_location_lat,
         customLng: result.data.custom_location_lng,
@@ -151,21 +154,48 @@ export function ExchangeListingDetailModal({
   // Try community location first
   if (listing.location_id && listing.location) {
     locationName = listing.location.name
-    
-    // Look up the full location from the locations array (which has valid coordinates)
-    const fullLocation = locations.find(loc => loc.id === listing.location_id)
-    
-    if (fullLocation?.coordinates) {
-      const parsedCoords = parseLocationCoordinates(fullLocation.coordinates)
-      
-      if (parsedCoords) {
-        listingLocationForMap = {
-          id: fullLocation.id,
-          name: fullLocation.name,
-          type: fullLocation.type || "facility" as const,
-          coordinates: parsedCoords
+    let coords: { lat: number; lng: number } | null = null
+
+    // Try coordinates first (point locations)
+    if (listing.location.coordinates) {
+      coords = parseLocationCoordinates(listing.location.coordinates)
+    }
+
+    // If no coordinates, try path_coordinates (facility paths like common areas)
+    if (!coords && listing.location.path_coordinates) {
+      const pathData = parseLocationCoordinates(listing.location.path_coordinates)
+      // path_coordinates returns array of [lat, lng] pairs - use first point as marker
+      if (pathData && Array.isArray(pathData) && pathData.length > 0) {
+        const firstPoint = pathData[0]
+        if (Array.isArray(firstPoint) && firstPoint.length === 2) {
+          coords = { lat: Number(firstPoint[0]), lng: Number(firstPoint[1]) }
+          console.log("[v0] Using path_coordinates first point:", coords)
         }
       }
+    }
+
+    // If no path, try boundary_coordinates (facility boundaries)
+    if (!coords && listing.location.boundary_coordinates) {
+      const boundaryData = parseLocationCoordinates(listing.location.boundary_coordinates)
+      // boundary_coordinates returns array of [lat, lng] pairs - calculate center
+      if (boundaryData && Array.isArray(boundaryData) && boundaryData.length > 0) {
+        const lats = boundaryData.map((c: any) => (Array.isArray(c) ? c[0] : c.lat))
+        const lngs = boundaryData.map((c: any) => (Array.isArray(c) ? c[1] : c.lng))
+        const centerLat = lats.reduce((a: number, b: number) => a + b, 0) / lats.length
+        const centerLng = lngs.reduce((a: number, b: number) => a + b, 0) / lngs.length
+        coords = { lat: centerLat, lng: centerLng }
+        console.log("[v0] Using boundary_coordinates center:", coords)
+      }
+    }
+
+    if (coords) {
+      listingLocationForMap = {
+        id: listing.location.id,
+        name: listing.location.name,
+        type: (listing.location.type || "facility") as const,
+        coordinates: coords
+      }
+      console.log("[v0] Community location resolved:", listingLocationForMap)
     }
   }
   
@@ -184,6 +214,7 @@ export function ExchangeListingDetailModal({
         lng: Number(listing.custom_location_lng)
       }
     }
+    console.log("[v0] Custom location resolved:", listingLocationForMap)
   }
 
   const mapLocations = listingLocationForMap 

@@ -99,7 +99,7 @@ export async function getExchangeListingById(listingId: string, tenantId: string
         custom_location_lng,
         category:exchange_categories(id, name, description),
         creator:users!created_by(id, first_name, last_name, profile_picture_url, phone, email),
-        location:locations(id, name, coordinates),
+        location:locations(id, name, type, coordinates, path_coordinates, boundary_coordinates),
         neighborhoods:exchange_neighborhoods(neighborhood:neighborhoods(id, name))
       `)
       .eq("id", listingId)

@@ -83,7 +83,7 @@ export function CreateExchangeListingModal({
 
       const listingData = {
         title: formData.title.trim(),
-        description: formData.description.trim() || null,
+        description: formData.description.trim() || "", // Allow empty string for description instead of null, let backend handle it
         category_id: formData.category_id,
         status: formData.status,
       }

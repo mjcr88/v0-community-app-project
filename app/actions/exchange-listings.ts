@@ -36,6 +36,8 @@ export async function getExchangeListings(tenantId: string) {
         photos,
         hero_photo,
         custom_location_name,
+        custom_location_lat,
+        custom_location_lng,
         category:exchange_categories(id, name, description),
         creator:users!created_by(id, first_name, last_name, profile_picture_url),
         location:locations(name)

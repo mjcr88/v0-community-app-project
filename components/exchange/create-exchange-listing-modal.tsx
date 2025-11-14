@@ -242,8 +242,8 @@ export function CreateExchangeListingModal({
                 <PhotoManager
                   photos={formData.photos}
                   heroPhoto={formData.hero_photo}
-                  onPhotosChange={(photos) => setFormData({ ...formData, photos })}
-                  onHeroPhotoChange={(heroPhoto) => setFormData({ ...formData, hero_photo: heroPhoto })}
+                  onPhotosChange={(photos) => setFormData(prev => ({ ...prev, photos }))}
+                  onHeroPhotoChange={(heroPhoto) => setFormData(prev => ({ ...prev, hero_photo: heroPhoto }))}
                   maxPhotos={10}
                   entityType="location"
                 />

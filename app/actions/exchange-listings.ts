@@ -17,11 +17,8 @@ export async function getExchangeListings(tenantId: string) {
     } = await supabase.auth.getUser()
 
     if (!user) {
-      console.log("[v0] getExchangeListings - No authenticated user")
       return []
     }
-
-    console.log("[v0] getExchangeListings - Fetching listings for tenant:", tenantId)
 
     const { data: listings, error } = await supabase
       .from("exchange_listings")
@@ -44,11 +41,9 @@ export async function getExchangeListings(tenantId: string) {
       .order("created_at", { ascending: false })
 
     if (error) {
-      console.error("[v0] Error fetching exchange listings:", error)
+      console.error("Error fetching exchange listings:", error)
       return []
     }
-
-    console.log("[v0] getExchangeListings - Found listings:", listings?.length || 0)
 
     const transformedListings = listings?.map((listing: any) => ({
       ...listing,
@@ -57,7 +52,7 @@ export async function getExchangeListings(tenantId: string) {
 
     return transformedListings || []
   } catch (error) {
-    console.error("[v0] Unexpected error fetching exchange listings:", error)
+    console.error("Unexpected error fetching exchange listings:", error)
     return []
   }
 }
@@ -78,13 +73,13 @@ export async function getExchangeCategories(tenantId: string) {
       .order("name", { ascending: true })
 
     if (error) {
-      console.error("[v0] Error fetching exchange categories:", error)
+      console.error("Error fetching exchange categories:", error)
       return []
     }
 
     return categories || []
   } catch (error) {
-    console.error("[v0] Unexpected error fetching exchange categories:", error)
+    console.error("Unexpected error fetching exchange categories:", error)
     return []
   }
 }
@@ -110,7 +105,6 @@ export async function createExchangeListing(
   },
 ) {
   try {
-    console.log("[v0] createExchangeListing - START")
     const supabase = await createServerClient()
 
     const {
@@ -121,7 +115,6 @@ export async function createExchangeListing(
       return { success: false, error: "User not authenticated" }
     }
 
-    // Verify user is a verified resident
     const { data: resident } = await supabase
       .from("users")
       .select("id, onboarding_completed")
@@ -132,7 +125,6 @@ export async function createExchangeListing(
       return { success: false, error: "Only verified residents can create listings" }
     }
 
-    // Validate required fields
     if (!data.title.trim()) {
       return { success: false, error: "Listing title is required" }
     }
@@ -149,18 +141,6 @@ export async function createExchangeListing(
       return { success: false, error: "At least one neighborhood must be selected for neighborhood-only visibility" }
     }
 
-    // Verify category exists
-    const { data: category } = await supabase
-      .from("exchange_categories")
-      .select("id")
-      .eq("id", data.category_id)
-      .eq("tenant_id", tenantId)
-      .single()
-
-    if (!category) {
-      return { success: false, error: "Invalid category selected" }
-    }
-
     const insertData: any = {
       tenant_id: tenantId,
       created_by: user.id,
@@ -172,17 +152,14 @@ export async function createExchangeListing(
       visibility_scope: data.visibility_scope,
     }
 
-    // Only add price if fixed_price type
     if (data.pricing_type === "fixed_price" && data.price) {
       insertData.price = data.price
     }
 
-    // Only add condition if it has a value (Tools & Equipment only)
     if (data.condition) {
       insertData.condition = data.condition
     }
 
-    // Only add quantity if it has a value
     if (data.available_quantity !== null && data.available_quantity !== undefined) {
       insertData.available_quantity = data.available_quantity
     }
@@ -203,7 +180,6 @@ export async function createExchangeListing(
       insertData.custom_location_lng = data.custom_location_lng
     }
 
-    console.log("[v0] createExchangeListing - Inserting listing")
     const { data: listing, error } = await supabase
       .from("exchange_listings")
       .insert(insertData)
@@ -211,40 +187,29 @@ export async function createExchangeListing(
       .single()
 
     if (error) {
-      console.error("[v0] Error creating exchange listing:", error)
+      console.error("Error creating exchange listing:", error)
       return { success: false, error: error.message }
     }
 
-    console.log("[v0] createExchangeListing - Listing created:", listing.id)
-
     if (data.visibility_scope === "neighborhood" && data.neighborhood_ids.length > 0) {
-      console.log("[v0] createExchangeListing - Creating neighborhood associations")
-      console.log("[v0] createExchangeListing - tenant_id:", tenantId)
-      console.log("[v0] createExchangeListing - neighborhood_ids:", data.neighborhood_ids)
-      
       const neighborhoodInserts = data.neighborhood_ids.map(neighborhoodId => ({
         tenant_id: tenantId,
         listing_id: listing.id,
         neighborhood_id: neighborhoodId,
       }))
 
-      console.log("[v0] createExchangeListing - Inserting neighborhoods:", neighborhoodInserts)
-
       const { error: neighborhoodError } = await supabase
         .from("exchange_neighborhoods")
         .insert(neighborhoodInserts)
 
       if (neighborhoodError) {
-        console.error("[v0] Error creating neighborhood associations:", neighborhoodError)
-        // Don't fail the entire operation, but log the error
+        console.error("Error creating neighborhood associations:", neighborhoodError)
       }
     }
 
-    console.log("[v0] createExchangeListing - SUCCESS")
-
     return { success: true, listingId: listing.id }
   } catch (error) {
-    console.error("[v0] Unexpected error creating exchange listing:", error)
+    console.error("Unexpected error creating exchange listing:", error)
     return {
       success: false,
       error: "An unexpected error occurred. Please try again.",

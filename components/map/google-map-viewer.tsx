@@ -231,27 +231,16 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
   const [checkIns, setCheckIns] = useState<any[]>(initialCheckIns || [])
   const [loadingCheckIns, setLoadingCheckIns] = useState(false)
 
-  // Only set checkIns once when initialCheckIns reference changes, not on every render
+  // Keep only the stable version of the useEffect for checkIns
   useEffect(() => {
-    console.log("[v0] GoogleMapViewer - initialCheckIns prop received:", {
-      count: initialCheckIns.length,
-      checkIns: initialCheckIns.map((c) => ({
-        id: c.id,
-        title: c.title,
-        location_type: c.location_type,
-        has_location: !!c.location,
-        has_custom_coords: !!c.custom_location_coordinates,
-        location_coords: c.location?.coordinates || null,
-        location_boundary: c.location?.boundary_coordinates || null,
-        location_path: c.location?.path_coordinates || null,
-      })),
-    })
-    
     // Only update if actually different to prevent loop
-    if (JSON.stringify(checkIns) !== JSON.stringify(initialCheckIns)) {
-      setCheckIns(initialCheckIns)
+    if (initialCheckIns && Array.isArray(initialCheckIns)) {
+      // Using JSON.stringify for deep comparison, could be optimized if performance is an issue
+      if (JSON.stringify(checkIns) !== JSON.stringify(initialCheckIns)) {
+        setCheckIns(initialCheckIns);
+      }
     }
-  }, [initialCheckIns]) // Remove checkIns from dependencies to prevent loop
+  }, [initialCheckIns]); // Removed checkIns from dependencies as it was causing infinite loop
 
   const [markerPosition, setMarkerPosition] = useState<{ lat: number; lng: number } | null>(drawnCoordinates || null)
   const [polygonPoints, setPolygonPoints] = useState<Array<{ lat: number; lng: number }>>(drawnPath || [])

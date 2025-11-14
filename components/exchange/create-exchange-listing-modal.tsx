@@ -34,10 +34,6 @@ export function CreateExchangeListingModal({
   categories,
   neighborhoods,
 }: CreateExchangeListingModalProps) {
-  const renderCount = useRef(0)
-  renderCount.current++
-  console.log(`[v0] Modal render #${renderCount.current}`)
-
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -61,7 +57,6 @@ export function CreateExchangeListingModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("[v0] handleSubmit called")
     setIsSubmitting(true)
 
     try {
@@ -125,9 +120,7 @@ export function CreateExchangeListingModal({
         status: formData.status,
       }
 
-      console.log("[v0] Calling createExchangeListing with data:", listingData)
       const result = await createExchangeListing(tenantSlug, tenantId, listingData)
-      console.log("[v0] createExchangeListing result:", result)
 
       if (result.success) {
         toast({
@@ -137,7 +130,6 @@ export function CreateExchangeListingModal({
               ? "Your listing is now visible to the community."
               : "You can continue editing and publish when ready.",
         })
-        console.log("[v0] Success - closing modal")
         onOpenChange(false)
         setFormData({
           title: "",
@@ -156,7 +148,7 @@ export function CreateExchangeListingModal({
           custom_location_lng: null,
           status: "draft",
         })
-        console.log("[v0] Form reset complete - relying on revalidatePath for updates")
+        window.location.reload()
       } else {
         toast({
           title: "Error",
@@ -165,14 +157,13 @@ export function CreateExchangeListingModal({
         })
       }
     } catch (error) {
-      console.error("[v0] Listing creation error:", error)
+      console.error("Listing creation error:", error)
       toast({
         title: "Error",
         description: "An unexpected error occurred",
         variant: "destructive",
       })
     } finally {
-      console.log("[v0] Setting isSubmitting to false")
       setIsSubmitting(false)
     }
   }
@@ -185,7 +176,6 @@ export function CreateExchangeListingModal({
   const showQuantity = isToolsEquipment || isFoodProduce
 
   const toggleNeighborhood = (neighborhoodId: string) => {
-    console.log("[v0] toggleNeighborhood:", neighborhoodId)
     setFormData(prev => ({
       ...prev,
       neighborhood_ids: prev.neighborhood_ids.includes(neighborhoodId)
@@ -195,7 +185,6 @@ export function CreateExchangeListingModal({
   }
 
   const handleLocationTypeChange = useCallback((type: "none" | "community" | "custom") => {
-    console.log("[v0] handleLocationTypeChange:", type)
     setFormData(prev => ({
       ...prev,
       location_type: type,
@@ -206,22 +195,26 @@ export function CreateExchangeListingModal({
     }))
   }, [])
 
-  const handleCommunityLocationChange = useCallback((locationId: string | null) => {
-    console.log("[v0] handleCommunityLocationChange:", locationId)
+  const handleCommunityLocationChange = useCallback((locationId: string) => {
     setFormData(prev => ({ ...prev, location_id: locationId }))
   }, [])
 
-  const handleCustomLocationChange = useCallback((
-    name: string,
-    lat: number | null,
-    lng: number | null
-  ) => {
-    console.log("[v0] handleCustomLocationChange:", { name, lat, lng })
+  const handleCustomLocationNameChange = useCallback((name: string) => {
     setFormData(prev => ({
       ...prev,
       custom_location_name: name,
-      custom_location_lat: lat,
-      custom_location_lng: lng,
+    }))
+  }, [])
+
+  const handleCustomLocationChange = useCallback((data: {
+    coordinates?: { lat: number; lng: number } | null
+    type?: "marker" | "polygon" | null
+    path?: Array<{ lat: number; lng: number }> | null
+  }) => {
+    setFormData(prev => ({
+      ...prev,
+      custom_location_lat: data.coordinates?.lat || null,
+      custom_location_lng: data.coordinates?.lng || null,
     }))
   }, [])
 
@@ -410,12 +403,18 @@ export function CreateExchangeListingModal({
                 <LocationSelector
                   tenantId={tenantId}
                   locationType={formData.location_type}
-                  locationId={formData.location_id}
+                  communityLocationId={formData.location_id}
                   customLocationName={formData.custom_location_name}
-                  customLocationLat={formData.custom_location_lat}
-                  customLocationLng={formData.custom_location_lng}
+                  customLocationCoordinates={
+                    formData.custom_location_lat && formData.custom_location_lng
+                      ? { lat: formData.custom_location_lat, lng: formData.custom_location_lng }
+                      : null
+                  }
+                  customLocationType="marker"
+                  customLocationPath={null}
                   onLocationTypeChange={handleLocationTypeChange}
                   onCommunityLocationChange={handleCommunityLocationChange}
+                  onCustomLocationNameChange={handleCustomLocationNameChange}
                   onCustomLocationChange={handleCustomLocationChange}
                 />
               </div>

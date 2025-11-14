@@ -7,8 +7,8 @@ import { createBrowserClient } from "@/lib/supabase/client"
  * Hook to check if exchange feature is enabled for a tenant
  */
 export function useExchangeFeature(tenantId: string) {
-  const [exchangeEnabled, setExchangeEnabled] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const [isEnabled, setIsEnabled] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     const fetchExchangeFeature = async () => {
@@ -20,13 +20,13 @@ export function useExchangeFeature(tenantId: string) {
         .single()
 
       if (data) {
-        setExchangeEnabled(data.exchange_enabled ?? false)
+        setIsEnabled(data.exchange_enabled ?? false)
       }
-      setLoading(false)
+      setIsLoading(false)
     }
 
     fetchExchangeFeature()
   }, [tenantId])
 
-  return { exchangeEnabled, loading }
+  return { isEnabled, isLoading }
 }

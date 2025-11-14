@@ -1,5 +1,5 @@
 import type React from "react"
-import { redirect } from "next/navigation"
+import { redirect } from 'next/navigation'
 import { createClient } from "@/lib/supabase/server"
 import {
   Sidebar,
@@ -16,7 +16,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
-import { Home, Users, Map, Calendar } from "lucide-react"
+import { Home, Users, Map, Calendar, Package } from 'lucide-react'
 import Link from "next/link"
 import { UserAvatarMenu } from "@/components/user-avatar-menu"
 
@@ -78,6 +78,7 @@ export default async function ResidentDashboardLayout({
   const mergedFeatures = { ...defaultFeatures, ...(tenant?.features || {}) }
   const mapEnabled = mergedFeatures.map === true
   const eventsEnabled = tenant.events_enabled === true
+  const exchangeEnabled = tenant.exchange_enabled === true
 
   return (
     <SidebarProvider>
@@ -132,6 +133,16 @@ export default async function ResidentDashboardLayout({
                       <Link href={`/t/${slug}/dashboard/events`}>
                         <Calendar />
                         <span>Events</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
+                {exchangeEnabled && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link href={`/t/${slug}/dashboard/exchange`}>
+                        <Package />
+                        <span>Exchange</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

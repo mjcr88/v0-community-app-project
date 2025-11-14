@@ -3,12 +3,10 @@ import { redirect } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Package } from 'lucide-react'
 import { getExchangeListings } from "@/app/actions/exchange-listings"
+import { CreateExchangeListingButton } from "@/components/exchange/create-exchange-listing-button"
+import { ExchangeListingCard } from "@/components/exchange/exchange-listing-card"
 
-export default async function ExchangePage({
-  params,
-}: {
-  params: Promise<{ slug: string }>
-}) {
+export default async function ExchangePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const supabase = await createClient()
 
@@ -22,7 +20,7 @@ export default async function ExchangePage({
 
   const { data: resident } = await supabase
     .from("users")
-    .select("id, tenant_id, lot_id, family_unit_id")
+    .select("id, tenant_id, lot_id, family_unit_id, onboarding_completed")
     .eq("id", user.id)
     .eq("role", "resident")
     .single()
@@ -32,11 +30,7 @@ export default async function ExchangePage({
   }
 
   // Check if exchange feature is enabled
-  const { data: tenant } = await supabase
-    .from("tenants")
-    .select("exchange_enabled")
-    .eq("id", resident.tenant_id)
-    .single()
+  const { data: tenant } = await supabase.from("tenants").select("exchange_enabled").eq("id", resident.tenant_id).single()
 
   if (!tenant?.exchange_enabled) {
     redirect(`/t/${slug}/dashboard`)
@@ -51,6 +45,9 @@ export default async function ExchangePage({
           <h2 className="text-3xl font-bold tracking-tight">Exchange Directory</h2>
           <p className="text-muted-foreground">Share, borrow, and trade within your community</p>
         </div>
+        {resident.onboarding_completed && (
+          <CreateExchangeListingButton tenantSlug={slug} tenantId={resident.tenant_id} />
+        )}
       </div>
 
       {listings.length === 0 ? (
@@ -62,32 +59,16 @@ export default async function ExchangePage({
               </div>
             </div>
             <CardTitle className="text-2xl">No listings yet</CardTitle>
-            <CardDescription className="text-base">
-              Be the first to share something with your community!
-            </CardDescription>
+            <CardDescription className="text-base">Be the first to share something with your community!</CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center pb-8">
-            <p className="text-sm text-muted-foreground">
-              Listings will appear here once created. Check back soon!
-            </p>
+            <p className="text-sm text-muted-foreground">Listings will appear here once created. Check back soon!</p>
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {listings.map((listing) => (
-            <Card key={listing.id}>
-              <CardHeader>
-                <CardTitle className="line-clamp-2 text-balance">{listing.title}</CardTitle>
-                <CardDescription className="line-clamp-1">
-                  {listing.category?.name || "Uncategorized"}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground line-clamp-3">
-                  {listing.description || "No description provided"}
-                </p>
-              </CardContent>
-            </Card>
+            <ExchangeListingCard key={listing.id} listing={listing} />
           ))}
         </div>
       )}

@@ -231,6 +231,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
   const [checkIns, setCheckIns] = useState<any[]>(initialCheckIns || [])
   const [loadingCheckIns, setLoadingCheckIns] = useState(false)
 
+  // Only set checkIns once when initialCheckIns reference changes, not on every render
   useEffect(() => {
     console.log("[v0] GoogleMapViewer - initialCheckIns prop received:", {
       count: initialCheckIns.length,
@@ -246,8 +247,11 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
       })),
     })
     
-    setCheckIns(initialCheckIns)
-  }, [initialCheckIns])
+    // Only update if actually different to prevent loop
+    if (JSON.stringify(checkIns) !== JSON.stringify(initialCheckIns)) {
+      setCheckIns(initialCheckIns)
+    }
+  }, [initialCheckIns]) // Remove checkIns from dependencies to prevent loop
 
   const [markerPosition, setMarkerPosition] = useState<{ lat: number; lng: number } | null>(drawnCoordinates || null)
   const [polygonPoints, setPolygonPoints] = useState<Array<{ lat: number; lng: number }>>(drawnPath || [])
@@ -483,21 +487,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
     [initialLocations],
   )
 
-  useEffect(() => {
-    console.log("[v0] GoogleMapViewer - initialCheckIns prop received:", {
-      count: initialCheckIns.length,
-      checkIns: initialCheckIns.map((c) => ({
-        id: c.id,
-        title: c.title,
-        location_type: c.location_type,
-        has_location: !!c.location,
-        has_custom_coords: !!c.custom_location_coordinates,
-        location_coords: c.location?.coordinates || null,
-        location_boundary: c.location?.boundary_coordinates || null,
-        location_path: c.location?.path_coordinates || null,
-      })),
-    })
-  }, [initialCheckIns])
+  // This was causing the infinite loop by running on every render
 
   const checkInsWithCoords = useMemo(() => {
     const activeCheckIns = checkIns

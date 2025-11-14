@@ -87,13 +87,16 @@ export function ExchangeListingDetailModal({
 
   // Location logic
   const hasMapLocation =
-    (listing.location?.coordinates) ||
+    (listing.location?.coordinates?.lat && listing.location?.coordinates?.lng) ||
     (listing.custom_location_lat && listing.custom_location_lng)
 
-  const locationCoordinates = listing.location?.coordinates || 
-    (listing.custom_location_lat && listing.custom_location_lng 
-      ? { lat: listing.custom_location_lat, lng: listing.custom_location_lng }
-      : null)
+  const locationCoordinates = listing.location?.coordinates 
+    ? (typeof listing.location.coordinates === 'string' 
+        ? JSON.parse(listing.location.coordinates) 
+        : listing.location.coordinates)
+    : (listing.custom_location_lat && listing.custom_location_lng 
+        ? { lat: listing.custom_location_lat, lng: listing.custom_location_lng }
+        : null)
 
   const locationName = listing.custom_location_name || listing.location?.name
 
@@ -233,20 +236,20 @@ export function ExchangeListingDetailModal({
                     <p className="text-sm text-muted-foreground">Community Member</p>
                   </div>
                 </div>
-
-                {/* Request to Borrow Button - Placeholder for Sprint 6 */}
-                {!isCreator && listing.is_available && listing.status === "published" && (
-                  <Button 
-                    className="w-full" 
-                    size="lg"
-                    onClick={() => toast.info("Request functionality coming soon in Sprint 6!")}
-                  >
-                    Request to Borrow
-                  </Button>
-                )}
               </div>
             </CardContent>
           </Card>
+
+          {/* Request to Borrow Button - Placeholder for Sprint 6 */}
+          {!isCreator && listing.is_available && listing.status === "published" && (
+            <Button 
+              className="w-full" 
+              size="lg"
+              onClick={() => toast.info("Request functionality coming soon in Sprint 6!")}
+            >
+              Request to Borrow
+            </Button>
+          )}
 
           {/* Additional Details */}
           <div className="space-y-3 text-sm">

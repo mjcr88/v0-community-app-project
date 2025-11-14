@@ -195,6 +195,7 @@ export async function createExchangeListing(
 
     if (data.visibility_scope === "neighborhood" && data.neighborhood_ids.length > 0) {
       const neighborhoodInserts = data.neighborhood_ids.map(neighborhoodId => ({
+        tenant_id: tenantId,
         listing_id: listing.id,
         neighborhood_id: neighborhoodId,
       }))

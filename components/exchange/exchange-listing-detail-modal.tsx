@@ -49,6 +49,22 @@ export function ExchangeListingDetailModal({
       setListing(result.data)
       // Set selected photo to hero or first photo
       setSelectedPhoto(result.data.hero_photo || result.data.photos?.[0] || null)
+      
+      console.log("[v0] Listing loaded:", {
+        listingId: result.data.id,
+        status: result.data.status,
+        isAvailable: result.data.is_available,
+        createdBy: result.data.created_by,
+        currentUserId: userId,
+        isCreator: userId === result.data.created_by,
+        locationData: {
+          hasLocationId: !!result.data.location_id,
+          hasLocationObject: !!result.data.location,
+          locationCoordinates: result.data.location?.coordinates,
+          customLat: result.data.custom_location_lat,
+          customLng: result.data.custom_location_lng,
+        }
+      })
     } else {
       toast.error(result.error || "Failed to load listing")
       onOpenChange(false)
@@ -85,22 +101,53 @@ export function ExchangeListingDetailModal({
     listing.category &&
     (listing.category.name === "Tools & Equipment" || listing.category.name === "Food & Produce")
 
-  // Location logic
-  const hasMapLocation =
-    (listing.location?.coordinates?.lat && listing.location?.coordinates?.lng) ||
-    (listing.custom_location_lat && listing.custom_location_lng)
+  let locationCoordinates = null
+  
+  // Try to get coordinates from community location
+  if (listing.location?.coordinates) {
+    try {
+      // Database stores coordinates as JSON string, parse it
+      locationCoordinates = typeof listing.location.coordinates === 'string' 
+        ? JSON.parse(listing.location.coordinates)
+        : listing.location.coordinates
+      
+      console.log("[v0] Parsed community location coordinates:", locationCoordinates)
+    } catch (e) {
+      console.error("[v0] Failed to parse location coordinates:", e)
+    }
+  }
+  
+  // Fall back to custom location coordinates
+  if (!locationCoordinates && listing.custom_location_lat && listing.custom_location_lng) {
+    locationCoordinates = {
+      lat: listing.custom_location_lat,
+      lng: listing.custom_location_lng
+    }
+    console.log("[v0] Using custom location coordinates:", locationCoordinates)
+  }
 
-  const locationCoordinates = listing.location?.coordinates 
-    ? (typeof listing.location.coordinates === 'string' 
-        ? JSON.parse(listing.location.coordinates) 
-        : listing.location.coordinates)
-    : (listing.custom_location_lat && listing.custom_location_lng 
-        ? { lat: listing.custom_location_lat, lng: listing.custom_location_lng }
-        : null)
+  // Now check if we have valid coordinates
+  const hasMapLocation = locationCoordinates && 
+    typeof locationCoordinates.lat === 'number' && 
+    typeof locationCoordinates.lng === 'number'
+
+  console.log("[v0] Map display check:", {
+    hasMapLocation,
+    locationCoordinates,
+    locationName: listing.custom_location_name || listing.location?.name
+  })
 
   const locationName = listing.custom_location_name || listing.location?.name
 
   const neighborhoods = listing.neighborhoods?.map((n: any) => n.neighborhood?.name).filter(Boolean) || []
+
+  const showBorrowButton = !isCreator && listing.is_available && listing.status === "published"
+  console.log("[v0] Borrow button visibility:", {
+    showBorrowButton,
+    isCreator,
+    isAvailable: listing.is_available,
+    status: listing.status,
+  })
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -240,8 +287,7 @@ export function ExchangeListingDetailModal({
             </CardContent>
           </Card>
 
-          {/* Request to Borrow Button - Placeholder for Sprint 6 */}
-          {!isCreator && listing.is_available && listing.status === "published" && (
+          {showBorrowButton && (
             <Button 
               className="w-full" 
               size="lg"

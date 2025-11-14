@@ -14,8 +14,6 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
 import { createExchangeListing, getExchangeCategories } from "@/app/actions/exchange-listings"
 import { getNeighborhoods } from "@/app/actions/neighborhoods"
-import { LocationSelector } from "@/components/event-forms/location-selector"
-import type { LocationType } from "@/components/event-forms/location-selector"
 import { Loader2 } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import type { ExchangePricingType, ExchangeCondition } from "@/types/exchange"
@@ -49,12 +47,7 @@ export function CreateExchangeListingModal({
     condition: "" as ExchangeCondition | "",
     available_quantity: "",
     status: "draft" as "draft" | "published",
-    location_type: "none" as LocationType,
-    community_location_id: null as string | null,
-    custom_location_name: null as string | null,
-    custom_location_coordinates: null as { lat: number; lng: number } | null,
-    custom_location_type: null as "marker" | "polygon" | null,
-    custom_location_path: null as Array<{ lat: number; lng: number }> | null,
+    location_name: "",
     visibility_scope: "community" as "community" | "neighborhood",
     neighborhood_ids: [] as string[],
   })
@@ -120,27 +113,6 @@ export function CreateExchangeListingModal({
         }
       }
 
-      if (formData.location_type === "custom") {
-        if (!formData.custom_location_name?.trim()) {
-          toast({
-            title: "Location name required",
-            description: "Please enter a name for your custom location",
-            variant: "destructive",
-          })
-          setIsSubmitting(false)
-          return
-        }
-        if (!formData.custom_location_coordinates) {
-          toast({
-            title: "Location coordinates required",
-            description: "Please select a location on the map",
-            variant: "destructive",
-          })
-          setIsSubmitting(false)
-          return
-        }
-      }
-
       if (formData.visibility_scope === "neighborhood" && formData.neighborhood_ids.length === 0) {
         toast({
           title: "Neighborhoods required",
@@ -160,12 +132,7 @@ export function CreateExchangeListingModal({
         condition: formData.condition,
         available_quantity: formData.available_quantity ? parseInt(formData.available_quantity, 10) : null,
         status: formData.status,
-        location_type: formData.location_type,
-        community_location_id: formData.community_location_id,
-        custom_location_name: formData.custom_location_name,
-        custom_location_coordinates: formData.custom_location_coordinates,
-        custom_location_type: formData.custom_location_type,
-        custom_location_path: formData.custom_location_path,
+        location_name: formData.location_name.trim() || null,
         visibility_scope: formData.visibility_scope,
         neighborhood_ids: formData.neighborhood_ids,
       }
@@ -191,12 +158,7 @@ export function CreateExchangeListingModal({
           condition: "",
           available_quantity: "",
           status: "draft",
-          location_type: "none",
-          community_location_id: null,
-          custom_location_name: null,
-          custom_location_coordinates: null,
-          custom_location_type: null,
-          custom_location_path: null,
+          location_name: "",
           visibility_scope: "community",
           neighborhood_ids: [],
         })
@@ -227,31 +189,6 @@ export function CreateExchangeListingModal({
   const showCondition = isToolsEquipment // Show only for Tools & Equipment
   const showQuantity = isToolsEquipment || isFoodProduce // Show for Tools & Equipment and Food & Produce
   const locationOptional = isServicesSkills
-
-  const handleLocationTypeChange = useCallback((type: LocationType) => {
-    setFormData((prev) => ({ ...prev, location_type: type }))
-  }, [])
-
-  const handleCommunityLocationChange = useCallback((id: string | null) => {
-    setFormData((prev) => ({ ...prev, community_location_id: id }))
-  }, [])
-
-  const handleCustomLocationNameChange = useCallback((name: string | null) => {
-    setFormData((prev) => ({ ...prev, custom_location_name: name }))
-  }, [])
-
-  const handleCustomLocationChange = useCallback((data: {
-    coordinates?: { lat: number; lng: number } | null
-    type?: "marker" | "polygon" | null
-    path?: Array<{ lat: number; lng: number }> | null
-  }) => {
-    setFormData((prev) => ({
-      ...prev,
-      custom_location_coordinates: data.coordinates ?? null,
-      custom_location_type: data.type ?? null,
-      custom_location_path: data.path ?? null,
-    }))
-  }, [])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -443,27 +380,28 @@ export function CreateExchangeListingModal({
                 </div>
               )}
 
+              {/* Location */}
               {selectedCategory && (
-                <LocationSelector
-                  tenantId={tenantId}
-                  locationType={formData.location_type}
-                  communityLocationId={formData.community_location_id}
-                  customLocationName={formData.custom_location_name}
-                  customLocationCoordinates={formData.custom_location_coordinates}
-                  customLocationType={formData.custom_location_type}
-                  customLocationPath={formData.custom_location_path}
-                  onLocationTypeChange={handleLocationTypeChange}
-                  onCommunityLocationChange={handleCommunityLocationChange}
-                  onCustomLocationNameChange={handleCustomLocationNameChange}
-                  onCustomLocationChange={handleCustomLocationChange}
-                />
-              )}
-              {locationOptional && formData.location_type === "none" && (
-                <p className="text-xs text-muted-foreground italic pl-6 -mt-2">
-                  Location is optional for services - you can coordinate directly with interested residents
-                </p>
+                <div className="space-y-2">
+                  <Label htmlFor="location_name">
+                    Location {!locationOptional && <span className="text-destructive">*</span>}
+                  </Label>
+                  <Input
+                    id="location_name"
+                    placeholder="e.g., Community Garden, Front Patio, etc."
+                    value={formData.location_name}
+                    onChange={(e) => setFormData({ ...formData, location_name: e.target.value })}
+                    required={!locationOptional}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {locationOptional 
+                      ? "Location is optional for services - you can coordinate directly"
+                      : "Where can residents find or pick up this item?"}
+                  </p>
+                </div>
               )}
 
+              {/* Visibility */}
               <div className="space-y-4 pt-4 border-t">
                 <div className="space-y-2">
                   <Label className="text-base font-semibold">Visibility</Label>

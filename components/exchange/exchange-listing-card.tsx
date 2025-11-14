@@ -77,7 +77,7 @@ export function ExchangeListingCard({ listing, onClick, className }: ExchangeLis
 
         {/* Category and price badges */}
         <div className="flex items-center gap-2 flex-wrap">
-          {listing.category && <ExchangeCategoryBadge category={listing.category.name} />}
+          {listing.category && <ExchangeCategoryBadge categoryName={listing.category.name} />}
           <ExchangePriceBadge pricingType={listing.pricing_type} priceAmount={listing.price_amount} />
           {conditionDisplay && (
             <Badge variant="secondary" className="text-xs">

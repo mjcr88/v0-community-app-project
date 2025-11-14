@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -200,7 +200,6 @@ export function CreateExchangeListingModal({
           visibility_scope: "community",
           neighborhood_ids: [],
         })
-        router.refresh()
       } else {
         toast({
           title: "Error",
@@ -228,6 +227,31 @@ export function CreateExchangeListingModal({
   const showCondition = isToolsEquipment // Show only for Tools & Equipment
   const showQuantity = isToolsEquipment || isFoodProduce // Show for Tools & Equipment and Food & Produce
   const locationOptional = isServicesSkills
+
+  const handleLocationTypeChange = useCallback((type: LocationType) => {
+    setFormData((prev) => ({ ...prev, location_type: type }))
+  }, [])
+
+  const handleCommunityLocationChange = useCallback((id: string | null) => {
+    setFormData((prev) => ({ ...prev, community_location_id: id }))
+  }, [])
+
+  const handleCustomLocationNameChange = useCallback((name: string | null) => {
+    setFormData((prev) => ({ ...prev, custom_location_name: name }))
+  }, [])
+
+  const handleCustomLocationChange = useCallback((data: {
+    coordinates?: { lat: number; lng: number } | null
+    type?: "marker" | "polygon" | null
+    path?: Array<{ lat: number; lng: number }> | null
+  }) => {
+    setFormData((prev) => ({
+      ...prev,
+      custom_location_coordinates: data.coordinates ?? null,
+      custom_location_type: data.type ?? null,
+      custom_location_path: data.path ?? null,
+    }))
+  }, [])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -428,17 +452,10 @@ export function CreateExchangeListingModal({
                   customLocationCoordinates={formData.custom_location_coordinates}
                   customLocationType={formData.custom_location_type}
                   customLocationPath={formData.custom_location_path}
-                  onLocationTypeChange={(type) => setFormData({ ...formData, location_type: type })}
-                  onCommunityLocationChange={(id) => setFormData({ ...formData, community_location_id: id })}
-                  onCustomLocationNameChange={(name) => setFormData({ ...formData, custom_location_name: name })}
-                  onCustomLocationChange={(data) =>
-                    setFormData({
-                      ...formData,
-                      custom_location_coordinates: data.coordinates ?? null,
-                      custom_location_type: data.type ?? null,
-                      custom_location_path: data.path ?? null,
-                    })
-                  }
+                  onLocationTypeChange={handleLocationTypeChange}
+                  onCommunityLocationChange={handleCommunityLocationChange}
+                  onCustomLocationNameChange={handleCustomLocationNameChange}
+                  onCustomLocationChange={handleCustomLocationChange}
                 />
               )}
               {locationOptional && formData.location_type === "none" && (

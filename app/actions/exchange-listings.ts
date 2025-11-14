@@ -100,6 +100,8 @@ export async function createExchangeListing(
     price: number | null
     condition: ExchangeCondition | null
     available_quantity: number | null
+    visibility_scope: "community" | "neighborhood"
+    neighborhood_ids: string[]
     status: "draft" | "published"
   },
 ) {
@@ -138,6 +140,10 @@ export async function createExchangeListing(
       return { success: false, error: "Price must be greater than 0 for fixed price listings" }
     }
 
+    if (data.visibility_scope === "neighborhood" && data.neighborhood_ids.length === 0) {
+      return { success: false, error: "At least one neighborhood must be selected for neighborhood-only visibility" }
+    }
+
     // Verify category exists
     const { data: category } = await supabase
       .from("exchange_categories")
@@ -158,7 +164,7 @@ export async function createExchangeListing(
       category_id: data.category_id,
       status: data.status,
       pricing_type: data.pricing_type,
-      visibility_scope: "community", // Default for Sprint 3B, will be customizable in 3C
+      visibility_scope: data.visibility_scope,
     }
 
     // Only add price if fixed_price type
@@ -179,7 +185,7 @@ export async function createExchangeListing(
     const { data: listing, error } = await supabase
       .from("exchange_listings")
       .insert(insertData)
-      .select()
+      .select("id")
       .single()
 
     if (error) {
@@ -187,11 +193,27 @@ export async function createExchangeListing(
       return { success: false, error: error.message }
     }
 
+    if (data.visibility_scope === "neighborhood" && data.neighborhood_ids.length > 0) {
+      const neighborhoodInserts = data.neighborhood_ids.map(neighborhoodId => ({
+        listing_id: listing.id,
+        neighborhood_id: neighborhoodId,
+      }))
+
+      const { error: neighborhoodError } = await supabase
+        .from("exchange_neighborhoods")
+        .insert(neighborhoodInserts)
+
+      if (neighborhoodError) {
+        console.error("[v0] Error creating neighborhood associations:", neighborhoodError)
+        // Don't fail the entire operation, but log the error
+      }
+    }
+
     console.log("[v0] Exchange listing created successfully:", listing.id)
 
     revalidatePath(`/t/${tenantSlug}/dashboard/exchange`)
 
-    return { success: true, data: listing }
+    return { success: true, listingId: listing.id }
   } catch (error) {
     console.error("[v0] Unexpected error creating exchange listing:", error)
     return {

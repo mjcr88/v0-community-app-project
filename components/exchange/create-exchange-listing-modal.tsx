@@ -11,7 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Card, CardContent } from "@/components/ui/card"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Checkbox } from "@/components/ui/checkbox"
 import { createExchangeListing, getExchangeCategories } from "@/app/actions/exchange-listings"
+import { getNeighborhoods } from "@/app/actions/neighborhoods"
 import { Loader2 } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import type { ExchangePricingType, ExchangeCondition } from "@/types/exchange"
@@ -34,6 +36,8 @@ export function CreateExchangeListingModal({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([])
   const [isLoadingCategories, setIsLoadingCategories] = useState(true)
+  const [neighborhoods, setNeighborhoods] = useState<Array<{ id: string; name: string }>>([])
+  const [isLoadingNeighborhoods, setIsLoadingNeighborhoods] = useState(false)
 
   const [formData, setFormData] = useState({
     title: "",
@@ -43,6 +47,8 @@ export function CreateExchangeListingModal({
     price: "",
     condition: "" as ExchangeCondition | "",
     available_quantity: "",
+    visibility_scope: "community" as "community" | "neighborhood",
+    neighborhood_ids: [] as string[],
     status: "draft" as "draft" | "published",
   })
 
@@ -50,6 +56,7 @@ export function CreateExchangeListingModal({
   useEffect(() => {
     if (open) {
       loadCategories()
+      loadNeighborhoods()
     }
   }, [open, tenantId])
 
@@ -58,6 +65,15 @@ export function CreateExchangeListingModal({
     const categoriesData = await getExchangeCategories(tenantId)
     setCategories(categoriesData)
     setIsLoadingCategories(false)
+  }
+
+  const loadNeighborhoods = async () => {
+    setIsLoadingNeighborhoods(true)
+    const result = await getNeighborhoods(tenantId)
+    if (result.success) {
+      setNeighborhoods(result.data)
+    }
+    setIsLoadingNeighborhoods(false)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -99,6 +115,16 @@ export function CreateExchangeListingModal({
         }
       }
 
+      if (formData.visibility_scope === "neighborhood" && formData.neighborhood_ids.length === 0) {
+        toast({
+          title: "Neighborhoods required",
+          description: "Please select at least one neighborhood for neighborhood-only visibility",
+          variant: "destructive",
+        })
+        setIsSubmitting(false)
+        return
+      }
+
       const listingData = {
         title: formData.title.trim(),
         description: formData.description.trim() || "",
@@ -107,6 +133,8 @@ export function CreateExchangeListingModal({
         price: formData.pricing_type === "fixed_price" ? parseFloat(formData.price) : null,
         condition: formData.condition,
         available_quantity: formData.available_quantity ? parseInt(formData.available_quantity, 10) : null,
+        visibility_scope: formData.visibility_scope,
+        neighborhood_ids: formData.visibility_scope === "neighborhood" ? formData.neighborhood_ids : [],
         status: formData.status,
       }
 
@@ -130,6 +158,8 @@ export function CreateExchangeListingModal({
           price: "",
           condition: "",
           available_quantity: "",
+          visibility_scope: "community",
+          neighborhood_ids: [],
           status: "draft",
         })
         router.refresh()
@@ -158,6 +188,15 @@ export function CreateExchangeListingModal({
   const showPricing = selectedCategory && !isToolsEquipment // Show for all except Tools & Equipment
   const showCondition = isToolsEquipment // Show only for Tools & Equipment
   const showQuantity = isToolsEquipment || isFoodProduce // Show for Tools & Equipment and Food & Produce
+
+  const toggleNeighborhood = (neighborhoodId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      neighborhood_ids: prev.neighborhood_ids.includes(neighborhoodId)
+        ? prev.neighborhood_ids.filter(id => id !== neighborhoodId)
+        : [...prev.neighborhood_ids, neighborhoodId]
+    }))
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -348,6 +387,75 @@ export function CreateExchangeListingModal({
                   </p>
                 </div>
               )}
+
+              <div className="space-y-4 pt-4 border-t">
+                <div className="space-y-2">
+                  <Label className="text-base font-semibold">Visibility</Label>
+                  <p className="text-sm text-muted-foreground">Who should be able to see this listing?</p>
+                </div>
+
+                <RadioGroup
+                  value={formData.visibility_scope}
+                  onValueChange={(value) => setFormData({ ...formData, visibility_scope: value as "community" | "neighborhood", neighborhood_ids: [] })}
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-start space-x-3 rounded-md border p-4">
+                      <RadioGroupItem value="community" id="community" className="mt-1" />
+                      <div className="flex-1">
+                        <Label htmlFor="community" className="font-medium cursor-pointer">
+                          Community-Wide
+                        </Label>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Visible to all residents in the community
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start space-x-3 rounded-md border p-4">
+                      <RadioGroupItem value="neighborhood" id="neighborhood" className="mt-1" />
+                      <div className="flex-1">
+                        <Label htmlFor="neighborhood" className="font-medium cursor-pointer">
+                          Neighborhood-Only
+                        </Label>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Only visible to residents in specific neighborhoods
+                        </p>
+                        {formData.visibility_scope === "neighborhood" && (
+                          <div className="mt-4 space-y-3">
+                            <Label className="text-sm font-medium">Select Neighborhoods <span className="text-destructive">*</span></Label>
+                            {isLoadingNeighborhoods ? (
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Loading neighborhoods...
+                              </div>
+                            ) : neighborhoods.length === 0 ? (
+                              <p className="text-sm text-muted-foreground">No neighborhoods available</p>
+                            ) : (
+                              <div className="space-y-2 max-h-48 overflow-y-auto rounded-md border p-3">
+                                {neighborhoods.map((neighborhood) => (
+                                  <div key={neighborhood.id} className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id={`neighborhood-${neighborhood.id}`}
+                                      checked={formData.neighborhood_ids.includes(neighborhood.id)}
+                                      onCheckedChange={() => toggleNeighborhood(neighborhood.id)}
+                                    />
+                                    <Label
+                                      htmlFor={`neighborhood-${neighborhood.id}`}
+                                      className="text-sm font-normal cursor-pointer"
+                                    >
+                                      {neighborhood.name}
+                                    </Label>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </RadioGroup>
+              </div>
 
               {/* Status Selection */}
               <div className="space-y-4 pt-4 border-t">

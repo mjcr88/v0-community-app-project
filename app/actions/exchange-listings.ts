@@ -150,7 +150,7 @@ export async function createExchangeListing(
       return { success: false, error: "Invalid category selected" }
     }
 
-    const insertData = {
+    const insertData: any = {
       tenant_id: tenantId,
       created_by: user.id,
       title: data.title.trim(),
@@ -158,10 +158,22 @@ export async function createExchangeListing(
       category_id: data.category_id,
       status: data.status,
       pricing_type: data.pricing_type,
-      price: data.pricing_type === "fixed_price" ? data.price : null,
-      condition: data.condition,
-      available_quantity: data.available_quantity,
       visibility_scope: "community", // Default for Sprint 3B, will be customizable in 3C
+    }
+
+    // Only add price if fixed_price type
+    if (data.pricing_type === "fixed_price" && data.price) {
+      insertData.price = data.price
+    }
+
+    // Only add condition if it has a value (Tools & Equipment only)
+    if (data.condition) {
+      insertData.condition = data.condition
+    }
+
+    // Only add quantity if it has a value
+    if (data.available_quantity !== null && data.available_quantity !== undefined) {
+      insertData.available_quantity = data.available_quantity
     }
 
     const { data: listing, error } = await supabase

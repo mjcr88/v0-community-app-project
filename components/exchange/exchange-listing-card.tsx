@@ -29,11 +29,6 @@ interface ExchangeListingCardProps {
       last_name: string
       profile_picture_url?: string | null
     } | null
-    location?: {
-      id: string
-      name: string
-    } | null
-    custom_location_name?: string | null
   }
   onClick?: () => void
   className?: string
@@ -52,12 +47,11 @@ export function ExchangeListingCard({ listing, onClick, className }: ExchangeLis
     ? listing.condition.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
     : null
 
-  const shouldShowQuantity = listing.category && 
-    (listing.category.name === "Tools & Equipment" || listing.category.name === "Food & Produce") &&
+  const shouldShowQuantity = 
     listing.available_quantity !== null && 
-    listing.available_quantity !== undefined
-
-  const locationName = listing.location?.name || listing.custom_location_name
+    listing.available_quantity !== undefined &&
+    listing.category &&
+    (listing.category.name === "Tools & Equipment" || listing.category.name === "Food & Produce")
 
   return (
     <Card className={cn("hover:bg-accent transition-colors cursor-pointer", className)} onClick={onClick}>
@@ -99,11 +93,6 @@ export function ExchangeListingCard({ listing, onClick, className }: ExchangeLis
           {shouldShowQuantity && (
             <Badge variant="outline" className="text-xs">
               {listing.available_quantity} available
-            </Badge>
-          )}
-          {locationName && (
-            <Badge variant="outline" className="text-xs">
-              📍 {locationName}
             </Badge>
           )}
         </div>

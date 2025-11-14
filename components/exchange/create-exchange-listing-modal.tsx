@@ -14,6 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { createExchangeListing } from "@/app/actions/exchange-listings"
 import { Loader2 } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
+import { useRouter } from 'next/navigation'
 import type { ExchangePricingType, ExchangeCondition } from "@/types/exchange"
 import { LocationSelector } from "@/components/event-forms/location-selector"
 
@@ -35,6 +36,7 @@ export function CreateExchangeListingModal({
   neighborhoods,
 }: CreateExchangeListingModalProps) {
   const { toast } = useToast()
+  const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const [formData, setFormData] = useState({
@@ -148,7 +150,7 @@ export function CreateExchangeListingModal({
           custom_location_lng: null,
           status: "draft",
         })
-        window.location.reload()
+        router.push(window.location.pathname)
       } else {
         toast({
           title: "Error",

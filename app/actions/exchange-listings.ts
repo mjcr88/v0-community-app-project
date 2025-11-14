@@ -207,6 +207,8 @@ export async function createExchangeListing(
       }
     }
 
+    revalidatePath(`/t/${tenantSlug}/dashboard/exchange`)
+
     return { success: true, listingId: listing.id }
   } catch (error) {
     console.error("Unexpected error creating exchange listing:", error)

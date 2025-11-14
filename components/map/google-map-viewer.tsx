@@ -231,16 +231,15 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
   const [checkIns, setCheckIns] = useState<any[]>(initialCheckIns || [])
   const [loadingCheckIns, setLoadingCheckIns] = useState(false)
 
-  // Keep only the stable version of the useEffect for checkIns
   useEffect(() => {
-    // Only update if actually different to prevent loop
-    if (initialCheckIns && Array.isArray(initialCheckIns)) {
-      // Using JSON.stringify for deep comparison, could be optimized if performance is an issue
-      if (JSON.stringify(checkIns) !== JSON.stringify(initialCheckIns)) {
-        setCheckIns(initialCheckIns);
-      }
+    if (!initialCheckIns || !Array.isArray(initialCheckIns)) return
+    
+    // Only update if the actual data changed, not just the array reference
+    const hasChanged = JSON.stringify(checkIns) !== JSON.stringify(initialCheckIns)
+    if (hasChanged) {
+      setCheckIns(initialCheckIns)
     }
-  }, [initialCheckIns]); // Removed checkIns from dependencies as it was causing infinite loop
+  }, [initialCheckIns]) // Removed checkIns from dependencies to prevent infinite loop
 
   const [markerPosition, setMarkerPosition] = useState<{ lat: number; lng: number } | null>(drawnCoordinates || null)
   const [polygonPoints, setPolygonPoints] = useState<Array<{ lat: number; lng: number }>>(drawnPath || [])

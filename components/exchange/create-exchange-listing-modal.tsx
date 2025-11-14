@@ -11,7 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Card, CardContent } from "@/components/ui/card"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Checkbox } from "@/components/ui/checkbox"
 import { createExchangeListing, getExchangeCategories } from "@/app/actions/exchange-listings"
+import { getNeighborhoods } from "@/app/actions/neighborhoods"
+import { LocationSelector } from "@/components/event-forms/location-selector"
+import type { LocationType } from "@/components/event-forms/location-selector"
 import { Loader2 } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import type { ExchangePricingType, ExchangeCondition } from "@/types/exchange"
@@ -33,6 +37,7 @@ export function CreateExchangeListingModal({
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([])
+  const [neighborhoods, setNeighborhoods] = useState<Array<{ id: string; name: string }>>([])
   const [isLoadingCategories, setIsLoadingCategories] = useState(true)
 
   const [formData, setFormData] = useState({
@@ -44,12 +49,21 @@ export function CreateExchangeListingModal({
     condition: "" as ExchangeCondition | "",
     available_quantity: "",
     status: "draft" as "draft" | "published",
+    location_type: "none" as LocationType,
+    community_location_id: null as string | null,
+    custom_location_name: null as string | null,
+    custom_location_coordinates: null as { lat: number; lng: number } | null,
+    custom_location_type: null as "marker" | "polygon" | null,
+    custom_location_path: null as Array<{ lat: number; lng: number }> | null,
+    visibility_scope: "community" as "community" | "neighborhood",
+    neighborhood_ids: [] as string[],
   })
 
-  // Load categories when modal opens
+  // Load categories and neighborhoods when modal opens
   useEffect(() => {
     if (open) {
       loadCategories()
+      loadNeighborhoods()
     }
   }, [open, tenantId])
 
@@ -58,6 +72,13 @@ export function CreateExchangeListingModal({
     const categoriesData = await getExchangeCategories(tenantId)
     setCategories(categoriesData)
     setIsLoadingCategories(false)
+  }
+
+  const loadNeighborhoods = async () => {
+    const result = await getNeighborhoods(tenantId)
+    if (result.success) {
+      setNeighborhoods(result.data)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -99,6 +120,37 @@ export function CreateExchangeListingModal({
         }
       }
 
+      if (formData.location_type === "custom") {
+        if (!formData.custom_location_name?.trim()) {
+          toast({
+            title: "Location name required",
+            description: "Please enter a name for your custom location",
+            variant: "destructive",
+          })
+          setIsSubmitting(false)
+          return
+        }
+        if (!formData.custom_location_coordinates) {
+          toast({
+            title: "Location coordinates required",
+            description: "Please select a location on the map",
+            variant: "destructive",
+          })
+          setIsSubmitting(false)
+          return
+        }
+      }
+
+      if (formData.visibility_scope === "neighborhood" && formData.neighborhood_ids.length === 0) {
+        toast({
+          title: "Neighborhoods required",
+          description: "Please select at least one neighborhood for neighborhood-only visibility",
+          variant: "destructive",
+        })
+        setIsSubmitting(false)
+        return
+      }
+
       const listingData = {
         title: formData.title.trim(),
         description: formData.description.trim() || "",
@@ -108,6 +160,14 @@ export function CreateExchangeListingModal({
         condition: formData.condition,
         available_quantity: formData.available_quantity ? parseInt(formData.available_quantity, 10) : null,
         status: formData.status,
+        location_type: formData.location_type,
+        community_location_id: formData.community_location_id,
+        custom_location_name: formData.custom_location_name,
+        custom_location_coordinates: formData.custom_location_coordinates,
+        custom_location_type: formData.custom_location_type,
+        custom_location_path: formData.custom_location_path,
+        visibility_scope: formData.visibility_scope,
+        neighborhood_ids: formData.neighborhood_ids,
       }
 
       const result = await createExchangeListing(tenantSlug, tenantId, listingData)
@@ -131,6 +191,14 @@ export function CreateExchangeListingModal({
           condition: "",
           available_quantity: "",
           status: "draft",
+          location_type: "none",
+          community_location_id: null,
+          custom_location_name: null,
+          custom_location_coordinates: null,
+          custom_location_type: null,
+          custom_location_path: null,
+          visibility_scope: "community",
+          neighborhood_ids: [],
         })
         router.refresh()
       } else {
@@ -155,9 +223,11 @@ export function CreateExchangeListingModal({
   const selectedCategory = categories.find(c => c.id === formData.category_id)
   const isToolsEquipment = selectedCategory?.name === "Tools & Equipment"
   const isFoodProduce = selectedCategory?.name === "Food & Produce"
+  const isServicesSkills = selectedCategory?.name === "Services & Skills"
   const showPricing = selectedCategory && !isToolsEquipment // Show for all except Tools & Equipment
   const showCondition = isToolsEquipment // Show only for Tools & Equipment
   const showQuantity = isToolsEquipment || isFoodProduce // Show for Tools & Equipment and Food & Produce
+  const locationOptional = isServicesSkills
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -348,6 +418,109 @@ export function CreateExchangeListingModal({
                   </p>
                 </div>
               )}
+
+              {selectedCategory && (
+                <LocationSelector
+                  tenantId={tenantId}
+                  locationType={formData.location_type}
+                  communityLocationId={formData.community_location_id}
+                  customLocationName={formData.custom_location_name}
+                  customLocationCoordinates={formData.custom_location_coordinates}
+                  customLocationType={formData.custom_location_type}
+                  customLocationPath={formData.custom_location_path}
+                  onLocationTypeChange={(type) => setFormData({ ...formData, location_type: type })}
+                  onCommunityLocationChange={(id) => setFormData({ ...formData, community_location_id: id })}
+                  onCustomLocationNameChange={(name) => setFormData({ ...formData, custom_location_name: name })}
+                  onCustomLocationChange={(data) =>
+                    setFormData({
+                      ...formData,
+                      custom_location_coordinates: data.coordinates ?? null,
+                      custom_location_type: data.type ?? null,
+                      custom_location_path: data.path ?? null,
+                    })
+                  }
+                />
+              )}
+              {locationOptional && formData.location_type === "none" && (
+                <p className="text-xs text-muted-foreground italic pl-6 -mt-2">
+                  Location is optional for services - you can coordinate directly with interested residents
+                </p>
+              )}
+
+              <div className="space-y-4 pt-4 border-t">
+                <div className="space-y-2">
+                  <Label className="text-base font-semibold">Visibility</Label>
+                  <p className="text-sm text-muted-foreground">Who can see this listing?</p>
+                </div>
+
+                <RadioGroup
+                  value={formData.visibility_scope}
+                  onValueChange={(value) => setFormData({ ...formData, visibility_scope: value as "community" | "neighborhood", neighborhood_ids: [] })}
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-start space-x-3 rounded-md border p-4">
+                      <RadioGroupItem value="community" id="visibility-community" className="mt-1" />
+                      <div className="flex-1">
+                        <Label htmlFor="visibility-community" className="font-medium cursor-pointer">
+                          Community-wide
+                        </Label>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          All residents can see this listing
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start space-x-3 rounded-md border p-4">
+                      <RadioGroupItem value="neighborhood" id="visibility-neighborhood" className="mt-1" />
+                      <div className="flex-1">
+                        <Label htmlFor="visibility-neighborhood" className="font-medium cursor-pointer">
+                          Neighborhood-only
+                        </Label>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Only residents in selected neighborhoods can see this listing
+                        </p>
+                        {formData.visibility_scope === "neighborhood" && (
+                          <div className="mt-3 space-y-2 border-t pt-3">
+                            <Label className="text-sm font-medium">Select Neighborhoods</Label>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              {neighborhoods.map((neighborhood) => (
+                                <div key={neighborhood.id} className="flex items-center space-x-2">
+                                  <Checkbox
+                                    id={`neighborhood-${neighborhood.id}`}
+                                    checked={formData.neighborhood_ids.includes(neighborhood.id)}
+                                    onCheckedChange={(checked) => {
+                                      if (checked) {
+                                        setFormData({
+                                          ...formData,
+                                          neighborhood_ids: [...formData.neighborhood_ids, neighborhood.id],
+                                        })
+                                      } else {
+                                        setFormData({
+                                          ...formData,
+                                          neighborhood_ids: formData.neighborhood_ids.filter((id) => id !== neighborhood.id),
+                                        })
+                                      }
+                                    }}
+                                  />
+                                  <Label
+                                    htmlFor={`neighborhood-${neighborhood.id}`}
+                                    className="text-sm font-normal cursor-pointer"
+                                  >
+                                    {neighborhood.name}
+                                  </Label>
+                                </div>
+                              ))}
+                            </div>
+                            {neighborhoods.length === 0 && (
+                              <p className="text-sm text-muted-foreground italic">No neighborhoods available</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </RadioGroup>
+              </div>
 
               {/* Status Selection */}
               <div className="space-y-4 pt-4 border-t">

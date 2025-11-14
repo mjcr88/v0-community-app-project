@@ -36,8 +36,10 @@ export async function getExchangeListings(tenantId: string) {
         condition,
         available_quantity,
         created_by,
+        custom_location_name,
         category:exchange_categories(id, name, description),
-        creator:users!created_by(id, first_name, last_name, profile_picture_url)
+        creator:users!created_by(id, first_name, last_name, profile_picture_url),
+        location:locations(id, name)
       `)
       .eq("tenant_id", tenantId)
       .or(`status.eq.published,and(status.eq.draft,created_by.eq.${user.id})`)
@@ -101,6 +103,14 @@ export async function createExchangeListing(
     condition: ExchangeCondition | null
     available_quantity: number | null
     status: "draft" | "published"
+    location_type: "community" | "custom" | "none"
+    community_location_id: string | null
+    custom_location_name: string | null
+    custom_location_coordinates: { lat: number; lng: number } | null
+    custom_location_type: "marker" | "polygon" | null
+    custom_location_path: Array<{ lat: number; lng: number }> | null
+    visibility_scope: "community" | "neighborhood"
+    neighborhood_ids: string[]
   },
 ) {
   try {
@@ -158,7 +168,7 @@ export async function createExchangeListing(
       category_id: data.category_id,
       status: data.status,
       pricing_type: data.pricing_type,
-      visibility_scope: "community", // Default for Sprint 3B, will be customizable in 3C
+      visibility_scope: data.visibility_scope,
     }
 
     // Only add price if fixed_price type
@@ -176,6 +186,16 @@ export async function createExchangeListing(
       insertData.available_quantity = data.available_quantity
     }
 
+    if (data.location_type === "community" && data.community_location_id) {
+      insertData.location_id = data.community_location_id
+    } else if (data.location_type === "custom") {
+      insertData.custom_location_name = data.custom_location_name
+      if (data.custom_location_coordinates) {
+        insertData.custom_location_lat = data.custom_location_coordinates.lat
+        insertData.custom_location_lng = data.custom_location_coordinates.lng
+      }
+    }
+
     const { data: listing, error } = await supabase
       .from("exchange_listings")
       .insert(insertData)
@@ -185,6 +205,23 @@ export async function createExchangeListing(
     if (error) {
       console.error("[v0] Error creating exchange listing:", error)
       return { success: false, error: error.message }
+    }
+
+    if (data.visibility_scope === "neighborhood" && data.neighborhood_ids.length > 0) {
+      const neighborhoodInserts = data.neighborhood_ids.map((neighborhoodId) => ({
+        tenant_id: tenantId,
+        listing_id: listing.id,
+        neighborhood_id: neighborhoodId,
+      }))
+
+      const { error: neighborhoodError } = await supabase
+        .from("exchange_neighborhoods")
+        .insert(neighborhoodInserts)
+
+      if (neighborhoodError) {
+        console.error("[v0] Error creating neighborhood associations:", neighborhoodError)
+        // Don't fail the entire operation if neighborhood insert fails
+      }
     }
 
     console.log("[v0] Exchange listing created successfully:", listing.id)

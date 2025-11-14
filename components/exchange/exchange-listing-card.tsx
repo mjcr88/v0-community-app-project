@@ -29,6 +29,11 @@ interface ExchangeListingCardProps {
       last_name: string
       profile_picture_url?: string | null
     } | null
+    location?: {
+      id: string
+      name: string
+    } | null
+    custom_location_name?: string | null
   }
   onClick?: () => void
   className?: string
@@ -46,6 +51,13 @@ export function ExchangeListingCard({ listing, onClick, className }: ExchangeLis
   const conditionDisplay = listing.condition 
     ? listing.condition.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
     : null
+
+  const shouldShowQuantity = listing.category && 
+    (listing.category.name === "Tools & Equipment" || listing.category.name === "Food & Produce") &&
+    listing.available_quantity !== null && 
+    listing.available_quantity !== undefined
+
+  const locationName = listing.location?.name || listing.custom_location_name
 
   return (
     <Card className={cn("hover:bg-accent transition-colors cursor-pointer", className)} onClick={onClick}>
@@ -78,15 +90,20 @@ export function ExchangeListingCard({ listing, onClick, className }: ExchangeLis
         {/* Category and price badges */}
         <div className="flex items-center gap-2 flex-wrap">
           {listing.category && <ExchangeCategoryBadge categoryName={listing.category.name} />}
-          <ExchangePriceBadge pricingType={listing.pricing_type} priceAmount={listing.price_amount} />
+          <ExchangePriceBadge pricingType={listing.pricing_type} price={listing.price_amount} />
           {conditionDisplay && (
             <Badge variant="secondary" className="text-xs">
               {conditionDisplay}
             </Badge>
           )}
-          {listing.available_quantity !== null && listing.available_quantity !== undefined && (
+          {shouldShowQuantity && (
             <Badge variant="outline" className="text-xs">
               {listing.available_quantity} available
+            </Badge>
+          )}
+          {locationName && (
+            <Badge variant="outline" className="text-xs">
+              📍 {locationName}
             </Badge>
           )}
         </div>

@@ -1,14 +1,16 @@
 import { createClient } from "@/lib/supabase/server"
-import { redirect, notFound } from "next/navigation"
+import { redirect, notFound } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { MapPin, Users, ArrowLeft, Home, MapIcon, Calendar, Star } from "lucide-react"
+import { MapPin, Users, ArrowLeft, Home, MapIcon, Calendar, Star } from 'lucide-react'
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { LocationEventsSection } from "./location-events-section"
+import { LocationCheckinsSection } from "./location-checkins-section"
 import { getEventsByLocation } from "@/app/actions/events"
+import { getCheckInsByLocation } from "@/app/actions/check-ins"
 
 export default async function LocationDetailsPage({ params }: { params: { slug: string; id: string } }) {
   const { slug, id } = params
@@ -56,7 +58,6 @@ export default async function LocationDetailsPage({ params }: { params: { slug: 
     const { data: lotData } = await supabase.from("lots").select("id, lot_number").eq("id", location.lot_id).single()
     lot = lotData
 
-    // Fetch residents for this lot
     const { data: residentsData } = await supabase
       .from("users")
       .select(
@@ -74,7 +75,6 @@ export default async function LocationDetailsPage({ params }: { params: { slug: 
     residents = residentsData || []
   }
 
-  // Fetch family unit if residents exist
   let familyUnit = null
   if (residents.length > 0 && residents[0].family_unit_id) {
     const { data: familyUnitData } = await supabase
@@ -85,7 +85,6 @@ export default async function LocationDetailsPage({ params }: { params: { slug: 
     familyUnit = familyUnitData
   }
 
-  // Fetch pets if family unit exists
   let pets: any[] = []
   if (familyUnit) {
     const { data: petsData } = await supabase
@@ -102,16 +101,23 @@ export default async function LocationDetailsPage({ params }: { params: { slug: 
 
   const { data: tenant } = await supabase
     .from("tenants")
-    .select("events_enabled")
+    .select("events_enabled, checkins_enabled")
     .eq("id", currentUser.tenant_id)
     .single()
 
   const eventsEnabled = tenant?.events_enabled === true
+  const checkinsEnabled = tenant?.checkins_enabled === true
   const canCreateEvents = isAdmin || eventsEnabled
+  const canCreateCheckIns = checkinsEnabled
 
   let locationEvents: any[] = []
   if (eventsEnabled) {
     locationEvents = await getEventsByLocation(location.id, currentUser.tenant_id, user.id)
+  }
+
+  let locationCheckIns: any[] = []
+  if (checkinsEnabled) {
+    locationCheckIns = await getCheckInsByLocation(location.id, currentUser.tenant_id)
   }
 
   const getTypeLabel = (type: string) => {
@@ -191,6 +197,12 @@ export default async function LocationDetailsPage({ params }: { params: { slug: 
               {statusConfig && (
                 <Badge variant="outline" className={statusConfig.color}>
                   {statusConfig.label}
+                </Badge>
+              )}
+              {checkinsEnabled && locationCheckIns.length > 0 && (
+                <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">
+                  <Users className="h-3 w-3 mr-1" />
+                  {locationCheckIns.length} checked in now
                 </Badge>
               )}
             </div>
@@ -513,6 +525,19 @@ export default async function LocationDetailsPage({ params }: { params: { slug: 
             locationName={location.name}
             locationId={location.id}
             canCreateEvents={canCreateEvents}
+          />
+        </div>
+      )}
+
+      {checkinsEnabled && (locationCheckIns.length > 0 || canCreateCheckIns) && (
+        <div id="checkins">
+          <LocationCheckinsSection
+            checkIns={locationCheckIns}
+            slug={slug}
+            locationId={location.id}
+            locationName={location.name}
+            tenantId={currentUser.tenant_id}
+            canCreateCheckIns={canCreateCheckIns}
           />
         </div>
       )}

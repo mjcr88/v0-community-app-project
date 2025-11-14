@@ -40,6 +40,7 @@ type Tenant = {
     }
   }
   events_enabled?: boolean
+  checkins_enabled?: boolean // Added checkins_enabled to tenant type
 }
 
 const FEATURES = [
@@ -103,6 +104,12 @@ const FEATURES = [
     description: "Enable community events with calendar, RSVPs, and event management",
     table: "events",
   },
+  {
+    key: "checkins",
+    label: "Check-ins",
+    description: "Enable spontaneous location-based check-ins for real-time community engagement",
+    table: "check_ins",
+  },
 ] as const
 
 const LOCATION_TYPE_OPTIONS = [
@@ -135,6 +142,7 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
     onboarding: true,
     map: true,
     events: false,
+    checkins: false,
     location_types: {
       facility: true,
       lot: true,
@@ -161,6 +169,7 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
     onboarding?: boolean
     map?: boolean
     events?: boolean
+    checkins?: boolean
     location_types?: {
       facility?: boolean
       lot?: boolean
@@ -177,6 +186,8 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
   }>({
     ...defaultFeatures,
     ...tenant.features,
+    events: tenant.events_enabled ?? false, // Read from tenant.events_enabled column
+    checkins: tenant.checkins_enabled ?? false, // Read from tenant.checkins_enabled column
     location_types: {
       ...defaultFeatures.location_types,
       ...(tenant.features?.location_types || {}),
@@ -184,6 +195,8 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
   })
 
   console.log("[v0] Tenant features from DB:", tenant.features)
+  console.log("[v0] Tenant events_enabled:", tenant.events_enabled)
+  console.log("[v0] Tenant checkins_enabled:", tenant.checkins_enabled)
   console.log("[v0] Initialized form state:", features)
 
   const [visibilityScope, setVisibilityScope] = useState<"neighborhood" | "tenant">(
@@ -296,7 +309,7 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
     setLoading(true)
 
     try {
-      const { events, ...otherFeatures } = features
+      const { events, checkins, ...otherFeatures } = features
 
       const wasEventsEnabled = tenant.events_enabled ?? false
       const willEnableEvents = !wasEventsEnabled && (events ?? false)
@@ -307,6 +320,7 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
           features: otherFeatures,
           resident_visibility_scope: visibilityScope,
           events_enabled: events ?? false,
+          checkins_enabled: checkins ?? false,
         })
         .eq("id", tenant.id)
 
@@ -375,21 +389,26 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
 
         <div className="space-y-4 pt-4 border-t">
           <h3 className="text-sm font-semibold text-muted-foreground">Community Features</h3>
-          {FEATURES.filter((f) => ["pets", "interests", "skills", "events"].includes(f.key)).map((feature) => (
-            <div key={feature.key} className="flex items-center justify-between space-x-4">
-              <div className="flex-1 space-y-1">
-                <Label htmlFor={feature.key} className="text-base font-medium">
-                  {feature.label}
-                </Label>
-                <p className="text-sm text-muted-foreground">{feature.description}</p>
+          {FEATURES.filter((f) => ["pets", "interests", "skills", "events", "checkins"].includes(f.key)).map(
+            (feature) => (
+              <div key={feature.key} className="flex items-center justify-between space-x-4">
+                <div className="flex-1 space-y-1">
+                  <Label htmlFor={feature.key} className="text-base font-medium">
+                    {feature.label}
+                  </Label>
+                  <p className="text-sm text-muted-foreground">{feature.description}</p>
+                </div>
+                <Switch
+                  id={feature.key}
+                  checked={
+                    features[feature.key as keyof typeof features] ??
+                    (feature.key === "events" || feature.key === "checkins" ? false : true)
+                  }
+                  onCheckedChange={(checked) => handleToggle(feature.key, checked)}
+                />
               </div>
-              <Switch
-                id={feature.key}
-                checked={features[feature.key as keyof typeof features] ?? (feature.key === "events" ? false : true)}
-                onCheckedChange={(checked) => handleToggle(feature.key, checked)}
-              />
-            </div>
-          ))}
+            ),
+          )}
         </div>
 
         <div className="space-y-4 pt-4 border-t">

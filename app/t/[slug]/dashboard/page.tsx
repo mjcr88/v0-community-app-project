@@ -1,11 +1,15 @@
 import { createClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Users, MapPin, Globe, Languages, PawPrint, Home, MapIcon } from "lucide-react"
+import { Users, MapPin, Globe, Languages, PawPrint, Home, MapIcon } from 'lucide-react'
 import Link from "next/link"
 import { MapPreviewWidget } from "@/components/map/map-preview-widget"
 import { UpcomingEventsWidget } from "@/components/dashboard/upcoming-events-widget"
 import { getUpcomingEvents } from "@/app/actions/events"
+import { CreateCheckInButton } from "@/components/check-ins/create-check-in-button"
+import { CheckInsCountWidget } from "@/components/dashboard/checkins-count-widget"
+import { LiveCheckInsWidget } from "@/components/dashboard/live-checkins-widget"
+import { getActiveCheckIns } from "@/app/actions/check-ins"
 
 export default async function ResidentDashboardPage({ params }: { params: { slug: string } }) {
   const { slug } = params
@@ -61,16 +65,17 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
   const { data: tenant } = await supabase.from("tenants").select("*").eq("id", resident.tenant_id).single()
 
   const petsEnabled = tenant?.features?.pets === true
+  const checkinsEnabled = tenant?.checkins_enabled === true
   const defaultFeatures = {
     map: true,
   }
   const mergedFeatures = { ...defaultFeatures, ...(tenant?.features || {}) }
   const mapEnabled = mergedFeatures.map === true
 
-  console.log("[v0] Dashboard map feature check:", {
-    tenantFeatures: tenant?.features,
-    mapEnabled,
-    mergedFeatures,
+  console.log("[v0] Dashboard features:", {
+    checkinsEnabled,
+    eventsEnabled: tenant?.events_enabled,
+    tenantCheckinsColumn: tenant?.checkins_enabled,
   })
 
   let lotLocation = null
@@ -192,6 +197,11 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
     }),
   )
 
+  let activeCheckIns: any[] = []
+  if (checkinsEnabled) {
+    activeCheckIns = await getActiveCheckIns(resident.tenant_id)
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -213,6 +223,7 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
           <Button asChild variant="outline">
             <Link href={`/t/${slug}/dashboard/events/create`}>Create Event</Link>
           </Button>
+          {checkinsEnabled && <CreateCheckInButton tenantSlug={slug} tenantId={resident.tenant_id} />}
           <Button asChild variant="outline">
             <Link href={`/t/${slug}/dashboard/settings/profile`}>Edit Profile</Link>
           </Button>
@@ -237,6 +248,15 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
         tenantId={resident.tenant_id}
       />
 
+      {checkinsEnabled && activeCheckIns.length > 0 && (
+        <LiveCheckInsWidget
+          initialCheckIns={activeCheckIns}
+          tenantSlug={slug}
+          tenantId={resident.tenant_id}
+          userId={user.id}
+        />
+      )}
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {mapEnabled && lotLocation ? (
           <Card className="md:col-span-2 lg:col-span-2 lg:row-span-6">
@@ -255,6 +275,7 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
                 locations={allLocations}
                 mapCenter={mapCenter}
                 highlightLocationId={lotLocation?.lot_id ? lotLocation.id : undefined}
+                checkIns={activeCheckIns}
               />
               <p className="text-xs text-center text-muted-foreground">
                 Interact with map or click expand button to view full map
@@ -289,6 +310,8 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
             </p>
           </CardContent>
         </Card>
+
+        {checkinsEnabled && <CheckInsCountWidget initialCount={activeCheckIns.length} />}
 
         {familyUnitId && (
           <Card className="lg:col-span-1">

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback } from "react"
-import { APIProvider, Map, Marker } from "@vis.gl/react-google-maps"
+import { APIProvider, Map, Marker, AdvancedMarker } from "@vis.gl/react-google-maps"
 import { Polygon } from "./polygon"
 import { Polyline } from "./polyline"
 import { createBrowserClient } from "@/lib/supabase/client"
@@ -16,10 +16,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu"
 import Link from "next/link"
-import { MapPin, Trash2, Filter, Layers, Locate, Plus } from "lucide-react"
+import { MapPin, Trash2, Filter, Layers, Locate, Plus } from 'lucide-react'
 import { getLocationEventCount } from "@/app/actions/events"
+import { CheckInDetailModal } from "@/components/check-ins/check-in-detail-modal" // Declare the CheckInDetailModal variable
 
 interface Location {
   id: string
@@ -39,8 +41,9 @@ interface Location {
 
 interface GoogleMapViewerProps {
   locations: Location[]
-  tenantId?: string // Make tenantId optional
-  tenantSlug?: string // Add tenantSlug prop for proper link generation
+  tenantId?: string
+  tenantSlug?: string
+  checkIns?: any[]
   mapCenter?: { lat: number; lng: number } | null
   mapZoom?: number
   isAdmin?: boolean
@@ -53,19 +56,144 @@ interface GoogleMapViewerProps {
   onDrawingModeChange?: (mode: "marker" | "polygon" | null) => void
   onDrawingComplete?: (data: {
     coordinates?: { lat: number; lng: number } | null
-    type?: "pin" | "polygon" | null
+    type?: "marker" | "polygon" | null
     path?: Array<{ lat: number; lng: number }> | null
   }) => void
   drawnCoordinates?: { lat: number; lng: number } | null
   drawnPath?: Array<{ lat: number; lng: number }> | null
-  drawnType?: "pin" | "polygon" | null
+  drawnType?: "marker" | "polygon" | null
   enableClickablePlaces?: boolean
+}
+
+function isPointInPolygon(point: { lat: number; lng: number }, polygon: Array<[number, number]>): boolean {
+  let inside = false
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i][1],
+      yi = polygon[i][0]
+    const xj = polygon[j][1],
+      yj = polygon[j][0]
+
+    const intersect = yi > point.lat !== yj > point.lat && point.lng < ((xj - xi) * (point.lat - yi)) / (yj - yi) + xi
+    if (intersect) inside = !inside
+  }
+  return inside
+}
+
+function distributePointsInBoundary(
+  boundary: Array<[number, number]>,
+  count: number,
+  checkInIds: string[],
+): Array<{ lat: number; lng: number }> {
+  if (count === 1) {
+    // Single check-in: use center
+    const lats = boundary.map((c) => c[0])
+    const lngs = boundary.map((c) => c[1])
+    return [
+      {
+        lat: lats.reduce((a, b) => a + b, 0) / lats.length,
+        lng: lngs.reduce((a, b) => a + b, 0) / lngs.length,
+      },
+    ]
+  }
+
+  // Calculate bounding box
+  const lats = boundary.map((c) => c[0])
+  const lngs = boundary.map((c) => c[1])
+  const minLat = Math.min(...lats)
+  const maxLat = Math.max(...lats)
+  const minLng = Math.min(...lngs)
+  const maxLng = Math.max(...lngs)
+
+  const positions: Array<{ lat: number; lng: number }> = []
+
+  // Generate deterministic grid points inside polygon
+  const gridSize = Math.ceil(Math.sqrt(count * 2)) // Oversample to ensure enough valid points
+  const latStep = (maxLat - minLat) / (gridSize + 1)
+  const lngStep = (maxLng - minLng) / (gridSize + 1)
+
+  const candidatePoints: Array<{ lat: number; lng: number; hash: number }> = []
+
+  // Generate grid of candidate points
+  for (let i = 1; i <= gridSize; i++) {
+    for (let j = 1; j <= gridSize; j++) {
+      const lat = minLat + i * latStep
+      const lng = minLng + j * lngStep
+      const point = { lat, lng }
+
+      if (isPointInPolygon(point, boundary)) {
+        // Create deterministic hash for this grid position
+        const hash = i * 1000 + j
+        candidatePoints.push({ ...point, hash })
+      }
+    }
+  }
+
+  if (candidatePoints.length === 0) {
+    // Fallback: use center if no valid points found
+    console.warn("[v0] No valid points found inside boundary, using center")
+    const centerLat = lats.reduce((a, b) => a + b, 0) / lats.length
+    const centerLng = lngs.reduce((a, b) => a + b, 0) / lngs.length
+    return Array(count).fill({ lat: centerLat, lng: centerLng })
+  }
+
+  // Sort candidate points by hash for consistency
+  candidatePoints.sort((a, b) => a.hash - b.hash)
+
+  // Assign each check-in to a position based on its ID hash
+  checkInIds.forEach((checkInId, index) => {
+    // Create deterministic index from check-in ID
+    const idHash = checkInId.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0)
+    const pointIndex = (idHash + index) % candidatePoints.length
+
+    positions.push({
+      lat: candidatePoints[pointIndex].lat,
+      lng: candidatePoints[pointIndex].lng,
+    })
+  })
+
+  return positions
+}
+
+function distributePointsAlongPath(
+  path: Array<[number, number]>,
+  count: number,
+  checkInIds: string[],
+): Array<{ lat: number; lng: number }> {
+  if (count === 1 || path.length < 2) {
+    // Single check-in or short path: use midpoint
+    const midIndex = Math.floor(path.length / 2)
+    return [{ lat: path[midIndex][0], lng: path[midIndex][1] }]
+  }
+
+  const positions: Array<{ lat: number; lng: number }> = []
+
+  // Calculate evenly spaced intervals along the path
+  const step = Math.max(1, Math.floor(path.length / count))
+
+  checkInIds.forEach((checkInId, index) => {
+    // Use index primarily for spacing, add ID hash for minor variation
+    const idHash = checkInId.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0)
+    const baseIndex = (index * step) % path.length
+    const offset = (idHash % 3) - 1 // -1, 0, or 1 for slight variation
+    const pathIndex = Math.max(0, Math.min(path.length - 1, baseIndex + offset))
+
+    const position = {
+      lat: path[pathIndex][0],
+      lng: path[pathIndex][1],
+    }
+
+    positions.push(position)
+    console.log(`[v0] Check-in ${index + 1}/${count} assigned to path point ${pathIndex}:`, position)
+  })
+
+  return positions
 }
 
 export const GoogleMapViewer = React.memo(function GoogleMapViewer({
   locations: initialLocations = [],
   tenantId, // Now optional
   tenantSlug, // Destructure tenantSlug prop
+  checkIns: initialCheckIns = [], // Destructure checkIns with default empty array
   mapCenter,
   mapZoom = 11,
   isAdmin = false,
@@ -100,6 +228,27 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
   const [tenantBoundary, setTenantBoundary] = useState<Array<{ lat: number; lng: number }> | null>(null)
   const [boundaryLocationsFromTable, setBoundaryLocationsFromTable] = useState<Location[] | null>(null)
 
+  const [checkIns, setCheckIns] = useState<any[]>(initialCheckIns || [])
+  const [loadingCheckIns, setLoadingCheckIns] = useState(false)
+
+  useEffect(() => {
+    console.log("[v0] GoogleMapViewer - initialCheckIns prop received:", {
+      count: initialCheckIns.length,
+      checkIns: initialCheckIns.map((c) => ({
+        id: c.id,
+        title: c.title,
+        location_type: c.location_type,
+        has_location: !!c.location,
+        has_custom_coords: !!c.custom_location_coordinates,
+        location_coords: c.location?.coordinates || null,
+        location_boundary: c.location?.boundary_coordinates || null,
+        location_path: c.location?.path_coordinates || null,
+      })),
+    })
+    
+    setCheckIns(initialCheckIns)
+  }, [initialCheckIns])
+
   const [markerPosition, setMarkerPosition] = useState<{ lat: number; lng: number } | null>(drawnCoordinates || null)
   const [polygonPoints, setPolygonPoints] = useState<Array<{ lat: number; lng: number }>>(drawnPath || [])
 
@@ -113,6 +262,9 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
 
   const [selectedLocationEventCount, setSelectedLocationEventCount] = useState<number | null>(null)
   const [loadingEventCount, setLoadingEventCount] = useState(false)
+
+  const [selectedCheckIn, setSelectedCheckIn] = useState<string | null>(null) // Changed to string for checkInId
+  const [checkInModalOpen, setCheckInModalOpen] = useState(false)
 
   useEffect(() => {
     console.log("[v0] GoogleMapViewer mounted with:", {
@@ -253,7 +405,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   if (typeof onDrawingComplete === "function") {
                     onDrawingComplete({
                       coordinates: { lat, lng },
-                      type: "pin",
+                      type: "marker",
                       path: null,
                     })
                   }
@@ -331,21 +483,190 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
     [initialLocations],
   )
 
+  useEffect(() => {
+    console.log("[v0] GoogleMapViewer - initialCheckIns prop received:", {
+      count: initialCheckIns.length,
+      checkIns: initialCheckIns.map((c) => ({
+        id: c.id,
+        title: c.title,
+        location_type: c.location_type,
+        has_location: !!c.location,
+        has_custom_coords: !!c.custom_location_coordinates,
+        location_coords: c.location?.coordinates || null,
+        location_boundary: c.location?.boundary_coordinates || null,
+        location_path: c.location?.path_coordinates || null,
+      })),
+    })
+  }, [initialCheckIns])
+
+  const checkInsWithCoords = useMemo(() => {
+    const activeCheckIns = checkIns
+
+    console.log("[v0] Processing check-ins for markers:", {
+      total: activeCheckIns.length,
+      currentZoom: zoom,
+    })
+
+    const locationGroups = new globalThis.Map<string, any[]>()
+
+    activeCheckIns.forEach((checkIn) => {
+      const locationKey =
+        checkIn.location_type === "community_location" && checkIn.location?.id
+          ? checkIn.location.id
+          : `custom-${checkIn.id}`
+
+      if (!locationGroups.has(locationKey)) {
+        locationGroups.set(locationKey, [])
+      }
+      locationGroups.get(locationKey)!.push(checkIn)
+    })
+
+    console.log("[v0] Check-ins grouped by location:", {
+      locationCount: locationGroups.size,
+      groups: Array.from(locationGroups.entries()).map(([key, items]) => ({
+        locationId: key,
+        count: items.length,
+      })),
+    })
+
+    const checkInsWithDistributedCoords: any[] = []
+
+    locationGroups.forEach((checkIns, locationKey) => {
+      if (locationKey.startsWith("custom-")) {
+        // Custom location - use exact coordinates
+        const checkIn = checkIns[0]
+        if (checkIn.custom_location_coordinates) {
+          checkInsWithDistributedCoords.push({
+            ...checkIn,
+            coordinates: checkIn.custom_location_coordinates,
+          })
+          console.log("[v0] Custom location check-in:", checkIn.title, checkIn.custom_location_coordinates)
+        }
+      } else {
+        // Community location - distribute within boundary/path
+        const location = checkIns[0].location
+
+        if (!location) {
+          console.warn("[v0] Check-in missing location data:", checkIns[0].title)
+          return
+        }
+
+        let positions: Array<{ lat: number; lng: number }> = []
+        const checkInIds = checkIns.map((c) => c.id)
+
+        if (location.boundary_coordinates && location.boundary_coordinates.length >= 3) {
+          // Distribute inside boundary polygon
+          positions = distributePointsInBoundary(location.boundary_coordinates, checkIns.length, checkInIds)
+          console.log("[v0] Distributed", checkIns.length, "check-ins in boundary:", location.name)
+          positions.forEach((pos, i) => console.log(`  Position ${i}:`, pos))
+        } else if (location.path_coordinates && location.path_coordinates.length >= 2) {
+          // Distribute along path
+          positions = distributePointsAlongPath(location.path_coordinates, checkIns.length, checkInIds)
+          console.log("[v0] Distributed", checkIns.length, "check-ins along path:", location.name)
+          positions.forEach((pos, i) => console.log(`  Position ${i}:`, pos))
+        } else if (location.coordinates) {
+          // Single point - all markers at same location (fallback)
+          positions = Array(checkIns.length).fill(location.coordinates)
+          console.log("[v0] Using single point for", checkIns.length, "check-ins:", location.name)
+        } else {
+          console.warn("[v0] Location has no coordinates:", location.name)
+          return
+        }
+
+        // Assign positions to check-ins
+        checkIns.forEach((checkIn, index) => {
+          checkInsWithDistributedCoords.push({
+            ...checkIn,
+            coordinates: positions[index],
+          })
+        })
+      }
+    })
+
+    console.log("[v0] Check-ins with distributed coordinates:", checkInsWithDistributedCoords.length)
+
+    const CLUSTER_ZOOM_THRESHOLD = 16
+
+    if (zoom < CLUSTER_ZOOM_THRESHOLD) {
+      // Group markers by rounded coordinates (clustering for distant view)
+      const precision = Math.max(3, Math.min(6, Math.floor(zoom / 3)))
+      const coordsMap = new globalThis.Map<string, any[]>()
+
+      checkInsWithDistributedCoords.forEach((checkIn) => {
+        const key = `${checkIn.coordinates.lat.toFixed(precision)},${checkIn.coordinates.lng.toFixed(precision)}`
+        if (!coordsMap.has(key)) {
+          coordsMap.set(key, [])
+        }
+        coordsMap.get(key)!.push(checkIn)
+      })
+
+      const clusteredCheckIns: any[] = []
+      coordsMap.forEach((group) => {
+        if (group.length === 1) {
+          // Single marker - no clustering needed
+          clusteredCheckIns.push(group[0])
+        } else {
+          // Multiple markers - create a cluster marker
+          const centerLat = group.reduce((sum, c) => sum + c.coordinates.lat, 0) / group.length
+          const centerLng = group.reduce((sum, c) => sum + c.coordinates.lng, 0) / group.length
+
+          clusteredCheckIns.push({
+            ...group[0], // Use first check-in as base
+            coordinates: { lat: centerLat, lng: centerLng },
+            isCluster: true,
+            clusterCount: group.length,
+            clusterCheckIns: group, // Store all check-ins in cluster
+          })
+        }
+      })
+
+      console.log("[v0] Clustered markers at zoom", zoom, ":", {
+        original: checkInsWithDistributedCoords.length,
+        clustered: clusteredCheckIns.length,
+      })
+      return clusteredCheckIns
+    } else {
+      // At high zoom, show individual markers without clustering
+      console.log("[v0] Individual markers (no clustering) at zoom", zoom, ":", checkInsWithDistributedCoords.length)
+      return checkInsWithDistributedCoords
+    }
+  }, [checkIns, zoom])
+
   const handleMapClick = useCallback(
     (e: any) => {
-      console.log("[v0] Map clicked, drawingMode:", drawingMode, "latLng:", e.detail?.latLng)
+      console.log("[v0] Map clicked - RAW EVENT:", {
+        hasDetail: !!e.detail,
+        detail: e.detail,
+        hasLatLng: !!(e.detail?.latLng || e.latLng),
+        drawingMode,
+      })
 
-      if (drawingMode === "marker" && e.detail?.latLng) {
-        const lat = e.detail.latLng.lat
-        const lng = e.detail.latLng.lng
+      let lat: number | undefined
+      let lng: number | undefined
 
+      if (e.detail?.latLng) {
+        lat = e.detail.latLng.lat
+        lng = e.detail.latLng.lng
+      } else if (e.detail?.lat && e.detail?.lng) {
+        lat = e.detail.lat
+        lng = e.detail.lng
+      } else if (e.latLng) {
+        // Try direct latLng property
+        lat = typeof e.latLng.lat === "function" ? e.latLng.lat() : e.latLng.lat
+        lng = typeof e.latLng.lng === "function" ? e.latLng.lng() : e.latLng.lng
+      }
+
+      console.log("[v0] Extracted coordinates:", { lat, lng })
+
+      if (drawingMode === "marker" && lat !== undefined && lng !== undefined) {
         console.log("[v0] Dropping custom pin at:", { lat, lng })
         setMarkerPosition({ lat, lng })
 
         if (typeof onDrawingComplete === "function") {
+          console.log("[v0] Calling onDrawingComplete with coordinates")
           onDrawingComplete({
             coordinates: { lat, lng },
-            type: "pin",
+            type: "marker",
             path: null,
           })
         }
@@ -353,6 +674,11 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
         console.log("[v0] Map clicked - clearing selection")
         setDynamicHighlightId(undefined)
         setSelectedLocation(null)
+      } else {
+        console.log("[v0] Map clicked but no action taken:", {
+          drawingMode,
+          hasCoordinates: lat !== undefined && lng !== undefined,
+        })
       }
     },
     [drawingMode, onDrawingComplete],
@@ -434,6 +760,11 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
 
   const handleLocationClick = useCallback(
     async (location: Location) => {
+      if (drawingMode) {
+        console.log("[v0] Ignoring location click - drawing mode active")
+        return
+      }
+
       console.log("[v0] Location clicked:", location.name, location.id, "type:", location.type)
 
       if (onLocationClick) {
@@ -466,8 +797,14 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
         }
       }
     },
-    [onLocationClick, showInfoCard, tenantId],
+    [onLocationClick, showInfoCard, tenantId, drawingMode],
   )
+
+  const handleCheckInClick = useCallback((checkIn: any) => {
+    console.log("[v0] Check-in marker clicked:", checkIn.title)
+    setSelectedCheckIn(checkIn.id)
+    setCheckInModalOpen(true)
+  }, [])
 
   const handleCustomMarkerClick = useCallback(() => {
     if (markerPosition) {
@@ -538,7 +875,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                 strokeWeight={2}
                 fillColor="transparent"
                 fillOpacity={0}
-                clickable={!isHighlighted}
+                clickable={!drawingMode}
                 onClick={() => handleLocationClick(location)}
                 zIndex={2}
               />
@@ -557,7 +894,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                 strokeWeight={2}
                 fillColor="transparent"
                 fillOpacity={0}
-                clickable={!isHighlighted}
+                clickable={!drawingMode}
                 onClick={() => handleLocationClick(location)}
                 zIndex={2}
               />
@@ -579,6 +916,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeWeight={12}
                   fillColor="transparent"
                   fillOpacity={0}
+                  clickable={!drawingMode}
                   onClick={() => handleLocationClick(location)}
                   zIndex={zIndex}
                 />
@@ -590,6 +928,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeWeight={2}
                   fillColor={isSelected ? "#ef4444" : isHighlighted ? "#60a5fa" : "#e9d5ff"}
                   fillOpacity={isSelected ? 0.4 : isHighlighted ? 0.3 : 0.6}
+                  clickable={!drawingMode}
                   onClick={() => handleLocationClick(location)}
                   zIndex={zIndex + 1}
                 />
@@ -609,6 +948,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeColor="transparent"
                   strokeOpacity={0}
                   strokeWeight={12}
+                  clickable={!drawingMode}
                   onClick={() => handleLocationClick(location)}
                   zIndex={zIndex}
                 />
@@ -617,6 +957,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeColor={isSelected ? "#ef4444" : isHighlighted ? "#fca5a5" : "#fbbf24"}
                   strokeOpacity={1}
                   strokeWeight={2}
+                  clickable={!drawingMode}
                   onClick={() => handleLocationClick(location)}
                   zIndex={zIndex + 1}
                 />
@@ -638,6 +979,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeWeight={12}
                   fillColor="transparent"
                   fillOpacity={0}
+                  clickable={!drawingMode}
                   onClick={() => handleLocationClick(location)}
                   zIndex={zIndex}
                 />
@@ -648,6 +990,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeWeight={2}
                   fillColor={isSelected ? "#ef4444" : isHighlighted ? "#60a5fa" : "#fef3c7"}
                   fillOpacity={isSelected ? 0.4 : isHighlighted ? 0.3 : 0.4}
+                  clickable={!drawingMode}
                   onClick={() => handleLocationClick(location)}
                   zIndex={zIndex + 1}
                 />
@@ -670,6 +1013,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeWeight={12}
                   fillColor="transparent"
                   fillOpacity={0}
+                  clickable={!drawingMode}
                   onClick={() => handleLocationClick(location)}
                   zIndex={zIndex}
                 />
@@ -680,6 +1024,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeWeight={2}
                   fillColor={isSelected ? "#ef4444" : isHighlighted ? "#60a5fa" : "#86efac"}
                   fillOpacity={isSelected ? 0.15 : isHighlighted ? 0.15 : 0.15}
+                  clickable={!drawingMode}
                   onClick={() => handleLocationClick(location)}
                   zIndex={zIndex + 1}
                 />
@@ -699,6 +1044,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeColor="transparent"
                   strokeOpacity={0}
                   strokeWeight={12}
+                  clickable={!drawingMode}
                   onClick={() => handleLocationClick(location)}
                   zIndex={zIndex}
                 />
@@ -707,6 +1053,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeColor={isSelected ? "#ef4444" : isHighlighted ? "#fca5a5" : "#10b981"}
                   strokeOpacity={1}
                   strokeWeight={2}
+                  clickable={!drawingMode}
                   onClick={() => handleLocationClick(location)}
                   zIndex={zIndex + 1}
                 />
@@ -728,6 +1075,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeWeight={12}
                   fillColor="transparent"
                   fillOpacity={0}
+                  clickable={!drawingMode}
                   onClick={() => handleLocationClick(location)}
                   zIndex={zIndex}
                 />
@@ -738,6 +1086,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeWeight={2}
                   fillColor={isSelected ? "#ef4444" : isHighlighted ? "#60a5fa" : "#fed7aa"}
                   fillOpacity={isSelected ? 0.15 : isHighlighted ? 0.15 : 0.4}
+                  clickable={!drawingMode}
                   onClick={() => handleLocationClick(location)}
                   zIndex={zIndex + 1}
                 />
@@ -757,6 +1106,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeColor="transparent"
                   strokeOpacity={0}
                   strokeWeight={12}
+                  clickable={!drawingMode}
                   onClick={() => handleLocationClick(location)}
                   zIndex={zIndex}
                 />
@@ -765,6 +1115,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeColor={isSelected ? "#ef4444" : isHighlighted ? "#fca5a5" : "#f97316"}
                   strokeOpacity={1}
                   strokeWeight={2}
+                  clickable={!drawingMode}
                   onClick={() => handleLocationClick(location)}
                   zIndex={zIndex + 1}
                 />
@@ -784,6 +1135,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeColor="transparent"
                   strokeOpacity={0}
                   strokeWeight={12}
+                  clickable={!drawingMode}
                   onClick={() => handleLocationClick(location)}
                   zIndex={zIndex}
                 />
@@ -792,6 +1144,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
                   strokeColor={isSelected ? "#ef4444" : isHighlighted ? "#fca5a5" : "#84cc16"}
                   strokeOpacity={1}
                   strokeWeight={2}
+                  clickable={!drawingMode}
                   onClick={() => handleLocationClick(location)}
                   zIndex={zIndex + 1}
                 />
@@ -812,10 +1165,99 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
             )
           })}
 
+          {checkInsWithCoords.map((checkIn) => {
+            if (checkIn.isCluster) {
+              // Cluster marker showing count
+              return (
+                <AdvancedMarker
+                  key={`cluster-${checkIn.id}`}
+                  position={checkIn.coordinates}
+                  onClick={() => {
+                    // Zoom in to show individual markers
+                    setCenter(checkIn.coordinates)
+                    setZoom(17)
+                  }}
+                  zIndex={200}
+                >
+                  <div className="relative cursor-pointer" style={{ transform: "translateY(-100%)" }}>
+                    {/* Cluster Circle */}
+                    <div className="relative w-12 h-12 rounded-full border-4 border-green-500 bg-green-600 overflow-hidden shadow-lg hover:border-green-600 transition-colors flex items-center justify-center">
+                      <span className="text-white font-bold text-lg">{checkIn.clusterCount}</span>
+                    </div>
+
+                    {/* Pointer Stem */}
+                    <div
+                      className="absolute left-1/2 -translate-x-1/2"
+                      style={{
+                        width: 0,
+                        height: 0,
+                        borderLeft: "8px solid transparent",
+                        borderRight: "8px solid transparent",
+                        borderTop: "8px solid rgb(34, 197, 94)", // green-500
+                      }}
+                    />
+                  </div>
+                </AdvancedMarker>
+              )
+            }
+
+            // Individual marker
+            const firstName = checkIn.created_by_user?.first_name || ""
+            const lastName = checkIn.created_by_user?.last_name || ""
+            const initials = (firstName.charAt(0) + lastName.charAt(0)).toUpperCase() || "?"
+            const hasProfilePicture = checkIn.created_by_user?.profile_picture_url
+
+            return (
+              <AdvancedMarker
+                key={checkIn.id}
+                position={checkIn.coordinates}
+                onClick={() => handleCheckInClick(checkIn)}
+                zIndex={200}
+              >
+                <div className="relative cursor-pointer" style={{ transform: "translateY(-100%)" }}>
+                  {/* Profile Picture Circle */}
+                  <div className="relative w-12 h-12 rounded-full border-4 border-green-500 bg-white overflow-hidden shadow-lg hover:border-green-600 transition-colors">
+                    {hasProfilePicture ? (
+                      <img
+                        src={checkIn.created_by_user.profile_picture_url || "/placeholder.svg"}
+                        alt={checkIn.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-white text-green-600 font-bold text-lg">
+                        {initials}
+                      </div>
+                    )}
+
+                    {/* Attending Count Badge */}
+                    {checkIn.attending_count > 0 && (
+                      <div className="absolute -top-1 -right-1 bg-green-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center border-2 border-white">
+                        {checkIn.attending_count}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Pointer Stem */}
+                  <div
+                    className="absolute left-1/2 -translate-x-1/2"
+                    style={{
+                      width: 0,
+                      height: 0,
+                      borderLeft: "8px solid transparent",
+                      borderRight: "8px solid transparent",
+                      borderTop: "8px solid rgb(34, 197, 94)", // green-500
+                    }}
+                  />
+                </div>
+              </AdvancedMarker>
+            )
+          })}
+
           {markerPosition && drawingMode && (
             <Marker
               position={markerPosition}
               zIndex={400}
+              onClick={handleCustomMarkerClick}
               icon={{
                 url: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='48' viewBox='0 0 32 48'%3E%3Cpath fill='%239333ea' stroke='%23ffffff' strokeWidth='2' d='M16 0C8.8 0 3 5.8 3 13c0 8.5 13 35 13 35s13-26.5 13-35c0-7.2-5.8-13-13-13zm0 18c-2.8 0-5-2.2-5-5s2.2-5 5-5 5 2.2 5 5-2.2 5-5 5z'/%3E%3C/svg%3E",
                 scaledSize: { width: 32, height: 48 },
@@ -880,7 +1322,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
             />
           )}
 
-          {!drawingMode && drawnType === "pin" && drawnCoordinates && (
+          {!drawingMode && drawnType === "marker" && drawnCoordinates && (
             <Marker
               position={drawnCoordinates}
               zIndex={350}
@@ -931,6 +1373,17 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
             tenantSlug={tenantSlug} // Pass tenantSlug instead of tenantId
           />
         </div>
+      )}
+
+      {selectedCheckIn && (
+        <CheckInDetailModal
+          checkInId={selectedCheckIn}
+          open={checkInModalOpen}
+          onOpenChange={setCheckInModalOpen}
+          tenantSlug={tenantSlug || ""}
+          userId={tenantId || ""} // Assuming userId should be tenantId based on context
+          tenantId={tenantId || ""}
+        />
       )}
 
       {drawingMode && (
@@ -1025,7 +1478,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => setMapType("satellite")}>Satellite</DropdownMenuItem>
             <DropdownMenuItem onClick={() => setMapType("terrain")}>Terrain</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setMapType("roadmap")}>Street</DropdownMenuItem>
+            <DropdownMenuRadioItem onClick={() => setMapType("roadmap")}>Street</DropdownMenuRadioItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

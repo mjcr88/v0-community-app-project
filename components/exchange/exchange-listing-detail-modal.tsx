@@ -24,6 +24,46 @@ interface ExchangeListingDetailModalProps {
   onOpenChange: (open: boolean) => void
 }
 
+function parseLocationCoordinates(coords: any): { lat: number; lng: number } | null {
+  if (!coords) return null
+  
+  // Handle string JSON
+  if (typeof coords === 'string') {
+    try {
+      coords = JSON.parse(coords)
+    } catch (e) {
+      console.error("[v0] Failed to parse coords string:", e)
+      return null
+    }
+  }
+  
+  // Handle object - try multiple formats
+  if (typeof coords === 'object') {
+    // Format 1: {lat, lng}
+    if (typeof coords.lat === 'number' && typeof coords.lng === 'number') {
+      return { lat: coords.lat, lng: coords.lng }
+    }
+    
+    // Format 2: {latitude, longitude}
+    if (typeof coords.latitude === 'number' && typeof coords.longitude === 'number') {
+      return { lat: coords.latitude, lng: coords.longitude }
+    }
+    
+    // Format 3: {x, y} (PostGIS format)
+    if (typeof coords.x === 'number' && typeof coords.y === 'number') {
+      return { lat: coords.x, lng: coords.y }
+    }
+    
+    // Format 4: [lat, lng] array
+    if (Array.isArray(coords) && coords.length === 2) {
+      return { lat: Number(coords[0]), lng: Number(coords[1]) }
+    }
+  }
+  
+  console.warn("[v0] Unknown coordinate format:", coords)
+  return null
+}
+
 export function ExchangeListingDetailModal({
   listingId,
   tenantId,
@@ -51,6 +91,21 @@ export function ExchangeListingDetailModal({
       setListing(result.data)
       // Set selected photo to hero or first photo
       setSelectedPhoto(result.data.hero_photo || result.data.photos?.[0] || null)
+      
+      console.log("[v0] LOCATION DEBUG:", {
+        hasLocationObject: !!result.data.location,
+        locationId: result.data.location?.id,
+        locationName: result.data.location?.name,
+        coordinatesRaw: result.data.location?.coordinates,
+        coordinatesType: typeof result.data.location?.coordinates,
+        coordinatesKeys: result.data.location?.coordinates ? Object.keys(result.data.location.coordinates) : null,
+        coordinatesStringified: result.data.location?.coordinates ? JSON.stringify(result.data.location.coordinates) : null,
+        customLat: result.data.custom_location_lat,
+        customLatType: typeof result.data.custom_location_lat,
+        customLng: result.data.custom_location_lng,
+        customLngType: typeof result.data.custom_location_lng,
+        customLocationName: result.data.custom_location_name,
+      })
     } else {
       toast.error(result.error || "Failed to load listing")
       onOpenChange(false)
@@ -94,21 +149,18 @@ export function ExchangeListingDetailModal({
   
   // Try to get coordinates from community location
   if (listing.location?.coordinates) {
-    try {
-      const parsedCoords = typeof listing.location.coordinates === 'string' 
-        ? JSON.parse(listing.location.coordinates)
-        : listing.location.coordinates
-      
-      if (parsedCoords && typeof parsedCoords.lat === 'number' && typeof parsedCoords.lng === 'number') {
-        listingLocationForMap = {
-          id: listing.location.id,
-          name: listing.location.name,
-          type: "facility",
-          coordinates: parsedCoords
-        }
+    const parsedCoords = parseLocationCoordinates(listing.location.coordinates)
+    
+    if (parsedCoords) {
+      listingLocationForMap = {
+        id: listing.location.id,
+        name: listing.location.name,
+        type: "facility",
+        coordinates: parsedCoords
       }
-    } catch (e) {
-      console.error("[v0] Failed to parse location coordinates:", e)
+      console.log("[v0] Successfully parsed community location:", listingLocationForMap)
+    } else {
+      console.warn("[v0] Failed to parse community location coordinates")
     }
   }
   
@@ -119,15 +171,23 @@ export function ExchangeListingDetailModal({
       name: listing.custom_location_name || "Pickup Location",
       type: "facility",
       coordinates: {
-        lat: listing.custom_location_lat,
-        lng: listing.custom_location_lng
+        lat: Number(listing.custom_location_lat),  // Explicit conversion
+        lng: Number(listing.custom_location_lng)   // Explicit conversion
       }
     }
+    console.log("[v0] Using custom location:", listingLocationForMap)
   }
 
   const mapLocations = listingLocationForMap 
     ? [...locations, listingLocationForMap]
     : locations
+  
+  console.log("[v0] Map display decision:", {
+    hasMapLocation: listingLocationForMap !== null,
+    listingLocationForMap,
+    totalMapLocations: mapLocations.length,
+    allLocationsCount: locations.length
+  })
 
   const hasMapLocation = listingLocationForMap !== null
   const locationName = listing.custom_location_name || listing.location?.name

@@ -12,6 +12,7 @@ import { ExchangePriceBadge } from "./exchange-price-badge"
 import { MapPin, Calendar, Package } from 'lucide-react'
 import { getExchangeListingById } from "@/app/actions/exchange-listings"
 import { GoogleMapViewer } from "@/components/map/google-map-viewer"
+import { getLocations } from "@/lib/queries/get-locations"
 import { toast } from "sonner"
 
 interface ExchangeListingDetailModalProps {
@@ -34,10 +35,13 @@ export function ExchangeListingDetailModal({
   const [listing, setListing] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null)
+  const [allLocations, setAllLocations] = useState<any[]>([])
+  const [loadingLocations, setLoadingLocations] = useState(false)
 
   useEffect(() => {
     if (open && listingId) {
       loadListing()
+      loadAllLocations()
     }
   }, [open, listingId])
 
@@ -49,28 +53,24 @@ export function ExchangeListingDetailModal({
       setListing(result.data)
       // Set selected photo to hero or first photo
       setSelectedPhoto(result.data.hero_photo || result.data.photos?.[0] || null)
-      
-      console.log("[v0] Listing loaded:", {
-        listingId: result.data.id,
-        status: result.data.status,
-        isAvailable: result.data.is_available,
-        createdBy: result.data.created_by,
-        currentUserId: userId,
-        isCreator: userId === result.data.created_by,
-        locationData: {
-          hasLocationId: !!result.data.location_id,
-          hasLocationObject: !!result.data.location,
-          locationCoordinates: result.data.location?.coordinates,
-          customLat: result.data.custom_location_lat,
-          customLng: result.data.custom_location_lng,
-        }
-      })
     } else {
       toast.error(result.error || "Failed to load listing")
       onOpenChange(false)
     }
 
     setIsLoading(false)
+  }
+
+  async function loadAllLocations() {
+    setLoadingLocations(true)
+    try {
+      const locations = await getLocations(tenantId)
+      setAllLocations(locations)
+    } catch (error) {
+      console.error("[v0] Failed to load locations:", error)
+    } finally {
+      setLoadingLocations(false)
+    }
   }
 
   if (isLoading || !listing) {
@@ -101,53 +101,49 @@ export function ExchangeListingDetailModal({
     listing.category &&
     (listing.category.name === "Tools & Equipment" || listing.category.name === "Food & Produce")
 
-  let locationCoordinates = null
+  let listingLocationForMap = null
   
   // Try to get coordinates from community location
   if (listing.location?.coordinates) {
     try {
-      // Database stores coordinates as JSON string, parse it
-      locationCoordinates = typeof listing.location.coordinates === 'string' 
+      const parsedCoords = typeof listing.location.coordinates === 'string' 
         ? JSON.parse(listing.location.coordinates)
         : listing.location.coordinates
       
-      console.log("[v0] Parsed community location coordinates:", locationCoordinates)
+      if (parsedCoords && typeof parsedCoords.lat === 'number' && typeof parsedCoords.lng === 'number') {
+        listingLocationForMap = {
+          id: listing.location.id,
+          name: listing.location.name,
+          type: "facility",
+          coordinates: parsedCoords
+        }
+      }
     } catch (e) {
       console.error("[v0] Failed to parse location coordinates:", e)
     }
   }
   
   // Fall back to custom location coordinates
-  if (!locationCoordinates && listing.custom_location_lat && listing.custom_location_lng) {
-    locationCoordinates = {
-      lat: listing.custom_location_lat,
-      lng: listing.custom_location_lng
+  if (!listingLocationForMap && listing.custom_location_lat && listing.custom_location_lng) {
+    listingLocationForMap = {
+      id: "custom-location",
+      name: listing.custom_location_name || "Pickup Location",
+      type: "facility",
+      coordinates: {
+        lat: listing.custom_location_lat,
+        lng: listing.custom_location_lng
+      }
     }
-    console.log("[v0] Using custom location coordinates:", locationCoordinates)
   }
 
-  // Now check if we have valid coordinates
-  const hasMapLocation = locationCoordinates && 
-    typeof locationCoordinates.lat === 'number' && 
-    typeof locationCoordinates.lng === 'number'
+  const mapLocations = listingLocationForMap 
+    ? [...allLocations, listingLocationForMap]
+    : allLocations
 
-  console.log("[v0] Map display check:", {
-    hasMapLocation,
-    locationCoordinates,
-    locationName: listing.custom_location_name || listing.location?.name
-  })
-
+  const hasMapLocation = listingLocationForMap !== null
   const locationName = listing.custom_location_name || listing.location?.name
-
   const neighborhoods = listing.neighborhoods?.map((n: any) => n.neighborhood?.name).filter(Boolean) || []
-
   const showBorrowButton = !isCreator && listing.is_available && listing.status === "published"
-  console.log("[v0] Borrow button visibility:", {
-    showBorrowButton,
-    isCreator,
-    isAvailable: listing.is_available,
-    status: listing.status,
-  })
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -238,32 +234,29 @@ export function ExchangeListingDetailModal({
           )}
 
           {/* Location Section */}
-          {(locationName || hasMapLocation) && (
+          {locationName && (
             <div className="space-y-3">
               <h3 className="font-semibold text-lg">Location</h3>
-              {locationName && (
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <MapPin className="h-4 w-4" />
-                  <span>{locationName}</span>
-                </div>
-              )}
-              {hasMapLocation && locationCoordinates && (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <MapPin className="h-4 w-4" />
+                <span>{locationName}</span>
+              </div>
+              {hasMapLocation && !loadingLocations && (
                 <div className="h-[250px] rounded-lg overflow-hidden border">
                   <GoogleMapViewer
-                    locations={[
-                      {
-                        id: "listing-location",
-                        name: locationName || "Pickup Location",
-                        type: "facility",
-                        coordinates: locationCoordinates,
-                      },
-                    ]}
-                    mapCenter={locationCoordinates}
+                    locations={mapLocations}
+                    mapCenter={listingLocationForMap!.coordinates}
                     mapZoom={15}
                     minimal={true}
                     showInfoCard={false}
+                    highlightLocationId={listingLocationForMap!.id}
                   />
                 </div>
+              )}
+              {!hasMapLocation && (
+                <p className="text-sm text-muted-foreground italic">
+                  Map not available for this location
+                </p>
               )}
             </div>
           )}

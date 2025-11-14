@@ -2,6 +2,7 @@
 
 import { createServerClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
+import type { ExchangePricingType, ExchangeCondition } from "@/types/exchange"
 
 /**
  * Server actions for exchange listing operations
@@ -32,6 +33,7 @@ export async function getExchangeListings(tenantId: string) {
         is_available,
         pricing_type,
         price,
+        condition,
         available_quantity,
         created_by,
         category:exchange_categories(id, name, description),
@@ -94,6 +96,10 @@ export async function createExchangeListing(
     title: string
     description: string | null
     category_id: string
+    pricing_type: ExchangePricingType
+    price: number | null
+    condition: ExchangeCondition | null
+    available_quantity: number | null
     status: "draft" | "published"
   },
 ) {
@@ -128,6 +134,10 @@ export async function createExchangeListing(
       return { success: false, error: "Category is required" }
     }
 
+    if (data.pricing_type === "fixed_price" && (!data.price || data.price <= 0)) {
+      return { success: false, error: "Price must be greater than 0 for fixed price listings" }
+    }
+
     // Verify category exists
     const { data: category } = await supabase
       .from("exchange_categories")
@@ -140,7 +150,6 @@ export async function createExchangeListing(
       return { success: false, error: "Invalid category selected" }
     }
 
-    // Create listing
     const insertData = {
       tenant_id: tenantId,
       created_by: user.id,
@@ -148,9 +157,11 @@ export async function createExchangeListing(
       description: data.description,
       category_id: data.category_id,
       status: data.status,
-      pricing_type: "free", // Default for Sprint 3A, will be customizable in 3B
-      available_quantity: null, // Will be added in Sprint 3B
-      visibility_scope: "community", // Default for Sprint 3A, will be customizable in 3C
+      pricing_type: data.pricing_type,
+      price: data.pricing_type === "fixed_price" ? data.price : null,
+      condition: data.condition,
+      available_quantity: data.available_quantity,
+      visibility_scope: "community", // Default for Sprint 3B, will be customizable in 3C
     }
 
     const { data: listing, error } = await supabase

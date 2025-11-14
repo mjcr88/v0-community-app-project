@@ -14,6 +14,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { createExchangeListing, getExchangeCategories } from "@/app/actions/exchange-listings"
 import { Loader2 } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
+import type { ExchangePricingType, ExchangeCondition } from "@/types/exchange"
 
 interface CreateExchangeListingModalProps {
   open: boolean
@@ -38,6 +39,10 @@ export function CreateExchangeListingModal({
     title: "",
     description: "",
     category_id: "",
+    pricing_type: "free" as ExchangePricingType,
+    price: "",
+    condition: "" as ExchangeCondition | "",
+    available_quantity: "",
     status: "draft" as "draft" | "published",
   })
 
@@ -81,10 +86,27 @@ export function CreateExchangeListingModal({
         return
       }
 
+      if (formData.pricing_type === "fixed_price") {
+        const priceNum = parseFloat(formData.price)
+        if (!formData.price || isNaN(priceNum) || priceNum <= 0) {
+          toast({
+            title: "Price required",
+            description: "Please enter a valid price for your listing",
+            variant: "destructive",
+          })
+          setIsSubmitting(false)
+          return
+        }
+      }
+
       const listingData = {
         title: formData.title.trim(),
-        description: formData.description.trim() || "", // Allow empty string for description instead of null, let backend handle it
+        description: formData.description.trim() || "",
         category_id: formData.category_id,
+        pricing_type: formData.pricing_type,
+        price: formData.pricing_type === "fixed_price" ? parseFloat(formData.price) : null,
+        condition: formData.condition,
+        available_quantity: formData.available_quantity ? parseInt(formData.available_quantity, 10) : null,
         status: formData.status,
       }
 
@@ -104,6 +126,10 @@ export function CreateExchangeListingModal({
           title: "",
           description: "",
           category_id: "",
+          pricing_type: "free",
+          price: "",
+          condition: "",
+          available_quantity: "",
           status: "draft",
         })
         router.refresh()
@@ -125,6 +151,10 @@ export function CreateExchangeListingModal({
       setIsSubmitting(false)
     }
   }
+
+  const selectedCategory = categories.find(c => c.id === formData.category_id)
+  const isToolsEquipment = selectedCategory?.name === "Tools & Equipment"
+  const needsQuantity = selectedCategory?.name === "Food & Produce" || selectedCategory?.name === "Services & Skills"
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -199,6 +229,117 @@ export function CreateExchangeListingModal({
                   Add details like condition, availability, or special instructions
                 </p>
               </div>
+
+              <div className="space-y-4 pt-4 border-t">
+                <div className="space-y-2">
+                  <Label className="text-base font-semibold">Pricing</Label>
+                  <p className="text-sm text-muted-foreground">How would you like to handle pricing?</p>
+                </div>
+
+                <RadioGroup
+                  value={formData.pricing_type}
+                  onValueChange={(value) => setFormData({ ...formData, pricing_type: value as ExchangePricingType, price: "" })}
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-start space-x-3 rounded-md border p-4">
+                      <RadioGroupItem value="free" id="free" className="mt-1" />
+                      <div className="flex-1">
+                        <Label htmlFor="free" className="font-medium cursor-pointer">
+                          Free
+                        </Label>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Offer this item or service at no cost
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start space-x-3 rounded-md border p-4">
+                      <RadioGroupItem value="fixed_price" id="fixed_price" className="mt-1" />
+                      <div className="flex-1">
+                        <Label htmlFor="fixed_price" className="font-medium cursor-pointer">
+                          Fixed Price
+                        </Label>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Set a specific price for your offering
+                        </p>
+                        {formData.pricing_type === "fixed_price" && (
+                          <div className="mt-3">
+                            <Label htmlFor="price" className="sr-only">Price</Label>
+                            <div className="flex items-center gap-2">
+                              <span className="text-muted-foreground">$</span>
+                              <Input
+                                id="price"
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                placeholder="0.00"
+                                value={formData.price}
+                                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                                className="max-w-32"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-start space-x-3 rounded-md border p-4">
+                      <RadioGroupItem value="pay_what_you_want" id="pay_what_you_want" className="mt-1" />
+                      <div className="flex-1">
+                        <Label htmlFor="pay_what_you_want" className="font-medium cursor-pointer">
+                          Pay What You Want
+                        </Label>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Let people choose what they'd like to pay
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              {isToolsEquipment && (
+                <div className="space-y-2">
+                  <Label htmlFor="condition">Condition</Label>
+                  <Select
+                    value={formData.condition}
+                    onValueChange={(value) => setFormData({ ...formData, condition: value as ExchangeCondition })}
+                  >
+                    <SelectTrigger id="condition">
+                      <SelectValue placeholder="Select condition (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="new">New</SelectItem>
+                      <SelectItem value="slightly_used">Slightly Used</SelectItem>
+                      <SelectItem value="used">Used</SelectItem>
+                      <SelectItem value="slightly_damaged">Slightly Damaged</SelectItem>
+                      <SelectItem value="maintenance">Needs Maintenance</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Let borrowers know the current state of your tool or equipment
+                  </p>
+                </div>
+              )}
+
+              {needsQuantity && (
+                <div className="space-y-2">
+                  <Label htmlFor="quantity">Available Quantity</Label>
+                  <Input
+                    id="quantity"
+                    type="number"
+                    min="1"
+                    placeholder="How many are available?"
+                    value={formData.available_quantity}
+                    onChange={(e) => setFormData({ ...formData, available_quantity: e.target.value })}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {selectedCategory?.name === "Food & Produce" 
+                      ? "E.g., 10 mangos, 5 loaves of bread"
+                      : "E.g., how many service slots you can accommodate"}
+                  </p>
+                </div>
+              )}
 
               {/* Status Selection */}
               <div className="space-y-4 pt-4 border-t">

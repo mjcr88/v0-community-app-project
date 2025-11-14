@@ -17,6 +17,7 @@ interface ExchangeListingCardProps {
     is_available?: boolean
     pricing_type: string
     price_amount?: number | null
+    condition?: string | null
     available_quantity?: number | null
     category?: {
       id: string
@@ -41,6 +42,10 @@ export function ExchangeListingCard({ listing, onClick, className }: ExchangeLis
     ? `${listing.creator.first_name[0]}${listing.creator.last_name[0]}`
     : "?"
   const avatarUrl = listing.creator?.profile_picture_url
+
+  const conditionDisplay = listing.condition 
+    ? listing.condition.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+    : null
 
   return (
     <Card className={cn("hover:bg-accent transition-colors cursor-pointer", className)} onClick={onClick}>
@@ -74,6 +79,16 @@ export function ExchangeListingCard({ listing, onClick, className }: ExchangeLis
         <div className="flex items-center gap-2 flex-wrap">
           {listing.category && <ExchangeCategoryBadge category={listing.category.name} />}
           <ExchangePriceBadge pricingType={listing.pricing_type} priceAmount={listing.price_amount} />
+          {conditionDisplay && (
+            <Badge variant="secondary" className="text-xs">
+              {conditionDisplay}
+            </Badge>
+          )}
+          {listing.available_quantity !== null && listing.available_quantity !== undefined && (
+            <Badge variant="outline" className="text-xs">
+              {listing.available_quantity} available
+            </Badge>
+          )}
         </div>
       </CardHeader>
 

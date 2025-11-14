@@ -1,3 +1,27 @@
+-- Drop existing policies if they exist (for re-running the script)
+DROP POLICY IF EXISTS "Residents can view tenant exchange categories" ON exchange_categories;
+DROP POLICY IF EXISTS "Admins can manage exchange categories" ON exchange_categories;
+DROP POLICY IF EXISTS "Residents can view published exchange listings" ON exchange_listings;
+DROP POLICY IF EXISTS "Creators can view their own exchange listings" ON exchange_listings;
+DROP POLICY IF EXISTS "Verified residents can create exchange listings" ON exchange_listings;
+DROP POLICY IF EXISTS "Creators can update their own exchange listings" ON exchange_listings;
+DROP POLICY IF EXISTS "Creators can delete their own exchange listings" ON exchange_listings;
+DROP POLICY IF EXISTS "Tenant admins can view all exchange listings" ON exchange_listings;
+DROP POLICY IF EXISTS "Tenant admins can update exchange listings" ON exchange_listings;
+DROP POLICY IF EXISTS "Users can view exchange images" ON exchange_images;
+DROP POLICY IF EXISTS "Creators can manage exchange images" ON exchange_images;
+DROP POLICY IF EXISTS "Users can view exchange neighborhoods" ON exchange_neighborhoods;
+DROP POLICY IF EXISTS "Creators can manage exchange neighborhoods" ON exchange_neighborhoods;
+DROP POLICY IF EXISTS "Borrowers can view their transactions" ON exchange_transactions;
+DROP POLICY IF EXISTS "Lenders can view their transactions" ON exchange_transactions;
+DROP POLICY IF EXISTS "Borrowers can create transactions" ON exchange_transactions;
+DROP POLICY IF EXISTS "Borrowers can update their transactions" ON exchange_transactions;
+DROP POLICY IF EXISTS "Lenders can update their transactions" ON exchange_transactions;
+DROP POLICY IF EXISTS "Users can view exchange flags for their listings" ON exchange_flags;
+DROP POLICY IF EXISTS "Tenant admins can view all exchange flags" ON exchange_flags;
+DROP POLICY IF EXISTS "Residents can flag exchange listings" ON exchange_flags;
+DROP POLICY IF EXISTS "Admins can remove exchange flags" ON exchange_flags;
+
 -- Enable Row Level Security on all exchange tables
 ALTER TABLE exchange_categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE exchange_listings ENABLE ROW LEVEL SECURITY;

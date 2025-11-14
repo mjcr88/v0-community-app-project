@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import { redirect } from 'next/navigation'
 import { getExchangeListings, getExchangeCategories } from "@/app/actions/exchange-listings"
 import { getNeighborhoods } from "@/app/actions/neighborhoods"
+import { getLocations } from "@/lib/queries/get-locations"
 import { CreateExchangeListingButton } from "@/components/exchange/create-exchange-listing-button"
 import { ExchangePageClient } from "./exchange-page-client"
 
@@ -35,10 +36,11 @@ export default async function ExchangePage({ params }: { params: Promise<{ slug:
     redirect(`/t/${slug}/dashboard`)
   }
 
-  const [listings, categories, neighborhoodsResult] = await Promise.all([
+  const [listings, categories, neighborhoodsResult, locations] = await Promise.all([
     getExchangeListings(resident.tenant_id),
     getExchangeCategories(resident.tenant_id),
-    getNeighborhoods(resident.tenant_id)
+    getNeighborhoods(resident.tenant_id),
+    getLocations(resident.tenant_id)
   ])
 
   const neighborhoods = neighborhoodsResult.success ? neighborhoodsResult.data : []
@@ -64,6 +66,7 @@ export default async function ExchangePage({ params }: { params: Promise<{ slug:
         listings={listings}
         categories={categories}
         neighborhoods={neighborhoods}
+        locations={locations}
         tenantId={resident.tenant_id}
         tenantSlug={slug}
         userId={user.id}

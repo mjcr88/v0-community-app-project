@@ -53,10 +53,18 @@ interface Neighborhood {
   name: string
 }
 
+interface Location {
+  id: string
+  name: string
+  type: string
+  coordinates?: { lat: number; lng: number }
+}
+
 export function ExchangePageClient({
   listings,
   categories,
   neighborhoods,
+  locations,
   tenantId,
   tenantSlug,
   userId,
@@ -64,6 +72,7 @@ export function ExchangePageClient({
   listings: Listing[]
   categories: Category[]
   neighborhoods: Neighborhood[]
+  locations: Location[]
   tenantId: string
   tenantSlug: string
   userId: string | null
@@ -469,6 +478,7 @@ export function ExchangePageClient({
           tenantId={tenantId}
           tenantSlug={tenantSlug}
           userId={userId}
+          locations={locations}
           open={isDetailModalOpen}
           onOpenChange={setIsDetailModalOpen}
         />

@@ -12,7 +12,6 @@ import { ExchangePriceBadge } from "./exchange-price-badge"
 import { MapPin, Calendar, Package } from 'lucide-react'
 import { getExchangeListingById } from "@/app/actions/exchange-listings"
 import { GoogleMapViewer } from "@/components/map/google-map-viewer"
-import { getLocations } from "@/lib/queries/get-locations"
 import { toast } from "sonner"
 
 interface ExchangeListingDetailModalProps {
@@ -20,6 +19,7 @@ interface ExchangeListingDetailModalProps {
   tenantId: string
   tenantSlug: string
   userId: string | null
+  locations: any[]
   open: boolean
   onOpenChange: (open: boolean) => void
 }
@@ -29,19 +29,18 @@ export function ExchangeListingDetailModal({
   tenantId,
   tenantSlug,
   userId,
+  locations,
   open,
   onOpenChange,
 }: ExchangeListingDetailModalProps) {
   const [listing, setListing] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null)
-  const [allLocations, setAllLocations] = useState<any[]>([])
   const [loadingLocations, setLoadingLocations] = useState(false)
 
   useEffect(() => {
     if (open && listingId) {
       loadListing()
-      loadAllLocations()
     }
   }, [open, listingId])
 
@@ -61,29 +60,6 @@ export function ExchangeListingDetailModal({
     setIsLoading(false)
   }
 
-  async function loadAllLocations() {
-    setLoadingLocations(true)
-    try {
-      const locations = await getLocations(tenantId)
-      setAllLocations(locations)
-    } catch (error) {
-      console.error("[v0] Failed to load locations:", error)
-    } finally {
-      setLoadingLocations(false)
-    }
-  }
-
-  if (isLoading || !listing) {
-    return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <div className="flex items-center justify-center py-12">
-            <div className="text-muted-foreground">Loading...</div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    )
-  }
 
   const isCreator = userId === listing.created_by
   const creatorName =
@@ -137,8 +113,8 @@ export function ExchangeListingDetailModal({
   }
 
   const mapLocations = listingLocationForMap 
-    ? [...allLocations, listingLocationForMap]
-    : allLocations
+    ? [...locations, listingLocationForMap]
+    : locations
 
   const hasMapLocation = listingLocationForMap !== null
   const locationName = listing.custom_location_name || listing.location?.name
@@ -241,7 +217,7 @@ export function ExchangeListingDetailModal({
                 <MapPin className="h-4 w-4" />
                 <span>{locationName}</span>
               </div>
-              {hasMapLocation && !loadingLocations && (
+              {hasMapLocation && (
                 <div className="h-[250px] rounded-lg overflow-hidden border">
                   <GoogleMapViewer
                     locations={mapLocations}

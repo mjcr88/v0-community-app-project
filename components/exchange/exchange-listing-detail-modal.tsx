@@ -24,7 +24,7 @@ interface ExchangeListingDetailModalProps {
   onOpenChange: (open: boolean) => void
 }
 
-function parseLocationCoordinates(coords: any): { lat: number; lng: number } | null {
+function parseLocationCoordinates(coords: any): { lat: number; lng: number } | any[] | null {
   if (!coords) return null
   
   // Handle string JSON
@@ -54,9 +54,15 @@ function parseLocationCoordinates(coords: any): { lat: number; lng: number } | n
       return { lat: coords.x, lng: coords.y }
     }
     
-    // Format 4: [lat, lng] array
-    if (Array.isArray(coords) && coords.length === 2) {
+    // Format 4: [lat, lng] single point array
+    if (Array.isArray(coords) && coords.length === 2 && typeof coords[0] === 'number' && typeof coords[1] === 'number') {
       return { lat: Number(coords[0]), lng: Number(coords[1]) }
+    }
+    
+    // Format 5: [[lat, lng], [lat, lng], ...] path/boundary array (return as-is for caller to handle)
+    if (Array.isArray(coords) && coords.length > 0 && Array.isArray(coords[0])) {
+      console.log("[v0] Detected path/boundary array format, returning as-is")
+      return coords
     }
   }
   
@@ -158,14 +164,19 @@ export function ExchangeListingDetailModal({
 
     // Try coordinates first (point locations)
     if (listing.location.coordinates) {
-      coords = parseLocationCoordinates(listing.location.coordinates)
+      const parsed = parseLocationCoordinates(listing.location.coordinates)
+      if (parsed && !Array.isArray(parsed)) {
+        coords = parsed
+        console.log("[v0] Using coordinates:", coords)
+      }
     }
 
-    // If no coordinates, try path_coordinates (facility paths like common areas)
     if (!coords && listing.location.path_coordinates) {
-      const pathData = parseLocationCoordinates(listing.location.path_coordinates)
-      // path_coordinates returns array of [lat, lng] pairs - use first point as marker
-      if (pathData && Array.isArray(pathData) && pathData.length > 0) {
+      const pathData = listing.location.path_coordinates
+      console.log("[v0] Raw path_coordinates:", pathData)
+      
+      // path_coordinates is array of [lat, lng] pairs - use first point as marker
+      if (Array.isArray(pathData) && pathData.length > 0) {
         const firstPoint = pathData[0]
         if (Array.isArray(firstPoint) && firstPoint.length === 2) {
           coords = { lat: Number(firstPoint[0]), lng: Number(firstPoint[1]) }
@@ -174,13 +185,14 @@ export function ExchangeListingDetailModal({
       }
     }
 
-    // If no path, try boundary_coordinates (facility boundaries)
     if (!coords && listing.location.boundary_coordinates) {
-      const boundaryData = parseLocationCoordinates(listing.location.boundary_coordinates)
-      // boundary_coordinates returns array of [lat, lng] pairs - calculate center
-      if (boundaryData && Array.isArray(boundaryData) && boundaryData.length > 0) {
-        const lats = boundaryData.map((c: any) => (Array.isArray(c) ? c[0] : c.lat))
-        const lngs = boundaryData.map((c: any) => (Array.isArray(c) ? c[1] : c.lng))
+      const boundaryData = listing.location.boundary_coordinates
+      console.log("[v0] Raw boundary_coordinates:", boundaryData)
+      
+      // boundary_coordinates is array of [lat, lng] pairs - calculate center
+      if (Array.isArray(boundaryData) && boundaryData.length > 0) {
+        const lats = boundaryData.map((point: any) => (Array.isArray(point) ? Number(point[0]) : 0))
+        const lngs = boundaryData.map((point: any) => (Array.isArray(point) ? Number(point[1]) : 0))
         const centerLat = lats.reduce((a: number, b: number) => a + b, 0) / lats.length
         const centerLng = lngs.reduce((a: number, b: number) => a + b, 0) / lngs.length
         coords = { lat: centerLat, lng: centerLng }

@@ -20,14 +20,20 @@ CREATE POLICY "Residents can view tenant exchange categories"
     )
   );
 
--- Tenant admins can manage categories
-CREATE POLICY "Tenant admins can manage exchange categories"
+-- Allow both tenant admins and super admins to manage categories
+-- Admins can manage categories
+CREATE POLICY "Admins can manage exchange categories"
   ON exchange_categories
   FOR ALL
   USING (
     tenant_id IN (
       SELECT tenant_id FROM users 
-      WHERE id = auth.uid() AND role = 'tenant_admin'
+      WHERE id = auth.uid() AND (role = 'tenant_admin' OR role = 'super_admin')
+    )
+    OR
+    EXISTS (
+      SELECT 1 FROM users 
+      WHERE id = auth.uid() AND role = 'super_admin'
     )
   );
 

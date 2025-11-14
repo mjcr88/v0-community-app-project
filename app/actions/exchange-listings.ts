@@ -199,7 +199,7 @@ export async function createExchangeListing(
     const { data: listing, error } = await supabase
       .from("exchange_listings")
       .insert(insertData)
-      .select()
+      .select('id')
       .single()
 
     if (error) {
@@ -228,7 +228,7 @@ export async function createExchangeListing(
 
     revalidatePath(`/t/${tenantSlug}/dashboard/exchange`)
 
-    return { success: true, data: listing }
+    return { success: true, listingId: listing.id }
   } catch (error) {
     console.error("[v0] Unexpected error creating exchange listing:", error)
     return {

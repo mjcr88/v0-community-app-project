@@ -13,6 +13,7 @@ interface ExchangeListingCardProps {
     title: string
     description?: string | null
     status: string
+    is_available?: boolean
     pricing_type: string
     price_amount?: number | null
     available_quantity?: number | null
@@ -52,7 +53,11 @@ export function ExchangeListingCard({ listing, onClick, className }: ExchangeLis
             </Avatar>
             <p className="text-sm text-muted-foreground truncate">{creatorName}</p>
           </div>
-          <ExchangeStatusBadge status={listing.status} className="flex-shrink-0" />
+          <ExchangeStatusBadge 
+            status={listing.status as any} 
+            isAvailable={listing.is_available ?? true}
+            className="flex-shrink-0" 
+          />
         </div>
 
         {/* Title */}

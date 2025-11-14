@@ -27,7 +27,14 @@ export async function getExchangeListings(tenantId: string) {
     const { data: listings, error } = await supabase
       .from("exchange_listings")
       .select(`
-        *,
+        id,
+        title,
+        description,
+        status,
+        is_available,
+        pricing_type,
+        price,
+        available_quantity,
         category:exchange_categories(id, name, description),
         creator:users!created_by(id, first_name, last_name, profile_picture_url)
       `)
@@ -42,7 +49,12 @@ export async function getExchangeListings(tenantId: string) {
 
     console.log("[v0] getExchangeListings - Found listings:", listings?.length || 0)
 
-    return listings || []
+    const transformedListings = listings?.map((listing: any) => ({
+      ...listing,
+      price_amount: listing.price,
+    }))
+
+    return transformedListings || []
   } catch (error) {
     console.error("[v0] Unexpected error fetching exchange listings:", error)
     return []

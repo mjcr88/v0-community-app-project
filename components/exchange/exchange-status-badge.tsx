@@ -1,19 +1,32 @@
 import { Badge } from "@/components/ui/badge"
-import { Pause, AlertCircle, Wrench } from 'lucide-react'
+import { Pause, AlertCircle, Wrench, CheckCircle } from 'lucide-react'
 
-type ExchangeStatus = "available" | "paused" | "unavailable" | "maintenance"
+type ExchangeStatus = "draft" | "published" | "paused" | "cancelled" | "unavailable" | "maintenance"
 
 interface ExchangeStatusBadgeProps {
   status: ExchangeStatus
+  isAvailable?: boolean
   compact?: boolean
 }
 
-export function ExchangeStatusBadge({ status, compact = false }: ExchangeStatusBadgeProps) {
+export function ExchangeStatusBadge({ status, isAvailable = true, compact = false }: ExchangeStatusBadgeProps) {
+  let displayStatus = status
+  if (status === 'published' && !isAvailable) {
+    displayStatus = 'unavailable'
+  } else if (status === 'published' && isAvailable) {
+    displayStatus = 'published' // Will show as "Available"
+  }
+  
   const statusConfig = {
-    available: {
+    draft: {
+      label: "Draft",
+      variant: "outline" as const,
+      icon: null,
+    },
+    published: {
       label: "Available",
       variant: "default" as const,
-      icon: null,
+      icon: <CheckCircle className="h-3 w-3" />,
     },
     paused: {
       label: "Paused",
@@ -25,6 +38,11 @@ export function ExchangeStatusBadge({ status, compact = false }: ExchangeStatusB
       variant: "outline" as const,
       icon: <AlertCircle className="h-3 w-3" />,
     },
+    cancelled: {
+      label: "Cancelled",
+      variant: "destructive" as const,
+      icon: <AlertCircle className="h-3 w-3" />,
+    },
     maintenance: {
       label: "Maintenance",
       variant: "destructive" as const,
@@ -32,7 +50,7 @@ export function ExchangeStatusBadge({ status, compact = false }: ExchangeStatusB
     },
   }
 
-  const config = statusConfig[status]
+  const config = statusConfig[displayStatus] || statusConfig.unavailable
 
   return (
     <Badge variant={config.variant} className={compact ? "text-xs gap-1" : "gap-1"}>

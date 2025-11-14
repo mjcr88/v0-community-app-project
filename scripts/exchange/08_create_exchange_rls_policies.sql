@@ -83,21 +83,14 @@ CREATE POLICY "Creators can view their own exchange listings"
   FOR SELECT
   USING (created_by = auth.uid());
 
--- Fixed RLS policy to check onboarding_completed in users table, not residents table
--- Verified residents can create listings
+-- Simplified policy to match check-ins pattern - removed onboarding_completed check
+-- Residents can create listings in their tenant
 CREATE POLICY "Verified residents can create exchange listings"
   ON exchange_listings
   FOR INSERT
   WITH CHECK (
-    created_by = auth.uid()
-    AND tenant_id IN (
-      SELECT tenant_id FROM users WHERE id = auth.uid()
-    )
-    AND EXISTS (
-      SELECT 1 FROM users 
-      WHERE id = auth.uid() 
-      AND onboarding_completed = true
-    )
+    tenant_id IN (SELECT tenant_id FROM users WHERE id = auth.uid())
+    AND created_by = auth.uid()
   );
 
 -- Creators can update their own listings
@@ -119,7 +112,7 @@ CREATE POLICY "Tenant admins can view all exchange listings"
   USING (
     tenant_id IN (
       SELECT tenant_id FROM users 
-      WHERE id = auth.uid() AND role = 'tenant_admin'
+      WHERE id = auth.uid() AND is_tenant_admin = true
     )
   );
 
@@ -130,7 +123,7 @@ CREATE POLICY "Tenant admins can update exchange listings"
   USING (
     tenant_id IN (
       SELECT tenant_id FROM users 
-      WHERE id = auth.uid() AND role = 'tenant_admin'
+      WHERE id = auth.uid() AND is_tenant_admin = true
     )
   );
 
@@ -242,12 +235,12 @@ CREATE POLICY "Tenant admins can view all exchange flags"
   USING (
     tenant_id IN (
       SELECT tenant_id FROM users 
-      WHERE id = auth.uid() AND role = 'tenant_admin'
+      WHERE id = auth.uid() AND is_tenant_admin = true
     )
   );
 
--- Fixed RLS policy to check onboarding_completed in users table, not residents table
--- Verified residents can flag listings
+-- Simplified policy to match check-ins pattern - removed onboarding_completed check
+-- Residents can flag listings in their tenant
 CREATE POLICY "Residents can flag exchange listings"
   ON exchange_flags
   FOR INSERT
@@ -255,11 +248,6 @@ CREATE POLICY "Residents can flag exchange listings"
     flagged_by = auth.uid()
     AND tenant_id IN (
       SELECT tenant_id FROM users WHERE id = auth.uid()
-    )
-    AND EXISTS (
-      SELECT 1 FROM users 
-      WHERE id = auth.uid() 
-      AND onboarding_completed = true
     )
   );
 
@@ -270,6 +258,6 @@ CREATE POLICY "Admins can remove exchange flags"
   USING (
     tenant_id IN (
       SELECT tenant_id FROM users 
-      WHERE id = auth.uid() AND role = 'tenant_admin'
+      WHERE id = auth.uid() AND is_tenant_admin = true
     )
   );

@@ -8,6 +8,8 @@ import { Plus } from 'lucide-react'
 interface CreateExchangeListingButtonProps {
   tenantSlug: string
   tenantId: string
+  categories: Array<{ id: string; name: string }>
+  neighborhoods: Array<{ id: string; name: string }>
   variant?: "default" | "outline" | "ghost" | "link"
   className?: string
 }
@@ -15,6 +17,8 @@ interface CreateExchangeListingButtonProps {
 export function CreateExchangeListingButton({
   tenantSlug,
   tenantId,
+  categories,
+  neighborhoods,
   variant = "default",
   className,
 }: CreateExchangeListingButtonProps) {
@@ -26,7 +30,14 @@ export function CreateExchangeListingButton({
         <Plus className="h-4 w-4 mr-2" />
         Create Listing
       </Button>
-      <CreateExchangeListingModal open={open} onOpenChange={setOpen} tenantSlug={tenantSlug} tenantId={tenantId} />
+      <CreateExchangeListingModal 
+        open={open} 
+        onOpenChange={setOpen} 
+        tenantSlug={tenantSlug} 
+        tenantId={tenantId}
+        categories={categories}
+        neighborhoods={neighborhoods}
+      />
     </>
   )
 }

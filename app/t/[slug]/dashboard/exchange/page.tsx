@@ -2,7 +2,8 @@ import { createClient } from "@/lib/supabase/server"
 import { redirect } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Package } from 'lucide-react'
-import { getExchangeListings } from "@/app/actions/exchange-listings"
+import { getExchangeListings, getExchangeCategories } from "@/app/actions/exchange-listings"
+import { getNeighborhoods } from "@/app/actions/neighborhoods"
 import { CreateExchangeListingButton } from "@/components/exchange/create-exchange-listing-button"
 import { ExchangeListingCard } from "@/components/exchange/exchange-listing-card"
 
@@ -37,8 +38,15 @@ export default async function ExchangePage({ params }: { params: Promise<{ slug:
     redirect(`/t/${slug}/dashboard`)
   }
 
-  const listings = await getExchangeListings(resident.tenant_id)
+  const [listings, categories, neighborhoodsResult] = await Promise.all([
+    getExchangeListings(resident.tenant_id),
+    getExchangeCategories(resident.tenant_id),
+    getNeighborhoods(resident.tenant_id)
+  ])
+  
   console.log("[v0] ExchangePage - Listings fetched:", listings.length)
+
+  const neighborhoods = neighborhoodsResult.success ? neighborhoodsResult.data : []
 
   return (
     <div className="space-y-6">
@@ -48,7 +56,12 @@ export default async function ExchangePage({ params }: { params: Promise<{ slug:
           <p className="text-muted-foreground">Share, borrow, and trade within your community</p>
         </div>
         {resident.onboarding_completed && (
-          <CreateExchangeListingButton tenantSlug={slug} tenantId={resident.tenant_id} />
+          <CreateExchangeListingButton 
+            tenantSlug={slug} 
+            tenantId={resident.tenant_id}
+            categories={categories}
+            neighborhoods={neighborhoods}
+          />
         )}
       </div>
 

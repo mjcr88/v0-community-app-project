@@ -1,8 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect, useRef, useCallback } from "react"
-import { useRouter } from 'next/navigation'
+import { useState, useRef, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -12,8 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Card, CardContent } from "@/components/ui/card"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
-import { createExchangeListing, getExchangeCategories } from "@/app/actions/exchange-listings"
-import { getNeighborhoods } from "@/app/actions/neighborhoods"
+import { createExchangeListing } from "@/app/actions/exchange-listings"
 import { Loader2 } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import type { ExchangePricingType, ExchangeCondition } from "@/types/exchange"
@@ -24,6 +22,8 @@ interface CreateExchangeListingModalProps {
   onOpenChange: (open: boolean) => void
   tenantSlug: string
   tenantId: string
+  categories: Array<{ id: string; name: string }>
+  neighborhoods: Array<{ id: string; name: string }>
 }
 
 export function CreateExchangeListingModal({
@@ -31,20 +31,15 @@ export function CreateExchangeListingModal({
   onOpenChange,
   tenantSlug,
   tenantId,
+  categories,
+  neighborhoods,
 }: CreateExchangeListingModalProps) {
   const renderCount = useRef(0)
-  useEffect(() => {
-    renderCount.current++
-    console.log(`[v0] Modal render #${renderCount.current}`)
-  })
+  renderCount.current++
+  console.log(`[v0] Modal render #${renderCount.current}`)
 
-  const router = useRouter()
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([])
-  const [isLoadingCategories, setIsLoadingCategories] = useState(true)
-  const [neighborhoods, setNeighborhoods] = useState<Array<{ id: string; name: string }>>([])
-  const [isLoadingNeighborhoods, setIsLoadingNeighborhoods] = useState(false)
 
   const [formData, setFormData] = useState({
     title: "",
@@ -63,34 +58,6 @@ export function CreateExchangeListingModal({
     custom_location_lng: null as number | null,
     status: "draft" as "draft" | "published",
   })
-
-  useEffect(() => {
-    console.log("[v0] Modal useEffect triggered - open:", open, "tenantId:", tenantId)
-    if (open) {
-      loadCategories()
-      loadNeighborhoods()
-    }
-  }, [open, tenantId])
-
-  const loadCategories = async () => {
-    console.log("[v0] loadCategories called")
-    setIsLoadingCategories(true)
-    const categoriesData = await getExchangeCategories(tenantId)
-    console.log("[v0] Categories loaded:", categoriesData.length)
-    setCategories(categoriesData)
-    setIsLoadingCategories(false)
-  }
-
-  const loadNeighborhoods = async () => {
-    console.log("[v0] loadNeighborhoods called")
-    setIsLoadingNeighborhoods(true)
-    const result = await getNeighborhoods(tenantId)
-    if (result.success) {
-      console.log("[v0] Neighborhoods loaded:", result.data.length)
-      setNeighborhoods(result.data)
-    }
-    setIsLoadingNeighborhoods(false)
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -287,29 +254,22 @@ export function CreateExchangeListingModal({
                 <Label htmlFor="category">
                   Category <span className="text-destructive">*</span>
                 </Label>
-                {isLoadingCategories ? (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Loading categories...
-                  </div>
-                ) : (
-                  <Select
-                    value={formData.category_id}
-                    onValueChange={(value) => setFormData({ ...formData, category_id: value })}
-                    required
-                  >
-                    <SelectTrigger id="category">
-                      <SelectValue placeholder="Select a category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
+                <Select
+                  value={formData.category_id}
+                  onValueChange={(value) => setFormData({ ...formData, category_id: value })}
+                  required
+                >
+                  <SelectTrigger id="category">
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <p className="text-xs text-muted-foreground">
                   Choose the category that best fits what you're offering
                 </p>
@@ -495,12 +455,7 @@ export function CreateExchangeListingModal({
                         {formData.visibility_scope === "neighborhood" && (
                           <div className="mt-4 space-y-3">
                             <Label className="text-sm font-medium">Select Neighborhoods <span className="text-destructive">*</span></Label>
-                            {isLoadingNeighborhoods ? (
-                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                Loading neighborhoods...
-                              </div>
-                            ) : neighborhoods.length === 0 ? (
+                            {neighborhoods.length === 0 ? (
                               <p className="text-sm text-muted-foreground">No neighborhoods available</p>
                             ) : (
                               <div className="space-y-2 max-h-48 overflow-y-auto rounded-md border p-3">

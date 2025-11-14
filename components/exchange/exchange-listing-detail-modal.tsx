@@ -149,17 +149,20 @@ export function ExchangeListingDetailModal({
   let locationName = null
   
   // Try community location first
-  if (listing.location) {
+  if (listing.location_id && listing.location) {
     locationName = listing.location.name
     
-    if (listing.location.coordinates) {
-      const parsedCoords = parseLocationCoordinates(listing.location.coordinates)
+    // Look up the full location from the locations array (which has valid coordinates)
+    const fullLocation = locations.find(loc => loc.id === listing.location_id)
+    
+    if (fullLocation?.coordinates) {
+      const parsedCoords = parseLocationCoordinates(fullLocation.coordinates)
       
       if (parsedCoords) {
         listingLocationForMap = {
-          id: listing.location.id,
-          name: listing.location.name,
-          type: "facility" as const,
+          id: fullLocation.id,
+          name: fullLocation.name,
+          type: fullLocation.type || "facility" as const,
           coordinates: parsedCoords
         }
       }

@@ -7,6 +7,7 @@ import { CreateExchangeListingButton } from "@/components/exchange/create-exchan
 import { ExchangeListingCard } from "@/components/exchange/exchange-listing-card"
 
 export default async function ExchangePage({ params }: { params: Promise<{ slug: string }> }) {
+  console.log("[v0] ExchangePage - Rendering")
   const { slug } = await params
   const supabase = await createClient()
 
@@ -37,6 +38,7 @@ export default async function ExchangePage({ params }: { params: Promise<{ slug:
   }
 
   const listings = await getExchangeListings(resident.tenant_id)
+  console.log("[v0] ExchangePage - Listings fetched:", listings.length)
 
   return (
     <div className="space-y-6">

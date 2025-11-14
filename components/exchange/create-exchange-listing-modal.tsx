@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,6 +16,8 @@ import { createExchangeListing, getExchangeCategories } from "@/app/actions/exch
 import { getNeighborhoods } from "@/app/actions/neighborhoods"
 import { Loader2 } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
+import { LocationSelector } from "@/components/event-forms/location-selector"
+import type { LocationType } from "@/components/event-forms/location-selector"
 import type { ExchangePricingType, ExchangeCondition } from "@/types/exchange"
 
 interface CreateExchangeListingModalProps {
@@ -31,6 +33,12 @@ export function CreateExchangeListingModal({
   tenantSlug,
   tenantId,
 }: CreateExchangeListingModalProps) {
+  const renderCount = useRef(0)
+  useEffect(() => {
+    renderCount.current++
+    console.log(`[v0] Modal render #${renderCount.current}`)
+  })
+
   const router = useRouter()
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -49,11 +57,17 @@ export function CreateExchangeListingModal({
     available_quantity: "",
     visibility_scope: "community" as "community" | "neighborhood",
     neighborhood_ids: [] as string[],
+    location_type: "none" as LocationType,
+    location_id: "",
+    custom_location_name: "",
+    custom_location_coordinates: null as { lat: number; lng: number } | null,
+    custom_location_type: null as "marker" | "polygon" | null,
+    custom_location_path: null as Array<{ lat: number; lng: number }> | null,
     status: "draft" as "draft" | "published",
   })
 
-  // Load categories when modal opens
   useEffect(() => {
+    console.log("[v0] Modal useEffect triggered - open:", open, "tenantId:", tenantId)
     if (open) {
       loadCategories()
       loadNeighborhoods()
@@ -61,16 +75,20 @@ export function CreateExchangeListingModal({
   }, [open, tenantId])
 
   const loadCategories = async () => {
+    console.log("[v0] loadCategories called")
     setIsLoadingCategories(true)
     const categoriesData = await getExchangeCategories(tenantId)
+    console.log("[v0] Categories loaded:", categoriesData.length)
     setCategories(categoriesData)
     setIsLoadingCategories(false)
   }
 
   const loadNeighborhoods = async () => {
+    console.log("[v0] loadNeighborhoods called")
     setIsLoadingNeighborhoods(true)
     const result = await getNeighborhoods(tenantId)
     if (result.success) {
+      console.log("[v0] Neighborhoods loaded:", result.data.length)
       setNeighborhoods(result.data)
     }
     setIsLoadingNeighborhoods(false)
@@ -78,10 +96,10 @@ export function CreateExchangeListingModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    console.log("[v0] handleSubmit called")
     setIsSubmitting(true)
 
     try {
-      // Validate required fields
       if (!formData.title.trim()) {
         toast({
           title: "Title required",
@@ -135,10 +153,18 @@ export function CreateExchangeListingModal({
         available_quantity: formData.available_quantity ? parseInt(formData.available_quantity, 10) : null,
         visibility_scope: formData.visibility_scope,
         neighborhood_ids: formData.visibility_scope === "neighborhood" ? formData.neighborhood_ids : [],
+        location_type: formData.location_type,
+        location_id: formData.location_type === "community" ? formData.location_id : null,
+        custom_location_name: formData.location_type === "custom" ? formData.custom_location_name : null,
+        custom_location_coordinates: formData.location_type === "custom" ? formData.custom_location_coordinates : null,
+        custom_location_type: formData.location_type === "custom" ? formData.custom_location_type : null,
+        custom_location_path: formData.location_type === "custom" ? formData.custom_location_path : null,
         status: formData.status,
       }
 
+      console.log("[v0] Calling createExchangeListing with data:", listingData)
       const result = await createExchangeListing(tenantSlug, tenantId, listingData)
+      console.log("[v0] createExchangeListing result:", result)
 
       if (result.success) {
         toast({
@@ -148,8 +174,8 @@ export function CreateExchangeListingModal({
               ? "Your listing is now visible to the community."
               : "You can continue editing and publish when ready.",
         })
+        console.log("[v0] Success - closing modal")
         onOpenChange(false)
-        // Reset form
         setFormData({
           title: "",
           description: "",
@@ -160,9 +186,15 @@ export function CreateExchangeListingModal({
           available_quantity: "",
           visibility_scope: "community",
           neighborhood_ids: [],
+          location_type: "none",
+          location_id: "",
+          custom_location_name: "",
+          custom_location_coordinates: null,
+          custom_location_type: null,
+          custom_location_path: null,
           status: "draft",
         })
-        router.refresh()
+        console.log("[v0] Form reset complete, modal should refresh via revalidatePath")
       } else {
         toast({
           title: "Error",
@@ -178,6 +210,7 @@ export function CreateExchangeListingModal({
         variant: "destructive",
       })
     } finally {
+      console.log("[v0] Setting isSubmitting to false")
       setIsSubmitting(false)
     }
   }
@@ -185,11 +218,55 @@ export function CreateExchangeListingModal({
   const selectedCategory = categories.find(c => c.id === formData.category_id)
   const isToolsEquipment = selectedCategory?.name === "Tools & Equipment"
   const isFoodProduce = selectedCategory?.name === "Food & Produce"
-  const showPricing = selectedCategory && !isToolsEquipment // Show for all except Tools & Equipment
-  const showCondition = isToolsEquipment // Show only for Tools & Equipment
-  const showQuantity = isToolsEquipment || isFoodProduce // Show for Tools & Equipment and Food & Produce
+  const showPricing = selectedCategory && !isToolsEquipment
+  const showCondition = isToolsEquipment
+  const showQuantity = isToolsEquipment || isFoodProduce
+
+  const handleLocationTypeChange = useCallback((type: LocationType) => {
+    console.log("[v0] handleLocationTypeChange:", type)
+    setFormData(prev => ({
+      ...prev,
+      location_type: type,
+      location_id: "",
+      custom_location_name: "",
+      custom_location_coordinates: null,
+      custom_location_type: null,
+      custom_location_path: null,
+    }))
+  }, [])
+
+  const handleCommunityLocationChange = useCallback((locationId: string) => {
+    console.log("[v0] handleCommunityLocationChange:", locationId)
+    setFormData(prev => ({
+      ...prev,
+      location_id: locationId,
+    }))
+  }, [])
+
+  const handleCustomLocationNameChange = useCallback((name: string) => {
+    console.log("[v0] handleCustomLocationNameChange:", name)
+    setFormData(prev => ({
+      ...prev,
+      custom_location_name: name,
+    }))
+  }, [])
+
+  const handleCustomLocationChange = useCallback((data: {
+    coordinates?: { lat: number; lng: number } | null
+    type?: "marker" | "polygon" | null
+    path?: Array<{ lat: number; lng: number }> | null
+  }) => {
+    console.log("[v0] handleCustomLocationChange:", data)
+    setFormData(prev => ({
+      ...prev,
+      custom_location_coordinates: data.coordinates ?? prev.custom_location_coordinates,
+      custom_location_type: data.type ?? prev.custom_location_type,
+      custom_location_path: data.path ?? prev.custom_location_path,
+    }))
+  }, [])
 
   const toggleNeighborhood = (neighborhoodId: string) => {
+    console.log("[v0] toggleNeighborhood:", neighborhoodId)
     setFormData(prev => ({
       ...prev,
       neighborhood_ids: prev.neighborhood_ids.includes(neighborhoodId)
@@ -209,7 +286,6 @@ export function CreateExchangeListingModal({
         <form onSubmit={handleSubmit}>
           <Card>
             <CardContent className="space-y-6 pt-6">
-              {/* Title */}
               <div className="space-y-2">
                 <Label htmlFor="title">
                   Listing Title <span className="text-destructive">*</span>
@@ -224,7 +300,6 @@ export function CreateExchangeListingModal({
                 <p className="text-xs text-muted-foreground">Keep it clear and descriptive</p>
               </div>
 
-              {/* Category */}
               <div className="space-y-2">
                 <Label htmlFor="category">
                   Category <span className="text-destructive">*</span>
@@ -257,7 +332,6 @@ export function CreateExchangeListingModal({
                 </p>
               </div>
 
-              {/* Description */}
               <div className="space-y-2">
                 <Label htmlFor="description">Description</Label>
                 <Textarea
@@ -272,7 +346,6 @@ export function CreateExchangeListingModal({
                 </p>
               </div>
 
-              {/* Pricing */}
               {showPricing && (
                 <div className="space-y-4 pt-4 border-t">
                   <div className="space-y-2">
@@ -343,7 +416,6 @@ export function CreateExchangeListingModal({
                 </div>
               )}
 
-              {/* Condition */}
               {showCondition && (
                 <div className="space-y-2">
                   <Label htmlFor="condition">Condition</Label>
@@ -368,7 +440,6 @@ export function CreateExchangeListingModal({
                 </div>
               )}
 
-              {/* Quantity */}
               {showQuantity && (
                 <div className="space-y-2">
                   <Label htmlFor="quantity">Available Quantity</Label>
@@ -387,6 +458,20 @@ export function CreateExchangeListingModal({
                   </p>
                 </div>
               )}
+
+              <LocationSelector
+                tenantId={tenantId}
+                locationType={formData.location_type}
+                communityLocationId={formData.location_id || null}
+                customLocationName={formData.custom_location_name || null}
+                customLocationCoordinates={formData.custom_location_coordinates}
+                customLocationType={formData.custom_location_type}
+                customLocationPath={formData.custom_location_path}
+                onLocationTypeChange={handleLocationTypeChange}
+                onCommunityLocationChange={handleCommunityLocationChange}
+                onCustomLocationNameChange={handleCustomLocationNameChange}
+                onCustomLocationChange={handleCustomLocationChange}
+              />
 
               <div className="space-y-4 pt-4 border-t">
                 <div className="space-y-2">
@@ -457,7 +542,6 @@ export function CreateExchangeListingModal({
                 </RadioGroup>
               </div>
 
-              {/* Status Selection */}
               <div className="space-y-4 pt-4 border-t">
                 <div className="space-y-2">
                   <Label className="text-base font-semibold">Listing Status</Label>
@@ -496,7 +580,6 @@ export function CreateExchangeListingModal({
                 </RadioGroup>
               </div>
 
-              {/* Actions */}
               <div className="flex gap-3 pt-4">
                 <Button type="submit" disabled={isSubmitting} className="flex-1 sm:flex-none">
                   {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

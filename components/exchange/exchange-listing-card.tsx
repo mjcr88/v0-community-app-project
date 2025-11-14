@@ -7,6 +7,7 @@ import { ExchangeCategoryBadge } from "./exchange-category-badge"
 import { ExchangeStatusBadge } from "./exchange-status-badge"
 import { ExchangePriceBadge } from "./exchange-price-badge"
 import { cn } from "@/lib/utils"
+import { MapPin } from 'lucide-react'
 
 interface ExchangeListingCardProps {
   listing: {
@@ -28,6 +29,10 @@ interface ExchangeListingCardProps {
       first_name: string
       last_name: string
       profile_picture_url?: string | null
+    } | null
+    custom_location_name?: string | null
+    location?: {
+      name: string
     } | null
   }
   onClick?: () => void
@@ -52,6 +57,8 @@ export function ExchangeListingCard({ listing, onClick, className }: ExchangeLis
     listing.available_quantity !== undefined &&
     listing.category &&
     (listing.category.name === "Tools & Equipment" || listing.category.name === "Food & Produce")
+
+  const locationDisplay = listing.custom_location_name || listing.location?.name
 
   return (
     <Card className={cn("hover:bg-accent transition-colors cursor-pointer", className)} onClick={onClick}>
@@ -81,7 +88,7 @@ export function ExchangeListingCard({ listing, onClick, className }: ExchangeLis
         {/* Title */}
         <CardTitle className="text-lg leading-tight line-clamp-2 text-balance">{listing.title}</CardTitle>
 
-        {/* Category and price badges */}
+        {/* Category, price, and location badges */}
         <div className="flex items-center gap-2 flex-wrap">
           {listing.category && <ExchangeCategoryBadge categoryName={listing.category.name} />}
           <ExchangePriceBadge pricingType={listing.pricing_type} price={listing.price_amount} />
@@ -93,6 +100,12 @@ export function ExchangeListingCard({ listing, onClick, className }: ExchangeLis
           {shouldShowQuantity && (
             <Badge variant="outline" className="text-xs">
               {listing.available_quantity} available
+            </Badge>
+          )}
+          {locationDisplay && (
+            <Badge variant="outline" className="text-xs flex items-center gap-1">
+              <MapPin className="h-3 w-3" />
+              {locationDisplay}
             </Badge>
           )}
         </div>

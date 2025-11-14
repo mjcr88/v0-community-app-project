@@ -102,10 +102,17 @@ export async function createExchangeListing(
     available_quantity: number | null
     visibility_scope: "community" | "neighborhood"
     neighborhood_ids: string[]
+    location_type?: "community" | "custom" | "none"
+    location_id?: string | null
+    custom_location_name?: string | null
+    custom_location_coordinates?: { lat: number; lng: number } | null
+    custom_location_type?: "marker" | "polygon" | null
+    custom_location_path?: Array<{ lat: number; lng: number }> | null
     status: "draft" | "published"
   },
 ) {
   try {
+    console.log("[v0] createExchangeListing - START")
     const supabase = await createServerClient()
 
     const {
@@ -182,6 +189,19 @@ export async function createExchangeListing(
       insertData.available_quantity = data.available_quantity
     }
 
+    if (data.location_type === "community" && data.location_id) {
+      insertData.location_id = data.location_id
+    } else if (data.location_type === "custom") {
+      if (data.custom_location_name) {
+        insertData.custom_location_name = data.custom_location_name
+      }
+      if (data.custom_location_coordinates) {
+        insertData.custom_location_lat = data.custom_location_coordinates.lat
+        insertData.custom_location_lng = data.custom_location_coordinates.lng
+      }
+    }
+
+    console.log("[v0] createExchangeListing - Inserting listing")
     const { data: listing, error } = await supabase
       .from("exchange_listings")
       .insert(insertData)
@@ -193,7 +213,10 @@ export async function createExchangeListing(
       return { success: false, error: error.message }
     }
 
+    console.log("[v0] createExchangeListing - Listing created:", listing.id)
+
     if (data.visibility_scope === "neighborhood" && data.neighborhood_ids.length > 0) {
+      console.log("[v0] createExchangeListing - Creating neighborhood associations")
       const neighborhoodInserts = data.neighborhood_ids.map(neighborhoodId => ({
         tenant_id: tenantId,
         listing_id: listing.id,
@@ -210,9 +233,9 @@ export async function createExchangeListing(
       }
     }
 
-    console.log("[v0] Exchange listing created successfully:", listing.id)
-
+    console.log("[v0] createExchangeListing - SUCCESS, calling revalidatePath")
     revalidatePath(`/t/${tenantSlug}/dashboard/exchange`)
+    console.log("[v0] createExchangeListing - revalidatePath called")
 
     return { success: true, listingId: listing.id }
   } catch (error) {

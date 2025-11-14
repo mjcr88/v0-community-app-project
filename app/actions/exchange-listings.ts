@@ -102,7 +102,10 @@ export async function createExchangeListing(
     available_quantity: number | null
     visibility_scope: "community" | "neighborhood"
     neighborhood_ids: string[]
-    location_name?: string | null
+    location_id?: string | null
+    custom_location_name?: string | null
+    custom_location_lat?: number | null
+    custom_location_lng?: number | null
     status: "draft" | "published"
   },
 ) {
@@ -184,8 +187,20 @@ export async function createExchangeListing(
       insertData.available_quantity = data.available_quantity
     }
 
-    if (data.location_name) {
-      insertData.custom_location_name = data.location_name
+    if (data.location_id) {
+      insertData.location_id = data.location_id
+    }
+
+    if (data.custom_location_name) {
+      insertData.custom_location_name = data.custom_location_name
+    }
+
+    if (data.custom_location_lat !== null && data.custom_location_lat !== undefined) {
+      insertData.custom_location_lat = data.custom_location_lat
+    }
+
+    if (data.custom_location_lng !== null && data.custom_location_lng !== undefined) {
+      insertData.custom_location_lng = data.custom_location_lng
     }
 
     console.log("[v0] createExchangeListing - Inserting listing")

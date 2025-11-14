@@ -17,6 +17,7 @@ import { getNeighborhoods } from "@/app/actions/neighborhoods"
 import { Loader2 } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import type { ExchangePricingType, ExchangeCondition } from "@/types/exchange"
+import { LocationSelector } from "@/components/event-forms/location-selector"
 
 interface CreateExchangeListingModalProps {
   open: boolean
@@ -55,7 +56,11 @@ export function CreateExchangeListingModal({
     available_quantity: "",
     visibility_scope: "community" as "community" | "neighborhood",
     neighborhood_ids: [] as string[],
-    location_name: "",
+    location_type: "none" as "none" | "community" | "custom",
+    location_id: null as string | null,
+    custom_location_name: "",
+    custom_location_lat: null as number | null,
+    custom_location_lng: null as number | null,
     status: "draft" as "draft" | "published",
   })
 
@@ -146,7 +151,10 @@ export function CreateExchangeListingModal({
         available_quantity: formData.available_quantity ? parseInt(formData.available_quantity, 10) : null,
         visibility_scope: formData.visibility_scope,
         neighborhood_ids: formData.visibility_scope === "neighborhood" ? formData.neighborhood_ids : [],
-        location_name: formData.location_name.trim() || null,
+        location_id: formData.location_type === "community" ? formData.location_id : null,
+        custom_location_name: formData.location_type === "custom" ? formData.custom_location_name : null,
+        custom_location_lat: formData.location_type === "custom" ? formData.custom_location_lat : null,
+        custom_location_lng: formData.location_type === "custom" ? formData.custom_location_lng : null,
         status: formData.status,
       }
 
@@ -174,7 +182,11 @@ export function CreateExchangeListingModal({
           available_quantity: "",
           visibility_scope: "community",
           neighborhood_ids: [],
-          location_name: "",
+          location_type: "none",
+          location_id: null,
+          custom_location_name: "",
+          custom_location_lat: null,
+          custom_location_lng: null,
           status: "draft",
         })
         console.log("[v0] Form reset complete - relying on revalidatePath for updates")
@@ -214,6 +226,37 @@ export function CreateExchangeListingModal({
         : [...prev.neighborhood_ids, neighborhoodId]
     }))
   }
+
+  const handleLocationTypeChange = useCallback((type: "none" | "community" | "custom") => {
+    console.log("[v0] handleLocationTypeChange:", type)
+    setFormData(prev => ({
+      ...prev,
+      location_type: type,
+      location_id: null,
+      custom_location_name: "",
+      custom_location_lat: null,
+      custom_location_lng: null,
+    }))
+  }, [])
+
+  const handleCommunityLocationChange = useCallback((locationId: string | null) => {
+    console.log("[v0] handleCommunityLocationChange:", locationId)
+    setFormData(prev => ({ ...prev, location_id: locationId }))
+  }, [])
+
+  const handleCustomLocationChange = useCallback((
+    name: string,
+    lat: number | null,
+    lng: number | null
+  ) => {
+    console.log("[v0] handleCustomLocationChange:", { name, lat, lng })
+    setFormData(prev => ({
+      ...prev,
+      custom_location_name: name,
+      custom_location_lat: lat,
+      custom_location_lng: lng,
+    }))
+  }, [])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -400,16 +443,21 @@ export function CreateExchangeListingModal({
               )}
 
               <div className="space-y-2 pt-4 border-t">
-                <Label htmlFor="location_name">Location (Optional)</Label>
-                <Input
-                  id="location_name"
-                  placeholder="e.g., Community Garden, My house, etc."
-                  value={formData.location_name}
-                  onChange={(e) => setFormData({ ...formData, location_name: e.target.value })}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Provide a general location or pickup point
+                <Label className="text-base font-semibold">Location (Optional)</Label>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Add a location to help community members find this item or service
                 </p>
+                <LocationSelector
+                  tenantId={tenantId}
+                  locationType={formData.location_type}
+                  locationId={formData.location_id}
+                  customLocationName={formData.custom_location_name}
+                  customLocationLat={formData.custom_location_lat}
+                  customLocationLng={formData.custom_location_lng}
+                  onLocationTypeChange={handleLocationTypeChange}
+                  onCommunityLocationChange={handleCommunityLocationChange}
+                  onCustomLocationChange={handleCustomLocationChange}
+                />
               </div>
 
               <div className="space-y-4 pt-4 border-t">

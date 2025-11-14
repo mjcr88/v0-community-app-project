@@ -219,11 +219,16 @@ export async function createExchangeListing(
 
     if (data.visibility_scope === "neighborhood" && data.neighborhood_ids.length > 0) {
       console.log("[v0] createExchangeListing - Creating neighborhood associations")
+      console.log("[v0] createExchangeListing - tenant_id:", tenantId)
+      console.log("[v0] createExchangeListing - neighborhood_ids:", data.neighborhood_ids)
+      
       const neighborhoodInserts = data.neighborhood_ids.map(neighborhoodId => ({
         tenant_id: tenantId,
         listing_id: listing.id,
         neighborhood_id: neighborhoodId,
       }))
+
+      console.log("[v0] createExchangeListing - Inserting neighborhoods:", neighborhoodInserts)
 
       const { error: neighborhoodError } = await supabase
         .from("exchange_neighborhoods")

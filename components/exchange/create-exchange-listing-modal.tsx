@@ -87,35 +87,21 @@ export function CreateExchangeListingModal({
     )
   }, [formData])
 
-  const handleModalClose = useCallback((shouldClose: boolean) => {
-    if (shouldClose && hasUnsavedChanges()) {
+  const handleModalClose = useCallback((newOpenState: boolean) => {
+    // If trying to close (newOpenState = false) and has unsaved changes, show warning
+    if (!newOpenState && hasUnsavedChanges()) {
       setShowUnsavedWarning(true)
-    } else {
-      onOpenChange(false)
-      setFormData({
-        title: "",
-        description: "",
-        category_id: "",
-        pricing_type: "free",
-        price: "",
-        condition: "",
-        available_quantity: "",
-        visibility_scope: "community",
-        neighborhood_ids: [],
-        location_type: "none",
-        location_id: null,
-        custom_location_name: "",
-        custom_location_lat: null,
-        custom_location_lng: null,
-        status: "draft",
-        photos: [],
-        hero_photo: null,
-      })
+      return // Don't close yet
     }
+    
+    // Otherwise, allow the close and reset form if closing
+    if (!newOpenState) {
+      resetForm()
+    }
+    onOpenChange(newOpenState)
   }, [hasUnsavedChanges, onOpenChange])
 
-  const handleDiscardChanges = useCallback(() => {
-    setShowUnsavedWarning(false)
+  const resetForm = useCallback(() => {
     setFormData({
       title: "",
       description: "",
@@ -135,8 +121,13 @@ export function CreateExchangeListingModal({
       photos: [],
       hero_photo: null,
     })
+  }, [])
+
+  const handleDiscardChanges = useCallback(() => {
+    setShowUnsavedWarning(false)
+    resetForm()
     onOpenChange(false)
-  }, [onOpenChange])
+  }, [onOpenChange, resetForm])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -215,25 +206,7 @@ export function CreateExchangeListingModal({
               ? "Your listing is now visible to the community."
               : "You can continue editing and publish when ready.",
         })
-        setFormData({
-          title: "",
-          description: "",
-          category_id: "",
-          pricing_type: "free",
-          price: "",
-          condition: "",
-          available_quantity: "",
-          visibility_scope: "community",
-          neighborhood_ids: [],
-          location_type: "none",
-          location_id: null,
-          custom_location_name: "",
-          custom_location_lat: null,
-          custom_location_lng: null,
-          status: "draft",
-          photos: [],
-          hero_photo: null,
-        })
+        resetForm()
         onOpenChange(false)
         router.push(window.location.pathname)
       } else {
@@ -495,10 +468,7 @@ export function CreateExchangeListingModal({
                 )}
 
                 <div className="space-y-2 pt-4 border-t">
-                  <Label className="text-base font-semibold">Location (Optional)</Label>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Add a location to help community members find this item or service
-                  </p>
+                  <Label htmlFor="location">Location (Optional)</Label>
                   <LocationSelector
                     tenantId={tenantId}
                     locationType={formData.location_type}
@@ -629,7 +599,12 @@ export function CreateExchangeListingModal({
                         ? "Publish Listing"
                         : "Save Draft"}
                   </Button>
-                  <Button type="button" variant="outline" onClick={() => handleModalClose(true)} disabled={isSubmitting}>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => handleModalClose(false)} 
+                    disabled={isSubmitting}
+                  >
                     Cancel
                   </Button>
                 </div>

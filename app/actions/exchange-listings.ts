@@ -233,9 +233,7 @@ export async function createExchangeListing(
       }
     }
 
-    console.log("[v0] createExchangeListing - SUCCESS, calling revalidatePath")
-    revalidatePath(`/t/${tenantSlug}/dashboard/exchange`)
-    console.log("[v0] createExchangeListing - revalidatePath called")
+    console.log("[v0] createExchangeListing - Complete (no revalidatePath)")
 
     return { success: true, listingId: listing.id }
   } catch (error) {

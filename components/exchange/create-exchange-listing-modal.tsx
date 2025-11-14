@@ -16,8 +16,6 @@ import { createExchangeListing, getExchangeCategories } from "@/app/actions/exch
 import { getNeighborhoods } from "@/app/actions/neighborhoods"
 import { Loader2 } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
-import { LocationSelector } from "@/components/event-forms/location-selector"
-import type { LocationType } from "@/components/event-forms/location-selector"
 import type { ExchangePricingType, ExchangeCondition } from "@/types/exchange"
 
 interface CreateExchangeListingModalProps {
@@ -57,12 +55,7 @@ export function CreateExchangeListingModal({
     available_quantity: "",
     visibility_scope: "community" as "community" | "neighborhood",
     neighborhood_ids: [] as string[],
-    location_type: "none" as LocationType,
-    location_id: "",
-    custom_location_name: "",
-    custom_location_coordinates: null as { lat: number; lng: number } | null,
-    custom_location_type: null as "marker" | "polygon" | null,
-    custom_location_path: null as Array<{ lat: number; lng: number }> | null,
+    location_name: "",
     status: "draft" as "draft" | "published",
   })
 
@@ -153,12 +146,7 @@ export function CreateExchangeListingModal({
         available_quantity: formData.available_quantity ? parseInt(formData.available_quantity, 10) : null,
         visibility_scope: formData.visibility_scope,
         neighborhood_ids: formData.visibility_scope === "neighborhood" ? formData.neighborhood_ids : [],
-        location_type: formData.location_type,
-        location_id: formData.location_type === "community" ? formData.location_id : null,
-        custom_location_name: formData.location_type === "custom" ? formData.custom_location_name : null,
-        custom_location_coordinates: formData.location_type === "custom" ? formData.custom_location_coordinates : null,
-        custom_location_type: formData.location_type === "custom" ? formData.custom_location_type : null,
-        custom_location_path: formData.location_type === "custom" ? formData.custom_location_path : null,
+        location_name: formData.location_name.trim() || null,
         status: formData.status,
       }
 
@@ -186,15 +174,11 @@ export function CreateExchangeListingModal({
           available_quantity: "",
           visibility_scope: "community",
           neighborhood_ids: [],
-          location_type: "none",
-          location_id: "",
-          custom_location_name: "",
-          custom_location_coordinates: null,
-          custom_location_type: null,
-          custom_location_path: null,
+          location_name: "",
           status: "draft",
         })
-        console.log("[v0] Form reset complete, modal should refresh via revalidatePath")
+        console.log("[v0] Form reset complete, manually refreshing page")
+        router.refresh()
       } else {
         toast({
           title: "Error",
@@ -221,49 +205,6 @@ export function CreateExchangeListingModal({
   const showPricing = selectedCategory && !isToolsEquipment
   const showCondition = isToolsEquipment
   const showQuantity = isToolsEquipment || isFoodProduce
-
-  const handleLocationTypeChange = useCallback((type: LocationType) => {
-    console.log("[v0] handleLocationTypeChange:", type)
-    setFormData(prev => ({
-      ...prev,
-      location_type: type,
-      location_id: "",
-      custom_location_name: "",
-      custom_location_coordinates: null,
-      custom_location_type: null,
-      custom_location_path: null,
-    }))
-  }, [])
-
-  const handleCommunityLocationChange = useCallback((locationId: string) => {
-    console.log("[v0] handleCommunityLocationChange:", locationId)
-    setFormData(prev => ({
-      ...prev,
-      location_id: locationId,
-    }))
-  }, [])
-
-  const handleCustomLocationNameChange = useCallback((name: string) => {
-    console.log("[v0] handleCustomLocationNameChange:", name)
-    setFormData(prev => ({
-      ...prev,
-      custom_location_name: name,
-    }))
-  }, [])
-
-  const handleCustomLocationChange = useCallback((data: {
-    coordinates?: { lat: number; lng: number } | null
-    type?: "marker" | "polygon" | null
-    path?: Array<{ lat: number; lng: number }> | null
-  }) => {
-    console.log("[v0] handleCustomLocationChange:", data)
-    setFormData(prev => ({
-      ...prev,
-      custom_location_coordinates: data.coordinates ?? prev.custom_location_coordinates,
-      custom_location_type: data.type ?? prev.custom_location_type,
-      custom_location_path: data.path ?? prev.custom_location_path,
-    }))
-  }, [])
 
   const toggleNeighborhood = (neighborhoodId: string) => {
     console.log("[v0] toggleNeighborhood:", neighborhoodId)
@@ -459,19 +400,18 @@ export function CreateExchangeListingModal({
                 </div>
               )}
 
-              <LocationSelector
-                tenantId={tenantId}
-                locationType={formData.location_type}
-                communityLocationId={formData.location_id || null}
-                customLocationName={formData.custom_location_name || null}
-                customLocationCoordinates={formData.custom_location_coordinates}
-                customLocationType={formData.custom_location_type}
-                customLocationPath={formData.custom_location_path}
-                onLocationTypeChange={handleLocationTypeChange}
-                onCommunityLocationChange={handleCommunityLocationChange}
-                onCustomLocationNameChange={handleCustomLocationNameChange}
-                onCustomLocationChange={handleCustomLocationChange}
-              />
+              <div className="space-y-2 pt-4 border-t">
+                <Label htmlFor="location_name">Location (Optional)</Label>
+                <Input
+                  id="location_name"
+                  placeholder="e.g., Community Garden, My house, etc."
+                  value={formData.location_name}
+                  onChange={(e) => setFormData({ ...formData, location_name: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Provide a general location or pickup point
+                </p>
+              </div>
 
               <div className="space-y-4 pt-4 border-t">
                 <div className="space-y-2">

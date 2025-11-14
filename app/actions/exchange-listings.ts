@@ -102,12 +102,7 @@ export async function createExchangeListing(
     available_quantity: number | null
     visibility_scope: "community" | "neighborhood"
     neighborhood_ids: string[]
-    location_type?: "community" | "custom" | "none"
-    location_id?: string | null
-    custom_location_name?: string | null
-    custom_location_coordinates?: { lat: number; lng: number } | null
-    custom_location_type?: "marker" | "polygon" | null
-    custom_location_path?: Array<{ lat: number; lng: number }> | null
+    location_name?: string | null
     status: "draft" | "published"
   },
 ) {
@@ -189,16 +184,8 @@ export async function createExchangeListing(
       insertData.available_quantity = data.available_quantity
     }
 
-    if (data.location_type === "community" && data.location_id) {
-      insertData.location_id = data.location_id
-    } else if (data.location_type === "custom") {
-      if (data.custom_location_name) {
-        insertData.custom_location_name = data.custom_location_name
-      }
-      if (data.custom_location_coordinates) {
-        insertData.custom_location_lat = data.custom_location_coordinates.lat
-        insertData.custom_location_lng = data.custom_location_coordinates.lng
-      }
+    if (data.location_name) {
+      insertData.custom_location_name = data.location_name
     }
 
     console.log("[v0] createExchangeListing - Inserting listing")
@@ -233,7 +220,7 @@ export async function createExchangeListing(
       }
     }
 
-    console.log("[v0] createExchangeListing - Complete (no revalidatePath)")
+    console.log("[v0] createExchangeListing - SUCCESS")
 
     return { success: true, listingId: listing.id }
   } catch (error) {

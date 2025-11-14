@@ -148,19 +148,29 @@ export function ExchangeListingDetailModal({
   let listingLocationForMap = null
   
   // Try to get coordinates from community location
-  if (listing.location?.coordinates) {
-    const parsedCoords = parseLocationCoordinates(listing.location.coordinates)
+  if (listing.location?.id) {
+    // Find the location in the locations array (which has valid coordinates)
+    const matchingLocation = locations.find((loc: any) => loc.id === listing.location.id)
     
-    if (parsedCoords) {
-      listingLocationForMap = {
-        id: listing.location.id,
-        name: listing.location.name,
-        type: "facility",
-        coordinates: parsedCoords
+    if (matchingLocation && matchingLocation.coordinates) {
+      const parsedCoords = parseLocationCoordinates(matchingLocation.coordinates)
+      
+      if (parsedCoords) {
+        listingLocationForMap = {
+          id: matchingLocation.id,
+          name: matchingLocation.name,
+          type: matchingLocation.type || "facility",
+          coordinates: parsedCoords
+        }
+        console.log("[v0] Found community location in locations array:", listingLocationForMap)
       }
-      console.log("[v0] Successfully parsed community location:", listingLocationForMap)
     } else {
-      console.warn("[v0] Failed to parse community location coordinates")
+      console.warn("[v0] Community location not found in locations array or has no coordinates:", {
+        locationId: listing.location.id,
+        locationName: listing.location.name,
+        foundInArray: !!matchingLocation,
+        hasCoordinates: !!matchingLocation?.coordinates
+      })
     }
   }
   
@@ -171,8 +181,8 @@ export function ExchangeListingDetailModal({
       name: listing.custom_location_name || "Pickup Location",
       type: "facility",
       coordinates: {
-        lat: Number(listing.custom_location_lat),  // Explicit conversion
-        lng: Number(listing.custom_location_lng)   // Explicit conversion
+        lat: Number(listing.custom_location_lat),
+        lng: Number(listing.custom_location_lng)
       }
     }
     console.log("[v0] Using custom location:", listingLocationForMap)

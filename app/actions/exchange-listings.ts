@@ -33,8 +33,12 @@ export async function getExchangeListings(tenantId: string) {
         condition,
         available_quantity,
         created_by,
+        photos,
+        hero_photo,
+        custom_location_name,
         category:exchange_categories(id, name, description),
-        creator:users!created_by(id, first_name, last_name, profile_picture_url)
+        creator:users!created_by(id, first_name, last_name, profile_picture_url),
+        location:locations(name)
       `)
       .eq("tenant_id", tenantId)
       .or(`status.eq.published,and(status.eq.draft,created_by.eq.${user.id})`)
@@ -102,6 +106,8 @@ export async function createExchangeListing(
     custom_location_lat?: number | null
     custom_location_lng?: number | null
     status: "draft" | "published"
+    photos?: string[]
+    hero_photo?: string | null
   },
 ) {
   try {
@@ -150,6 +156,8 @@ export async function createExchangeListing(
       status: data.status,
       pricing_type: data.pricing_type,
       visibility_scope: data.visibility_scope,
+      photos: data.photos || [],
+      hero_photo: data.hero_photo || null,
     }
 
     if (data.pricing_type === "fixed_price" && data.price) {

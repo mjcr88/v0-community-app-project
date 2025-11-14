@@ -20,6 +20,8 @@ interface ExchangeListingCardProps {
     price_amount?: number | null
     condition?: string | null
     available_quantity?: number | null
+    hero_photo?: string | null
+    photos?: string[] | null
     category?: {
       id: string
       name: string
@@ -62,6 +64,16 @@ export function ExchangeListingCard({ listing, onClick, className }: ExchangeLis
 
   return (
     <Card className={cn("hover:bg-accent transition-colors cursor-pointer", className)} onClick={onClick}>
+      {listing.hero_photo && (
+        <div className="aspect-video w-full overflow-hidden rounded-t-lg">
+          <img 
+            src={listing.hero_photo || "/placeholder.svg"} 
+            alt={listing.title}
+            className="w-full h-full object-cover"
+          />
+        </div>
+      )}
+      
       <CardHeader className="space-y-3">
         {/* Header: Creator and status */}
         <div className="flex items-start justify-between gap-2">

@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useRouter } from 'next/navigation'
 import type { ExchangePricingType, ExchangeCondition } from "@/types/exchange"
 import { LocationSelector } from "@/components/event-forms/location-selector"
+import { PhotoManager } from "@/components/photo-manager"
 
 interface CreateExchangeListingModalProps {
   open: boolean
@@ -55,6 +56,8 @@ export function CreateExchangeListingModal({
     custom_location_lat: null as number | null,
     custom_location_lng: null as number | null,
     status: "draft" as "draft" | "published",
+    photos: [] as string[],
+    hero_photo: null as string | null,
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -120,6 +123,8 @@ export function CreateExchangeListingModal({
         custom_location_lat: formData.location_type === "custom" ? formData.custom_location_lat : null,
         custom_location_lng: formData.location_type === "custom" ? formData.custom_location_lng : null,
         status: formData.status,
+        photos: formData.photos,
+        hero_photo: formData.hero_photo,
       }
 
       const result = await createExchangeListing(tenantSlug, tenantId, listingData)
@@ -149,6 +154,8 @@ export function CreateExchangeListingModal({
           custom_location_lat: null,
           custom_location_lng: null,
           status: "draft",
+          photos: [],
+          hero_photo: null,
         })
         router.push(window.location.pathname)
       } else {
@@ -231,6 +238,17 @@ export function CreateExchangeListingModal({
         <form onSubmit={handleSubmit}>
           <Card>
             <CardContent className="space-y-6 pt-6">
+              <div className="space-y-2">
+                <PhotoManager
+                  photos={formData.photos}
+                  heroPhoto={formData.hero_photo}
+                  onPhotosChange={(photos) => setFormData({ ...formData, photos })}
+                  onHeroPhotoChange={(heroPhoto) => setFormData({ ...formData, hero_photo: heroPhoto })}
+                  maxPhotos={10}
+                  entityType="location"
+                />
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="title">
                   Listing Title <span className="text-destructive">*</span>

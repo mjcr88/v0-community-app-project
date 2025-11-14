@@ -146,61 +146,48 @@ export function ExchangeListingDetailModal({
     (listing.category.name === "Tools & Equipment" || listing.category.name === "Food & Produce")
 
   let listingLocationForMap = null
+  let locationName = null
   
-  // Try to get coordinates from community location
-  if (listing.location?.id) {
-    // Find the location in the locations array (which has valid coordinates)
-    const matchingLocation = locations.find((loc: any) => loc.id === listing.location.id)
+  // Try community location first
+  if (listing.location) {
+    locationName = listing.location.name
     
-    if (matchingLocation && matchingLocation.coordinates) {
-      const parsedCoords = parseLocationCoordinates(matchingLocation.coordinates)
+    if (listing.location.coordinates) {
+      const parsedCoords = parseLocationCoordinates(listing.location.coordinates)
       
       if (parsedCoords) {
         listingLocationForMap = {
-          id: matchingLocation.id,
-          name: matchingLocation.name,
-          type: matchingLocation.type || "facility",
+          id: listing.location.id,
+          name: listing.location.name,
+          type: "facility" as const,
           coordinates: parsedCoords
         }
-        console.log("[v0] Found community location in locations array:", listingLocationForMap)
       }
-    } else {
-      console.warn("[v0] Community location not found in locations array or has no coordinates:", {
-        locationId: listing.location.id,
-        locationName: listing.location.name,
-        foundInArray: !!matchingLocation,
-        hasCoordinates: !!matchingLocation?.coordinates
-      })
     }
   }
   
-  // Fall back to custom location coordinates
+  // Fall back to custom location
+  if (!locationName && listing.custom_location_name) {
+    locationName = listing.custom_location_name
+  }
+  
   if (!listingLocationForMap && listing.custom_location_lat && listing.custom_location_lng) {
     listingLocationForMap = {
       id: "custom-location",
       name: listing.custom_location_name || "Pickup Location",
-      type: "facility",
+      type: "facility" as const,
       coordinates: {
         lat: Number(listing.custom_location_lat),
         lng: Number(listing.custom_location_lng)
       }
     }
-    console.log("[v0] Using custom location:", listingLocationForMap)
   }
 
   const mapLocations = listingLocationForMap 
     ? [...locations, listingLocationForMap]
     : locations
-  
-  console.log("[v0] Map display decision:", {
-    hasMapLocation: listingLocationForMap !== null,
-    listingLocationForMap,
-    totalMapLocations: mapLocations.length,
-    allLocationsCount: locations.length
-  })
 
   const hasMapLocation = listingLocationForMap !== null
-  const locationName = listing.custom_location_name || listing.location?.name
   const neighborhoods = listing.neighborhoods?.map((n: any) => n.neighborhood?.name).filter(Boolean) || []
   const showBorrowButton = !isCreator && listing.is_available && listing.status === "published"
 

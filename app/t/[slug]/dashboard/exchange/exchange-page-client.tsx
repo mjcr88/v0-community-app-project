@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Search, Filter, X, ChevronDown, Package, ArrowUpDown } from 'lucide-react'
 import { ExchangeListingCard } from "@/components/exchange/exchange-listing-card"
+import { ExchangeListingDetailModal } from "@/components/exchange/exchange-listing-detail-modal"
 import type { ExchangePricingType, ExchangeCondition } from "@/types/exchange"
 
 interface Listing {
@@ -56,10 +57,16 @@ export function ExchangePageClient({
   listings,
   categories,
   neighborhoods,
+  tenantId,
+  tenantSlug,
+  userId,
 }: {
   listings: Listing[]
   categories: Category[]
   neighborhoods: Neighborhood[]
+  tenantId: string
+  tenantSlug: string
+  userId: string | null
 }) {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
@@ -68,6 +75,8 @@ export function ExchangePageClient({
   const [showUnavailable, setShowUnavailable] = useState(false)
   const [selectedNeighborhoods, setSelectedNeighborhoods] = useState<string[]>([])
   const [sortBy, setSortBy] = useState("newest")
+  const [selectedListingId, setSelectedListingId] = useState<string | null>(null)
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
 
   const filteredAndSortedListings = useMemo(() => {
     let filtered = listings.filter((listing) => {
@@ -195,6 +204,11 @@ export function ExchangePageClient({
     { value: "condition-best", label: "Condition: Best to Worst" },
     { value: "condition-worst", label: "Condition: Worst to Best" },
   ]
+
+  const handleCardClick = (listingId: string) => {
+    setSelectedListingId(listingId)
+    setIsDetailModalOpen(true)
+  }
 
   return (
     <div className="space-y-6">
@@ -440,9 +454,24 @@ export function ExchangePageClient({
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {filteredAndSortedListings.map((listing) => (
-            <ExchangeListingCard key={listing.id} listing={listing} />
+            <ExchangeListingCard 
+              key={listing.id} 
+              listing={listing}
+              onClick={() => handleCardClick(listing.id)}
+            />
           ))}
         </div>
+      )}
+
+      {selectedListingId && (
+        <ExchangeListingDetailModal
+          listingId={selectedListingId}
+          tenantId={tenantId}
+          tenantSlug={tenantSlug}
+          userId={userId}
+          open={isDetailModalOpen}
+          onOpenChange={setIsDetailModalOpen}
+        />
       )}
     </div>
   )

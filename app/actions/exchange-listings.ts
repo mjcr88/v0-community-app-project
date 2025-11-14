@@ -63,9 +63,72 @@ export async function getExchangeListings(tenantId: string) {
   }
 }
 
-export async function getExchangeListingById(id: string) {
-  // Sprint 4
-  return { data: null, error: null }
+export async function getExchangeListingById(listingId: string, tenantId: string) {
+  try {
+    const supabase = await createServerClient()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: "User not authenticated", data: null }
+    }
+
+    const { data: listing, error } = await supabase
+      .from("exchange_listings")
+      .select(`
+        id,
+        title,
+        description,
+        status,
+        is_available,
+        pricing_type,
+        price,
+        condition,
+        available_quantity,
+        created_by,
+        created_at,
+        published_at,
+        photos,
+        hero_photo,
+        visibility_scope,
+        location_id,
+        custom_location_name,
+        custom_location_lat,
+        custom_location_lng,
+        category:exchange_categories(id, name, description),
+        creator:users!created_by(id, first_name, last_name, profile_picture_url, phone, email),
+        location:locations(id, name, coordinates),
+        neighborhoods:exchange_neighborhoods(neighborhood:neighborhoods(id, name))
+      `)
+      .eq("id", listingId)
+      .eq("tenant_id", tenantId)
+      .single()
+
+    if (error) {
+      console.error("Error fetching exchange listing:", error)
+      return { success: false, error: error.message, data: null }
+    }
+
+    if (!listing) {
+      return { success: false, error: "Listing not found", data: null }
+    }
+
+    // Check if user has permission to view (status check)
+    if (listing.status === "draft" && listing.created_by !== user.id) {
+      return { success: false, error: "You don't have permission to view this listing", data: null }
+    }
+
+    return { success: true, data: listing }
+  } catch (error) {
+    console.error("Unexpected error fetching exchange listing:", error)
+    return {
+      success: false,
+      error: "An unexpected error occurred. Please try again.",
+      data: null,
+    }
+  }
 }
 
 export async function getExchangeCategories(tenantId: string) {

@@ -64,6 +64,9 @@ export default async function ExchangePage({ params }: { params: Promise<{ slug:
         listings={listings}
         categories={categories}
         neighborhoods={neighborhoods}
+        tenantId={resident.tenant_id}
+        tenantSlug={slug}
+        userId={user.id}
       />
     </div>
   )

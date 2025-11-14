@@ -22,8 +22,6 @@ export async function getExchangeListings(tenantId: string) {
 
     console.log("[v0] getExchangeListings - Fetching listings for tenant:", tenantId)
 
-    // For now, just fetch all published listings
-    // In Sprint 3-11 we'll add filtering, transactions, and visibility logic
     const { data: listings, error } = await supabase
       .from("exchange_listings")
       .select(`
@@ -35,11 +33,12 @@ export async function getExchangeListings(tenantId: string) {
         pricing_type,
         price,
         available_quantity,
+        created_by,
         category:exchange_categories(id, name, description),
         creator:users!created_by(id, first_name, last_name, profile_picture_url)
       `)
       .eq("tenant_id", tenantId)
-      .eq("status", "published")
+      .or(`status.eq.published,and(status.eq.draft,created_by.eq.${user.id})`)
       .order("created_at", { ascending: false })
 
     if (error) {

@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
 import { ExchangeCategoryBadge } from "./exchange-category-badge"
 import { ExchangeStatusBadge } from "./exchange-status-badge"
 import { ExchangePriceBadge } from "./exchange-price-badge"
@@ -53,11 +54,17 @@ export function ExchangeListingCard({ listing, onClick, className }: ExchangeLis
             </Avatar>
             <p className="text-sm text-muted-foreground truncate">{creatorName}</p>
           </div>
-          <ExchangeStatusBadge 
-            status={listing.status as any} 
-            isAvailable={listing.is_available ?? true}
-            className="flex-shrink-0" 
-          />
+          {listing.status === "draft" ? (
+            <Badge variant="outline" className="flex-shrink-0">
+              Draft
+            </Badge>
+          ) : (
+            <ExchangeStatusBadge 
+              status={listing.status as any} 
+              isAvailable={listing.is_available ?? true}
+              className="flex-shrink-0" 
+            />
+          )}
         </div>
 
         {/* Title */}

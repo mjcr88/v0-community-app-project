@@ -89,6 +89,12 @@ export function EditExchangeListingModal({
     if (result.success && result.data) {
       const listing = result.data
       
+      console.log("[v0] Loading listing data:", {
+        categoryId: listing.category_id,
+        categoryName: listing.category?.name,
+        allCategories: categories.map(c => ({ id: c.id, name: c.name }))
+      })
+      
       // Check if listing has active transactions (would come from server action)
       setHasActiveTransactions(false) // TODO: Add this check in getExchangeListingById
 
@@ -340,16 +346,18 @@ export function EditExchangeListingModal({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="category">
+                <Label htmlFor="edit-category">
                   Category <span className="text-destructive">*</span>
                 </Label>
                 <Select
                   value={formData.category_id}
-                  onValueChange={(value) => setFormData({ ...formData, category_id: value })}
+                  onValueChange={(value) => {
+                    console.log("[v0] Category changed to:", value)
+                    setFormData({ ...formData, category_id: value })
+                  }}
                   disabled={hasActiveTransactions}
-                  required
                 >
-                  <SelectTrigger id="category">
+                  <SelectTrigger id="edit-category">
                     <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
                   <SelectContent>
@@ -437,13 +445,13 @@ export function EditExchangeListingModal({
 
               {showCondition && (
                 <div className="space-y-2">
-                  <Label htmlFor="condition">Condition</Label>
+                  <Label htmlFor="edit-condition">Condition</Label>
                   <Select
                     value={formData.condition}
                     onValueChange={(value) => setFormData({ ...formData, condition: value as ExchangeCondition })}
                     disabled={hasActiveTransactions}
                   >
-                    <SelectTrigger id="condition">
+                    <SelectTrigger id="edit-condition">
                       <SelectValue placeholder="Select condition (optional)" />
                     </SelectTrigger>
                     <SelectContent>

@@ -4,16 +4,46 @@ import { Button } from "@/components/ui/button"
 import { Users, MapPin, Globe, Languages, PawPrint, Home, MapIcon } from 'lucide-react'
 import Link from "next/link"
 import { UpcomingEventsWidget } from "@/components/dashboard/upcoming-events-widget"
-import { getUpcomingEvents } from "@/app/actions/events"
 import { CreateCheckInButton } from "@/components/check-ins/create-check-in-button"
 import { CheckInsCountWidget } from "@/components/dashboard/checkins-count-widget"
 import { LiveCheckInsWidget } from "@/components/dashboard/live-checkins-widget"
-import { getActiveCheckIns } from "@/app/actions/check-ins"
 import { MyExchangeListingsWidget } from "@/components/exchange/my-exchange-listings-widget"
 import { getUserListings } from "@/app/actions/exchange-listings"
 import { cache } from 'react'
 import { MapSectionLazy } from "@/components/dashboard/map-section-lazy"
 import { DashboardSectionCollapsible } from "@/components/dashboard/dashboard-section-collapsible"
+
+const getCachedUser = cache(async () => {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  return user
+})
+
+const getCachedResident = cache(async (userId: string) => {
+  const supabase = await createClient()
+  const { data: resident } = await supabase
+    .from("users")
+    .select(
+      `
+      *,
+      lots (
+        lot_number,
+        neighborhoods (
+          name,
+          id
+        )
+      ),
+      family_units (
+        name,
+        id
+      )
+    `,
+    )
+    .eq("id", userId)
+    .eq("role", "resident")
+    .single()
+  return resident
+})
 
 const getCachedExchangeCategories = cache(async (tenantId: string) => {
   const supabase = await createClient()
@@ -45,39 +75,21 @@ const getCachedTenant = cache(async (tenantId: string) => {
   return data
 })
 
+const getCachedUserListings = cache(async (userId: string, tenantId: string) => {
+  return await getUserListings(userId, tenantId)
+})
+
 export default async function ResidentDashboardPage({ params }: { params: { slug: string } }) {
   const { slug } = params
   const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getCachedUser()
 
   if (!user) {
     return null
   }
 
-  const { data: resident } = await supabase
-    .from("users")
-    .select(
-      `
-      *,
-      lots (
-        lot_number,
-        neighborhoods (
-          name,
-          id
-        )
-      ),
-      family_units (
-        name,
-        id
-      )
-    `,
-    )
-    .eq("id", user.id)
-    .eq("role", "resident")
-    .single()
+  const resident = await getCachedResident(user.id)
 
   if (!resident) {
     return null
@@ -186,14 +198,12 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
     ? { lat: tenant.map_center_coordinates.lat, lng: tenant.map_center_coordinates.lng }
     : null
 
-  // Removed server-side data fetching for events and check-ins
-
   let userListings: any[] = []
   let exchangeCategories: any[] = []
   let exchangeNeighborhoods: any[] = []
   
   if (exchangeEnabled) {
-    userListings = await getUserListings(user.id, resident.tenant_id)
+    userListings = await getCachedUserListings(user.id, resident.tenant_id)
     exchangeCategories = await getCachedExchangeCategories(resident.tenant_id)
     exchangeNeighborhoods = await getCachedNeighborhoods(resident.tenant_id)
   }

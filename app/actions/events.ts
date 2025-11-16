@@ -3,6 +3,7 @@
 import { createServerClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 import { applyVisibilityFilter, canUserViewEvent } from "@/lib/visibility-filter"
+import { cache } from 'react'
 
 export async function createEvent(
   tenantSlug: string,
@@ -504,7 +505,7 @@ export async function updateEvent(
   }
 }
 
-export async function getUpcomingEvents(tenantId: string, limit = 5) {
+export const getUpcomingEvents = cache(async (tenantId: string, limit = 5) => {
   try {
     const supabase = await createServerClient()
 
@@ -607,8 +608,7 @@ export async function getUpcomingEvents(tenantId: string, limit = 5) {
     const attendingCountMap = new Map<string, number>()
     allRsvps?.forEach((rsvp) => {
       if (rsvp.rsvp_status === "yes") {
-        const current = attendingCountMap.get(rsvp.event_id) || 0
-        attendingCountMap.set(rsvp.event_id, current + (rsvp.attending_count || 1))
+        attendingCountMap.set(rsvp.event_id, (attendingCountMap.get(rsvp.event_id) || 0) + (rsvp.attending_count || 1))
       }
     })
 
@@ -622,10 +622,10 @@ export async function getUpcomingEvents(tenantId: string, limit = 5) {
 
     return eventsWithUserData
   } catch (error) {
-    console.error("[v0] Unexpected error fetching upcoming events:", error)
+    console.error("[v0] Error fetching upcoming events:", error)
     return []
   }
-}
+})
 
 export async function rsvpToEvent(eventId: string, tenantId: string, status: "yes" | "maybe" | "no") {
   try {

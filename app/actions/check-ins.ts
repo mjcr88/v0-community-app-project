@@ -2,6 +2,7 @@
 
 import { createServerClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
+import { cache } from 'react'
 
 export async function createCheckIn(
   tenantSlug: string,
@@ -249,7 +250,7 @@ export async function getCheckInById(checkInId: string, tenantId: string) {
   }
 }
 
-export async function getActiveCheckIns(tenantId: string) {
+export const getActiveCheckIns = cache(async (tenantId: string) => {
   try {
     const supabase = await createServerClient()
 
@@ -447,7 +448,7 @@ export async function getActiveCheckIns(tenantId: string) {
     console.error("[v0] Unexpected error fetching active check-ins:", error)
     return []
   }
-}
+})
 
 export async function updateCheckIn(
   checkInId: string,

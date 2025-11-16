@@ -46,6 +46,11 @@ export function LiveCheckInsWidget({ tenantSlug, tenantId, userId }: LiveCheckIn
     {
       refreshInterval: 30000, // Refresh every 30 seconds
       revalidateOnFocus: false,
+      shouldRetryOnError: false, // Don't retry on errors to prevent cascade
+      errorRetryCount: 0, // No retries on error
+      onError: (err) => {
+        console.log("[v0] Check-ins widget fetch error (non-critical):", err.message)
+      },
     }
   )
 

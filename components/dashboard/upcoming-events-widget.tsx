@@ -61,6 +61,11 @@ export function UpcomingEventsWidget({ slug, userId, tenantId }: UpcomingEventsW
     {
       refreshInterval: 60000, // Refresh every minute
       revalidateOnFocus: false,
+      shouldRetryOnError: false, // Don't retry on errors to prevent cascade
+      errorRetryCount: 0, // No retries on error
+      onError: (err) => {
+        console.log("[v0] Events widget fetch error (non-critical):", err.message)
+      },
     }
   )
 

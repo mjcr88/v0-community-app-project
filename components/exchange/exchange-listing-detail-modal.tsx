@@ -521,7 +521,8 @@ export function ExchangeListingDetailModal({
             <AlertDialogDescription>
               This action cannot be undone. This will permanently delete your listing and remove it from the community exchange.
               {listing?.status === "published" && " Make sure there are no active transactions before deleting."}
-            </AlertDialogHeader>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction 

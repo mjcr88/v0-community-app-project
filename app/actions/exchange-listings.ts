@@ -292,12 +292,455 @@ export async function createExchangeListing(
   }
 }
 
-export async function updateExchangeListing() {
-  // Sprint 4-5
-  return { data: null, error: null }
+export async function getUserListings(userId: string, tenantId: string) {
+  try {
+    const supabase = await createServerClient()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user || user.id !== userId) {
+      return []
+    }
+
+    const { data: listings, error } = await supabase
+      .from("exchange_listings")
+      .select(`
+        id,
+        title,
+        status,
+        is_available,
+        pricing_type,
+        price,
+        condition,
+        available_quantity,
+        photos,
+        hero_photo,
+        created_at,
+        published_at,
+        category:exchange_categories(id, name),
+        location:locations(name),
+        custom_location_name
+      `)
+      .eq("created_by", userId)
+      .eq("tenant_id", tenantId)
+      .order("created_at", { ascending: false })
+
+    if (error) {
+      console.error("Error fetching user listings:", error)
+      return []
+    }
+
+    return listings || []
+  } catch (error) {
+    console.error("Unexpected error fetching user listings:", error)
+    return []
+  }
 }
 
-export async function deleteExchangeListing() {
-  // Sprint 5
-  return { data: null, error: null }
+export async function updateExchangeListing(
+  listingId: string,
+  tenantSlug: string,
+  tenantId: string,
+  data: {
+    title?: string
+    description?: string | null
+    category_id?: string
+    pricing_type?: ExchangePricingType
+    price?: number | null
+    condition?: ExchangeCondition | null
+    available_quantity?: number | null
+    visibility_scope?: "community" | "neighborhood"
+    neighborhood_ids?: string[]
+    location_id?: string | null
+    custom_location_name?: string | null
+    custom_location_lat?: number | null
+    custom_location_lng?: number | null
+    photos?: string[]
+    hero_photo?: string | null
+  },
+) {
+  try {
+    const supabase = await createServerClient()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: "User not authenticated" }
+    }
+
+    // Get listing to verify ownership
+    const { data: listing, error: listingError } = await supabase
+      .from("exchange_listings")
+      .select("id, created_by, tenant_id, status")
+      .eq("id", listingId)
+      .eq("tenant_id", tenantId)
+      .single()
+
+    if (listingError || !listing) {
+      return { success: false, error: "Listing not found" }
+    }
+
+    // Only creator can edit
+    if (listing.created_by !== user.id) {
+      return { success: false, error: "You don't have permission to edit this listing" }
+    }
+
+    // Check for active transactions
+    const { data: activeTransactions } = await supabase
+      .from("exchange_transactions")
+      .select("id")
+      .eq("listing_id", listingId)
+      .in("status", ["pending", "confirmed", "picked_up"])
+      .limit(1)
+
+    const hasActiveTransactions = activeTransactions && activeTransactions.length > 0
+
+    // If active transactions exist, only allow quantity updates
+    if (hasActiveTransactions) {
+      if (data.available_quantity !== undefined) {
+        const { error } = await supabase
+          .from("exchange_listings")
+          .update({ available_quantity: data.available_quantity })
+          .eq("id", listingId)
+
+        if (error) {
+          console.error("Error updating listing quantity:", error)
+          return { success: false, error: error.message }
+        }
+
+        revalidatePath(`/t/${tenantSlug}/dashboard/exchange`)
+        return { success: true }
+      } else {
+        return {
+          success: false,
+          error: "Cannot edit listing details with active transactions. Only quantity can be updated.",
+        }
+      }
+    }
+
+    // Prepare update data
+    const updateData: any = {}
+
+    if (data.title !== undefined) {
+      if (!data.title.trim()) {
+        return { success: false, error: "Listing title is required" }
+      }
+      updateData.title = data.title.trim()
+    }
+
+    if (data.description !== undefined) {
+      updateData.description = data.description
+    }
+
+    if (data.category_id !== undefined) {
+      if (!data.category_id) {
+        return { success: false, error: "Category is required" }
+      }
+      updateData.category_id = data.category_id
+    }
+
+    if (data.pricing_type !== undefined) {
+      updateData.pricing_type = data.pricing_type
+
+      if (data.pricing_type === "fixed_price") {
+        if (data.price === undefined || data.price === null || data.price <= 0) {
+          return { success: false, error: "Price must be greater than 0 for fixed price listings" }
+        }
+        updateData.price = data.price
+      } else {
+        updateData.price = null
+      }
+    }
+
+    if (data.price !== undefined && data.pricing_type !== "fixed_price") {
+      updateData.price = data.price
+    }
+
+    if (data.condition !== undefined) {
+      updateData.condition = data.condition
+    }
+
+    if (data.available_quantity !== undefined) {
+      updateData.available_quantity = data.available_quantity
+    }
+
+    if (data.visibility_scope !== undefined) {
+      if (data.visibility_scope === "neighborhood" && (!data.neighborhood_ids || data.neighborhood_ids.length === 0)) {
+        return { success: false, error: "At least one neighborhood must be selected for neighborhood-only visibility" }
+      }
+      updateData.visibility_scope = data.visibility_scope
+    }
+
+    if (data.location_id !== undefined) {
+      updateData.location_id = data.location_id
+    }
+
+    if (data.custom_location_name !== undefined) {
+      updateData.custom_location_name = data.custom_location_name
+    }
+
+    if (data.custom_location_lat !== undefined) {
+      updateData.custom_location_lat = data.custom_location_lat
+    }
+
+    if (data.custom_location_lng !== undefined) {
+      updateData.custom_location_lng = data.custom_location_lng
+    }
+
+    if (data.photos !== undefined) {
+      updateData.photos = data.photos
+    }
+
+    if (data.hero_photo !== undefined) {
+      updateData.hero_photo = data.hero_photo
+    }
+
+    updateData.updated_at = new Date().toISOString()
+
+    // Update listing
+    const { error } = await supabase.from("exchange_listings").update(updateData).eq("id", listingId)
+
+    if (error) {
+      console.error("Error updating exchange listing:", error)
+      return { success: false, error: error.message }
+    }
+
+    // Handle neighborhood visibility updates
+    if (data.visibility_scope !== undefined || data.neighborhood_ids !== undefined) {
+      // Delete existing neighborhood associations
+      await supabase.from("exchange_neighborhoods").delete().eq("listing_id", listingId)
+
+      // Add new associations if neighborhood visibility
+      if (
+        (data.visibility_scope === "neighborhood" || listing.status === "neighborhood") &&
+        data.neighborhood_ids &&
+        data.neighborhood_ids.length > 0
+      ) {
+        const neighborhoodInserts = data.neighborhood_ids.map((neighborhoodId) => ({
+          tenant_id: tenantId,
+          listing_id: listingId,
+          neighborhood_id: neighborhoodId,
+        }))
+
+        await supabase.from("exchange_neighborhoods").insert(neighborhoodInserts)
+      }
+    }
+
+    revalidatePath(`/t/${tenantSlug}/dashboard/exchange`)
+    return { success: true }
+  } catch (error) {
+    console.error("Unexpected error updating exchange listing:", error)
+    return {
+      success: false,
+      error: "An unexpected error occurred. Please try again.",
+    }
+  }
+}
+
+export async function pauseExchangeListing(listingId: string, tenantSlug: string, tenantId: string) {
+  try {
+    const supabase = await createServerClient()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: "User not authenticated" }
+    }
+
+    // Get listing to verify ownership and current state
+    const { data: listing, error: listingError } = await supabase
+      .from("exchange_listings")
+      .select("id, created_by, is_available")
+      .eq("id", listingId)
+      .eq("tenant_id", tenantId)
+      .single()
+
+    if (listingError || !listing) {
+      return { success: false, error: "Listing not found" }
+    }
+
+    // Only creator can pause/resume
+    if (listing.created_by !== user.id) {
+      return { success: false, error: "You don't have permission to modify this listing" }
+    }
+
+    // Toggle is_available
+    const { error } = await supabase
+      .from("exchange_listings")
+      .update({
+        is_available: !listing.is_available,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", listingId)
+
+    if (error) {
+      console.error("Error toggling listing availability:", error)
+      return { success: false, error: error.message }
+    }
+
+    revalidatePath(`/t/${tenantSlug}/dashboard/exchange`)
+    revalidatePath(`/t/${tenantSlug}/dashboard`)
+    return { success: true, is_available: !listing.is_available }
+  } catch (error) {
+    console.error("Unexpected error toggling listing availability:", error)
+    return {
+      success: false,
+      error: "An unexpected error occurred. Please try again.",
+    }
+  }
+}
+
+export async function publishDraftListing(listingId: string, tenantSlug: string, tenantId: string) {
+  try {
+    const supabase = await createServerClient()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: "User not authenticated" }
+    }
+
+    // Get listing to verify ownership and status
+    const { data: listing, error: listingError } = await supabase
+      .from("exchange_listings")
+      .select("*")
+      .eq("id", listingId)
+      .eq("tenant_id", tenantId)
+      .single()
+
+    if (listingError || !listing) {
+      return { success: false, error: "Listing not found" }
+    }
+
+    // Only creator can publish
+    if (listing.created_by !== user.id) {
+      return { success: false, error: "You don't have permission to publish this listing" }
+    }
+
+    // Only drafts can be published
+    if (listing.status !== "draft") {
+      return { success: false, error: "Only draft listings can be published" }
+    }
+
+    // Validate required fields
+    if (!listing.title || !listing.title.trim()) {
+      return { success: false, error: "Title is required before publishing" }
+    }
+
+    if (!listing.category_id) {
+      return { success: false, error: "Category is required before publishing" }
+    }
+
+    if (listing.pricing_type === "fixed_price" && (!listing.price || listing.price <= 0)) {
+      return { success: false, error: "Price must be set for fixed price listings" }
+    }
+
+    // Publish listing
+    const { error } = await supabase
+      .from("exchange_listings")
+      .update({
+        status: "published",
+        published_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", listingId)
+
+    if (error) {
+      console.error("Error publishing listing:", error)
+      return { success: false, error: error.message }
+    }
+
+    revalidatePath(`/t/${tenantSlug}/dashboard/exchange`)
+    revalidatePath(`/t/${tenantSlug}/dashboard`)
+    return { success: true }
+  } catch (error) {
+    console.error("Unexpected error publishing listing:", error)
+    return {
+      success: false,
+      error: "An unexpected error occurred. Please try again.",
+    }
+  }
+}
+
+export async function deleteExchangeListing(listingId: string, tenantSlug: string, tenantId: string) {
+  try {
+    const supabase = await createServerClient()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: "User not authenticated" }
+    }
+
+    // Get listing to verify ownership
+    const { data: listing, error: listingError } = await supabase
+      .from("exchange_listings")
+      .select("id, created_by, tenant_id")
+      .eq("id", listingId)
+      .eq("tenant_id", tenantId)
+      .single()
+
+    if (listingError || !listing) {
+      return { success: false, error: "Listing not found" }
+    }
+
+    // Check if user is creator or tenant admin
+    const { data: userData } = await supabase
+      .from("users")
+      .select("is_tenant_admin")
+      .eq("id", user.id)
+      .single()
+
+    const isCreator = listing.created_by === user.id
+    const isAdmin = userData?.is_tenant_admin === true
+
+    if (!isCreator && !isAdmin) {
+      return { success: false, error: "You don't have permission to delete this listing" }
+    }
+
+    // CRITICAL: Check for active transactions
+    const { data: activeTransactions } = await supabase
+      .from("exchange_transactions")
+      .select("id, status")
+      .eq("listing_id", listingId)
+      .in("status", ["pending", "confirmed", "picked_up"])
+
+    if (activeTransactions && activeTransactions.length > 0) {
+      return {
+        success: false,
+        error: "Cannot delete listing with active transactions. Please wait for all transactions to complete.",
+      }
+    }
+
+    // Delete neighborhood associations (explicit, even though cascade should handle it)
+    await supabase.from("exchange_neighborhoods").delete().eq("listing_id", listingId)
+
+    // Delete listing
+    const { error: deleteError } = await supabase.from("exchange_listings").delete().eq("id", listingId)
+
+    if (deleteError) {
+      console.error("Error deleting exchange listing:", deleteError)
+      return { success: false, error: deleteError.message }
+    }
+
+    revalidatePath(`/t/${tenantSlug}/dashboard/exchange`)
+    revalidatePath(`/t/${tenantSlug}/dashboard`)
+    return { success: true }
+  } catch (error) {
+    console.error("Unexpected error deleting exchange listing:", error)
+    return {
+      success: false,
+      error: "An unexpected error occurred. Please try again.",
+    }
+  }
 }

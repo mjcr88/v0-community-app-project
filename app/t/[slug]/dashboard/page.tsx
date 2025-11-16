@@ -10,6 +10,9 @@ import { CreateCheckInButton } from "@/components/check-ins/create-check-in-butt
 import { CheckInsCountWidget } from "@/components/dashboard/checkins-count-widget"
 import { LiveCheckInsWidget } from "@/components/dashboard/live-checkins-widget"
 import { getActiveCheckIns } from "@/app/actions/check-ins"
+import { MyExchangeListingsWidget } from "@/components/exchange/my-exchange-listings-widget"
+import { getUserListings } from "@/app/actions/exchange-listings"
+import { getLocations } from "@/lib/queries/get-locations"
 
 export default async function ResidentDashboardPage({ params }: { params: { slug: string } }) {
   const { slug } = params
@@ -66,6 +69,7 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
 
   const petsEnabled = tenant?.features?.pets === true
   const checkinsEnabled = tenant?.checkins_enabled === true
+  const exchangeEnabled = tenant?.exchange_enabled === true
   const defaultFeatures = {
     map: true,
   }
@@ -202,6 +206,36 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
     activeCheckIns = await getActiveCheckIns(resident.tenant_id)
   }
 
+  let userListings: any[] = []
+  let exchangeCategories: any[] = []
+  let exchangeNeighborhoods: any[] = []
+  let allTenantLocations: any[] = []
+  
+  if (exchangeEnabled) {
+    userListings = await getUserListings(user.id, resident.tenant_id)
+    
+    // Fetch categories and neighborhoods for the edit modal
+    const { data: categories } = await supabase
+      .from("exchange_categories")
+      .select("id, name")
+      .eq("tenant_id", resident.tenant_id)
+      .eq("is_active", true)
+      .order("name")
+    
+    exchangeCategories = categories || []
+    
+    const { data: neighborhoods } = await supabase
+      .from("neighborhoods")
+      .select("id, name")
+      .eq("tenant_id", resident.tenant_id)
+      .order("name")
+    
+    exchangeNeighborhoods = neighborhoods || []
+    
+    // Fetch all locations for the map
+    allTenantLocations = await getLocations(resident.tenant_id)
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -238,6 +272,13 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
               </Link>
             </Button>
           )}
+          {exchangeEnabled && (
+            <Button asChild variant="outline">
+              <Link href={`/t/${slug}/dashboard/exchange`}>
+                View My Listings
+              </Link>
+            </Button>
+          )}
         </CardContent>
       </Card>
 
@@ -254,6 +295,18 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
           tenantSlug={slug}
           tenantId={resident.tenant_id}
           userId={user.id}
+        />
+      )}
+
+      {exchangeEnabled && userListings.length > 0 && (
+        <MyExchangeListingsWidget
+          listings={userListings}
+          tenantSlug={slug}
+          tenantId={resident.tenant_id}
+          userId={user.id}
+          categories={exchangeCategories}
+          neighborhoods={exchangeNeighborhoods}
+          locations={allTenantLocations}
         />
       )}
 

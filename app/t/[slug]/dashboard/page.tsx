@@ -13,6 +13,41 @@ import { getActiveCheckIns } from "@/app/actions/check-ins"
 import { MyExchangeListingsWidget } from "@/components/exchange/my-exchange-listings-widget"
 import { getUserListings } from "@/app/actions/exchange-listings"
 import { getLocations } from "@/lib/queries/get-locations"
+import { cache } from 'react'
+
+const getCachedLocations = cache(async (tenantId: string) => {
+  return await getLocations(tenantId)
+})
+
+const getCachedExchangeCategories = cache(async (tenantId: string) => {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from("exchange_categories")
+    .select("id, name")
+    .eq("tenant_id", tenantId)
+    .order("name")
+  return data || []
+})
+
+const getCachedNeighborhoods = cache(async (tenantId: string) => {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from("neighborhoods")
+    .select("id, name")
+    .eq("tenant_id", tenantId)
+    .order("name")
+  return data || []
+})
+
+const getCachedTenant = cache(async (tenantId: string) => {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from("tenants")
+    .select("*")
+    .eq("id", tenantId)
+    .single()
+  return data
+})
 
 export default async function ResidentDashboardPage({ params }: { params: { slug: string } }) {
   const { slug } = params
@@ -64,8 +99,7 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
     return null
   }
 
-  // Get tenant to check features
-  const { data: tenant } = await supabase.from("tenants").select("*").eq("id", resident.tenant_id).single()
+  const tenant = await getCachedTenant(resident.tenant_id)
 
   const petsEnabled = tenant?.features?.pets === true
   const checkinsEnabled = tenant?.checkins_enabled === true
@@ -85,12 +119,11 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
   let lotLocation = null
   let allLocations = []
   if (mapEnabled && resident.lot_id) {
-    const { data: locations } = await supabase.from("locations").select("*").eq("tenant_id", resident.tenant_id)
+    allLocations = await getCachedLocations(resident.tenant_id)
 
-    console.log("[v0] Dashboard locations query:", { count: locations?.length })
+    console.log("[v0] Dashboard locations query:", { count: allLocations?.length })
 
-    allLocations = locations || []
-    lotLocation = locations?.find((loc) => loc.lot_id === resident.lot_id && loc.type === "lot" && loc.lot_id !== null)
+    lotLocation = allLocations?.find((loc) => loc.lot_id === resident.lot_id && loc.type === "lot" && loc.lot_id !== null)
 
     console.log("[v0] Dashboard lot location:", {
       lotLocation: lotLocation?.name,
@@ -214,25 +247,9 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
   if (exchangeEnabled) {
     userListings = await getUserListings(user.id, resident.tenant_id)
     
-    // Fetch categories and neighborhoods for the edit modal
-    const { data: categories } = await supabase
-      .from("exchange_categories")
-      .select("id, name")
-      .eq("tenant_id", resident.tenant_id)
-      .order("name")
-    
-    exchangeCategories = categories || []
-    
-    const { data: neighborhoods } = await supabase
-      .from("neighborhoods")
-      .select("id, name")
-      .eq("tenant_id", resident.tenant_id)
-      .order("name")
-    
-    exchangeNeighborhoods = neighborhoods || []
-    
-    // Fetch all locations for the map
-    allTenantLocations = await getLocations(resident.tenant_id)
+    exchangeCategories = await getCachedExchangeCategories(resident.tenant_id)
+    exchangeNeighborhoods = await getCachedNeighborhoods(resident.tenant_id)
+    allTenantLocations = await getCachedLocations(resident.tenant_id)
   }
 
   return (

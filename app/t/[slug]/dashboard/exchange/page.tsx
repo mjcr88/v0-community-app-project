@@ -5,6 +5,19 @@ import { getNeighborhoods } from "@/app/actions/neighborhoods"
 import { getLocations } from "@/lib/queries/get-locations"
 import { CreateExchangeListingButton } from "@/components/exchange/create-exchange-listing-button"
 import { ExchangePageClient } from "./exchange-page-client"
+import { cache } from 'react'
+
+const getCachedExchangeCategories = cache(async (tenantId: string) => {
+  return await getExchangeCategories(tenantId)
+})
+
+const getCachedNeighborhoods = cache(async (tenantId: string) => {
+  return await getNeighborhoods(tenantId)
+})
+
+const getCachedLocations = cache(async (tenantId: string) => {
+  return await getLocations(tenantId)
+})
 
 export default async function ExchangePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
@@ -38,9 +51,9 @@ export default async function ExchangePage({ params }: { params: Promise<{ slug:
 
   const [listings, categories, neighborhoodsResult, locations] = await Promise.all([
     getExchangeListings(resident.tenant_id),
-    getExchangeCategories(resident.tenant_id),
-    getNeighborhoods(resident.tenant_id),
-    getLocations(resident.tenant_id)
+    getCachedExchangeCategories(resident.tenant_id),
+    getCachedNeighborhoods(resident.tenant_id),
+    getCachedLocations(resident.tenant_id)
   ])
 
   const neighborhoods = neighborhoodsResult.success ? neighborhoodsResult.data : []

@@ -479,6 +479,8 @@ export function ExchangePageClient({
           tenantSlug={tenantSlug}
           userId={userId}
           locations={locations}
+          categories={categories}
+          neighborhoods={neighborhoods}
           open={isDetailModalOpen}
           onOpenChange={setIsDetailModalOpen}
         />

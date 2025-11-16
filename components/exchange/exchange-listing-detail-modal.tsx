@@ -9,10 +9,22 @@ import { Card, CardContent } from "@/components/ui/card"
 import { ExchangeCategoryBadge } from "./exchange-category-badge"
 import { ExchangeStatusBadge } from "./exchange-status-badge"
 import { ExchangePriceBadge } from "./exchange-price-badge"
-import { MapPin, Calendar, Package } from 'lucide-react'
-import { getExchangeListingById } from "@/app/actions/exchange-listings"
+import { MapPin, Calendar, Package, Pencil, Trash2, Pause, Play } from 'lucide-react'
+import { getExchangeListingById, pauseExchangeListing, deleteExchangeListing } from "@/app/actions/exchange-listings"
 import { GoogleMapViewer } from "@/components/map/google-map-viewer"
 import { toast } from "sonner"
+import { useRouter } from 'next/navigation'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { EditExchangeListingModal } from "./edit-exchange-listing-modal"
 
 interface ExchangeListingDetailModalProps {
   listingId: string
@@ -20,6 +32,8 @@ interface ExchangeListingDetailModalProps {
   tenantSlug: string
   userId: string | null
   locations: any[]
+  categories?: Array<{ id: string; name: string }>
+  neighborhoods?: Array<{ id: string; name: string }>
   open: boolean
   onOpenChange: (open: boolean) => void
 }
@@ -76,12 +90,19 @@ export function ExchangeListingDetailModal({
   tenantSlug,
   userId,
   locations,
+  categories = [],
+  neighborhoods = [],
   open,
   onOpenChange,
 }: ExchangeListingDetailModalProps) {
   const [listing, setListing] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [isPausing, setIsPausing] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const router = useRouter()
 
   useEffect(() => {
     if (open && listingId) {
@@ -95,7 +116,6 @@ export function ExchangeListingDetailModal({
 
     if (result.success && result.data) {
       setListing(result.data)
-      // Set selected photo to hero or first photo
       setSelectedPhoto(result.data.hero_photo || result.data.photos?.[0] || null)
       
       console.log("[v0] LOCATION DEBUG:", {
@@ -121,6 +141,38 @@ export function ExchangeListingDetailModal({
     }
 
     setIsLoading(false)
+  }
+
+  async function handleTogglePause() {
+    setIsPausing(true)
+    const result = await pauseExchangeListing(listingId, tenantSlug, tenantId)
+
+    if (result.success) {
+      toast.success(result.data?.is_available ? "Listing resumed" : "Listing paused")
+      await loadListing()
+    } else {
+      toast.error(result.error || "Failed to update listing")
+    }
+    setIsPausing(false)
+  }
+
+  async function handleDelete() {
+    setIsDeleting(true)
+    const result = await deleteExchangeListing(listingId, tenantSlug, tenantId)
+
+    if (result.success) {
+      toast.success("Listing deleted")
+      onOpenChange(false)
+      router.push(`/t/${tenantSlug}/dashboard/exchange`)
+    } else {
+      toast.error(result.error || "Failed to delete listing")
+      setShowDeleteDialog(false)
+    }
+    setIsDeleting(false)
+  }
+
+  function handleEditSuccess() {
+    loadListing()
   }
 
   if (isLoading || !listing) {
@@ -157,12 +209,10 @@ export function ExchangeListingDetailModal({
   let listingLocationForMap = null
   let locationName = null
   
-  // Try community location first
   if (listing.location_id && listing.location) {
     locationName = listing.location.name
     let coords: { lat: number; lng: number } | null = null
 
-    // Try coordinates first (point locations)
     if (listing.location.coordinates) {
       const parsed = parseLocationCoordinates(listing.location.coordinates)
       if (parsed && !Array.isArray(parsed)) {
@@ -175,7 +225,6 @@ export function ExchangeListingDetailModal({
       const pathData = listing.location.path_coordinates
       console.log("[v0] Raw path_coordinates:", pathData)
       
-      // path_coordinates is array of [lat, lng] pairs - use first point as marker
       if (Array.isArray(pathData) && pathData.length > 0) {
         const firstPoint = pathData[0]
         if (Array.isArray(firstPoint) && firstPoint.length === 2) {
@@ -189,7 +238,6 @@ export function ExchangeListingDetailModal({
       const boundaryData = listing.location.boundary_coordinates
       console.log("[v0] Raw boundary_coordinates:", boundaryData)
       
-      // boundary_coordinates is array of [lat, lng] pairs - calculate center
       if (Array.isArray(boundaryData) && boundaryData.length > 0) {
         const lats = boundaryData.map((point: any) => (Array.isArray(point) ? Number(point[0]) : 0))
         const lngs = boundaryData.map((point: any) => (Array.isArray(point) ? Number(point[1]) : 0))
@@ -211,7 +259,6 @@ export function ExchangeListingDetailModal({
     }
   }
   
-  // Fall back to custom location
   if (!locationName && listing.custom_location_name) {
     locationName = listing.custom_location_name
   }
@@ -234,189 +281,259 @@ export function ExchangeListingDetailModal({
     : locations
 
   const hasMapLocation = listingLocationForMap !== null
-  const neighborhoods = listing.neighborhoods?.map((n: any) => n.neighborhood?.name).filter(Boolean) || []
+  const visibleNeighborhoods = listing.neighborhoods?.map((n: any) => n.neighborhood?.name).filter(Boolean) || []
   const showBorrowButton = !isCreator && listing.is_available && listing.status === "published"
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1 space-y-3">
-              <div className="flex flex-wrap items-center gap-2">
-                {listing.category && <ExchangeCategoryBadge categoryName={listing.category.name} />}
-                <ExchangeStatusBadge status={listing.status} isAvailable={listing.is_available ?? true} />
-                {conditionDisplay && (
-                  <Badge variant="secondary" className="text-xs">
-                    {conditionDisplay}
-                  </Badge>
-                )}
-                {listing.visibility_scope === "neighborhood" && (
-                  <Badge variant="outline" className="text-xs">
-                    Neighborhood Only
-                  </Badge>
-                )}
-              </div>
-              <DialogTitle className="text-2xl text-balance">{listing.title}</DialogTitle>
-            </div>
-          </div>
-        </DialogHeader>
-
-        <div className="space-y-6">
-          {/* Image Gallery */}
-          {(selectedPhoto || listing.photos?.length > 0) && (
-            <div className="space-y-3">
-              {/* Main Photo */}
-              <div className="aspect-video w-full overflow-hidden rounded-lg bg-muted">
-                <img
-                  src={selectedPhoto || "/placeholder.svg?height=400&width=600"}
-                  alt={listing.title}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-
-              {/* Thumbnail Strip */}
-              {listing.photos && listing.photos.length > 1 && (
-                <div className="flex gap-2 overflow-x-auto pb-2">
-                  {listing.photos.map((photo: string, index: number) => (
-                    <button
-                      key={index}
-                      onClick={() => setSelectedPhoto(photo)}
-                      className={`flex-shrink-0 w-20 h-20 rounded-md overflow-hidden border-2 transition-all ${
-                        selectedPhoto === photo ? "border-primary ring-2 ring-primary" : "border-border hover:border-primary/50"
-                      }`}
-                    >
-                      <img src={photo || "/placeholder.svg"} alt={`${listing.title} ${index + 1}`} className="w-full h-full object-cover" />
-                    </button>
-                  ))}
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  {listing.category && <ExchangeCategoryBadge categoryName={listing.category.name} />}
+                  <ExchangeStatusBadge status={listing.status} isAvailable={listing.is_available ?? true} />
+                  {conditionDisplay && (
+                    <Badge variant="secondary" className="text-xs">
+                      {conditionDisplay}
+                    </Badge>
+                  )}
+                  {listing.visibility_scope === "neighborhood" && (
+                    <Badge variant="outline" className="text-xs">
+                      Neighborhood Only
+                    </Badge>
+                  )}
                 </div>
-              )}
-            </div>
-          )}
-
-          {/* Pricing Section */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Price</p>
-                  <div className="flex items-center gap-2">
-                    <ExchangePriceBadge pricingType={listing.pricing_type} price={listing.price} className="text-lg" />
-                  </div>
-                </div>
-                {shouldShowQuantity && (
-                  <div className="space-y-1 text-right">
-                    <p className="text-sm text-muted-foreground">Available Quantity</p>
-                    <div className="flex items-center gap-1 text-lg font-semibold justify-end">
-                      <Package className="h-5 w-5" />
-                      <span>{listing.available_quantity}</span>
-                    </div>
-                  </div>
-                )}
+                <DialogTitle className="text-2xl text-balance">{listing.title}</DialogTitle>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Description */}
-          {listing.description && (
-            <div className="space-y-2">
-              <h3 className="font-semibold text-lg">Description</h3>
-              <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed">{listing.description}</p>
             </div>
-          )}
+          </DialogHeader>
 
-          {/* Location Section */}
-          {locationName && (
-            <div className="space-y-3">
-              <h3 className="font-semibold text-lg">Location</h3>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <MapPin className="h-4 w-4" />
-                <span>{locationName}</span>
-              </div>
-              {hasMapLocation && (
-                <div className="h-[250px] rounded-lg overflow-hidden border">
-                  <GoogleMapViewer
-                    locations={mapLocations}
-                    mapCenter={listingLocationForMap!.coordinates}
-                    mapZoom={15}
-                    minimal={true}
-                    showInfoCard={false}
-                    highlightLocationId={listingLocationForMap!.id}
+          <div className="space-y-6">
+            {(selectedPhoto || listing.photos?.length > 0) && (
+              <div className="space-y-3">
+                <div className="aspect-video w-full overflow-hidden rounded-lg bg-muted">
+                  <img
+                    src={selectedPhoto || "/placeholder.svg?height=400&width=600"}
+                    alt={listing.title}
+                    className="w-full h-full object-cover"
                   />
                 </div>
-              )}
-              {!hasMapLocation && (
-                <p className="text-sm text-muted-foreground italic">
-                  Map not available for this location
-                </p>
-              )}
-            </div>
-          )}
 
-          {/* Creator Info */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="space-y-4">
-                <h3 className="font-semibold text-lg">Shared by</h3>
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={listing.creator?.profile_picture_url || undefined} alt={`${creatorName}'s avatar`} />
-                    <AvatarFallback>{creatorInitials}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium">{creatorName}</p>
-                    <p className="text-sm text-muted-foreground">Community Member</p>
+                {listing.photos && listing.photos.length > 1 && (
+                  <div className="flex gap-2 overflow-x-auto pb-2">
+                    {listing.photos.map((photo: string, index: number) => (
+                      <button
+                        key={index}
+                        onClick={() => setSelectedPhoto(photo)}
+                        className={`flex-shrink-0 w-20 h-20 rounded-md overflow-hidden border-2 transition-all ${
+                          selectedPhoto === photo ? "border-primary ring-2 ring-primary" : "border-border hover:border-primary/50"
+                        }`}
+                      >
+                        <img src={photo || "/placeholder.svg"} alt={`${listing.title} ${index + 1}`} className="w-full h-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Price</p>
+                    <div className="flex items-center gap-2">
+                      <ExchangePriceBadge pricingType={listing.pricing_type} price={listing.price} className="text-lg" />
+                    </div>
+                  </div>
+                  {shouldShowQuantity && (
+                    <div className="space-y-1 text-right">
+                      <p className="text-sm text-muted-foreground">Available Quantity</p>
+                      <div className="flex items-center gap-1 text-lg font-semibold justify-end">
+                        <Package className="h-5 w-5" />
+                        <span>{listing.available_quantity}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {listing.description && (
+              <div className="space-y-2">
+                <h3 className="font-semibold text-lg">Description</h3>
+                <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed">{listing.description}</p>
+              </div>
+            )}
+
+            {locationName && (
+              <div className="space-y-3">
+                <h3 className="font-semibold text-lg">Location</h3>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <MapPin className="h-4 w-4" />
+                  <span>{locationName}</span>
+                </div>
+                {hasMapLocation && (
+                  <div className="h-[250px] rounded-lg overflow-hidden border">
+                    <GoogleMapViewer
+                      locations={mapLocations}
+                      mapCenter={listingLocationForMap!.coordinates}
+                      mapZoom={15}
+                      minimal={true}
+                      showInfoCard={false}
+                      highlightLocationId={listingLocationForMap!.id}
+                    />
+                  </div>
+                )}
+                {!hasMapLocation && (
+                  <p className="text-sm text-muted-foreground italic">
+                    Map not available for this location
+                  </p>
+                )}
+              </div>
+            )}
+
+            <Card>
+              <CardContent className="pt-6">
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-lg">Shared by</h3>
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={listing.creator?.profile_picture_url || undefined} alt={`${creatorName}'s avatar`} />
+                      <AvatarFallback>{creatorInitials}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-medium">{creatorName}</p>
+                      <p className="text-sm text-muted-foreground">Community Member</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          {showBorrowButton && (
-            <Button 
-              className="w-full" 
-              size="lg"
-              onClick={() => toast.info("Request functionality coming soon in Sprint 6!")}
-            >
-              Request to Borrow
-            </Button>
-          )}
+            {isCreator && (
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="space-y-3">
+                    <h3 className="font-semibold text-sm text-muted-foreground">Manage Listing</h3>
+                    <div className="flex flex-wrap gap-2">
+                      <Button variant="outline" size="sm" onClick={() => setIsEditModalOpen(true)}>
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Edit Listing
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={handleTogglePause}
+                        disabled={isPausing}
+                      >
+                        {listing.is_available ? (
+                          <>
+                            <Pause className="h-4 w-4 mr-2" />
+                            Pause Listing
+                          </>
+                        ) : (
+                          <>
+                            <Play className="h-4 w-4 mr-2" />
+                            Resume Listing
+                          </>
+                        )}
+                      </Button>
+                      <Button 
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => setShowDeleteDialog(true)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete Listing
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
-          {/* Additional Details */}
-          <div className="space-y-3 text-sm">
-            <h3 className="font-semibold text-lg">Additional Details</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-muted-foreground">Category</p>
-                <p className="font-medium">{listing.category?.name || "N/A"}</p>
-              </div>
-              {conditionDisplay && (
+            {showBorrowButton && (
+              <Button 
+                className="w-full" 
+                size="lg"
+                onClick={() => toast.info("Request functionality coming soon in Sprint 7!")}
+              >
+                Request to Borrow
+              </Button>
+            )}
+
+            <div className="space-y-3 text-sm">
+              <h3 className="font-semibold text-lg">Additional Details</h3>
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-muted-foreground">Condition</p>
-                  <p className="font-medium">{conditionDisplay}</p>
+                  <p className="text-muted-foreground">Category</p>
+                  <p className="font-medium">{listing.category?.name || "N/A"}</p>
                 </div>
-              )}
-              <div>
-                <p className="text-muted-foreground">Date Posted</p>
-                <div className="flex items-center gap-1 font-medium">
-                  <Calendar className="h-4 w-4" />
-                  {new Date(listing.published_at || listing.created_at).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                  })}
-                </div>
-              </div>
-              {listing.visibility_scope === "neighborhood" && neighborhoods.length > 0 && (
+                {conditionDisplay && (
+                  <div>
+                    <p className="text-muted-foreground">Condition</p>
+                    <p className="font-medium">{conditionDisplay}</p>
+                  </div>
+                )}
                 <div>
-                  <p className="text-muted-foreground">Visible To</p>
-                  <p className="font-medium">{neighborhoods.join(", ")}</p>
+                  <p className="text-muted-foreground">Date Posted</p>
+                  <div className="flex items-center gap-1 font-medium">
+                    <Calendar className="h-4 w-4" />
+                    {new Date(listing.published_at || listing.created_at).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
+                  </div>
                 </div>
-              )}
+                {listing.visibility_scope === "neighborhood" && visibleNeighborhoods.length > 0 && (
+                  <div>
+                    <p className="text-muted-foreground">Visible To</p>
+                    <p className="font-medium">{visibleNeighborhoods.join(", ")}</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+
+      {isCreator && (
+        <EditExchangeListingModal
+          listingId={listingId}
+          open={isEditModalOpen}
+          onOpenChange={setIsEditModalOpen}
+          tenantSlug={tenantSlug}
+          tenantId={tenantId}
+          categories={categories}
+          neighborhoods={neighborhoods}
+          onSuccess={handleEditSuccess}
+        />
+      )}
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete listing?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete your listing and remove it from the community exchange.
+              {listing?.status === "published" && " Make sure there are no active transactions before deleting."}
+            </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDelete} 
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "Deleting..." : "Delete Listing"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }

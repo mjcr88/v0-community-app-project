@@ -4,13 +4,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Package, Plus, Pencil, Pause, Play, Eye, FileText } from 'lucide-react'
+import { Package, Plus, Pencil, Pause, Play, Eye, FileText, Trash2 } from 'lucide-react'
 import Link from "next/link"
 import { useState } from "react"
 import { useRouter } from 'next/navigation'
-import { pauseExchangeListing, publishDraftListing } from "@/app/actions/exchange-listings"
+import { pauseExchangeListing, publishDraftListing, deleteExchangeListing } from "@/app/actions/exchange-listings"
 import { ExchangeListingDetailModal } from "./exchange-listing-detail-modal"
 import { EditExchangeListingModal } from "./edit-exchange-listing-modal"
+import { CreateExchangeListingButton } from "./create-exchange-listing-button"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import Image from "next/image"
 import type { Location } from "@/types/locations"
 
@@ -65,8 +76,9 @@ export function MyExchangeListingsWidget({
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [editListingId, setEditListingId] = useState<string | null>(null)
   const [isEditOpen, setIsEditOpen] = useState(false)
+  const [deleteListingId, setDeleteListingId] = useState<string | null>(null)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
-  // Calculate counts
   const counts = {
     total: listings.length,
     drafts: listings.filter((l) => l.status === "draft").length,
@@ -80,7 +92,7 @@ export function MyExchangeListingsWidget({
 
     setLoadingStates((prev) => ({ ...prev, [listingId]: true }))
 
-    const result = await pauseExchangeListing(listingId, tenantId)
+    const result = await pauseExchangeListing(listingId, tenantSlug, tenantId)
 
     setLoadingStates((prev) => ({ ...prev, [listingId]: false }))
 
@@ -95,7 +107,7 @@ export function MyExchangeListingsWidget({
 
     setLoadingStates((prev) => ({ ...prev, [listingId]: true }))
 
-    const result = await publishDraftListing(listingId, tenantId)
+    const result = await publishDraftListing(listingId, tenantSlug, tenantId)
 
     setLoadingStates((prev) => ({ ...prev, [listingId]: false }))
 
@@ -120,6 +132,31 @@ export function MyExchangeListingsWidget({
     setIsEditOpen(true)
   }
 
+  const handleDelete = async (listingId: string, e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDeleteListingId(listingId)
+    setShowDeleteDialog(true)
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteListingId) return
+
+    setLoadingStates((prev) => ({ ...prev, [deleteListingId]: true }))
+
+    const result = await deleteExchangeListing(deleteListingId, tenantSlug, tenantId)
+
+    setLoadingStates((prev) => ({ ...prev, [deleteListingId]: false }))
+
+    if (result.success) {
+      setShowDeleteDialog(false)
+      setDeleteListingId(null)
+      router.refresh()
+    } else {
+      alert(result.error || "Failed to delete listing")
+    }
+  }
+
   function renderListingCard(listing: Listing) {
     const isLoading = loadingStates[listing.id]
     const isDraft = listing.status === "draft"
@@ -131,7 +168,6 @@ export function MyExchangeListingsWidget({
         className="flex gap-4 p-4 rounded-lg border hover:bg-accent transition-colors cursor-pointer"
         onClick={(e) => handleView(listing.id, e)}
       >
-        {/* Photo on left */}
         {listing.hero_photo ? (
           <div className="relative w-20 h-20 flex-shrink-0 rounded-md overflow-hidden bg-muted">
             <Image src={listing.hero_photo || "/placeholder.svg"} alt={listing.title} fill className="object-cover" />
@@ -142,7 +178,6 @@ export function MyExchangeListingsWidget({
           </div>
         )}
 
-        {/* Main content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <h4 className="font-semibold text-base leading-tight truncate">{listing.title}</h4>
@@ -166,7 +201,6 @@ export function MyExchangeListingsWidget({
             <p className="text-xs text-muted-foreground">Qty: {listing.available_quantity}</p>
           </div>
 
-          {/* Quick actions */}
           <div className="flex items-center gap-1 mt-3" onClick={(e) => e.preventDefault()}>
             <Button
               size="sm"
@@ -221,6 +255,17 @@ export function MyExchangeListingsWidget({
               <Eye className="h-3 w-3 mr-1" />
               View
             </Button>
+
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 text-xs text-destructive hover:text-destructive"
+              onClick={(e) => handleDelete(listing.id, e)}
+              disabled={isLoading}
+            >
+              <Trash2 className="h-3 w-3 mr-1" />
+              Delete
+            </Button>
           </div>
         </div>
       </div>
@@ -249,12 +294,12 @@ export function MyExchangeListingsWidget({
             <p className="text-sm text-muted-foreground mb-4">
               You haven't created any listings yet. Start sharing items with your community!
             </p>
-            <Button asChild>
-              <Link href={`/t/${tenantSlug}/dashboard/exchange`}>
-                <Plus className="h-4 w-4 mr-2" />
-                Browse Exchange
-              </Link>
-            </Button>
+            <CreateExchangeListingButton
+              tenantSlug={tenantSlug}
+              tenantId={tenantId}
+              categories={categories}
+              neighborhoods={neighborhoods}
+            />
           </div>
         </CardContent>
       </Card>
@@ -269,9 +314,13 @@ export function MyExchangeListingsWidget({
             <CardTitle>My Listings</CardTitle>
             <CardDescription>{counts.total} total listings</CardDescription>
           </div>
-          <Button asChild size="sm">
-            <Link href={`/t/${tenantSlug}/dashboard/exchange`}>Browse Exchange</Link>
-          </Button>
+          <CreateExchangeListingButton
+            tenantSlug={tenantSlug}
+            tenantId={tenantId}
+            categories={categories}
+            neighborhoods={neighborhoods}
+            variant="default"
+          />
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="all" className="w-full">
@@ -360,6 +409,26 @@ export function MyExchangeListingsWidget({
           }}
         />
       )}
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Listing?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete your listing. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete Listing
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

@@ -21,8 +21,8 @@ import {
 import { Card, CardContent } from "@/components/ui/card"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
-import { getExchangeListingById, updateExchangeListing } from "@/app/actions/exchange-listings"
-import { Loader2, AlertCircle } from 'lucide-react'
+import { getExchangeListingById, updateExchangeListing, deleteExchangeListing } from "@/app/actions/exchange-listings"
+import { Loader2, AlertCircle, Trash2 } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { useRouter } from 'next/navigation'
 import type { ExchangePricingType, ExchangeCondition } from "@/types/exchange"
@@ -56,6 +56,8 @@ export function EditExchangeListingModal({
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [hasActiveTransactions, setHasActiveTransactions] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const [formData, setFormData] = useState({
     title: "",
@@ -312,6 +314,33 @@ export function EditExchangeListingModal({
     }))
   }, [])
 
+  const handleDelete = async () => {
+    setIsDeleting(true)
+    
+    const result = await deleteExchangeListing(listingId, tenantSlug, tenantId)
+    
+    if (result.success) {
+      toast({
+        title: "Listing deleted",
+        description: "Your listing has been permanently deleted.",
+      })
+      setShowDeleteDialog(false)
+      onOpenChange(false)
+      if (onSuccess) {
+        onSuccess()
+      } else {
+        router.refresh()
+      }
+    } else {
+      toast({
+        title: "Error",
+        description: result.error || "Failed to delete listing",
+        variant: "destructive",
+      })
+      setIsDeleting(false)
+    }
+  }
+
   if (isLoading) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -328,291 +357,310 @@ export function EditExchangeListingModal({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Edit Exchange Listing</DialogTitle>
-          <DialogDescription>Update your listing details</DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Exchange Listing</DialogTitle>
+            <DialogDescription>Update your listing details</DialogDescription>
+          </DialogHeader>
 
-        {hasActiveTransactions && (
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              This listing has active transactions. You can only update the quantity while transactions are in progress.
-            </AlertDescription>
-          </Alert>
-        )}
+          {hasActiveTransactions && (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                This listing has active transactions. You can only update the quantity while transactions are in progress.
+              </AlertDescription>
+            </Alert>
+          )}
 
-        <form onSubmit={handleSubmit}>
-          <Card>
-            <CardContent className="space-y-6 pt-6">
-              <div className="space-y-2">
-                <PhotoManager
-                  photos={formData.photos}
-                  heroPhoto={formData.hero_photo}
-                  onPhotosChange={(photos) => setFormData(prev => ({ ...prev, photos }))}
-                  onHeroPhotoChange={(heroPhoto) => setFormData(prev => ({ ...prev, hero_photo: heroPhoto }))}
-                  maxPhotos={10}
-                  entityType="location"
-                  disabled={hasActiveTransactions}
-                />
-              </div>
+          <form onSubmit={handleSubmit}>
+            <Card>
+              <CardContent className="space-y-6 pt-6">
+                <div className="space-y-2">
+                  <PhotoManager
+                    photos={formData.photos}
+                    heroPhoto={formData.hero_photo}
+                    onPhotosChange={(photos) => setFormData(prev => ({ ...prev, photos }))}
+                    onHeroPhotoChange={(heroPhoto) => setFormData(prev => ({ ...prev, hero_photo: heroPhoto }))}
+                    maxPhotos={10}
+                    entityType="location"
+                    disabled={hasActiveTransactions}
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="title">
-                  Listing Title <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="title"
-                  placeholder="e.g., Tall Ladder, Fresh Mangos, Graphic Design Services..."
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  disabled={hasActiveTransactions}
-                  required
-                />
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="title">
+                    Listing Title <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="title"
+                    placeholder="e.g., Tall Ladder, Fresh Mangos, Graphic Design Services..."
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    disabled={hasActiveTransactions}
+                    required
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="edit-category">
-                  Category <span className="text-destructive">*</span>
-                </Label>
-                <Select
-                  value={formData.category_id}
-                  onValueChange={(value) => {
-                    console.log("[v0] Category changed to:", value)
-                    setFormData({ ...formData, category_id: value })
-                  }}
-                  disabled={hasActiveTransactions}
-                >
-                  <SelectTrigger id="edit-category">
-                    <SelectValue placeholder="Select a category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-category">
+                    Category <span className="text-destructive">*</span>
+                  </Label>
+                  <Select
+                    value={formData.category_id}
+                    onValueChange={(value) => {
+                      console.log("[v0] Category changed to:", value)
+                      setFormData({ ...formData, category_id: value })
+                    }}
+                    disabled={hasActiveTransactions}
+                  >
+                    <SelectTrigger id="edit-category">
+                      <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Tell your community more about this item or service..."
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  disabled={hasActiveTransactions}
-                  rows={4}
-                />
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    placeholder="Tell your community more about this item or service..."
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    disabled={hasActiveTransactions}
+                    rows={4}
+                  />
+                </div>
 
-              {showPricing && (
+                {showPricing && (
+                  <div className="space-y-4 pt-4 border-t">
+                    <div className="space-y-2">
+                      <Label className="text-base font-semibold">Pricing</Label>
+                    </div>
+
+                    <RadioGroup
+                      value={formData.pricing_type}
+                      onValueChange={(value) => setFormData({ ...formData, pricing_type: value as ExchangePricingType, price: "" })}
+                      disabled={hasActiveTransactions}
+                    >
+                      <div className="space-y-3">
+                        <div className="flex items-start space-x-3 rounded-md border p-4">
+                          <RadioGroupItem value="free" id="free" className="mt-1" disabled={hasActiveTransactions} />
+                          <div className="flex-1">
+                            <Label htmlFor="free" className="font-medium cursor-pointer">
+                              Free
+                            </Label>
+                          </div>
+                        </div>
+
+                        <div className="flex items-start space-x-3 rounded-md border p-4">
+                          <RadioGroupItem value="fixed_price" id="fixed_price" className="mt-1" disabled={hasActiveTransactions} />
+                          <div className="flex-1">
+                            <Label htmlFor="fixed_price" className="font-medium cursor-pointer">
+                              Fixed Price
+                            </Label>
+                            {formData.pricing_type === "fixed_price" && (
+                              <div className="mt-3">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-muted-foreground">$</span>
+                                  <Input
+                                    id="price"
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    placeholder="0.00"
+                                    value={formData.price}
+                                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                                    className="max-w-32"
+                                    disabled={hasActiveTransactions}
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-start space-x-3 rounded-md border p-4">
+                          <RadioGroupItem value="pay_what_you_want" id="pay_what_you_want" className="mt-1" disabled={hasActiveTransactions} />
+                          <div className="flex-1">
+                            <Label htmlFor="pay_what_you_want" className="font-medium cursor-pointer">
+                              Pay What You Want
+                            </Label>
+                          </div>
+                        </div>
+                      </div>
+                    </RadioGroup>
+                  </div>
+                )}
+
+                {showCondition && (
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-condition">Condition</Label>
+                    <Select
+                      value={formData.condition}
+                      onValueChange={(value) => setFormData({ ...formData, condition: value as ExchangeCondition })}
+                      disabled={hasActiveTransactions}
+                    >
+                      <SelectTrigger id="edit-condition">
+                        <SelectValue placeholder="Select condition (optional)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="new">New</SelectItem>
+                        <SelectItem value="slightly_used">Slightly Used</SelectItem>
+                        <SelectItem value="used">Used</SelectItem>
+                        <SelectItem value="slightly_damaged">Slightly Damaged</SelectItem>
+                        <SelectItem value="maintenance">Needs Maintenance</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {showQuantity && (
+                  <div className="space-y-2">
+                    <Label htmlFor="quantity">Available Quantity</Label>
+                    <Input
+                      id="quantity"
+                      type="number"
+                      min="1"
+                      placeholder="How many are available?"
+                      value={formData.available_quantity}
+                      onChange={(e) => setFormData({ ...formData, available_quantity: e.target.value })}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {hasActiveTransactions 
+                        ? "You can update quantity even with active transactions"
+                        : isFoodProduce 
+                          ? "E.g., 10 mangos, 5 loaves of bread"
+                          : "E.g., how many tools are available to lend"}
+                    </p>
+                  </div>
+                )}
+
                 <div className="space-y-4 pt-4 border-t">
                   <div className="space-y-2">
-                    <Label className="text-base font-semibold">Pricing</Label>
+                    <Label className="text-base font-semibold">Visibility</Label>
                   </div>
 
                   <RadioGroup
-                    value={formData.pricing_type}
-                    onValueChange={(value) => setFormData({ ...formData, pricing_type: value as ExchangePricingType, price: "" })}
+                    value={formData.visibility_scope}
+                    onValueChange={(value) => setFormData({ ...formData, visibility_scope: value as "community" | "neighborhood", neighborhood_ids: [] })}
                     disabled={hasActiveTransactions}
                   >
                     <div className="space-y-3">
                       <div className="flex items-start space-x-3 rounded-md border p-4">
-                        <RadioGroupItem value="free" id="free" className="mt-1" disabled={hasActiveTransactions} />
+                        <RadioGroupItem value="community" id="community" className="mt-1" disabled={hasActiveTransactions} />
                         <div className="flex-1">
-                          <Label htmlFor="free" className="font-medium cursor-pointer">
-                            Free
+                          <Label htmlFor="community" className="font-medium cursor-pointer">
+                            Community-Wide
                           </Label>
                         </div>
                       </div>
 
                       <div className="flex items-start space-x-3 rounded-md border p-4">
-                        <RadioGroupItem value="fixed_price" id="fixed_price" className="mt-1" disabled={hasActiveTransactions} />
+                        <RadioGroupItem value="neighborhood" id="neighborhood" className="mt-1" disabled={hasActiveTransactions} />
                         <div className="flex-1">
-                          <Label htmlFor="fixed_price" className="font-medium cursor-pointer">
-                            Fixed Price
+                          <Label htmlFor="neighborhood" className="font-medium cursor-pointer">
+                            Neighborhood-Only
                           </Label>
-                          {formData.pricing_type === "fixed_price" && (
-                            <div className="mt-3">
-                              <div className="flex items-center gap-2">
-                                <span className="text-muted-foreground">$</span>
-                                <Input
-                                  id="price"
-                                  type="number"
-                                  step="0.01"
-                                  min="0"
-                                  placeholder="0.00"
-                                  value={formData.price}
-                                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                                  className="max-w-32"
-                                  disabled={hasActiveTransactions}
-                                />
-                              </div>
+                          {formData.visibility_scope === "neighborhood" && (
+                            <div className="mt-4 space-y-3">
+                              <Label className="text-sm font-medium">Select Neighborhoods <span className="text-destructive">*</span></Label>
+                              {neighborhoods.length === 0 ? (
+                                <p className="text-sm text-muted-foreground">No neighborhoods available</p>
+                              ) : (
+                                <div className="space-y-2 max-h-48 overflow-y-auto rounded-md border p-3">
+                                  {neighborhoods.map((neighborhood) => (
+                                    <div key={neighborhood.id} className="flex items-center space-x-2">
+                                      <Checkbox
+                                        id={`neighborhood-${neighborhood.id}`}
+                                        checked={formData.neighborhood_ids.includes(neighborhood.id)}
+                                        onCheckedChange={() => toggleNeighborhood(neighborhood.id)}
+                                        disabled={hasActiveTransactions}
+                                      />
+                                      <Label
+                                        htmlFor={`neighborhood-${neighborhood.id}`}
+                                        className="text-sm font-normal cursor-pointer"
+                                      >
+                                        {neighborhood.name}
+                                      </Label>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-start space-x-3 rounded-md border p-4">
-                        <RadioGroupItem value="pay_what_you_want" id="pay_what_you_want" className="mt-1" disabled={hasActiveTransactions} />
-                        <div className="flex-1">
-                          <Label htmlFor="pay_what_you_want" className="font-medium cursor-pointer">
-                            Pay What You Want
-                          </Label>
                         </div>
                       </div>
                     </div>
                   </RadioGroup>
                 </div>
-              )}
 
-              {showCondition && (
-                <div className="space-y-2">
-                  <Label htmlFor="edit-condition">Condition</Label>
-                  <Select
-                    value={formData.condition}
-                    onValueChange={(value) => setFormData({ ...formData, condition: value as ExchangeCondition })}
-                    disabled={hasActiveTransactions}
+                <div className="flex gap-3 pt-4">
+                  <Button type="submit" disabled={isSubmitting} className="flex-1 sm:flex-none">
+                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {isSubmitting ? "Saving..." : "Save Changes"}
+                  </Button>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => onOpenChange(false)} 
+                    disabled={isSubmitting}
+                    className="flex-1 sm:flex-none"
                   >
-                    <SelectTrigger id="edit-condition">
-                      <SelectValue placeholder="Select condition (optional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="new">New</SelectItem>
-                      <SelectItem value="slightly_used">Slightly Used</SelectItem>
-                      <SelectItem value="used">Used</SelectItem>
-                      <SelectItem value="slightly_damaged">Slightly Damaged</SelectItem>
-                      <SelectItem value="maintenance">Needs Maintenance</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    Cancel
+                  </Button>
+                  <div className="flex-1" />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setShowDeleteDialog(true)}
+                    disabled={isSubmitting}
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </Button>
                 </div>
+              </CardContent>
+            </Card>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Listing?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete your listing. This action cannot be undone.
+              {hasActiveTransactions && (
+                <span className="block mt-2 text-destructive font-semibold">
+                  Warning: This listing has active transactions. Please wait for all transactions to complete before deleting.
+                </span>
               )}
-
-              {showQuantity && (
-                <div className="space-y-2">
-                  <Label htmlFor="quantity">Available Quantity</Label>
-                  <Input
-                    id="quantity"
-                    type="number"
-                    min="1"
-                    placeholder="How many are available?"
-                    value={formData.available_quantity}
-                    onChange={(e) => setFormData({ ...formData, available_quantity: e.target.value })}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {hasActiveTransactions 
-                      ? "You can update quantity even with active transactions"
-                      : isFoodProduce 
-                        ? "E.g., 10 mangos, 5 loaves of bread"
-                        : "E.g., how many tools are available to lend"}
-                  </p>
-                </div>
-              )}
-
-              <div className="space-y-2 pt-4 border-t">
-                <Label htmlFor="location">Location (Optional)</Label>
-                <LocationSelector
-                  tenantId={tenantId}
-                  locationType={formData.location_type}
-                  communityLocationId={formData.location_id}
-                  customLocationName={formData.custom_location_name}
-                  customLocationCoordinates={
-                    formData.custom_location_lat && formData.custom_location_lng
-                      ? { lat: formData.custom_location_lat, lng: formData.custom_location_lng }
-                      : null
-                  }
-                  customLocationType="marker"
-                  customLocationPath={null}
-                  onLocationTypeChange={handleLocationTypeChange}
-                  onCommunityLocationChange={handleCommunityLocationChange}
-                  onCustomLocationNameChange={handleCustomLocationNameChange}
-                  onCustomLocationChange={handleCustomLocationChange}
-                  disabled={hasActiveTransactions}
-                />
-              </div>
-
-              <div className="space-y-4 pt-4 border-t">
-                <div className="space-y-2">
-                  <Label className="text-base font-semibold">Visibility</Label>
-                </div>
-
-                <RadioGroup
-                  value={formData.visibility_scope}
-                  onValueChange={(value) => setFormData({ ...formData, visibility_scope: value as "community" | "neighborhood", neighborhood_ids: [] })}
-                  disabled={hasActiveTransactions}
-                >
-                  <div className="space-y-3">
-                    <div className="flex items-start space-x-3 rounded-md border p-4">
-                      <RadioGroupItem value="community" id="community" className="mt-1" disabled={hasActiveTransactions} />
-                      <div className="flex-1">
-                        <Label htmlFor="community" className="font-medium cursor-pointer">
-                          Community-Wide
-                        </Label>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start space-x-3 rounded-md border p-4">
-                      <RadioGroupItem value="neighborhood" id="neighborhood" className="mt-1" disabled={hasActiveTransactions} />
-                      <div className="flex-1">
-                        <Label htmlFor="neighborhood" className="font-medium cursor-pointer">
-                          Neighborhood-Only
-                        </Label>
-                        {formData.visibility_scope === "neighborhood" && (
-                          <div className="mt-4 space-y-3">
-                            <Label className="text-sm font-medium">Select Neighborhoods <span className="text-destructive">*</span></Label>
-                            {neighborhoods.length === 0 ? (
-                              <p className="text-sm text-muted-foreground">No neighborhoods available</p>
-                            ) : (
-                              <div className="space-y-2 max-h-48 overflow-y-auto rounded-md border p-3">
-                                {neighborhoods.map((neighborhood) => (
-                                  <div key={neighborhood.id} className="flex items-center space-x-2">
-                                    <Checkbox
-                                      id={`neighborhood-${neighborhood.id}`}
-                                      checked={formData.neighborhood_ids.includes(neighborhood.id)}
-                                      onCheckedChange={() => toggleNeighborhood(neighborhood.id)}
-                                      disabled={hasActiveTransactions}
-                                    />
-                                    <Label
-                                      htmlFor={`neighborhood-${neighborhood.id}`}
-                                      className="text-sm font-normal cursor-pointer"
-                                    >
-                                      {neighborhood.name}
-                                    </Label>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </RadioGroup>
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <Button type="submit" disabled={isSubmitting} className="flex-1 sm:flex-none">
-                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {isSubmitting ? "Saving..." : "Save Changes"}
-                </Button>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => onOpenChange(false)} 
-                  disabled={isSubmitting}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </form>
-      </DialogContent>
-    </Dialog>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isDeleting ? "Deleting..." : "Delete Listing"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }

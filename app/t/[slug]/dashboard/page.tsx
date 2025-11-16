@@ -15,10 +15,6 @@ import { getUserListings } from "@/app/actions/exchange-listings"
 import { getLocations } from "@/lib/queries/get-locations"
 import { cache } from 'react'
 
-const getCachedLocations = cache(async (tenantId: string) => {
-  return await getLocations(tenantId)
-})
-
 const getCachedExchangeCategories = cache(async (tenantId: string) => {
   const supabase = await createClient()
   const { data } = await supabase
@@ -119,7 +115,7 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
   let lotLocation = null
   let allLocations = []
   if (mapEnabled && resident.lot_id) {
-    allLocations = await getCachedLocations(resident.tenant_id)
+    allLocations = await getLocations(resident.tenant_id)
 
     console.log("[v0] Dashboard locations query:", { count: allLocations?.length })
 
@@ -249,7 +245,7 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
     
     exchangeCategories = await getCachedExchangeCategories(resident.tenant_id)
     exchangeNeighborhoods = await getCachedNeighborhoods(resident.tenant_id)
-    allTenantLocations = await getCachedLocations(resident.tenant_id)
+    allTenantLocations = await getLocations(resident.tenant_id)
   }
 
   return (

@@ -1,4 +1,5 @@
 import { createServerClient } from "@/lib/supabase/server"
+import { cache } from 'react'
 
 // Core location types matching database schema
 export type LocationType =
@@ -117,10 +118,10 @@ export interface GetLocationsOptions {
  * @param options - Optional filters and enrichment flags
  * @returns Array of locations with optional relations
  */
-export async function getLocations(
+export const getLocations = cache(async (
   tenantId: string,
   options: GetLocationsOptions = {},
-): Promise<LocationWithRelations[]> {
+): Promise<LocationWithRelations[]> => {
   const {
     types,
     neighborhoodId,
@@ -377,7 +378,7 @@ export async function getLocations(
   }
 
   return transformedLocations
-}
+})
 
 /**
  * Get location counts by type for a tenant

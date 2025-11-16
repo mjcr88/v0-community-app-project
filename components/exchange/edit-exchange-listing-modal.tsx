@@ -89,14 +89,21 @@ export function EditExchangeListingModal({
     if (result.success && result.data) {
       const listing = result.data
       
+      const categoryId = listing.category?.id || listing.category_id || ""
+      
+      let initialPhotos = listing.photos || []
+      if (initialPhotos.length === 0 && listing.hero_photo) {
+        initialPhotos = [listing.hero_photo]
+      }
+      
       console.log("[v0] EDIT MODAL - Loading listing data:", {
-        categoryId: listing.category_id,
+        categoryId: categoryId,
         categoryName: listing.category?.name,
         allCategories: categories.map(c => ({ id: c.id, name: c.name })),
-        photos: listing.photos,
-        photosType: typeof listing.photos,
-        photosIsArray: Array.isArray(listing.photos),
-        photosLength: listing.photos?.length,
+        photos: initialPhotos,
+        photosType: typeof initialPhotos,
+        photosIsArray: Array.isArray(initialPhotos),
+        photosLength: initialPhotos.length,
         heroPhoto: listing.hero_photo,
         heroPhotoType: typeof listing.hero_photo,
       })
@@ -113,7 +120,7 @@ export function EditExchangeListingModal({
       const newFormData = {
         title: listing.title,
         description: listing.description || "",
-        category_id: listing.category_id,
+        category_id: categoryId,
         pricing_type: listing.pricing_type,
         price: listing.price ? listing.price.toString() : "",
         condition: listing.condition || "",
@@ -125,7 +132,7 @@ export function EditExchangeListingModal({
         custom_location_name: listing.custom_location_name || "",
         custom_location_lat: listing.custom_location_lat,
         custom_location_lng: listing.custom_location_lng,
-        photos: listing.photos || [],
+        photos: initialPhotos,
         hero_photo: listing.hero_photo || null,
       }
       

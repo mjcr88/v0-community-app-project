@@ -219,7 +219,6 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
       .from("exchange_categories")
       .select("id, name")
       .eq("tenant_id", resident.tenant_id)
-      .eq("is_active", true)
       .order("name")
     
     exchangeCategories = categories || []

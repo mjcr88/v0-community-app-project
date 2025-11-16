@@ -1,12 +1,12 @@
 "use client"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Activity } from 'lucide-react'
+import { Activity, Loader2 } from 'lucide-react'
 import { CheckInCard } from "@/components/check-ins/check-in-card"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { CreateCheckInButton } from "@/components/check-ins/create-check-in-button"
 import { CheckInDetailModal } from "@/components/check-ins/check-in-detail-modal"
-import { createBrowserClient } from "@/lib/supabase/client"
+import useSWR from "swr"
 
 interface CheckIn {
   id: string
@@ -32,69 +32,64 @@ interface CheckIn {
 }
 
 interface LiveCheckInsWidgetProps {
-  initialCheckIns: CheckIn[]
   tenantSlug: string
   tenantId: string
   userId: string
 }
 
-export function LiveCheckInsWidget({ initialCheckIns, tenantSlug, tenantId, userId }: LiveCheckInsWidgetProps) {
-  const [checkIns, setCheckIns] = useState<CheckIn[]>(initialCheckIns)
+const fetcher = (url: string) => fetch(url).then((res) => res.json())
+
+export function LiveCheckInsWidget({ tenantSlug, tenantId, userId }: LiveCheckInsWidgetProps) {
+  const { data: checkIns, error, isLoading } = useSWR<CheckIn[]>(
+    `/api/check-ins/${tenantId}`,
+    fetcher,
+    {
+      refreshInterval: 30000, // Refresh every 30 seconds
+      revalidateOnFocus: false,
+    }
+  )
+
   const [selectedCheckInId, setSelectedCheckInId] = useState<string | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
-
-  useEffect(() => {
-    const loadCheckIns = async () => {
-      const supabase = createBrowserClient()
-      
-      // Calculate time 8 hours ago (max check-in duration)
-      const eightHoursAgo = new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString()
-
-      const { data, error } = await supabase
-        .from("check_ins")
-        .select(`
-          *,
-          creator:users!created_by(id, first_name, last_name, profile_picture_url),
-          location:locations!location_id(id, name)
-        `)
-        .eq("tenant_id", tenantId)
-        .eq("status", "active")
-        .gte("start_time", eightHoursAgo)
-        .order("start_time", { ascending: false })
-
-      if (error) {
-        console.error("[v0] Error loading check-ins:", error)
-        return
-      }
-
-      if (!data) {
-        setCheckIns([])
-        return
-      }
-
-      // Filter expired check-ins client-side
-      const now = new Date()
-      const activeCheckIns = data.filter((checkIn) => {
-        const expiresAt = new Date(checkIn.start_time)
-        expiresAt.setMinutes(expiresAt.getMinutes() + checkIn.duration_minutes)
-        return expiresAt > now
-      })
-
-      setCheckIns(activeCheckIns as CheckIn[])
-    }
-
-    // Refresh every 30 seconds - don't call immediately on mount
-    const interval = setInterval(loadCheckIns, 30000)
-
-    return () => clearInterval(interval)
-  }, [tenantId])
 
   function handleCheckInClick(checkInId: string) {
     setSelectedCheckInId(checkInId)
     setIsDetailOpen(true)
   }
 
-  if (checkIns.length === 0) {
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Live Check-ins</CardTitle>
+          <CardDescription>See who's active in your community right now</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Live Check-ins</CardTitle>
+          <CardDescription>See who's active in your community right now</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center text-muted-foreground py-8">
+            Failed to load check-ins. Please refresh the page.
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (!checkIns || checkIns.length === 0) {
     return (
       <Card>
         <CardHeader>

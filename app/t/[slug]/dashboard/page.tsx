@@ -186,25 +186,7 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
     ? { lat: tenant.map_center_coordinates.lat, lng: tenant.map_center_coordinates.lng }
     : null
 
-  const upcomingEvents = await getUpcomingEvents(resident.tenant_id, 5)
-
-  const upcomingEventsWithFlags = await Promise.all(
-    upcomingEvents.map(async (event) => {
-      const { data: flagCount } = await supabase.rpc("get_event_flag_count", {
-        p_event_id: event.id,
-        p_tenant_id: resident.tenant_id,
-      })
-      return {
-        ...event,
-        flag_count: flagCount ?? 0,
-      }
-    }),
-  )
-
-  let activeCheckIns: any[] = []
-  if (checkinsEnabled) {
-    activeCheckIns = await getActiveCheckIns(resident.tenant_id)
-  }
+  // Removed server-side data fetching for events and check-ins
 
   let userListings: any[] = []
   let exchangeCategories: any[] = []
@@ -260,25 +242,23 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
 
       <DashboardSectionCollapsible 
         title="Upcoming Events" 
-        description={`Your next ${upcomingEventsWithFlags.length} event${upcomingEventsWithFlags.length === 1 ? "" : "s"}`}
+        description="Your next events"
         defaultOpen={true}
       >
         <UpcomingEventsWidget
-          events={upcomingEventsWithFlags}
           slug={slug}
           userId={user.id}
           tenantId={resident.tenant_id}
         />
       </DashboardSectionCollapsible>
 
-      {checkinsEnabled && activeCheckIns.length > 0 && (
+      {checkinsEnabled && (
         <DashboardSectionCollapsible 
           title="Live Check-ins"
-          description={`${activeCheckIns.length} ${activeCheckIns.length === 1 ? "resident" : "residents"} active now`}
+          description="Active residents now"
           defaultOpen={true}
         >
           <LiveCheckInsWidget
-            initialCheckIns={activeCheckIns}
             tenantSlug={slug}
             tenantId={resident.tenant_id}
             userId={user.id}
@@ -311,7 +291,7 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
             tenantId={resident.tenant_id}
             lotLocationId={lotLocationId}
             mapCenter={mapCenter}
-            checkIns={activeCheckIns}
+            checkIns={[]} // Will be fetched by widget on demand
             neighborhoodName={resident.lots?.neighborhoods?.name}
             lotNumber={resident.lots?.lot_number}
           />
@@ -341,7 +321,7 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
           </CardContent>
         </Card>
 
-        {checkinsEnabled && <CheckInsCountWidget initialCount={activeCheckIns.length} />}
+        {checkinsEnabled && <CheckInsCountWidget initialCount={0} />}
 
         {familyUnitId && (
           <Card className="lg:col-span-1">

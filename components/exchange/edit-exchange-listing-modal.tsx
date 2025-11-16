@@ -89,16 +89,20 @@ export function EditExchangeListingModal({
     if (result.success && result.data) {
       const listing = result.data
       
-      console.log("[v0] Loading listing data:", {
+      console.log("[v0] EDIT MODAL - Loading listing data:", {
         categoryId: listing.category_id,
         categoryName: listing.category?.name,
-        allCategories: categories.map(c => ({ id: c.id, name: c.name }))
+        allCategories: categories.map(c => ({ id: c.id, name: c.name })),
+        photos: listing.photos,
+        photosType: typeof listing.photos,
+        photosIsArray: Array.isArray(listing.photos),
+        photosLength: listing.photos?.length,
+        heroPhoto: listing.hero_photo,
+        heroPhotoType: typeof listing.hero_photo,
       })
       
-      // Check if listing has active transactions (would come from server action)
       setHasActiveTransactions(false) // TODO: Add this check in getExchangeListingById
 
-      // Determine location type
       let locationType: "none" | "community" | "custom" = "none"
       if (listing.location_id) {
         locationType = "community"
@@ -106,7 +110,7 @@ export function EditExchangeListingModal({
         locationType = "custom"
       }
 
-      setFormData({
+      const newFormData = {
         title: listing.title,
         description: listing.description || "",
         category_id: listing.category_id,
@@ -123,7 +127,24 @@ export function EditExchangeListingModal({
         custom_location_lng: listing.custom_location_lng,
         photos: listing.photos || [],
         hero_photo: listing.hero_photo || null,
+      }
+      
+      console.log("[v0] EDIT MODAL - Setting form data:", {
+        categoryId: newFormData.category_id,
+        photos: newFormData.photos,
+        photosLength: newFormData.photos.length,
+        heroPhoto: newFormData.hero_photo,
       })
+
+      setFormData(newFormData)
+      
+      setTimeout(() => {
+        console.log("[v0] EDIT MODAL - Form data after setState:", {
+          categoryId: formData.category_id,
+          photos: formData.photos,
+          photosLength: formData.photos.length,
+        })
+      }, 100)
     } else {
       toast({
         title: "Error",

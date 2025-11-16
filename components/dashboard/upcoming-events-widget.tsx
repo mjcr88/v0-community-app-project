@@ -4,14 +4,15 @@ import type React from "react"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Calendar, Plus, Heart, Check, HelpCircle, X, Flag } from "lucide-react"
+import { Calendar, Plus, Heart, Check, HelpCircle, X, Flag, Loader2 } from 'lucide-react'
 import Link from "next/link"
 import { format, parseISO } from "date-fns"
 import { useState } from "react"
 import { rsvpToEvent, saveEvent, unsaveEvent } from "@/app/actions/events"
-import { useRouter } from "next/navigation"
+import { useRouter } from 'next/navigation'
 import { LocationBadge } from "@/components/events/location-badge"
 import { Badge } from "@/components/ui/badge"
+import useSWR from "swr"
 
 interface Event {
   id: string
@@ -42,19 +43,31 @@ interface Event {
   status?: "draft" | "published" | "cancelled"
 }
 
-export function UpcomingEventsWidget({
-  events,
-  slug,
-  userId,
-  tenantId,
-}: {
-  events: Event[]
+interface UpcomingEventsWidgetProps {
   slug: string
-  userId?: string
-  tenantId?: string
-}) {
+  userId: string
+  tenantId: string
+}
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json())
+
+export function UpcomingEventsWidget({ slug, userId, tenantId }: UpcomingEventsWidgetProps) {
   const router = useRouter()
   const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({})
+
+  const { data: events, error, isLoading, mutate } = useSWR<Event[]>(
+    `/api/events/upcoming/${tenantId}?limit=5`,
+    fetcher,
+    {
+      refreshInterval: 60000, // Refresh every minute
+      revalidateOnFocus: false,
+      shouldRetryOnError: false, // Don't retry on errors to prevent cascade
+      errorRetryCount: 0, // No retries on error
+      onError: (err) => {
+        console.log("[v0] Events widget fetch error (non-critical):", err.message)
+      },
+    }
+  )
 
   const handleRsvp = async (eventId: string, status: "yes" | "maybe" | "no", e: React.MouseEvent) => {
     e.preventDefault()
@@ -69,7 +82,7 @@ export function UpcomingEventsWidget({
     setLoadingStates((prev) => ({ ...prev, [eventId]: false }))
 
     if (result.success) {
-      router.refresh()
+      mutate()
     }
   }
 
@@ -86,11 +99,43 @@ export function UpcomingEventsWidget({
     setLoadingStates((prev) => ({ ...prev, [`save-${eventId}`]: false }))
 
     if (result.success) {
-      router.refresh()
+      mutate()
     }
   }
 
-  if (events.length === 0) {
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Upcoming Events</CardTitle>
+          <CardDescription>Loading your events...</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Upcoming Events</CardTitle>
+          <CardDescription>Error loading events</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center text-muted-foreground py-8">
+            Failed to load events. Please refresh the page.
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (!events || events.length === 0) {
     return (
       <Card>
         <CardHeader>

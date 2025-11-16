@@ -1,13 +1,13 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Button } from "@/components/ui/button"
 import { createBrowserClient } from "@/lib/supabase/client"
-import { Loader2 } from "lucide-react"
+import { Loader2 } from 'lucide-react'
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
 
@@ -40,7 +40,8 @@ type Tenant = {
     }
   }
   events_enabled?: boolean
-  checkins_enabled?: boolean // Added checkins_enabled to tenant type
+  checkins_enabled?: boolean
+  exchange_enabled?: boolean
 }
 
 const FEATURES = [
@@ -110,6 +111,12 @@ const FEATURES = [
     description: "Enable spontaneous location-based check-ins for real-time community engagement",
     table: "check_ins",
   },
+  {
+    key: "exchange",
+    label: "Exchange Directory",
+    description: "Enable community exchange for sharing tools, services, food, rides, and rentals",
+    table: "exchange_listings",
+  },
 ] as const
 
 const LOCATION_TYPE_OPTIONS = [
@@ -143,6 +150,7 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
     map: true,
     events: false,
     checkins: false,
+    exchange: false,
     location_types: {
       facility: true,
       lot: true,
@@ -170,6 +178,7 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
     map?: boolean
     events?: boolean
     checkins?: boolean
+    exchange?: boolean
     location_types?: {
       facility?: boolean
       lot?: boolean
@@ -186,8 +195,9 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
   }>({
     ...defaultFeatures,
     ...tenant.features,
-    events: tenant.events_enabled ?? false, // Read from tenant.events_enabled column
-    checkins: tenant.checkins_enabled ?? false, // Read from tenant.checkins_enabled column
+    events: tenant.events_enabled ?? false,
+    checkins: tenant.checkins_enabled ?? false,
+    exchange: tenant.exchange_enabled ?? false,
     location_types: {
       ...defaultFeatures.location_types,
       ...(tenant.features?.location_types || {}),
@@ -197,6 +207,7 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
   console.log("[v0] Tenant features from DB:", tenant.features)
   console.log("[v0] Tenant events_enabled:", tenant.events_enabled)
   console.log("[v0] Tenant checkins_enabled:", tenant.checkins_enabled)
+  console.log("[v0] Tenant exchange_enabled:", tenant.exchange_enabled)
   console.log("[v0] Initialized form state:", features)
 
   const [visibilityScope, setVisibilityScope] = useState<"neighborhood" | "tenant">(
@@ -309,10 +320,13 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
     setLoading(true)
 
     try {
-      const { events, checkins, ...otherFeatures } = features
+      const { events, checkins, exchange, ...otherFeatures } = features
 
       const wasEventsEnabled = tenant.events_enabled ?? false
       const willEnableEvents = !wasEventsEnabled && (events ?? false)
+      
+      const wasExchangeEnabled = tenant.exchange_enabled ?? false
+      const willEnableExchange = !wasExchangeEnabled && (exchange ?? false)
 
       const { error } = await supabase
         .from("tenants")
@@ -321,6 +335,7 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
           resident_visibility_scope: visibilityScope,
           events_enabled: events ?? false,
           checkins_enabled: checkins ?? false,
+          exchange_enabled: exchange ?? false,
         })
         .eq("id", tenant.id)
 
@@ -346,7 +361,25 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
           }
         } catch (seedError) {
           console.error("[v0] Error seeding categories:", seedError)
-          // Don't fail the whole operation if seeding fails
+        }
+      }
+      
+      if (willEnableExchange) {
+        try {
+          const response = await fetch("/api/seed-exchange-categories", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ tenantId: tenant.id }),
+          })
+
+          if (!response.ok) {
+            console.error("[v0] Failed to seed exchange categories")
+          } else {
+            const result = await response.json()
+            console.log("[v0] Seeded exchange categories:", result)
+          }
+        } catch (seedError) {
+          console.error("[v0] Error seeding exchange categories:", seedError)
         }
       }
 
@@ -389,7 +422,7 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
 
         <div className="space-y-4 pt-4 border-t">
           <h3 className="text-sm font-semibold text-muted-foreground">Community Features</h3>
-          {FEATURES.filter((f) => ["pets", "interests", "skills", "events", "checkins"].includes(f.key)).map(
+          {FEATURES.filter((f) => ["pets", "interests", "skills", "events", "checkins", "exchange"].includes(f.key)).map(
             (feature) => (
               <div key={feature.key} className="flex items-center justify-between space-x-4">
                 <div className="flex-1 space-y-1">
@@ -402,7 +435,7 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
                   id={feature.key}
                   checked={
                     features[feature.key as keyof typeof features] ??
-                    (feature.key === "events" || feature.key === "checkins" ? false : true)
+                    (feature.key === "events" || feature.key === "checkins" || feature.key === "exchange" ? false : true)
                   }
                   onCheckedChange={(checked) => handleToggle(feature.key, checked)}
                 />

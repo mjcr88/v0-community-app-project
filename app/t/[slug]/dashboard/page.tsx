@@ -3,29 +3,25 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Users, MapPin, Globe, Languages, PawPrint, Home, MapIcon } from 'lucide-react'
 import Link from "next/link"
-import { MapPreviewWidget } from "@/components/map/map-preview-widget"
 import { UpcomingEventsWidget } from "@/components/dashboard/upcoming-events-widget"
-import { getUpcomingEvents } from "@/app/actions/events"
 import { CreateCheckInButton } from "@/components/check-ins/create-check-in-button"
 import { CheckInsCountWidget } from "@/components/dashboard/checkins-count-widget"
 import { LiveCheckInsWidget } from "@/components/dashboard/live-checkins-widget"
-import { getActiveCheckIns } from "@/app/actions/check-ins"
+import { MyExchangeListingsWidget } from "@/components/exchange/my-exchange-listings-widget"
+import { getUserListings } from "@/app/actions/exchange-listings"
+import { cache } from 'react'
+import { MapSectionLazy } from "@/components/dashboard/map-section-lazy"
+import { DashboardSectionCollapsible } from "@/components/dashboard/dashboard-section-collapsible"
 
-export default async function ResidentDashboardPage({ params }: { params: { slug: string } }) {
-  const { slug } = params
+const getCachedUser = cache(async () => {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  return user
+})
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  console.log("[v0] Dashboard - Auth user:", user?.id)
-
-  if (!user) {
-    return null
-  }
-
-  const { data: resident, error: residentError } = await supabase
+const getCachedResident = cache(async (userId: string) => {
+  const supabase = await createClient()
+  const { data: resident } = await supabase
     .from("users")
     .select(
       `
@@ -43,57 +39,83 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
       )
     `,
     )
-    .eq("id", user.id)
+    .eq("id", userId)
     .eq("role", "resident")
     .single()
+  return resident
+})
 
-  console.log("[v0] Dashboard resident query:", { resident, residentError })
+const getCachedExchangeCategories = cache(async (tenantId: string) => {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from("exchange_categories")
+    .select("id, name")
+    .eq("tenant_id", tenantId)
+    .order("name")
+  return data || []
+})
 
-  if (resident) {
-    console.log("[v0] Dashboard lot data:", {
-      lot_id: resident.lot_id,
-      lots: resident.lots,
-      neighborhood: resident.lots?.neighborhoods,
-    })
+const getCachedNeighborhoods = cache(async (tenantId: string) => {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from("neighborhoods")
+    .select("id, name")
+    .eq("tenant_id", tenantId)
+    .order("name")
+  return data || []
+})
+
+const getCachedTenant = cache(async (tenantId: string) => {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from("tenants")
+    .select("*")
+    .eq("id", tenantId)
+    .single()
+  return data
+})
+
+const getCachedUserListings = cache(async (userId: string, tenantId: string) => {
+  return await getUserListings(userId, tenantId)
+})
+
+export default async function ResidentDashboardPage({ params }: { params: { slug: string } }) {
+  const { slug } = params
+  const supabase = await createClient()
+
+  const user = await getCachedUser()
+
+  if (!user) {
+    return null
   }
+
+  const resident = await getCachedResident(user.id)
 
   if (!resident) {
     return null
   }
 
-  // Get tenant to check features
-  const { data: tenant } = await supabase.from("tenants").select("*").eq("id", resident.tenant_id).single()
+  const tenant = await getCachedTenant(resident.tenant_id)
 
   const petsEnabled = tenant?.features?.pets === true
   const checkinsEnabled = tenant?.checkins_enabled === true
+  const exchangeEnabled = tenant?.exchange_enabled === true
   const defaultFeatures = {
     map: true,
   }
   const mergedFeatures = { ...defaultFeatures, ...(tenant?.features || {}) }
   const mapEnabled = mergedFeatures.map === true
 
-  console.log("[v0] Dashboard features:", {
-    checkinsEnabled,
-    eventsEnabled: tenant?.events_enabled,
-    tenantCheckinsColumn: tenant?.checkins_enabled,
-  })
-
-  let lotLocation = null
-  let allLocations = []
+  let lotLocationId: string | undefined
   if (mapEnabled && resident.lot_id) {
-    const { data: locations } = await supabase.from("locations").select("*").eq("tenant_id", resident.tenant_id)
-
-    console.log("[v0] Dashboard locations query:", { count: locations?.length })
-
-    allLocations = locations || []
-    lotLocation = locations?.find((loc) => loc.lot_id === resident.lot_id && loc.type === "lot" && loc.lot_id !== null)
-
-    console.log("[v0] Dashboard lot location:", {
-      lotLocation: lotLocation?.name,
-      lotLocationId: lotLocation?.id,
-      residentLotId: resident.lot_id,
-      locationHasLotId: lotLocation?.lot_id !== null,
-    })
+    const { data: lotLocation } = await supabase
+      .from("locations")
+      .select("id")
+      .eq("lot_id", resident.lot_id)
+      .eq("type", "lot")
+      .maybeSingle()
+    
+    lotLocationId = lotLocation?.id
   }
 
   // Get total residents count in neighborhood (or tenant if no neighborhood)
@@ -101,7 +123,6 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
   let totalResidents = 0
 
   if (neighborhoodId) {
-    // Query users who have lots in this neighborhood
     const { data: residentsInNeighborhood } = await supabase
       .from("users")
       .select("id, lot_id, lots!inner(neighborhood_id)")
@@ -143,8 +164,6 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
 
   const uniqueCountries = new Set(countriesData?.map((u) => u.birth_country).filter(Boolean))
 
-  console.log("[v0] Dashboard countries data:", { countriesData, uniqueCountries: Array.from(uniqueCountries) })
-
   // Get pets count if enabled
   let petsCount = 0
   if (petsEnabled && neighborhoodId) {
@@ -170,36 +189,23 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
 
     familyMembersCount = count || 0
 
-    // Get family unit name
     if (resident.family_units?.name) {
       familyName = resident.family_units.name
     }
   }
 
-  console.log("[v0] Dashboard family data:", { familyUnitId, familyMembersCount, familyName })
-
   const mapCenter = tenant?.map_center_coordinates
     ? { lat: tenant.map_center_coordinates.lat, lng: tenant.map_center_coordinates.lng }
     : null
 
-  const upcomingEvents = await getUpcomingEvents(resident.tenant_id, 5)
-
-  const upcomingEventsWithFlags = await Promise.all(
-    upcomingEvents.map(async (event) => {
-      const { data: flagCount } = await supabase.rpc("get_event_flag_count", {
-        p_event_id: event.id,
-        p_tenant_id: resident.tenant_id,
-      })
-      return {
-        ...event,
-        flag_count: flagCount ?? 0,
-      }
-    }),
-  )
-
-  let activeCheckIns: any[] = []
-  if (checkinsEnabled) {
-    activeCheckIns = await getActiveCheckIns(resident.tenant_id)
+  let userListings: any[] = []
+  let exchangeCategories: any[] = []
+  let exchangeNeighborhoods: any[] = []
+  
+  if (exchangeEnabled) {
+    userListings = await getCachedUserListings(user.id, resident.tenant_id)
+    exchangeCategories = await getCachedExchangeCategories(resident.tenant_id)
+    exchangeNeighborhoods = await getCachedNeighborhoods(resident.tenant_id)
   }
 
   return (
@@ -209,12 +215,8 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
         <p className="text-muted-foreground">Here's what's happening in your community</p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-          <CardDescription>Get started with your community dashboard</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
+      <DashboardSectionCollapsible title="Quick Actions" description="Get started with your community dashboard">
+        <div className="flex flex-wrap gap-2">
           {!resident.onboarding_completed && (
             <Button asChild>
               <Link href={`/t/${slug}/onboarding/welcome`}>Complete Onboarding</Link>
@@ -238,50 +240,71 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
               </Link>
             </Button>
           )}
-        </CardContent>
-      </Card>
+          {exchangeEnabled && (
+            <Button asChild variant="outline">
+              <Link href={`/t/${slug}/dashboard/exchange`}>
+                View My Listings
+              </Link>
+            </Button>
+          )}
+        </div>
+      </DashboardSectionCollapsible>
 
-      <UpcomingEventsWidget
-        events={upcomingEventsWithFlags}
-        slug={slug}
-        userId={user.id}
-        tenantId={resident.tenant_id}
-      />
-
-      {checkinsEnabled && activeCheckIns.length > 0 && (
-        <LiveCheckInsWidget
-          initialCheckIns={activeCheckIns}
-          tenantSlug={slug}
-          tenantId={resident.tenant_id}
+      <DashboardSectionCollapsible 
+        title="Upcoming Events" 
+        description="Your next events"
+        defaultOpen={true}
+      >
+        <UpcomingEventsWidget
+          slug={slug}
           userId={user.id}
+          tenantId={resident.tenant_id}
         />
+      </DashboardSectionCollapsible>
+
+      {checkinsEnabled && (
+        <DashboardSectionCollapsible 
+          title="Live Check-ins"
+          description="Active residents now"
+          defaultOpen={true}
+        >
+          <LiveCheckInsWidget
+            tenantSlug={slug}
+            tenantId={resident.tenant_id}
+            userId={user.id}
+          />
+        </DashboardSectionCollapsible>
+      )}
+
+      {exchangeEnabled && userListings.length > 0 && (
+        <DashboardSectionCollapsible 
+          title="My Listings"
+          description="Manage your exchange listings"
+          defaultOpen={true}
+        >
+          <MyExchangeListingsWidget
+            listings={userListings}
+            tenantSlug={slug}
+            tenantId={resident.tenant_id}
+            userId={user.id}
+            categories={exchangeCategories}
+            neighborhoods={exchangeNeighborhoods}
+            locations={[]} // Will be fetched by modal on demand
+          />
+        </DashboardSectionCollapsible>
       )}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {mapEnabled && lotLocation ? (
-          <Card className="md:col-span-2 lg:col-span-2 lg:row-span-6">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Your Neighborhood</CardTitle>
-              <MapPin className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div>
-                <div className="text-2xl font-bold">{resident.lots?.neighborhoods?.name || "Not assigned"}</div>
-                <p className="text-xs text-muted-foreground">Lot #{resident.lots?.lot_number || "N/A"}</p>
-              </div>
-              <MapPreviewWidget
-                tenantSlug={slug}
-                tenantId={resident.tenant_id}
-                locations={allLocations}
-                mapCenter={mapCenter}
-                highlightLocationId={lotLocation?.lot_id ? lotLocation.id : undefined}
-                checkIns={activeCheckIns}
-              />
-              <p className="text-xs text-center text-muted-foreground">
-                Interact with map or click expand button to view full map
-              </p>
-            </CardContent>
-          </Card>
+        {mapEnabled && resident.lot_id ? (
+          <MapSectionLazy
+            tenantSlug={slug}
+            tenantId={resident.tenant_id}
+            lotLocationId={lotLocationId}
+            mapCenter={mapCenter}
+            checkIns={[]} // Will be fetched by widget on demand
+            neighborhoodName={resident.lots?.neighborhoods?.name}
+            lotNumber={resident.lots?.lot_number}
+          />
         ) : (
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -291,9 +314,6 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
             <CardContent>
               <div className="text-2xl font-bold">{resident.lots?.neighborhoods?.name || "Not assigned"}</div>
               <p className="text-xs text-muted-foreground">Lot #{resident.lots?.lot_number || "N/A"}</p>
-              <p className="text-xs text-muted-foreground mt-2">
-                Map: {mapEnabled ? "enabled" : "disabled"}, Lot: {lotLocation ? "found" : "not found"}
-              </p>
             </CardContent>
           </Card>
         )}
@@ -311,7 +331,7 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
           </CardContent>
         </Card>
 
-        {checkinsEnabled && <CheckInsCountWidget initialCount={activeCheckIns.length} />}
+        {checkinsEnabled && <CheckInsCountWidget initialCount={0} />}
 
         {familyUnitId && (
           <Card className="lg:col-span-1">

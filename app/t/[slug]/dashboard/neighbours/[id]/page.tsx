@@ -1,26 +1,17 @@
 import { createClient } from "@/lib/supabase/server"
-import { redirect, notFound } from "next/navigation"
+import { redirect, notFound } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import {
-  MapPin,
-  Calendar,
-  Phone,
-  Mail,
-  Globe,
-  Languages,
-  Lightbulb,
-  Wrench,
-  Users,
-  ArrowLeft,
-  CheckCircle2,
-  Star,
-} from "lucide-react"
+import { MapPin, Calendar, Phone, Mail, Globe, Languages, Lightbulb, Wrench, Users, ArrowLeft, CheckCircle2, Star } from 'lucide-react'
 import Link from "next/link"
 import { filterPrivateData } from "@/lib/privacy-utils"
 import { MapPreviewWidget } from "@/components/map/map-preview-widget"
+import { ResidentExchangeListings } from "@/components/profile/resident-exchange-listings"
+import { getExchangeListingsByUser, getExchangeCategories } from "@/app/actions/exchange-listings"
+import { getNeighborhoods } from "@/app/actions/neighborhoods"
+import { getLocations } from "@/app/actions/locations"
 
 export default async function PublicProfilePage({
   params,
@@ -174,6 +165,19 @@ export default async function PublicProfilePage({
   const heroPhoto =
     resident.hero_photo || resident.profile_picture_url || (residentPhotos.length > 0 ? residentPhotos[0] : null)
   const otherPhotos = heroPhoto ? residentPhotos.filter((p) => p !== heroPhoto) : residentPhotos
+
+  const exchangeEnabled = tenant?.exchange_enabled === true
+  let residentListings: any[] = []
+  let categories: any[] = []
+  let neighborhoods: any[] = []
+  let allLocations: any[] = []
+
+  if (exchangeEnabled) {
+    residentListings = await getExchangeListingsByUser(resident.id, currentResident.tenant_id)
+    categories = await getExchangeCategories(currentResident.tenant_id)
+    neighborhoods = await getNeighborhoods(currentResident.tenant_id)
+    allLocations = await getLocations(currentResident.tenant_id)
+  }
 
   return (
     <div className="space-y-6">
@@ -392,6 +396,20 @@ export default async function PublicProfilePage({
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {exchangeEnabled && residentListings.length > 0 && (
+            <ResidentExchangeListings
+              listings={residentListings}
+              residentName={displayName}
+              residentId={resident.id}
+              slug={slug}
+              userId={user.id}
+              tenantId={currentResident.tenant_id}
+              categories={categories}
+              neighborhoods={neighborhoods}
+              locations={allLocations}
+            />
           )}
 
           {pets && pets.length > 0 && (

@@ -16,9 +16,11 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
-import { Home, Users, Map, Calendar, Package } from 'lucide-react'
+import { Home, Users, Map, Calendar, Package, Bell } from 'lucide-react'
 import Link from "next/link"
 import { UserAvatarMenu } from "@/components/user-avatar-menu"
+import { NotificationBellButton } from "@/components/notifications/notification-bell-button"
+import { NotificationPreviewPopover } from "@/components/notifications/notification-preview-popover"
 
 export default async function ResidentDashboardLayout({
   children,
@@ -170,6 +172,9 @@ export default async function ResidentDashboardLayout({
         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger />
           <h1 className="text-lg font-semibold">Dashboard</h1>
+          <div className="ml-auto">
+            <NotificationPreviewPopover tenantSlug={slug} tenantId={tenant.id} userId={user.id} />
+          </div>
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4">{children}</div>
       </SidebarInset>

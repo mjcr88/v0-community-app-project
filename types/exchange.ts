@@ -63,6 +63,10 @@ export type ExchangeListing = {
   cancelled_at: string | null
   cancellation_reason: string | null
   
+  // Archive
+  archived_at: string | null
+  archived_by: string | null
+  
   // Timestamps
   created_at: string
   updated_at: string
@@ -195,4 +199,31 @@ export type ExchangeFlagWithRelations = ExchangeFlag & {
     email: string
     full_name: string | null
   }
+}
+
+// New types for archive functionality
+export type ListingWithTransactionCount = ExchangeListing & {
+  transaction_count: number
+}
+
+export type TransactionHistoryItem = ExchangeTransaction & {
+  borrower_name: string
+  borrower_avatar_url: string | null
+  lender_name: string
+  lender_avatar_url: string | null
+}
+
+// Extended type for listings with creator info
+export type ExchangeListingWithCreator = ExchangeListing & {
+  creator: {
+    id: string
+    first_name: string
+    last_name: string
+    profile_picture_url: string | null
+  }
+  category?: ExchangeCategory
+  location?: {
+    id: string
+    name: string
+  } | null
 }

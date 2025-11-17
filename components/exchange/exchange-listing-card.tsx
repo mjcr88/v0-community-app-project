@@ -7,7 +7,7 @@ import { ExchangeCategoryBadge } from "./exchange-category-badge"
 import { ExchangeStatusBadge } from "./exchange-status-badge"
 import { ExchangePriceBadge } from "./exchange-price-badge"
 import { cn } from "@/lib/utils"
-import { MapPin } from 'lucide-react'
+import { MapPin, Flag } from 'lucide-react'
 
 interface ExchangeListingCardProps {
   listing: {
@@ -36,6 +36,7 @@ interface ExchangeListingCardProps {
     location?: {
       name: string
     } | null
+    flag_count?: number
   }
   onClick?: () => void
   className?: string
@@ -63,9 +64,9 @@ export function ExchangeListingCard({ listing, onClick, className }: ExchangeLis
   const locationDisplay = listing.custom_location_name || listing.location?.name
 
   return (
-    <Card className={cn("hover:bg-accent transition-colors cursor-pointer", className)} onClick={onClick}>
+    <Card className={cn("hover:bg-accent transition-colors cursor-pointer overflow-hidden", className)} onClick={onClick}>
       {listing.hero_photo && (
-        <div className="aspect-video w-full overflow-hidden rounded-t-lg">
+        <div className="aspect-video w-full overflow-hidden">
           <img 
             src={listing.hero_photo || "/placeholder.svg"} 
             alt={listing.title}
@@ -74,33 +75,40 @@ export function ExchangeListingCard({ listing, onClick, className }: ExchangeLis
         </div>
       )}
       
-      <CardHeader className="space-y-3">
+      <CardHeader className="space-y-3 pb-3">
         {/* Header: Creator and status */}
         <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
             <Avatar className="h-8 w-8 flex-shrink-0">
               <AvatarImage src={avatarUrl || undefined} />
               <AvatarFallback>{creatorInitials}</AvatarFallback>
             </Avatar>
             <p className="text-sm text-muted-foreground truncate">{creatorName}</p>
           </div>
-          {listing.status === "draft" ? (
-            <Badge variant="outline" className="flex-shrink-0">
-              Draft
-            </Badge>
-          ) : (
-            <ExchangeStatusBadge 
-              status={listing.status as any} 
-              isAvailable={listing.is_available ?? true}
-              className="flex-shrink-0" 
-            />
-          )}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {listing.flag_count !== undefined && listing.flag_count > 0 && (
+              <Badge variant="destructive" className="text-xs gap-1">
+                <Flag className="h-3 w-3" />
+                {listing.flag_count}
+              </Badge>
+            )}
+            {listing.status === "draft" ? (
+              <Badge variant="outline">
+                Draft
+              </Badge>
+            ) : (
+              <ExchangeStatusBadge 
+                status={listing.status as any} 
+                isAvailable={listing.is_available ?? true}
+              />
+            )}
+          </div>
         </div>
 
         {/* Title */}
         <CardTitle className="text-lg leading-tight line-clamp-2 text-balance">{listing.title}</CardTitle>
 
-        {/* Category, price, and location badges */}
+        {/* Category, price, and other badges - wrapped properly */}
         <div className="flex items-center gap-2 flex-wrap">
           {listing.category && <ExchangeCategoryBadge categoryName={listing.category.name} />}
           <ExchangePriceBadge pricingType={listing.pricing_type} price={listing.price_amount} />
@@ -117,14 +125,14 @@ export function ExchangeListingCard({ listing, onClick, className }: ExchangeLis
           {locationDisplay && (
             <Badge variant="outline" className="text-xs flex items-center gap-1">
               <MapPin className="h-3 w-3" />
-              {locationDisplay}
+              <span className="truncate max-w-[120px]">{locationDisplay}</span>
             </Badge>
           )}
         </div>
       </CardHeader>
 
       {listing.description && (
-        <CardContent>
+        <CardContent className="pt-0">
           <p className="text-sm text-muted-foreground line-clamp-3">{listing.description}</p>
         </CardContent>
       )}

@@ -2,6 +2,16 @@
 
 import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle 
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -9,28 +19,25 @@ import { Card, CardContent } from "@/components/ui/card"
 import { ExchangeCategoryBadge } from "./exchange-category-badge"
 import { ExchangeStatusBadge } from "./exchange-status-badge"
 import { ExchangePriceBadge } from "./exchange-price-badge"
-import { MapPin, Calendar, Package, Pencil, Trash2, Pause, Play } from 'lucide-react'
-import { getExchangeListingById, pauseExchangeListing, deleteExchangeListing } from "@/app/actions/exchange-listings"
+import { MapPin, Calendar, Package, Pencil, Trash2, Pause, Play, Archive, ArchiveRestore, History, Flag } from 'lucide-react'
+import { getExchangeListingById, pauseExchangeListing, deleteExchangeListing, getExchangeListingFlagCount, getListingFlagDetails } from "@/app/actions/exchange-listings"
+import { archiveListing, unarchiveListing } from "@/app/actions/exchange-history"
 import { GoogleMapViewer } from "@/components/map/google-map-viewer"
 import { toast } from "sonner"
 import { useRouter } from 'next/navigation'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+import { FlagListingDialog } from "./flag-listing-dialog"
 import { EditExchangeListingModal } from "./edit-exchange-listing-modal"
+import { ListingHistoryModal } from "./listing-history-modal"
+import { RequestBorrowDialog } from "./request-borrow-dialog"
+import { ListingFlagDetails } from "./listing-flag-details"
 
 interface ExchangeListingDetailModalProps {
   listingId: string
   tenantId: string
   tenantSlug: string
   userId: string | null
+  userRole?: string | null
+  isAdmin?: boolean
   locations: any[]
   categories?: Array<{ id: string; name: string }>
   neighborhoods?: Array<{ id: string; name: string }>
@@ -89,6 +96,8 @@ export function ExchangeListingDetailModal({
   tenantId,
   tenantSlug,
   userId,
+  userRole,
+  isAdmin = false,
   locations,
   categories = [],
   neighborhoods = [],
@@ -102,11 +111,22 @@ export function ExchangeListingDetailModal({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isPausing, setIsPausing] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isArchiving, setIsArchiving] = useState(false)
+  const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false)
+  const [pendingRequest, setPendingRequest] = useState<any>(null)
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false)
+  const [flagCount, setFlagCount] = useState(0)
+  const [hasUserFlagged, setHasUserFlagged] = useState(false)
+  const [flagDetails, setFlagDetails] = useState<any[]>([])
   const router = useRouter()
 
   useEffect(() => {
     if (open && listingId) {
       loadListing()
+      loadFlagStatus()
+      if (userId && userId !== listing?.created_by) {
+        loadPendingRequest()
+      }
     }
   }, [open, listingId])
 
@@ -143,6 +163,30 @@ export function ExchangeListingDetailModal({
     setIsLoading(false)
   }
 
+  async function loadFlagStatus() {
+    if (!userId) return
+    
+    const result = await getExchangeListingFlagCount(listingId, userId, tenantId)
+    
+    if (result.success) {
+      setFlagCount(result.flagCount ?? 0)
+      setHasUserFlagged(result.hasUserFlagged ?? false)
+      
+      if (isAdmin && result.flagCount && result.flagCount > 0) {
+        const flagDetailsResult = await getListingFlagDetails(listingId, tenantId)
+        if (flagDetailsResult.success && flagDetailsResult.data) {
+          setFlagDetails(flagDetailsResult.data)
+        }
+      }
+    }
+  }
+
+  async function loadPendingRequest() {
+    if (!userId) return
+    const request = await getUserPendingRequest(userId, listingId, tenantId)
+    setPendingRequest(request)
+  }
+
   async function handleTogglePause() {
     setIsPausing(true)
     const result = await pauseExchangeListing(listingId, tenantSlug, tenantId)
@@ -171,8 +215,40 @@ export function ExchangeListingDetailModal({
     setIsDeleting(false)
   }
 
+  async function handleArchive() {
+    if (!listing) return
+    
+    setIsArchiving(true)
+    const result = listing.archived_at 
+      ? await unarchiveListing(listingId, userId!, tenantId, tenantSlug)
+      : await archiveListing(listingId, userId!, tenantId, tenantSlug)
+
+    if (result.success) {
+      if (listing.archived_at) {
+        toast.success(result.message || "Listing restored successfully")
+      } else {
+        toast.success("Listing archived successfully")
+      }
+      onOpenChange(false)
+      router.refresh()
+    } else {
+      toast.error(result.error || "Failed to update listing")
+    }
+    setIsArchiving(false)
+  }
+
   function handleEditSuccess() {
     loadListing()
+  }
+
+  function handleRequestSuccess() {
+    loadListing()
+    loadPendingRequest()
+  }
+
+  function handleFlagSuccess() {
+    loadFlagStatus()
+    onOpenChange(false)
   }
 
   if (isLoading || !listing) {
@@ -283,6 +359,15 @@ export function ExchangeListingDetailModal({
   const hasMapLocation = listingLocationForMap !== null
   const visibleNeighborhoods = listing.neighborhoods?.map((n: any) => n.neighborhood?.name).filter(Boolean) || []
   const showBorrowButton = !isCreator && listing.is_available && listing.status === "published"
+  const hasPendingRequest = !!pendingRequest
+
+  function getActionButtonText(categoryName: string) {
+    if (categoryName === "Services & Skills") return "Request Service"
+    if (categoryName === "House sitting & Rentals") return "Request to Rent"
+    if (categoryName === "Rides & Carpooling") return "Request Ride"
+    if (categoryName === "Food & Produce") return "Request"
+    return "Request to Borrow"
+  }
 
   return (
     <>
@@ -294,6 +379,17 @@ export function ExchangeListingDetailModal({
                 <div className="flex flex-wrap items-center gap-2">
                   {listing.category && <ExchangeCategoryBadge categoryName={listing.category.name} />}
                   <ExchangeStatusBadge status={listing.status} isAvailable={listing.is_available ?? true} />
+                  {flagCount > 0 && (
+                    <Badge variant="destructive" className="text-xs gap-1">
+                      <Flag className="h-3 w-3" />
+                      {flagCount}
+                    </Badge>
+                  )}
+                  {listing.archived_at && (
+                    <Badge variant="secondary" className="text-xs">
+                      Archived
+                    </Badge>
+                  )}
                   {conditionDisplay && (
                     <Badge variant="secondary" className="text-xs">
                       {conditionDisplay}
@@ -311,6 +407,17 @@ export function ExchangeListingDetailModal({
           </DialogHeader>
 
           <div className="space-y-6">
+            {isAdmin && flagDetails.length > 0 && (
+              <ListingFlagDetails 
+                flags={flagDetails} 
+                listingId={listingId}
+                listingTitle={listing.title}
+                tenantId={tenantId}
+                tenantSlug={tenantSlug}
+                onActionComplete={() => onOpenChange(false)}
+              />
+            )}
+
             {(selectedPhoto || listing.photos?.length > 0) && (
               <div className="space-y-3">
                 <div className="aspect-video w-full overflow-hidden rounded-lg bg-muted">
@@ -395,60 +502,81 @@ export function ExchangeListingDetailModal({
               </div>
             )}
 
-            <Card>
-              <CardContent className="pt-6">
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-lg">Shared by</h3>
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-12 w-12">
-                      <AvatarImage src={listing.creator?.profile_picture_url || undefined} alt={`${creatorName}'s avatar`} />
-                      <AvatarFallback>{creatorInitials}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="font-medium">{creatorName}</p>
-                      <p className="text-sm text-muted-foreground">Community Member</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            {!isCreator && !listing.archived_at && (
+              <div className="flex justify-end">
+                <FlagListingDialog
+                  listingId={listingId}
+                  tenantSlug={tenantSlug}
+                  triggerVariant="outline"
+                  triggerSize="sm"
+                  initialFlagCount={flagCount}
+                  initialHasUserFlagged={hasUserFlagged}
+                  onFlagSuccess={handleFlagSuccess}
+                />
+              </div>
+            )}
 
             {isCreator && (
               <Card>
                 <CardContent className="pt-6">
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     <h3 className="font-semibold text-sm text-muted-foreground">Manage Listing</h3>
                     <div className="flex flex-wrap gap-2">
-                      <Button variant="outline" size="sm" onClick={() => setIsEditModalOpen(true)}>
-                        <Pencil className="h-4 w-4 mr-2" />
-                        Edit Listing
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={handleTogglePause}
-                        disabled={isPausing}
-                      >
-                        {listing.is_available ? (
-                          <>
-                            <Pause className="h-4 w-4 mr-2" />
-                            Pause Listing
-                          </>
-                        ) : (
-                          <>
-                            <Play className="h-4 w-4 mr-2" />
-                            Resume Listing
-                          </>
-                        )}
-                      </Button>
-                      <Button 
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => setShowDeleteDialog(true)}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete Listing
-                      </Button>
+                      {listing.archived_at ? (
+                        <>
+                          <Button 
+                            variant="default" 
+                            size="sm"
+                            onClick={handleArchive}
+                            disabled={isArchiving}
+                          >
+                            <ArchiveRestore className="h-4 w-4 mr-2" />
+                            {isArchiving ? "Restoring..." : "Restore Listing"}
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button variant="outline" size="sm" onClick={() => setIsEditModalOpen(true)}>
+                            <Pencil className="h-4 w-4 mr-2" />
+                            Edit Listing
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={handleTogglePause}
+                            disabled={isPausing}
+                          >
+                            {listing.is_available ? (
+                              <>
+                                <Pause className="h-4 w-4 mr-2" />
+                                Pause Listing
+                              </>
+                            ) : (
+                              <>
+                                <Play className="h-4 w-4 mr-2" />
+                                Resume Listing
+                              </>
+                            )}
+                          </Button>
+                          <Button 
+                            variant="outline"
+                            size="sm"
+                            onClick={handleArchive}
+                            disabled={isArchiving}
+                          >
+                            <Archive className="h-4 w-4 mr-2" />
+                            {isArchiving ? "Archiving..." : "Archive Listing"}
+                          </Button>
+                          <Button 
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => setShowDeleteDialog(true)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete Listing
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -456,13 +584,43 @@ export function ExchangeListingDetailModal({
             )}
 
             {showBorrowButton && (
-              <Button 
-                className="w-full" 
-                size="lg"
-                onClick={() => toast.info("Request functionality coming soon in Sprint 7!")}
-              >
-                Request to Borrow
-              </Button>
+              <>
+                {hasPendingRequest ? (
+                  <div className="p-4 bg-accent rounded-lg border border-border">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary">Pending Request</Badge>
+                        <span className="text-sm text-muted-foreground">
+                          You have a pending request for this item
+                        </span>
+                      </div>
+                      <div className="text-sm space-y-1">
+                        <p>
+                          <strong>Quantity:</strong> {pendingRequest.quantity}
+                        </p>
+                        <p>
+                          <strong>Pickup:</strong>{" "}
+                          {new Date(pendingRequest.proposed_pickup_date).toLocaleDateString()}
+                        </p>
+                        {pendingRequest.proposed_return_date && (
+                          <p>
+                            <strong>Return:</strong>{" "}
+                            {new Date(pendingRequest.proposed_return_date).toLocaleDateString()}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <Button 
+                    className="w-full" 
+                    size="lg"
+                    onClick={() => setIsRequestDialogOpen(true)}
+                  >
+                    {getActionButtonText(listing.category?.name || "")}
+                  </Button>
+                )}
+              </>
             )}
 
             <div className="space-y-3 text-sm">
@@ -514,6 +672,18 @@ export function ExchangeListingDetailModal({
         />
       )}
 
+      {isCreator && (
+        <ListingHistoryModal
+          listingId={listingId}
+          listingName={listing?.title || "Listing"}
+          open={isHistoryModalOpen}
+          onOpenChange={setIsHistoryModalOpen}
+          userId={userId!}
+          tenantId={tenantId}
+          tenantSlug={tenantSlug}
+        />
+      )}
+
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -535,6 +705,28 @@ export function ExchangeListingDetailModal({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {showBorrowButton && !hasPendingRequest && (
+        <RequestBorrowDialog
+          open={isRequestDialogOpen}
+          onOpenChange={setIsRequestDialogOpen}
+          listingId={listingId}
+          listingTitle={listing?.title || ""}
+          listingCategory={listing?.category?.name || ""}
+          pricingType={listing?.pricing_type || "free"}
+          price={listing?.price}
+          availableQuantity={listing?.available_quantity || 0}
+          tenantSlug={tenantSlug}
+          tenantId={tenantId}
+          onSuccess={handleRequestSuccess}
+        />
+      )}
     </>
   )
+}
+
+async function getUserPendingRequest(userId: string, listingId: string, tenantId: string) {
+  // Placeholder function for fetching user pending request
+  // Implement actual logic here
+  return null
 }

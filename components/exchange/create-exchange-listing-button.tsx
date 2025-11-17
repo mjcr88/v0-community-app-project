@@ -12,6 +12,10 @@ interface CreateExchangeListingButtonProps {
   neighborhoods: Array<{ id: string; name: string }>
   variant?: "default" | "outline" | "ghost" | "link"
   className?: string
+  initialLocation?: {
+    id: string
+    name: string
+  }
 }
 
 export function CreateExchangeListingButton({
@@ -21,6 +25,7 @@ export function CreateExchangeListingButton({
   neighborhoods,
   variant = "default",
   className,
+  initialLocation,
 }: CreateExchangeListingButtonProps) {
   const [open, setOpen] = useState(false)
 
@@ -37,6 +42,7 @@ export function CreateExchangeListingButton({
         tenantId={tenantId}
         categories={categories}
         neighborhoods={neighborhoods}
+        initialLocation={initialLocation}
       />
     </>
   )

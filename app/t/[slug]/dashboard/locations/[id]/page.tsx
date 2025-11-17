@@ -9,8 +9,10 @@ import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { LocationEventsSection } from "./location-events-section"
 import { LocationCheckinsSection } from "./location-checkins-section"
+import { LocationExchangeSection } from "./location-exchange-section"
 import { getEventsByLocation } from "@/app/actions/events"
 import { getCheckInsByLocation } from "@/app/actions/check-ins"
+import { getExchangeListingsByLocation, getExchangeCategories } from "@/app/actions/exchange-listings"
 
 export default async function LocationDetailsPage({ params }: { params: { slug: string; id: string } }) {
   const { slug, id } = params
@@ -101,14 +103,13 @@ export default async function LocationDetailsPage({ params }: { params: { slug: 
 
   const { data: tenant } = await supabase
     .from("tenants")
-    .select("events_enabled, checkins_enabled")
+    .select("events_enabled, checkins_enabled, exchange_enabled")
     .eq("id", currentUser.tenant_id)
     .single()
 
   const eventsEnabled = tenant?.events_enabled === true
   const checkinsEnabled = tenant?.checkins_enabled === true
-  const canCreateEvents = isAdmin || eventsEnabled
-  const canCreateCheckIns = checkinsEnabled
+  const exchangeEnabled = tenant?.exchange_enabled === true
 
   let locationEvents: any[] = []
   if (eventsEnabled) {
@@ -118,6 +119,42 @@ export default async function LocationDetailsPage({ params }: { params: { slug: 
   let locationCheckIns: any[] = []
   if (checkinsEnabled) {
     locationCheckIns = await getCheckInsByLocation(location.id, currentUser.tenant_id)
+  }
+
+  const { data: currentResident } = await supabase
+    .from("users")
+    .select("id, onboarding_completed")
+    .eq("id", user.id)
+    .single()
+
+  const canCreateEvents = eventsEnabled && currentResident?.onboarding_completed === true
+  const canCreateCheckIns = checkinsEnabled && currentResident?.onboarding_completed === true
+  const canCreateListings = exchangeEnabled && currentResident?.onboarding_completed === true
+
+  let locationListings: any[] = []
+  let categories: any[] = []
+  let neighborhoods: any[] = []
+  let locations: any[] = []
+
+  if (exchangeEnabled) {
+    locationListings = await getExchangeListingsByLocation(location.id, currentUser.tenant_id)
+    categories = await getExchangeCategories(currentUser.tenant_id)
+
+    const { data: neighborhoodsData } = await supabase
+      .from("neighborhoods")
+      .select("id, name")
+      .eq("tenant_id", currentUser.tenant_id)
+      .order("name")
+
+    neighborhoods = neighborhoodsData || []
+
+    const { data: locationsData } = await supabase
+      .from("locations")
+      .select("id, name, type")
+      .eq("tenant_id", currentUser.tenant_id)
+      .order("name")
+
+    locations = locationsData || []
   }
 
   const getTypeLabel = (type: string) => {
@@ -515,7 +552,7 @@ export default async function LocationDetailsPage({ params }: { params: { slug: 
       )}
 
       {/* Events Section */}
-      {eventsEnabled && (locationEvents.length > 0 || canCreateEvents) && (
+      {eventsEnabled && locationEvents.length > 0 && (
         <div id="events">
           <LocationEventsSection
             events={locationEvents}
@@ -529,7 +566,8 @@ export default async function LocationDetailsPage({ params }: { params: { slug: 
         </div>
       )}
 
-      {checkinsEnabled && (locationCheckIns.length > 0 || canCreateCheckIns) && (
+      {/* Check-ins Section */}
+      {checkinsEnabled && locationCheckIns.length > 0 && (
         <div id="checkins">
           <LocationCheckinsSection
             checkIns={locationCheckIns}
@@ -538,6 +576,24 @@ export default async function LocationDetailsPage({ params }: { params: { slug: 
             locationName={location.name}
             tenantId={currentUser.tenant_id}
             canCreateCheckIns={canCreateCheckIns}
+          />
+        </div>
+      )}
+
+      {/* Exchange Section */}
+      {exchangeEnabled && locationListings.length > 0 && (
+        <div id="exchange">
+          <LocationExchangeSection
+            listings={locationListings}
+            slug={slug}
+            userId={user.id}
+            tenantId={currentUser.tenant_id}
+            locationName={location.name}
+            locationId={location.id}
+            canCreateListings={canCreateListings}
+            categories={categories}
+            neighborhoods={neighborhoods}
+            locations={locations}
           />
         </div>
       )}

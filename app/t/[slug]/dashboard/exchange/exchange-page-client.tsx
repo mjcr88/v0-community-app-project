@@ -68,6 +68,8 @@ export function ExchangePageClient({
   tenantId,
   tenantSlug,
   userId,
+  userRole,
+  isAdmin = false,
 }: {
   listings: Listing[]
   categories: Category[]
@@ -76,6 +78,8 @@ export function ExchangePageClient({
   tenantId: string
   tenantSlug: string
   userId: string | null
+  userRole?: string | null
+  isAdmin?: boolean
 }) {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
@@ -478,6 +482,8 @@ export function ExchangePageClient({
           tenantId={tenantId}
           tenantSlug={tenantSlug}
           userId={userId}
+          userRole={userRole}
+          isAdmin={isAdmin}
           locations={locations}
           categories={categories}
           neighborhoods={neighborhoods}

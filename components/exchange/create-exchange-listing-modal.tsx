@@ -36,6 +36,10 @@ interface CreateExchangeListingModalProps {
   tenantId: string
   categories: Array<{ id: string; name: string }>
   neighborhoods: Array<{ id: string; name: string }>
+  initialLocation?: {
+    id: string
+    name: string
+  }
 }
 
 export function CreateExchangeListingModal({
@@ -45,6 +49,7 @@ export function CreateExchangeListingModal({
   tenantId,
   categories,
   neighborhoods,
+  initialLocation,
 }: CreateExchangeListingModalProps) {
   const { toast } = useToast()
   const router = useRouter()
@@ -70,6 +75,16 @@ export function CreateExchangeListingModal({
     photos: [] as string[],
     hero_photo: null as string | null,
   })
+
+  useEffect(() => {
+    if (initialLocation && open) {
+      setFormData(prev => ({
+        ...prev,
+        location_type: "community",
+        location_id: initialLocation.id,
+      }))
+    }
+  }, [initialLocation, open])
 
   const hasUnsavedChanges = useCallback(() => {
     return (

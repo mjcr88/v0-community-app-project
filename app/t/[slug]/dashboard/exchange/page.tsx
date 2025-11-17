@@ -31,32 +31,33 @@ export default async function ExchangePage({ params }: { params: Promise<{ slug:
     redirect(`/t/${slug}/login`)
   }
 
-  const { data: resident } = await supabase
+  const { data: userData } = await supabase
     .from("users")
-    .select("id, tenant_id, lot_id, family_unit_id, onboarding_completed")
+    .select("id, tenant_id, lot_id, family_unit_id, onboarding_completed, role, is_tenant_admin")
     .eq("id", user.id)
-    .eq("role", "resident")
     .single()
 
-  if (!resident) {
+  if (!userData) {
     redirect(`/t/${slug}/login`)
   }
 
   // Check if exchange feature is enabled
-  const { data: tenant } = await supabase.from("tenants").select("exchange_enabled").eq("id", resident.tenant_id).single()
+  const { data: tenant } = await supabase.from("tenants").select("exchange_enabled").eq("id", userData.tenant_id).single()
 
   if (!tenant?.exchange_enabled) {
     redirect(`/t/${slug}/dashboard`)
   }
 
   const [listings, categories, neighborhoodsResult, locations] = await Promise.all([
-    getExchangeListings(resident.tenant_id),
-    getCachedExchangeCategories(resident.tenant_id),
-    getCachedNeighborhoods(resident.tenant_id),
-    getCachedLocations(resident.tenant_id)
+    getExchangeListings(userData.tenant_id),
+    getCachedExchangeCategories(userData.tenant_id),
+    getCachedNeighborhoods(userData.tenant_id),
+    getCachedLocations(userData.tenant_id)
   ])
 
   const neighborhoods = neighborhoodsResult.success ? neighborhoodsResult.data : []
+
+  const isAdmin = userData.is_tenant_admin || userData.role === "super_admin" || userData.role === "tenant_admin"
 
   return (
     <div className="space-y-6">
@@ -65,10 +66,10 @@ export default async function ExchangePage({ params }: { params: Promise<{ slug:
           <h2 className="text-3xl font-bold tracking-tight">Exchange Directory</h2>
           <p className="text-muted-foreground">Share, borrow, and trade within your community</p>
         </div>
-        {resident.onboarding_completed && (
+        {userData.onboarding_completed && (
           <CreateExchangeListingButton 
             tenantSlug={slug} 
-            tenantId={resident.tenant_id}
+            tenantId={userData.tenant_id}
             categories={categories}
             neighborhoods={neighborhoods}
           />
@@ -80,9 +81,11 @@ export default async function ExchangePage({ params }: { params: Promise<{ slug:
         categories={categories}
         neighborhoods={neighborhoods}
         locations={locations}
-        tenantId={resident.tenant_id}
+        tenantId={userData.tenant_id}
         tenantSlug={slug}
         userId={user.id}
+        userRole={userData.role}
+        isAdmin={isAdmin}
       />
     </div>
   )

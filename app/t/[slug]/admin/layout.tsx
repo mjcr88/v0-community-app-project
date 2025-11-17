@@ -1,5 +1,5 @@
 import type React from "react"
-import { redirect } from "next/navigation"
+import { redirect } from 'next/navigation'
 import { createClient } from "@/lib/supabase/server"
 import {
   Sidebar,
@@ -16,7 +16,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
-import { Home, MapPin, Users, Building2, HeartHandshake, Lightbulb, Map, Calendar } from "lucide-react"
+import { Home, MapPin, Users, Building2, HeartHandshake, Lightbulb, Map, Calendar, Package } from 'lucide-react'
 import Link from "next/link"
 import { UserAvatarMenu } from "@/components/user-avatar-menu"
 
@@ -260,6 +260,14 @@ export default async function TenantAdminLayout({
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 )}
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <Link href={`/t/${slug}/admin/exchange`}>
+                      <Package />
+                      <span>Exchange</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

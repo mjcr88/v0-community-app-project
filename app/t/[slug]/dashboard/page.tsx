@@ -12,6 +12,9 @@ import { getUserListings } from "@/app/actions/exchange-listings"
 import { cache } from 'react'
 import { MapSectionLazy } from "@/components/dashboard/map-section-lazy"
 import { DashboardSectionCollapsible } from "@/components/dashboard/dashboard-section-collapsible"
+import { MyListingsAndTransactionsWidget } from "@/components/exchange/my-listings-and-transactions-widget"
+import { getMyTransactions } from "@/app/actions/exchange-transactions"
+import { CreateExchangeListingButton } from "@/components/exchange/create-exchange-listing-button"
 
 const getCachedUser = cache(async () => {
   const supabase = await createClient()
@@ -77,6 +80,10 @@ const getCachedTenant = cache(async (tenantId: string) => {
 
 const getCachedUserListings = cache(async (userId: string, tenantId: string) => {
   return await getUserListings(userId, tenantId)
+})
+
+const getCachedUserTransactions = cache(async (userId: string, tenantId: string) => {
+  return await getMyTransactions(userId, tenantId)
 })
 
 export default async function ResidentDashboardPage({ params }: { params: { slug: string } }) {
@@ -201,11 +208,13 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
   let userListings: any[] = []
   let exchangeCategories: any[] = []
   let exchangeNeighborhoods: any[] = []
+  let userTransactions: any[] = []
   
   if (exchangeEnabled) {
     userListings = await getCachedUserListings(user.id, resident.tenant_id)
     exchangeCategories = await getCachedExchangeCategories(resident.tenant_id)
     exchangeNeighborhoods = await getCachedNeighborhoods(resident.tenant_id)
+    userTransactions = await getCachedUserTransactions(user.id, resident.tenant_id)
   }
 
   return (
@@ -241,11 +250,13 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
             </Button>
           )}
           {exchangeEnabled && (
-            <Button asChild variant="outline">
-              <Link href={`/t/${slug}/dashboard/exchange`}>
-                View My Listings
-              </Link>
-            </Button>
+            <CreateExchangeListingButton
+              tenantSlug={slug}
+              tenantId={resident.tenant_id}
+              categories={exchangeCategories}
+              neighborhoods={exchangeNeighborhoods}
+              variant="outline"
+            />
           )}
         </div>
       </DashboardSectionCollapsible>
@@ -253,7 +264,7 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
       <DashboardSectionCollapsible 
         title="Upcoming Events" 
         description="Your next events"
-        defaultOpen={true}
+        defaultOpen={false}
       >
         <UpcomingEventsWidget
           slug={slug}
@@ -266,7 +277,7 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
         <DashboardSectionCollapsible 
           title="Live Check-ins"
           description="Active residents now"
-          defaultOpen={true}
+          defaultOpen={false}
         >
           <LiveCheckInsWidget
             tenantSlug={slug}
@@ -276,14 +287,15 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
         </DashboardSectionCollapsible>
       )}
 
-      {exchangeEnabled && userListings.length > 0 && (
+      {exchangeEnabled && (userListings.length > 0 || userTransactions.length > 0) && (
         <DashboardSectionCollapsible 
-          title="My Listings"
-          description="Manage your exchange listings"
+          title="My Listings & Transactions"
+          description="Manage your exchange listings and track active exchanges"
           defaultOpen={true}
         >
-          <MyExchangeListingsWidget
+          <MyListingsAndTransactionsWidget
             listings={userListings}
+            transactions={userTransactions}
             tenantSlug={slug}
             tenantId={resident.tenant_id}
             userId={user.id}

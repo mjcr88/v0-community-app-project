@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Package, Plus, Pencil, Pause, Play, Eye, FileText, Trash2 } from 'lucide-react'
+import { Package, Plus, Pencil, Pause, Play, Eye, FileText, Trash2, History } from 'lucide-react'
 import Link from "next/link"
 import { useState } from "react"
 import { useRouter } from 'next/navigation'
@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import Image from "next/image"
 import type { Location } from "@/types/locations"
+import { ListingHistoryModal } from "./listing-history-modal" // Import ListingHistoryModal
 
 interface ListingCategory {
   id: string
@@ -78,6 +79,8 @@ export function MyExchangeListingsWidget({
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [deleteListingId, setDeleteListingId] = useState<string | null>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [historyListingId, setHistoryListingId] = useState<string | null>(null)
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false)
 
   const counts = {
     total: listings.length,
@@ -137,6 +140,13 @@ export function MyExchangeListingsWidget({
     e.stopPropagation()
     setDeleteListingId(listingId)
     setShowDeleteDialog(true)
+  }
+
+  const handleViewHistory = (listingId: string, e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setHistoryListingId(listingId)
+    setIsHistoryModalOpen(true)
   }
 
   const confirmDelete = async () => {
@@ -254,6 +264,17 @@ export function MyExchangeListingsWidget({
             >
               <Eye className="h-3 w-3 mr-1" />
               View
+            </Button>
+
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 text-xs"
+              onClick={(e) => handleViewHistory(listing.id, e)}
+              disabled={isLoading}
+            >
+              <History className="h-3 w-3 mr-1" />
+              History
             </Button>
 
             <Button
@@ -407,6 +428,18 @@ export function MyExchangeListingsWidget({
             setIsEditOpen(false)
             router.refresh()
           }}
+        />
+      )}
+
+      {historyListingId && (
+        <ListingHistoryModal
+          listingId={historyListingId}
+          listingName={listings.find(l => l.id === historyListingId)?.title || "Listing"}
+          open={isHistoryModalOpen}
+          onOpenChange={setIsHistoryModalOpen}
+          userId={userId}
+          tenantId={tenantId}
+          tenantSlug={tenantSlug}
         />
       )}
 

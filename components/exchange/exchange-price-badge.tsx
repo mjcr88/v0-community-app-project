@@ -32,7 +32,7 @@ export function ExchangePriceBadge({ pricingType, price, compact = false }: Exch
   return (
     <Badge variant="outline" className={compact ? "text-xs gap-1" : "gap-1"}>
       <DollarSign className="h-3 w-3" />
-      {price ? `$${price.toFixed(2)}` : "Price TBD"}
+      {price ? `${price.toFixed(2)}` : "Price TBD"}
     </Badge>
   )
 }

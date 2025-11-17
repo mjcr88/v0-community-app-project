@@ -57,12 +57,16 @@ export function ClearFlagDialog({
           }
         }
 
-        toast.success(`Flags cleared for ${listingIds.length} listing${listingIds.length > 1 ? "s" : ""}`)
         console.log("[v0] All flags cleared successfully")
+        toast.success(`Flags cleared for ${listingIds.length} listing${listingIds.length > 1 ? "s" : ""}`)
         
         setOpen(false)
         setReason("")
-        router.refresh()
+        
+        // Delay refresh slightly to ensure revalidation completes
+        setTimeout(() => {
+          router.refresh()
+        }, 150)
       } catch (error) {
         console.error("[v0] Unexpected error clearing flags:", error)
         toast.error("An unexpected error occurred")

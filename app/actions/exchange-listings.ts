@@ -1521,71 +1521,77 @@ export async function adminUnflagListing(
   tenantSlug: string,
   reason?: string,
 ) {
-  try {
-    const supabase = await createServerClient()
+  const supabase = await createServerClient()
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-    if (!user) {
-      return { success: false, error: "User not authenticated" }
-    }
-
-    const { data: userData } = await supabase.from("users").select("is_tenant_admin, role").eq("id", user.id).single()
-
-    const isAdmin = userData?.is_tenant_admin || userData?.role === "super_admin" || userData?.role === "tenant_admin"
-
-    if (!isAdmin) {
-      return { success: false, error: "You don't have permission to unflag listings" }
-    }
-
-    const { data: listing } = await supabase
-      .from("exchange_listings")
-      .select("created_by, title")
-      .eq("id", listingId)
-      .eq("tenant_id", tenantId)
-      .single()
-
-    const { error } = await supabase.from("exchange_flags").delete().eq("listing_id", listingId).eq("tenant_id", tenantId)
-
-    if (error) {
-      console.error("[v0] Error unflagging listing:", error)
-      return { success: false, error: error.message }
-    }
-
-    await supabase
-      .from("exchange_listings")
-      .update({
-        is_flagged: false,
-        flagged_at: null,
-      })
-      .eq("id", listingId)
-
-    if (reason && listing?.created_by) {
-      await createNotification({
-        tenant_id: tenantId,
-        recipient_id: listing.created_by,
-        type: "exchange_listing_unflagged",
-        title: "Listing Flags Cleared",
-        message: `Your listing "${listing.title}" has been reviewed and all flags have been cleared by an admin.${reason ? `\n\nAdmin note: ${reason}` : ""}`,
-        action_required: false,
-        exchange_listing_id: listingId,
-      })
-    }
-
-    revalidatePath(`/t/${tenantSlug}/admin/exchange`)
-    revalidatePath(`/t/${tenantSlug}/dashboard/exchange`)
-
-    return { success: true }
-  } catch (error) {
-    console.error("[v0] Unexpected error unflagging listing:", error)
-    return {
-      success: false,
-      error: "An unexpected error occurred. Please try again.",
-    }
+  if (!user) {
+    return { success: false, error: "Unauthorized" }
   }
+
+  // Verify user is tenant admin
+  const { data: userData, error: userError } = await supabase
+    .from("users")
+    .select("is_tenant_admin, role")
+    .eq("id", user.id)
+    .single()
+
+  if (userError || !userData) {
+    return { success: false, error: "Failed to verify admin status" }
+  }
+
+  const isAdmin =
+    userData.is_tenant_admin === true || userData.role === "super_admin" || userData.role === "tenant_admin"
+
+  if (!isAdmin) {
+    return { success: false, error: "Only admins can clear flags" }
+  }
+
+  // Get listing details for the creator
+  const { data: listing, error: listingError } = await supabase
+    .from("exchange_listings")
+    .select("title, created_by")
+    .eq("id", listingId)
+    .eq("tenant_id", tenantId)
+    .single()
+
+  if (listingError || !listing) {
+    return { success: false, error: "Listing not found" }
+  }
+
+  // Delete all flags for this listing
+  const { error: deleteFlagsError } = await supabase
+    .from("exchange_flags")
+    .delete()
+    .eq("listing_id", listingId)
+    .eq("tenant_id", tenantId)
+
+  if (deleteFlagsError) {
+    console.error("[v0] Error deleting flags:", deleteFlagsError)
+    return { success: false, error: "Failed to clear flags" }
+  }
+
+  // Notify the creator that flags were cleared (if reason provided)
+  if (reason && listing.created_by) {
+    await createNotification({
+      tenant_id: tenantId,
+      recipient_id: listing.created_by,
+      type: "exchange_listing_unflagged",
+      title: "Listing Flags Cleared",
+      message: `Your listing "${listing.title}" has been reviewed and cleared by an administrator. Admin note: ${reason}`,
+      action_required: false,
+      exchange_listing_id: listingId,
+    })
+  }
+
+  revalidatePath(`/t/${tenantSlug}/admin/exchange`)
+  revalidatePath(`/t/${tenantSlug}/dashboard/exchange`)
+
+  return { success: true }
 }
+
 
 export async function dismissListingFlag(flagId: string, tenantSlug: string) {
   try {

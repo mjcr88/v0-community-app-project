@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { ArrowUpDown, Flag, MapPin, Search, X, Trash2, Archive, FlagOff, ChevronDown } from 'lucide-react'
+import { ArrowUpDown, Flag, MapPin, Search, X, Trash2, Archive, FlagOff, ChevronDown, Eye } from 'lucide-react'
 import Link from "next/link"
 import { formatDate } from "date-fns"
 import {
@@ -573,7 +573,15 @@ export function AdminExchangeTable({
                     )}
                   </TableCell>
                   <TableCell className="text-right">
-                    <span className="text-sm text-muted-foreground">{getListingDate(listing)}</span>
+                    <div className="flex items-center justify-end gap-2">
+                      <Button variant="ghost" size="icon" asChild>
+                        <Link href={`/t/${slug}/dashboard/exchange?listing=${listing.id}`}>
+                          <Eye className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                      
+                      <span className="text-sm text-muted-foreground">{getListingDate(listing)}</span>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))

@@ -51,27 +51,19 @@ export function ArchiveListingsDialog({
       return
     }
 
-    console.log("[v0] Archive started for:", listingIds)
-    console.log("[v0] Reason:", reason)
-
     startTransition(async () => {
       try {
         const result = await adminArchiveListings(listingIds, tenantId, tenantSlug, reason)
-        console.log("[v0] Archive result:", result)
 
         if (result.success) {
-          toast.success(`${listingIds.length} listing(s) archived successfully`)
-          console.log("[v0] Archive successful")
-          
           setOpen(false)
           setReason("")
+          toast.success(`${listingIds.length} listing${listingIds.length > 1 ? "s" : ""} archived successfully`)
           router.refresh()
         } else {
-          console.error("[v0] Archive failed:", result.error)
           toast.error(result.error || "Failed to archive listings")
         }
       } catch (error) {
-        console.error("[v0] Unexpected error archiving:", error)
         toast.error("An unexpected error occurred")
       }
     })

@@ -41,34 +41,29 @@ export function ClearFlagDialog({
   const [isPending, startTransition] = useTransition()
 
   const handleClearFlags = async () => {
-    console.log("[v0] Clear flags started for:", listingIds)
+    let allSuccess = true
+    let errorMessage = ""
     
     startTransition(async () => {
       try {
         for (const listingId of listingIds) {
-          console.log("[v0] Clearing flags for listing:", listingId)
           const result = await adminUnflagListing(listingId, tenantId, tenantSlug, reason || undefined)
-          console.log("[v0] Unflag result:", result)
 
           if (!result.success) {
-            console.error("[v0] Failed to clear flags:", result.error)
-            toast.error(result.error || `Failed to clear flags for listing`)
+            allSuccess = false
+            errorMessage = result.error || `Failed to clear flags for listing`
+            toast.error(errorMessage)
             return
           }
         }
 
-        console.log("[v0] All flags cleared successfully")
-        toast.success(`Flags cleared for ${listingIds.length} listing${listingIds.length > 1 ? "s" : ""}`)
-        
-        setOpen(false)
-        setReason("")
-        
-        // Delay refresh slightly to ensure revalidation completes
-        setTimeout(() => {
+        if (allSuccess) {
+          setOpen(false)
+          setReason("")
+          toast.success(`Flags cleared for ${listingIds.length} listing${listingIds.length > 1 ? "s" : ""}`)
           router.refresh()
-        }, 150)
+        }
       } catch (error) {
-        console.error("[v0] Unexpected error clearing flags:", error)
         toast.error("An unexpected error occurred")
       }
     })

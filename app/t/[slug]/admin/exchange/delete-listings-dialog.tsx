@@ -46,20 +46,19 @@ export function DeleteListingsDialog({
         console.log("[v0] Delete result:", result)
 
         if (result.success) {
-          toast.success(`${listingIds.length} listing(s) deleted successfully`)
-          console.log("[v0] Delete successful")
-          
           setOpen(false)
-          router.refresh()
         } else {
-          console.error("[v0] Delete failed:", result.error)
           toast.error(result.error || "Failed to delete listings")
         }
       } catch (error) {
-        console.error("[v0] Unexpected error deleting:", error)
         toast.error("An unexpected error occurred")
       }
     })
+
+    if (listingIds.length > 0) {
+      toast.success(`${listingIds.length} listing${listingIds.length > 1 ? "s" : ""} deleted successfully`)
+      router.refresh()
+    }
   }
 
   const title = listingIds.length === 1 && listingTitle 

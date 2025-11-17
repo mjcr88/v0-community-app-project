@@ -25,6 +25,9 @@ export type NotificationType =
   // Check-in-related (future)
   | 'checkin_invite'
   | 'checkin_joined'
+  // Request-related
+  | 'request_status_changed'
+  | 'request_admin_reply'
   // Announcements (future)
   | 'announcement'
   // Mentions (future)
@@ -57,6 +60,7 @@ export interface Notification {
   exchange_listing_id: string | null
   event_id: string | null
   check_in_id: string | null
+  resident_request_id: string | null // Added for request notifications
   
   // Context
   actor_id: string | null
@@ -126,6 +130,7 @@ export interface CreateNotificationData {
   exchange_listing_id?: string | null
   event_id?: string | null
   check_in_id?: string | null
+  resident_request_id?: string | null // Added for request notifications
   actor_id?: string | null
   action_url?: string | null
   metadata?: Record<string, any> | null

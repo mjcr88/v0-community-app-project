@@ -16,7 +16,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
-import { Home, MapPin, Users, Building2, HeartHandshake, Lightbulb, Map, Calendar, Package } from 'lucide-react'
+import { Home, MapPin, Users, Building2, HeartHandshake, Lightbulb, Map, Calendar, Package, ClipboardList } from 'lucide-react'
 import Link from "next/link"
 import { UserAvatarMenu } from "@/components/user-avatar-menu"
 
@@ -265,6 +265,14 @@ export default async function TenantAdminLayout({
                     <Link href={`/t/${slug}/admin/exchange`}>
                       <Package />
                       <span>Exchange</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <Link href={`/t/${slug}/admin/requests`}>
+                      <ClipboardList />
+                      <span>Requests</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

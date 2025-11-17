@@ -19,19 +19,11 @@ import {
   DropdownMenuTrigger,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+import { ClearFlagDialog } from "./clear-flag-dialog"
+import { ArchiveListingsDialog } from "./archive-listings-dialog"
+import { DeleteListingsDialog } from "./delete-listings-dialog"
 import { useRouter } from 'next/navigation'
 import { toast } from "sonner"
-import { adminDeleteListings, adminArchiveListings, adminUnflagListing } from "@/app/actions/exchange-listings"
 
 type AdminListing = {
   id: string
@@ -93,10 +85,6 @@ export function AdminExchangeTable({
   const [pricingTypeFilter, setPricingTypeFilter] = useState<string>("all")
   const [conditionFilter, setConditionFilter] = useState<string>("all")
   const [flaggedFilter, setFlaggedFilter] = useState<string>("all")
-
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const [showArchiveDialog, setShowArchiveDialog] = useState(false)
-  const [isProcessing, setIsProcessing] = useState(false)
 
   const filteredListings = useMemo(() => {
     let filtered = listings
@@ -232,101 +220,6 @@ export function AdminExchangeTable({
     conditionFilter !== "all" ||
     flaggedFilter !== "all"
 
-  const handleBulkDelete = async () => {
-    setIsProcessing(true)
-    try {
-      const result = await adminDeleteListings(selectedListings, tenantId, slug)
-      
-      if (!result.success) {
-        toast.error(result.error || "Failed to delete listings")
-        return
-      }
-      
-      toast.success(`${selectedListings.length} listing(s) deleted successfully`)
-      setSelectedListings([])
-      setShowDeleteDialog(false)
-      router.refresh()
-    } catch (error) {
-      toast.error("An unexpected error occurred")
-    } finally {
-      setIsProcessing(false)
-    }
-  }
-
-  const handleBulkArchive = async () => {
-    setIsProcessing(true)
-    try {
-      const result = await adminArchiveListings(selectedListings, tenantId, slug)
-      
-      if (!result.success) {
-        toast.error(result.error || "Failed to archive listings")
-        return
-      }
-      
-      toast.success(`${selectedListings.length} listing(s) archived successfully`)
-      setSelectedListings([])
-      setShowArchiveDialog(false)
-      router.refresh()
-    } catch (error) {
-      toast.error("An unexpected error occurred")
-    } finally {
-      setIsProcessing(false)
-    }
-  }
-
-  const handleBulkUnflag = async () => {
-    const flaggedListings = selectedListings.filter((id) => {
-      const listing = sortedListings.find((l) => l.id === id)
-      return listing && listing.flag_count > 0
-    })
-
-    if (flaggedListings.length === 0) {
-      toast.error("No flagged listings selected")
-      return
-    }
-
-    setIsProcessing(true)
-    try {
-      const results = await Promise.all(
-        flaggedListings.map((id) => adminUnflagListing(id, tenantId, slug))
-      )
-      
-      const failedCount = results.filter((r) => !r.success).length
-      
-      if (failedCount > 0) {
-        toast.error(`Failed to unflag ${failedCount} listing(s)`)
-      } else {
-        toast.success(`${flaggedListings.length} listing(s) unflagged successfully`)
-      }
-      
-      setSelectedListings([])
-      router.refresh()
-    } catch (error) {
-      toast.error("An unexpected error occurred")
-    } finally {
-      setIsProcessing(false)
-    }
-  }
-
-  const handleUnflagListing = async (listingId: string) => {
-    setIsProcessing(true)
-    try {
-      const result = await adminUnflagListing(listingId, tenantId, slug)
-      
-      if (!result.success) {
-        toast.error(result.error || "Failed to unflag listing")
-        return
-      }
-      
-      toast.success("Listing unflagged successfully")
-      router.refresh()
-    } catch (error) {
-      toast.error("An unexpected error occurred")
-    } finally {
-      setIsProcessing(false)
-    }
-  }
-
   const getListingDate = (listing: AdminListing) => {
     try {
       const date = new Date(listing.published_at || listing.created_at)
@@ -401,18 +294,27 @@ export function AdminExchangeTable({
             {selectedListings.length} listing{selectedListings.length > 1 ? "s" : ""} selected
           </span>
           <div className="flex gap-2 ml-auto">
-            <Button variant="destructive" size="sm" onClick={() => setShowDeleteDialog(true)} disabled={isProcessing}>
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setShowArchiveDialog(true)} disabled={isProcessing}>
-              <Archive className="mr-2 h-4 w-4" />
-              Archive
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleBulkUnflag} disabled={isProcessing}>
-              <Flag className="mr-2 h-4 w-4" />
-              Unflag
-            </Button>
+            <DeleteListingsDialog
+              listingIds={selectedListings}
+              tenantId={tenantId}
+              tenantSlug={slug}
+              triggerSize="sm"
+            />
+            <ArchiveListingsDialog
+              listingIds={selectedListings}
+              tenantId={tenantId}
+              tenantSlug={slug}
+              triggerSize="sm"
+            />
+            {selectedListings.length === 1 && (
+              <ClearFlagDialog
+                listingId={selectedListings[0]}
+                listingTitle="listing"
+                tenantId={tenantId}
+                tenantSlug={slug}
+                triggerSize="sm"
+              />
+            )}
           </div>
         </div>
       )}
@@ -658,30 +560,41 @@ export function AdminExchangeTable({
                     <span className="text-sm">{listing.available_quantity ?? "—"}</span>
                   </TableCell>
                   <TableCell>
-                    {listing.flag_count > 0 ? (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 px-2"
-                        onClick={() => handleUnflagListing(listing.id)}
-                        disabled={isProcessing}
-                      >
-                        <Badge variant="destructive">
-                          <Flag className="h-3 w-3 mr-1" />
-                          {listing.flag_count}
-                        </Badge>
-                      </Button>
-                    ) : (
-                      <span className="text-muted-foreground text-sm">—</span>
+                    {listing.flag_count > 0 && (
+                      <ClearFlagDialog
+                        listingId={listing.id}
+                        listingTitle={listing.title}
+                        tenantId={tenantId}
+                        tenantSlug={slug}
+                        triggerSize="icon"
+                      />
                     )}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" asChild>
-                        <Link href={`/t/${slug}/dashboard/exchange`}>
-                          <Eye className="h-4 w-4" />
-                        </Link>
-                      </Button>
+                      {listing.flag_count > 0 && (
+                        <ClearFlagDialog
+                          listingId={listing.id}
+                          listingTitle={listing.title}
+                          tenantId={tenantId}
+                          tenantSlug={slug}
+                          triggerSize="icon"
+                        />
+                      )}
+                      <ArchiveListingsDialog
+                        listingIds={[listing.id]}
+                        listingTitle={listing.title}
+                        tenantId={tenantId}
+                        tenantSlug={slug}
+                        triggerSize="icon"
+                      />
+                      <DeleteListingsDialog
+                        listingIds={[listing.id]}
+                        listingTitle={listing.title}
+                        tenantId={tenantId}
+                        tenantSlug={slug}
+                        triggerSize="icon"
+                      />
                     </div>
                   </TableCell>
                 </TableRow>
@@ -690,45 +603,6 @@ export function AdminExchangeTable({
           </TableBody>
         </Table>
       </div>
-
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete {selectedListings.length} listing(s)?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the selected listings and all associated data
-              including transactions and flags.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isProcessing}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleBulkDelete}
-              disabled={isProcessing}
-              className="bg-destructive text-destructive-foreground"
-            >
-              {isProcessing ? "Deleting..." : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={showArchiveDialog} onOpenChange={setShowArchiveDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Archive {selectedListings.length} listing(s)?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will hide the listings from residents but preserve all data. You can unarchive them later.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isProcessing}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleBulkArchive} disabled={isProcessing}>
-              {isProcessing ? "Archiving..." : "Archive"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   )
 }

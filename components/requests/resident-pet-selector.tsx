@@ -8,14 +8,14 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Search, Users, Dog } from 'lucide-react'
+import { getResidents, getPets } from "@/app/actions/neighborhoods"
 
 type Resident = {
   id: string
   first_name: string
   last_name: string
   profile_picture_url: string | null
-  lot_id: string | null
-  lots?: { lot_number: string } | null
+  family_unit_id: string | null
 }
 
 type Pet = {
@@ -52,16 +52,13 @@ export function ResidentPetSelector({
     async function fetchData() {
       setIsLoading(true)
       try {
-        // Fetch residents
-        const residentsResponse = await fetch(`/api/residents?tenantId=${tenantId}`)
-        const residentsData = await residentsResponse.json()
-        
-        // Fetch pets
-        const petsResponse = await fetch(`/api/pets?tenantId=${tenantId}`)
-        const petsData = await petsResponse.json()
+        const [residentsResult, petsResult] = await Promise.all([
+          getResidents(tenantId),
+          getPets(tenantId)
+        ])
 
-        if (residentsData.success) setResidents(residentsData.data || [])
-        if (petsData.success) setPets(petsData.data || [])
+        if (residentsResult.success) setResidents(residentsResult.data || [])
+        if (petsResult.success) setPets(petsResult.data || [])
       } catch (error) {
         console.error("[v0] Error fetching residents/pets:", error)
       } finally {
@@ -141,9 +138,6 @@ export function ResidentPetSelector({
                       <Label htmlFor={`resident-${resident.id}`} className="cursor-pointer font-normal block">
                         {resident.first_name} {resident.last_name}
                       </Label>
-                      {resident.lots && (
-                        <p className="text-xs text-muted-foreground">Lot {resident.lots.lot_number}</p>
-                      )}
                     </div>
                   </div>
                 ))}

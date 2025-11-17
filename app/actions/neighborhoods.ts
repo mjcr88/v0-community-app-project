@@ -94,3 +94,36 @@ export async function getFamilyUnits(tenantId: string) {
     }
   }
 }
+
+export async function getPets(tenantId: string) {
+  try {
+    const supabase = await createServerClient()
+
+    const { data: pets, error } = await supabase
+      .from("pets")
+      .select(`
+        id,
+        name,
+        species,
+        breed,
+        profile_picture_url,
+        family_unit:family_unit_id(name)
+      `)
+      .eq("lot_id", tenantId)
+      .order("name", { ascending: true })
+
+    if (error) {
+      console.error("[v0] Error fetching pets:", error)
+      return { success: false, error: error.message, data: [] }
+    }
+
+    return { success: true, data: pets || [] }
+  } catch (error) {
+    console.error("[v0] Unexpected error fetching pets:", error)
+    return {
+      success: false,
+      error: "An unexpected error occurred",
+      data: [],
+    }
+  }
+}

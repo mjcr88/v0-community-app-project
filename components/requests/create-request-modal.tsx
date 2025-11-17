@@ -16,6 +16,7 @@ import { createResidentRequest } from "@/app/actions/resident-requests"
 import { LocationSelector } from "@/components/event-forms/location-selector"
 import { PhotoManager } from "@/components/photo-manager"
 import { RequestTypeIcon } from "./request-type-icon"
+import { ResidentPetSelector } from "./resident-pet-selector"
 import type { RequestType, RequestPriority } from "@/types/requests"
 
 interface CreateRequestModalProps {
@@ -26,26 +27,36 @@ interface CreateRequestModalProps {
   requestType: RequestType
 }
 
-const requestTypeLabels: Record<RequestType, { title: string; description: string }> = {
+const requestTypeLabels: Record<RequestType, { title: string; description: string; titlePlaceholder: string; descriptionPlaceholder: string }> = {
   maintenance: {
     title: "Maintenance Request",
     description: "Report something that needs fixing or repair",
+    titlePlaceholder: "Brief description of what needs fixing",
+    descriptionPlaceholder: "Please provide details about the maintenance issue...",
   },
   question: {
     title: "Question",
     description: "Ask about processes, policies, or community information",
+    titlePlaceholder: "Brief description of your question",
+    descriptionPlaceholder: "Please provide details about your question...",
   },
   complaint: {
     title: "Complaint",
     description: "Report an issue or concern about the community or neighbors",
+    titlePlaceholder: "Brief description of your complaint",
+    descriptionPlaceholder: "Please provide details about your complaint...",
   },
   safety: {
     title: "Safety Issue",
     description: "Report urgent safety concerns that need immediate attention",
+    titlePlaceholder: "Brief description of the safety issue",
+    descriptionPlaceholder: "Please provide details about the safety concern...",
   },
   other: {
     title: "Other Request",
     description: "Submit a request that doesn't fit other categories",
+    titlePlaceholder: "Brief description of your request",
+    descriptionPlaceholder: "Please provide details about your request...",
   },
 }
 
@@ -64,13 +75,15 @@ export function CreateRequestModal({
     title: "",
     description: "",
     priority: "normal" as RequestPriority,
-    location_type: "community" as "community" | "custom" | null,
+    location_type: null as "community" | "custom" | null,
     location_id: null as string | null,
     custom_location_name: "",
     custom_location_lat: null as number | null,
     custom_location_lng: null as number | null,
     is_anonymous: false,
     images: [] as string[],
+    tagged_resident_ids: [] as string[],
+    tagged_pet_ids: [] as string[],
   })
 
   const handleLocationTypeChange = useCallback((type: "community" | "custom" | "none") => {
@@ -141,6 +154,8 @@ export function CreateRequestModal({
         custom_location_lng: formData.location_type === "custom" ? formData.custom_location_lng : null,
         is_anonymous: formData.is_anonymous,
         images: formData.images,
+        tagged_resident_ids: formData.tagged_resident_ids,
+        tagged_pet_ids: formData.tagged_pet_ids,
       }
 
       const result = await createResidentRequest(tenantId, tenantSlug, requestData)
@@ -193,7 +208,7 @@ export function CreateRequestModal({
                 </Label>
                 <Input
                   id="title"
-                  placeholder="Brief description of your request"
+                  placeholder={typeInfo.titlePlaceholder}
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   required
@@ -206,7 +221,7 @@ export function CreateRequestModal({
                 </Label>
                 <Textarea
                   id="description"
-                  placeholder="Please provide details about your request..."
+                  placeholder={typeInfo.descriptionPlaceholder}
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   rows={6}
@@ -279,23 +294,45 @@ export function CreateRequestModal({
                 </p>
               </div>
 
-              <LocationSelector
-                tenantId={tenantId}
-                locationType={formData.location_type || "none"}
-                communityLocationId={formData.location_id}
-                customLocationName={formData.custom_location_name}
-                customLocationCoordinates={
-                  formData.custom_location_lat && formData.custom_location_lng
-                    ? { lat: formData.custom_location_lat, lng: formData.custom_location_lng }
-                    : null
-                }
-                customLocationType="marker"
-                customLocationPath={null}
-                onLocationTypeChange={handleLocationTypeChange}
-                onCommunityLocationChange={handleCommunityLocationChange}
-                onCustomLocationNameChange={handleCustomLocationNameChange}
-                onCustomLocationChange={handleCustomLocationChange}
-              />
+              {requestType === 'complaint' && (
+                <div className="space-y-2 pt-4 border-t">
+                  <Label className="text-base font-semibold">Tag Residents or Pets (Optional)</Label>
+                  <p className="text-sm text-muted-foreground">
+                    If your complaint involves specific residents or pets, you can tag them here
+                  </p>
+                  <ResidentPetSelector
+                    tenantId={tenantId}
+                    selectedResidentIds={formData.tagged_resident_ids}
+                    selectedPetIds={formData.tagged_pet_ids}
+                    onResidentsChange={(ids) => setFormData({ ...formData, tagged_resident_ids: ids })}
+                    onPetsChange={(ids) => setFormData({ ...formData, tagged_pet_ids: ids })}
+                  />
+                </div>
+              )}
+
+              <div className="space-y-2 pt-4 border-t">
+                <Label className="text-base font-semibold">Location (Optional)</Label>
+                <p className="text-sm text-muted-foreground">
+                  Where is this request related to?
+                </p>
+                <LocationSelector
+                  tenantId={tenantId}
+                  locationType={formData.location_type || "none"}
+                  communityLocationId={formData.location_id}
+                  customLocationName={formData.custom_location_name}
+                  customLocationCoordinates={
+                    formData.custom_location_lat && formData.custom_location_lng
+                      ? { lat: formData.custom_location_lat, lng: formData.custom_location_lng }
+                      : null
+                  }
+                  customLocationType="marker"
+                  customLocationPath={null}
+                  onLocationTypeChange={handleLocationTypeChange}
+                  onCommunityLocationChange={handleCommunityLocationChange}
+                  onCustomLocationNameChange={handleCustomLocationNameChange}
+                  onCustomLocationChange={handleCustomLocationChange}
+                />
+              </div>
 
               {requestType === 'complaint' && (
                 <div className="flex items-center space-x-2 pt-4 border-t">

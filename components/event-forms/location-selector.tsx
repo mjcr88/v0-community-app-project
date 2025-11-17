@@ -274,12 +274,8 @@ export function LocationSelector({
   })()
 
   return (
-    <div className="space-y-4 pt-4 border-t">
-      <div className="space-y-2">
-        <Label className="text-base font-semibold">Event Location</Label>
-        <p className="text-sm text-muted-foreground">Where will this event take place?</p>
-      </div>
-
+    <div className="space-y-4">
+      
       <RadioGroup value={locationType} onValueChange={(value) => onLocationTypeChange(value as LocationType)}>
         <div className="space-y-3">
           <div className="flex items-start space-x-3 rounded-md border p-4">
@@ -309,9 +305,9 @@ export function LocationSelector({
             <div className="flex-1">
               <Label htmlFor="location-none" className="font-medium cursor-pointer flex items-center gap-2">
                 <XCircle className="h-4 w-4" />
-                No Physical Location
+                No location
               </Label>
-              <p className="text-sm text-muted-foreground mt-1">Virtual event or location not applicable</p>
+              <p className="text-sm text-muted-foreground mt-1">Location not applicable</p>
             </div>
           </div>
         </div>

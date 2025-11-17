@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Pencil, Eye, ArrowUpDown, Flag, MapPin, Search, X, Trash2, Archive, ChevronDown } from 'lucide-react'
+import { ArrowUpDown, Flag, MapPin, Search, X, Trash2, Archive, FlagOff, ChevronDown } from 'lucide-react'
 import Link from "next/link"
 import { formatDate } from "date-fns"
 import {
@@ -22,8 +22,6 @@ import {
 import { ClearFlagDialog } from "./clear-flag-dialog"
 import { ArchiveListingsDialog } from "./archive-listings-dialog"
 import { DeleteListingsDialog } from "./delete-listings-dialog"
-import { useRouter } from 'next/navigation'
-import { toast } from "sonner"
 
 type AdminListing = {
   id: string
@@ -72,7 +70,6 @@ export function AdminExchangeTable({
   tenantId: string
   categories: Category[]
 }) {
-  const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
   const [sortedListings, setSortedListings] = useState<AdminListing[]>(listings)
   const [sortField, setSortField] = useState<string>("created_at")
@@ -263,6 +260,14 @@ export function AdminExchangeTable({
     return `$${price.toFixed(2)}`
   }
 
+  const selectedListingTitles = useMemo(() => {
+    return sortedListings
+      .filter(listing => selectedListings.includes(listing.id))
+      .map(listing => listing.title)
+  }, [selectedListings, sortedListings])
+
+  const selectedListingTitle = selectedListings.length === 1 ? selectedListingTitles[0] : undefined
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-4">
@@ -296,25 +301,25 @@ export function AdminExchangeTable({
           <div className="flex gap-2 ml-auto">
             <DeleteListingsDialog
               listingIds={selectedListings}
+              listingTitle={selectedListingTitle}
               tenantId={tenantId}
               tenantSlug={slug}
               triggerSize="sm"
             />
             <ArchiveListingsDialog
               listingIds={selectedListings}
+              listingTitle={selectedListingTitle}
               tenantId={tenantId}
               tenantSlug={slug}
               triggerSize="sm"
             />
-            {selectedListings.length === 1 && (
-              <ClearFlagDialog
-                listingId={selectedListings[0]}
-                listingTitle="listing"
-                tenantId={tenantId}
-                tenantSlug={slug}
-                triggerSize="sm"
-              />
-            )}
+            <ClearFlagDialog
+              listingIds={selectedListings}
+              listingTitles={selectedListingTitles}
+              tenantId={tenantId}
+              tenantSlug={slug}
+              triggerSize="sm"
+            />
           </div>
         </div>
       )}
@@ -561,41 +566,14 @@ export function AdminExchangeTable({
                   </TableCell>
                   <TableCell>
                     {listing.flag_count > 0 && (
-                      <ClearFlagDialog
-                        listingId={listing.id}
-                        listingTitle={listing.title}
-                        tenantId={tenantId}
-                        tenantSlug={slug}
-                        triggerSize="icon"
-                      />
+                      <div className="flex items-center gap-1 text-orange-600">
+                        <Flag className="h-4 w-4" />
+                        <span className="text-sm font-medium">{listing.flag_count}</span>
+                      </div>
                     )}
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      {listing.flag_count > 0 && (
-                        <ClearFlagDialog
-                          listingId={listing.id}
-                          listingTitle={listing.title}
-                          tenantId={tenantId}
-                          tenantSlug={slug}
-                          triggerSize="icon"
-                        />
-                      )}
-                      <ArchiveListingsDialog
-                        listingIds={[listing.id]}
-                        listingTitle={listing.title}
-                        tenantId={tenantId}
-                        tenantSlug={slug}
-                        triggerSize="icon"
-                      />
-                      <DeleteListingsDialog
-                        listingIds={[listing.id]}
-                        listingTitle={listing.title}
-                        tenantId={tenantId}
-                        tenantSlug={slug}
-                        triggerSize="icon"
-                      />
-                    </div>
+                    <span className="text-sm text-muted-foreground">{getListingDate(listing)}</span>
                   </TableCell>
                 </TableRow>
               ))

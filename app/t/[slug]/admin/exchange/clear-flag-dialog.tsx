@@ -21,16 +21,16 @@ import { useRouter } from 'next/navigation'
 import { toast } from "sonner"
 
 interface ClearFlagDialogProps {
-  listingId: string
-  listingTitle: string
+  listingIds: string[]
+  listingTitles: string[]
   tenantId: string
   tenantSlug: string
   triggerSize?: "sm" | "default" | "lg" | "icon"
 }
 
 export function ClearFlagDialog({
-  listingId,
-  listingTitle,
+  listingIds,
+  listingTitles,
   tenantId,
   tenantSlug,
   triggerSize = "sm",
@@ -41,23 +41,42 @@ export function ClearFlagDialog({
   const [isPending, startTransition] = useTransition()
 
   const handleClearFlags = async () => {
+    console.log("[v0] Clear flags started for:", listingIds)
+    
     startTransition(async () => {
       try {
-        const result = await adminUnflagListing(listingId, tenantId, tenantSlug, reason || undefined)
+        for (const listingId of listingIds) {
+          console.log("[v0] Clearing flags for listing:", listingId)
+          const result = await adminUnflagListing(listingId, tenantId, tenantSlug, reason || undefined)
+          console.log("[v0] Unflag result:", result)
 
-        if (result.success) {
-          toast.success("Flags cleared successfully")
-          setOpen(false)
-          setReason("")
-          router.refresh()
-        } else {
-          toast.error(result.error || "Failed to clear flags")
+          if (!result.success) {
+            console.error("[v0] Failed to clear flags:", result.error)
+            toast.error(result.error || `Failed to clear flags for listing`)
+            return
+          }
         }
+
+        toast.success(`Flags cleared for ${listingIds.length} listing${listingIds.length > 1 ? "s" : ""}`)
+        console.log("[v0] All flags cleared successfully")
+        
+        setOpen(false)
+        setReason("")
+        router.refresh()
       } catch (error) {
+        console.error("[v0] Unexpected error clearing flags:", error)
         toast.error("An unexpected error occurred")
       }
     })
   }
+
+  const title = listingIds.length === 1 && listingTitles[0]
+    ? `Clear all flags for "${listingTitles[0]}"?`
+    : `Clear flags for ${listingIds.length} listing(s)?`
+
+  const description = listingIds.length === 1
+    ? "This will remove all flags from this listing. You can optionally provide a note to the creator explaining why the flags were cleared."
+    : `This will remove all flags from ${listingIds.length} selected listings. You can optionally provide a note to the creators.`
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
@@ -69,13 +88,11 @@ export function ClearFlagDialog({
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Clear all flags for "{listingTitle}"?</AlertDialogTitle>
-          <AlertDialogDescription>
-            This will remove all flags from this listing. You can optionally provide a note to the creator explaining why the flags were cleared.
-          </AlertDialogDescription>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <div className="py-4">
-          <Label htmlFor="clear-reason">Note to creator (optional)</Label>
+          <Label htmlFor="clear-reason">Note to creator(s) (optional)</Label>
           <Textarea
             id="clear-reason"
             placeholder="e.g., After review, the listing meets community guidelines..."
@@ -86,7 +103,7 @@ export function ClearFlagDialog({
             disabled={isPending}
           />
           <p className="text-sm text-muted-foreground mt-2">
-            The creator will be notified that flags have been cleared.
+            The creator(s) will be notified that flags have been cleared.
           </p>
         </div>
         <AlertDialogFooter>

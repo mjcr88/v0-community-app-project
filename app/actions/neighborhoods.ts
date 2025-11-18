@@ -107,9 +107,11 @@ export async function getPets(tenantId: string) {
         species,
         breed,
         profile_picture_url,
+        lot_id,
+        lots!inner(tenant_id),
         family_unit:family_unit_id(name)
       `)
-      .eq("lot_id", tenantId)
+      .eq("lots.tenant_id", tenantId)
       .order("name", { ascending: true })
 
     if (error) {

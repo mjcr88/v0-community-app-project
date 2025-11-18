@@ -60,6 +60,41 @@ const requestTypeLabels: Record<RequestType, { title: string; description: strin
   },
 }
 
+const getPriorityDescriptions = (requestType: RequestType) => {
+  switch (requestType) {
+    case 'maintenance':
+      return {
+        normal: "Standard request, no rush",
+        urgent: "Needs quick attention (broken AC, water leak, appliance failure)",
+        emergency: "Safety concern requiring immediate response (gas leak, electrical hazard)",
+      }
+    case 'question':
+      return {
+        normal: "General inquiry, no rush",
+        urgent: "Need answer soon for planning purposes",
+        emergency: "Time-sensitive question requiring immediate answer",
+      }
+    case 'complaint':
+      return {
+        normal: "General concern to be addressed",
+        urgent: "Ongoing disturbance or recurring issue",
+        emergency: "Severe disturbance or immediate threat to well-being",
+      }
+    case 'safety':
+      return {
+        normal: "Safety concern to be reviewed",
+        urgent: "Hazard that should be addressed soon",
+        emergency: "Immediate danger requiring urgent response",
+      }
+    case 'other':
+      return {
+        normal: "Standard request, no rush",
+        urgent: "Needs attention within a few days",
+        emergency: "Requires immediate attention",
+      }
+  }
+}
+
 export function CreateRequestModal({
   open,
   onOpenChange,
@@ -187,6 +222,7 @@ export function CreateRequestModal({
   }
 
   const typeInfo = requestTypeLabels[requestType]
+  const priorityDescriptions = getPriorityDescriptions(requestType)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -247,7 +283,7 @@ export function CreateRequestModal({
                           Normal
                         </Label>
                         <p className="text-sm text-muted-foreground mt-1">
-                          Standard request, no rush
+                          {priorityDescriptions.normal}
                         </p>
                       </div>
                     </div>
@@ -259,7 +295,7 @@ export function CreateRequestModal({
                           Urgent
                         </Label>
                         <p className="text-sm text-muted-foreground mt-1">
-                          Needs quick attention (e.g., broken AC, water leak)
+                          {priorityDescriptions.urgent}
                         </p>
                       </div>
                     </div>
@@ -271,7 +307,7 @@ export function CreateRequestModal({
                           Emergency
                         </Label>
                         <p className="text-sm text-muted-foreground mt-1">
-                          Safety concern requiring immediate response
+                          {priorityDescriptions.emergency}
                         </p>
                       </div>
                     </div>
@@ -342,7 +378,7 @@ export function CreateRequestModal({
                     onCheckedChange={(checked) => setFormData({ ...formData, is_anonymous: checked as boolean })}
                   />
                   <Label htmlFor="anonymous" className="cursor-pointer text-sm font-normal">
-                    Submit anonymously (admins will not see your name)
+                    Submit anonymously (your identity will be hidden from other residents, but visible to admins)
                   </Label>
                 </div>
               )}

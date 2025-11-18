@@ -23,6 +23,7 @@ export async function createResidentRequest(
       .insert({
         tenant_id: tenantId,
         created_by: data.is_anonymous ? null : user.id,
+        original_submitter_id: user.id, // Always store actual submitter
         title: data.title,
         request_type: data.request_type,
         description: data.description,
@@ -34,6 +35,8 @@ export async function createResidentRequest(
         custom_location_lng: data.custom_location_lng || null,
         is_anonymous: data.is_anonymous || false,
         images: data.images || [],
+        tagged_resident_ids: data.tagged_resident_ids || [],
+        tagged_pet_ids: data.tagged_pet_ids || [],
         status: 'pending',
       })
 
@@ -240,7 +243,7 @@ export async function getMyRequests(tenantId: string) {
         resolved_by_user:resolved_by(first_name, last_name)
       `)
       .eq("tenant_id", tenantId)
-      .eq("created_by", user.id)
+      .eq("original_submitter_id", user.id)
       .order("created_at", { ascending: false })
 
     if (error) {
@@ -295,6 +298,39 @@ export async function getAllRequests(tenantId: string) {
     return requests || []
   } catch (error) {
     console.error("[v0] Unexpected error fetching all requests:", error)
+    return []
+  }
+}
+
+export async function getCommunityRequests(tenantId: string) {
+  try {
+    const supabase = await createServerClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return []
+    }
+
+    const { data: requests, error } = await supabase
+      .from("resident_requests")
+      .select(`
+        *,
+        creator:created_by(first_name, last_name, lot_id, lots(lot_number)),
+        location:location_id(id, name, type),
+        resolved_by_user:resolved_by(first_name, last_name)
+      `)
+      .eq("tenant_id", tenantId)
+      .in("request_type", ["maintenance", "safety"])
+      .order("created_at", { ascending: false })
+
+    if (error) {
+      console.error("[v0] Error fetching community requests:", error)
+      return []
+    }
+
+    return requests || []
+  } catch (error) {
+    console.error("[v0] Unexpected error fetching community requests:", error)
     return []
   }
 }

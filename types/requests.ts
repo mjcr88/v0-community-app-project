@@ -6,6 +6,7 @@ export interface ResidentRequest {
   id: string
   tenant_id: string
   created_by: string | null // null if anonymous
+  original_submitter_id: string | null
   
   // Core fields
   title: string
@@ -24,6 +25,8 @@ export interface ResidentRequest {
   // Metadata
   is_anonymous: boolean
   images: string[]
+  tagged_resident_ids: string[]
+  tagged_pet_ids: string[]
   
   // Admin interaction
   admin_reply: string | null
@@ -71,4 +74,6 @@ export interface CreateRequestData {
   custom_location_lng?: number | null
   is_anonymous?: boolean
   images?: string[]
+  tagged_resident_ids?: string[]
+  tagged_pet_ids?: string[]
 }

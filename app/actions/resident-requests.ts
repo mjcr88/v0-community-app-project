@@ -283,7 +283,7 @@ export async function getAllRequests(tenantId: string) {
       .from("resident_requests")
       .select(`
         *,
-        creator:created_by(first_name, last_name, lot_id, lots(lot_number)),
+        creator:created_by(id, first_name, last_name, lot_id, lots(lot_number)),
         location:location_id(id, name, type),
         resolved_by_user:resolved_by(first_name, last_name)
       `)
@@ -308,20 +308,31 @@ export async function getCommunityRequests(tenantId: string) {
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
+      console.log("[v0] No user found for community requests")
       return []
     }
+
+    console.log("[v0] Fetching community requests for tenant:", tenantId)
+    console.log("[v0] User ID:", user.id)
 
     const { data: requests, error } = await supabase
       .from("resident_requests")
       .select(`
         *,
-        creator:created_by(first_name, last_name, lot_id, lots(lot_number)),
+        creator:created_by(id, first_name, last_name, profile_picture_url),
         location:location_id(id, name, type),
         resolved_by_user:resolved_by(first_name, last_name)
       `)
       .eq("tenant_id", tenantId)
       .in("request_type", ["maintenance", "safety"])
       .order("created_at", { ascending: false })
+
+    console.log("[v0] Community requests query error:", error)
+    console.log("[v0] Community requests count:", requests?.length || 0)
+    
+    if (requests && requests.length > 0) {
+      console.log("[v0] First request sample:", JSON.stringify(requests[0], null, 2))
+    }
 
     if (error) {
       console.error("[v0] Error fetching community requests:", error)

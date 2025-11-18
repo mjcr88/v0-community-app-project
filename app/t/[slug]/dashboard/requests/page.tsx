@@ -135,7 +135,7 @@ export default async function RequestsPage({ params }: RequestsPageProps) {
             <Tabs defaultValue="my-requests" className="w-full">
               <TabsList>
                 <TabsTrigger value="my-requests">My Requests</TabsTrigger>
-                <TabsTrigger value="community">Community Requests</TabsTrigger>
+                <TabsTrigger value="all-requests">All Requests</TabsTrigger>
               </TabsList>
               
               <TabsContent value="my-requests" className="space-y-4">
@@ -148,9 +148,9 @@ export default async function RequestsPage({ params }: RequestsPageProps) {
                 </div>
               </TabsContent>
 
-              <TabsContent value="community" className="space-y-4">
+              <TabsContent value="all-requests" className="space-y-4">
                 <div>
-                  <h2 className="text-2xl font-semibold mb-2">Community Requests</h2>
+                  <h2 className="text-2xl font-semibold mb-2">All Requests</h2>
                   <p className="text-sm text-muted-foreground mb-4">
                     Maintenance and safety requests from all residents
                   </p>

@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Eye, MapPin, EyeOff } from 'lucide-react'
 import { RequestStatusBadge } from "./request-status-badge"
 import { RequestPriorityBadge } from "./request-priority-badge"
@@ -23,9 +24,10 @@ interface Request {
   location?: { name: string } | null
   custom_location_name?: string | null
   creator?: {
+    id: string
     first_name: string
     last_name: string
-    lots?: { lot_number: string } | null
+    profile_picture_url?: string | null
   } | null
 }
 
@@ -83,18 +85,23 @@ export function CommunityRequestsTable({ requests, tenantSlug }: CommunityReques
               </TableCell>
               <TableCell>
                 {request.is_anonymous ? (
-                  <div className="flex items-center gap-1 text-muted-foreground">
-                    <EyeOff className="h-3 w-3" />
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+                      <EyeOff className="h-4 w-4" />
+                    </div>
                     <span className="text-sm">Anonymous</span>
                   </div>
                 ) : request.creator ? (
-                  <div className="text-sm">
-                    {request.creator.first_name} {request.creator.last_name}
-                    {request.creator.lots?.lot_number && (
-                      <span className="ml-1 text-muted-foreground">
-                        (Lot {request.creator.lots.lot_number})
-                      </span>
-                    )}
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={request.creator.profile_picture_url || undefined} />
+                      <AvatarFallback>
+                        {request.creator.first_name[0]}{request.creator.last_name[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm">
+                      {request.creator.first_name} {request.creator.last_name}
+                    </span>
                   </div>
                 ) : (
                   <span className="text-sm text-muted-foreground">Unknown</span>

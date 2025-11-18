@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ArrowUpDown, Search, X, ChevronDown, Pencil } from 'lucide-react'
 import Link from "next/link"
 import { formatDate } from "date-fns"
+import { useRouter } from 'next/navigation'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -202,6 +203,8 @@ export function AdminAnnouncementsTable({
     if (!announcement.last_edited_at || !announcement.published_at) return false
     return new Date(announcement.last_edited_at) > new Date(announcement.published_at)
   }
+
+  const router = useRouter()
 
   return (
     <div className="space-y-4">
@@ -424,7 +427,8 @@ export function AdminAnnouncementsTable({
                   className="cursor-pointer hover:bg-muted/50"
                   onClick={(e) => {
                     if ((e.target as HTMLElement).closest("button, input, a")) return
-                    window.location.href = `/t/${slug}/admin/announcements/${announcement.id}`
+                    // Navigate using router instead of window.location for better performance
+                    router.push(`/t/${slug}/admin/announcements/${announcement.id}`)
                   }}
                 >
                   <TableCell onClick={(e) => e.stopPropagation()}>

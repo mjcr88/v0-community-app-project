@@ -70,7 +70,7 @@ export default async function AdminAnnouncementDetailPage({
     .eq("announcement_id", announcementId)
 
   let locationData = null
-  if (announcement.location_type === "community" && announcement.location_id) {
+  if (announcement.location_type === "community_location" && announcement.location_id) {
     const { data: location } = await supabase
       .from("locations")
       .select("id, name, type")

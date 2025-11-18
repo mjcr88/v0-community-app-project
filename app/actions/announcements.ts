@@ -164,6 +164,8 @@ export async function updateAnnouncement(
       dbLocationType = "community_location"
     } else if (data.location_type === "custom") {
       dbLocationType = "custom_temporary"
+    } else if (data.location_type === "none") {
+      dbLocationType = null
     }
 
     const updateData: any = {
@@ -176,12 +178,16 @@ export async function updateAnnouncement(
     if (data.priority !== undefined) updateData.priority = data.priority
     if (data.event_id !== undefined) updateData.event_id = data.event_id
     if (data.location_type !== undefined) updateData.location_type = dbLocationType
+    if (data.location_type === "none") {
+      updateData.location_id = null
+      updateData.custom_location_name = null
+      updateData.custom_location_lat = null
+      updateData.custom_location_lng = null
+    }
     if (data.location_id !== undefined) updateData.location_id = data.location_id
     if (data.custom_location_name !== undefined) updateData.custom_location_name = data.custom_location_name
     if (data.custom_location_lat !== undefined) updateData.custom_location_lat = data.custom_location_lat
     if (data.custom_location_lng !== undefined) updateData.custom_location_lng = data.custom_location_lng
-    if (data.images !== undefined) updateData.images = data.images
-    if (data.auto_archive_date !== undefined) updateData.auto_archive_date = data.auto_archive_date
 
     // Track if editing after initial publish
     const wasPublished = existing.status === "published"

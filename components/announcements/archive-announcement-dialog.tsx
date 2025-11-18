@@ -36,6 +36,7 @@ export function ArchiveAnnouncementDialog({
       const result = await archiveAnnouncements(announcementIds, tenantId, tenantSlug)
       if (result.success) {
         toast.success(`${announcementIds.length} announcement(s) archived successfully`)
+        router.push(`/t/${tenantSlug}/admin/announcements`)
         router.refresh()
       } else {
         toast.error(result.error || "Failed to archive announcements")

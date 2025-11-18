@@ -36,6 +36,7 @@ export function DeleteAnnouncementDialog({
       const result = await deleteAnnouncements(announcementIds, tenantId, tenantSlug)
       if (result.success) {
         toast.success(`${announcementIds.length} announcement(s) deleted successfully`)
+        router.push(`/t/${tenantSlug}/admin/announcements`)
         router.refresh()
       } else {
         toast.error(result.error || "Failed to delete announcements")

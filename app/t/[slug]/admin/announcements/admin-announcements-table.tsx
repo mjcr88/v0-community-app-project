@@ -164,7 +164,7 @@ export function AdminAnnouncementsTable({
   }
 
   const getInitials = (firstName: string | null, lastName: string | null) => {
-    if (!firstName || !lastName) return "?"
+    if (!firstName || !lastName) return "A"
     return `${firstName[0]}${lastName[0]}`.toUpperCase()
   }
 
@@ -363,11 +363,7 @@ export function AdminAnnouncementsTable({
                           </AvatarFallback>
                         )}
                       </Avatar>
-                      <span className="text-sm">
-                        {announcement.creator
-                          ? `${announcement.creator.first_name} ${announcement.creator.last_name}`
-                          : "Unknown"}
-                      </span>
+                      <span className="text-sm">Administrator</span>
                     </div>
                   </TableCell>
                   <TableCell>

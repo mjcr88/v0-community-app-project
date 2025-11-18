@@ -88,7 +88,6 @@ export default async function AdminRequestDetailPage({
         </Button>
         <div className="flex-1">
           <h2 className="text-2xl font-bold tracking-tight">{request.title}</h2>
-          <p className="text-muted-foreground">Request ID: {request.id.slice(0, 8)}</p>
         </div>
         <div className="flex gap-2">
           {request.status === 'pending' && (
@@ -225,9 +224,10 @@ export default async function AdminRequestDetailPage({
                     <p className="text-sm text-muted-foreground">Pets:</p>
                     <div className="flex flex-wrap gap-3">
                       {request.tagged_pets.map((pet: any) => (
-                        <div
+                        <Link
                           key={pet.id}
-                          className="flex items-center gap-2 p-2 rounded-lg border bg-muted/50"
+                          href={`/t/${slug}/admin/pets/${pet.id}`}
+                          className="flex items-center gap-2 p-2 rounded-lg border bg-muted/50 hover:bg-muted transition-colors"
                         >
                           <Avatar className="h-8 w-8">
                             {pet.profile_picture_url ? (
@@ -246,13 +246,13 @@ export default async function AdminRequestDetailPage({
                             {pet.family_unit?.primary_contact && (
                               <Link
                                 href={`/t/${slug}/admin/residents/${pet.family_unit.primary_contact.id}`}
-                                className="text-xs text-primary hover:underline"
+                                className="text-xs text-primary hover:underline inline-block mt-0.5"
                               >
                                 Owner: {pet.family_unit.primary_contact.first_name} {pet.family_unit.primary_contact.last_name}
                               </Link>
                             )}
                           </div>
-                        </div>
+                        </Link>
                       ))}
                     </div>
                   </div>

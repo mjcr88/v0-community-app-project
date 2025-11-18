@@ -11,18 +11,12 @@ export default async function AdminAnnouncementsPage({
 }: {
   params: Promise<{ slug: string }>
 }) {
-  console.log("[v0] AdminAnnouncementsPage - Starting")
-  
   const { slug } = await params
-  console.log("[v0] Slug:", slug)
-  
   const supabase = await createClient()
 
   const {
     data: { user },
   } = await supabase.auth.getUser()
-
-  console.log("[v0] User authenticated:", !!user)
 
   if (!user) {
     redirect(`/t/${slug}/login`)
@@ -34,15 +28,11 @@ export default async function AdminAnnouncementsPage({
     .eq('id', user.id)
     .maybeSingle()
 
-  console.log("[v0] User data:", userData)
-
   const { data: tenant } = await supabase
     .from('tenants')
     .select('*')
     .eq('slug', slug)
     .single()
-
-  console.log("[v0] Tenant:", tenant?.slug)
 
   if (!tenant) {
     redirect('/backoffice/login')
@@ -53,20 +43,14 @@ export default async function AdminAnnouncementsPage({
     (userData?.role === 'tenant_admin' && userData?.tenant_id === tenant.id) ||
     userData?.is_tenant_admin === true
 
-  console.log("[v0] Is admin:", isSuperAdmin || isTenantAdmin)
-
   if (!isSuperAdmin && !isTenantAdmin) {
     redirect(`/t/${slug}/dashboard`)
   }
 
   // Check if announcements feature is enabled
-  console.log("[v0] Announcements enabled:", tenant.announcements_enabled)
-  
   if (tenant.announcements_enabled === false) {
     redirect(`/t/${slug}/admin/dashboard`)
   }
-
-  console.log("[v0] Fetching announcements from database")
 
   const { data: announcements, error: announcementsError } = await supabase
     .from("announcements")
@@ -95,10 +79,7 @@ export default async function AdminAnnouncementsPage({
 
   if (announcementsError) {
     console.error("[v0] Error fetching announcements:", announcementsError)
-    console.error("[v0] Error details:", JSON.stringify(announcementsError, null, 2))
   }
-
-  console.log("[v0] Announcements fetched:", announcements?.length || 0)
 
   const publishedAnnouncements = announcements?.filter(
     (a) => a.status === "published"
@@ -109,8 +90,6 @@ export default async function AdminAnnouncementsPage({
   const draftAnnouncements = announcements?.filter(
     (a) => a.status === "draft"
   ) || []
-
-  console.log("[v0] Published:", publishedAnnouncements.length, "Archived:", archivedAnnouncements.length, "Drafts:", draftAnnouncements.length)
 
   return (
     <div className="space-y-6">

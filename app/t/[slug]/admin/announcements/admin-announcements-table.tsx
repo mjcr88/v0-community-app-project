@@ -16,6 +16,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuItem,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { AnnouncementTypeIcon } from "@/components/announcements/announcement-type-icon"
 import { AnnouncementPriorityBadge } from "@/components/announcements/announcement-priority-badge"

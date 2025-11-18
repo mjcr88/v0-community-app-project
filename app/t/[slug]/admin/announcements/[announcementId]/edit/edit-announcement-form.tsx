@@ -56,6 +56,9 @@ export function EditAnnouncementForm({
 
   const [photos, setPhotos] = useState<string[]>(initialData.images)
   const [enableAutoArchive, setEnableAutoArchive] = useState(!!initialData.auto_archive_date)
+  const [targetAudience, setTargetAudience] = useState<"community" | "neighborhoods">(
+    initialNeighborhoods.length > 0 ? "neighborhoods" : "community"
+  )
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -192,16 +195,51 @@ export function EditAnnouncementForm({
             </div>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-4">
             <Label>Target Audience</Label>
-            <p className="text-sm text-muted-foreground">
-              Select specific neighborhoods or leave empty for community-wide
-            </p>
-            <NeighborhoodMultiSelect
-              tenantId={tenantId}
-              selectedNeighborhoodIds={formData.selected_neighborhoods}
-              onChange={(ids) => setFormData({ ...formData, selected_neighborhoods: ids })}
-            />
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="radio"
+                  id="community-wide"
+                  name="target"
+                  value="community"
+                  checked={targetAudience === "community"}
+                  onChange={() => {
+                    setTargetAudience("community")
+                    setFormData({ ...formData, selected_neighborhoods: [] })
+                  }}
+                  className="h-4 w-4"
+                />
+                <Label htmlFor="community-wide" className="font-normal cursor-pointer">
+                  Community-Wide (All Residents)
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="radio"
+                  id="specific-neighborhoods"
+                  name="target"
+                  value="neighborhoods"
+                  checked={targetAudience === "neighborhoods"}
+                  onChange={() => setTargetAudience("neighborhoods")}
+                  className="h-4 w-4"
+                />
+                <Label htmlFor="specific-neighborhoods" className="font-normal cursor-pointer">
+                  Specific Neighborhoods
+                </Label>
+              </div>
+            </div>
+
+            {targetAudience === "neighborhoods" && (
+              <div className="pl-6">
+                <NeighborhoodMultiSelect
+                  tenantId={tenantId}
+                  selectedNeighborhoodIds={formData.selected_neighborhoods}
+                  onChange={(ids) => setFormData({ ...formData, selected_neighborhoods: ids })}
+                />
+              </div>
+            )}
           </div>
 
           <div className="pt-4 border-t">

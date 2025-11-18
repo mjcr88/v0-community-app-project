@@ -1,10 +1,9 @@
 import { createServerClient } from "@/lib/supabase/server"
 import { redirect, notFound } from 'next/navigation'
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { ArrowLeft, Calendar, MapPin, Pencil, ImageIcon } from 'lucide-react'
+import { ArrowLeft, Calendar, MapPin, Pencil, ImageIcon, Users } from 'lucide-react'
 import Link from "next/link"
 import { formatDate } from "date-fns"
 import { AnnouncementTypeIcon } from "@/components/announcements/announcement-type-icon"
@@ -30,7 +29,7 @@ export default async function AdminAnnouncementDetailPage({
     redirect(`/t/${slug}/login`)
   }
 
-  const { data: tenant } = await supabase.from("tenants").select("*").eq("slug", slug).single()
+  const { data: tenant } = await supabase.from("tenants").select("id, name").eq("slug", slug).single()
 
   if (!tenant) {
     redirect("/backoffice/login")
@@ -48,16 +47,12 @@ export default async function AdminAnnouncementDetailPage({
     redirect(`/t/${slug}/dashboard`)
   }
 
-  // Fetch announcement details with relationships
   const { data: announcement, error } = await supabase
     .from("announcements")
     .select(
       `
       *,
-      creator:users!created_by(id, first_name, last_name, profile_picture_url),
-      location:locations(id, name, type),
-      event:events(id, title),
-      neighborhoods:announcement_neighborhoods(neighborhood:neighborhoods(id, name))
+      creator:users!created_by(id, first_name, last_name, profile_picture_url)
     `,
     )
     .eq("id", announcementId)
@@ -68,6 +63,27 @@ export default async function AdminAnnouncementDetailPage({
     notFound()
   }
 
+  const { data: announcementNeighborhoods } = await supabase
+    .from("announcement_neighborhoods")
+    .select("neighborhood:neighborhoods(id, name)")
+    .eq("announcement_id", announcementId)
+
+  let locationData = null
+  if (announcement.location_type === "community" && announcement.location_id) {
+    const { data: location } = await supabase
+      .from("locations")
+      .select("id, name, type")
+      .eq("id", announcement.location_id)
+      .single()
+    locationData = location
+  }
+
+  let eventData = null
+  if (announcement.event_id) {
+    const { data: event } = await supabase.from("events").select("id, title").eq("id", announcement.event_id).single()
+    eventData = event
+  }
+
   const getInitials = (firstName?: string, lastName?: string) => {
     if (!firstName || !lastName) return "?"
     return `${firstName[0]}${lastName[0]}`.toUpperCase()
@@ -75,7 +91,7 @@ export default async function AdminAnnouncementDetailPage({
 
   const getLocationDisplay = () => {
     if (announcement.custom_location_name) return announcement.custom_location_name
-    if (announcement.location) return announcement.location.name
+    if (locationData) return locationData.name
     return "No location specified"
   }
 
@@ -90,210 +106,216 @@ export default async function AdminAnnouncementDetailPage({
   }
 
   const statusBadge = getStatusBadge()
+  const neighborhoods = announcementNeighborhoods?.map((n: any) => n.neighborhood) || []
+  const isCommunityWide = neighborhoods.length === 0
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" asChild>
-          <Link href={`/t/${slug}/admin/announcements`}>
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-        </Button>
-        <div className="flex-1">
-          <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            {announcement.title}
-            {announcement.last_edited_at && announcement.published_at && (
-              <UpdatedIndicator lastEditedAt={announcement.last_edited_at} publishedAt={announcement.published_at} />
-            )}
-          </h2>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" asChild>
-            <Link href={`/t/${slug}/admin/announcements/${announcementId}/edit`}>
-              <Pencil className="h-4 w-4 mr-2" />
-              Edit
+    <div className="min-h-screen bg-background">
+      <div className="relative bg-gradient-to-br from-primary/10 via-primary/5 to-background border-b">
+        <div className="container mx-auto px-4 py-8 md:py-12">
+          <div className="max-w-4xl mx-auto space-y-6">
+            <Link href={`/t/${slug}/admin/announcements`}>
+              <Button variant="ghost" size="sm" className="gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                Back to Announcements
+              </Button>
             </Link>
-          </Button>
-          {announcement.status === "draft" && (
-            <PublishAnnouncementDialog
-              announcementIds={[announcement.id]}
-              announcementTitle={announcement.title}
-              tenantId={tenant.id}
-              tenantSlug={slug}
-            />
-          )}
-          {announcement.status !== "archived" && (
-            <ArchiveAnnouncementDialog
-              announcementIds={[announcement.id]}
-              announcementTitle={announcement.title}
-              tenantId={tenant.id}
-              tenantSlug={slug}
-            />
-          )}
-          <DeleteAnnouncementDialog
-            announcementIds={[announcement.id]}
-            announcementTitle={announcement.title}
-            tenantId={tenant.id}
-            tenantSlug={slug}
-          />
+
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <AnnouncementTypeIcon type={announcement.announcement_type} className="h-8 w-8" />
+                <Badge variant="outline" className="text-sm">
+                  {announcement.announcement_type}
+                </Badge>
+                <Badge variant={statusBadge.variant as any}>{statusBadge.label}</Badge>
+                <AnnouncementPriorityBadge priority={announcement.priority} />
+                {isCommunityWide && (
+                  <Badge variant="secondary" className="gap-1">
+                    <Users className="h-3 w-3" />
+                    Community-Wide
+                  </Badge>
+                )}
+                {announcement.last_edited_at && announcement.published_at && (
+                  <UpdatedIndicator lastEditedAt={announcement.last_edited_at} publishedAt={announcement.published_at} />
+                )}
+              </div>
+
+              <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-balance">{announcement.title}</h1>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Link href={`/t/${slug}/admin/announcements/${announcementId}/edit`}>
+                <Button variant="default" size="sm" className="gap-2">
+                  <Pencil className="h-4 w-4" />
+                  Edit
+                </Button>
+              </Link>
+              {announcement.status === "draft" && (
+                <PublishAnnouncementDialog
+                  announcementIds={[announcement.id]}
+                  announcementTitle={announcement.title}
+                  tenantId={tenant.id}
+                  tenantSlug={slug}
+                />
+              )}
+              {announcement.status !== "archived" && (
+                <ArchiveAnnouncementDialog
+                  announcementIds={[announcement.id]}
+                  announcementTitle={announcement.title}
+                  tenantId={tenant.id}
+                  tenantSlug={slug}
+                />
+              )}
+              <DeleteAnnouncementDialog
+                announcementIds={[announcement.id]}
+                announcementTitle={announcement.title}
+                tenantId={tenant.id}
+                tenantSlug={slug}
+              />
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <div className="flex items-start justify-between">
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto space-y-8">
+          {/* Image Gallery */}
+          {announcement.images && announcement.images.length > 0 && (
+            <div className="space-y-4">
+              <h2 className="text-2xl font-semibold flex items-center gap-2">
+                <ImageIcon className="h-5 w-5" />
+                Images ({announcement.images.length})
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {announcement.images.map((url: string, index: number) => (
+                  <img
+                    key={index}
+                    src={url || "/placeholder.svg"}
+                    alt={`Image ${index + 1}`}
+                    className="rounded-lg border object-cover aspect-video w-full"
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Description */}
+          {announcement.description && (
+            <div className="space-y-4">
+              <h2 className="text-2xl font-semibold">Details</h2>
+              <div className="prose prose-neutral dark:prose-invert max-w-none">
+                <p className="text-muted-foreground whitespace-pre-wrap text-pretty leading-relaxed">
+                  {announcement.description}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Info Grid */}
+          <div className="grid md:grid-cols-2 gap-4">
+            {/* Date Card */}
+            <div className="p-6 border rounded-lg bg-card space-y-3">
               <div className="flex items-center gap-3">
-                <AnnouncementTypeIcon type={announcement.announcement_type} className="h-12 w-12" />
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Calendar className="h-5 w-5 text-primary" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Created</p>
+                  <p className="font-medium">{formatDate(new Date(announcement.created_at), "MMM d, yyyy")}</p>
+                </div>
+              </div>
+              {announcement.published_at && (
+                <div className="pl-13 space-y-1 pt-2 border-t">
+                  <p className="text-sm text-muted-foreground">Published</p>
+                  <p className="text-sm font-medium">{formatDate(new Date(announcement.published_at), "MMM d, yyyy")}</p>
+                </div>
+              )}
+              {announcement.auto_archive_date && (
+                <div className="pl-13 space-y-1 pt-2 border-t">
+                  <p className="text-sm text-muted-foreground">Auto-Archives</p>
+                  <p className="text-sm font-medium">
+                    {formatDate(new Date(announcement.auto_archive_date), "MMM d, yyyy")}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Creator Card */}
+            <div className="p-6 border rounded-lg bg-card">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-10 w-10">
+                  <AvatarImage src={announcement.creator?.profile_picture_url || undefined} />
+                  <AvatarFallback>
+                    {getInitials(announcement.creator?.first_name, announcement.creator?.last_name)}
+                  </AvatarFallback>
+                </Avatar>
                 <div>
-                  <CardTitle className="flex items-center gap-2">
-                    {announcement.announcement_type}
-                    <Badge variant={statusBadge.variant as any}>{statusBadge.label}</Badge>
-                  </CardTitle>
-                  <CardDescription>
-                    Created {formatDate(new Date(announcement.created_at), "MMM d, yyyy 'at' h:mm a")}
-                  </CardDescription>
+                  <p className="text-sm text-muted-foreground">Created by</p>
+                  <Link
+                    href={`/t/${slug}/admin/residents/${announcement.creator?.id}`}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    {announcement.creator?.first_name} {announcement.creator?.last_name}
+                  </Link>
                 </div>
               </div>
-              <AnnouncementPriorityBadge priority={announcement.priority} />
             </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div>
-              <h3 className="font-semibold mb-2">Description</h3>
-              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                {announcement.description || "No description provided"}
-              </p>
-            </div>
+          </div>
 
-            {announcement.images && announcement.images.length > 0 && (
-              <div>
-                <h3 className="font-semibold mb-2 flex items-center gap-2">
-                  <ImageIcon className="h-4 w-4" />
-                  Images ({announcement.images.length})
-                </h3>
-                <div className="grid grid-cols-2 gap-2">
-                  {announcement.images.map((url: string, index: number) => (
-                    <img
-                      key={index}
-                      src={url || "/placeholder.svg"}
-                      alt={`Attachment ${index + 1}`}
-                      className="rounded-lg border object-cover aspect-video"
-                    />
-                  ))}
+          {/* Location Section */}
+          {announcement.location_type !== "none" && (
+            <div className="p-6 border rounded-lg bg-card space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <MapPin className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Location</p>
+                  <p className="font-medium">{getLocationDisplay()}</p>
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
-            {announcement.event && (
-              <div className="border-t pt-4">
-                <h3 className="font-semibold mb-2">Linked Event</h3>
-                <Link
-                  href={`/t/${slug}/dashboard/events/${announcement.event.id}`}
-                  className="flex items-center gap-2 p-3 rounded-lg border hover:bg-muted transition-colors"
-                >
-                  <Calendar className="h-5 w-5 text-muted-foreground" />
-                  <span className="text-sm font-medium">{announcement.event.title}</span>
-                </Link>
+          {/* Linked Event */}
+          {eventData && (
+            <div className="p-6 border rounded-lg bg-card space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Calendar className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Linked Event</p>
+                  <Link
+                    href={`/t/${slug}/dashboard/events/${eventData.id}`}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    {eventData.title}
+                  </Link>
+                </div>
               </div>
-            )}
+            </div>
+          )}
 
-            {announcement.neighborhoods && announcement.neighborhoods.length > 0 && (
-              <div className="border-t pt-4">
-                <h3 className="font-semibold mb-2">Target Neighborhoods</h3>
+          {/* Target Neighborhoods */}
+          {neighborhoods.length > 0 && (
+            <div className="p-6 border rounded-lg bg-muted/30 space-y-3">
+              <div className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                <h3 className="font-semibold">Neighborhood Visibility</h3>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">Visible to residents in:</p>
                 <div className="flex flex-wrap gap-2">
-                  {announcement.neighborhoods.map((n: any) => (
-                    <Badge key={n.neighborhood.id} variant="outline">
-                      {n.neighborhood.name}
+                  {neighborhoods.map((neighborhood: any) => (
+                    <Badge key={neighborhood.id} variant="outline">
+                      {neighborhood.name}
                     </Badge>
                   ))}
                 </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Announcement Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-3">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Created</p>
-                  <p className="text-sm text-muted-foreground">
-                    {formatDate(new Date(announcement.created_at), "MMM d, yyyy")}
-                  </p>
-                </div>
-              </div>
-
-              {announcement.published_at && (
-                <div className="flex items-center gap-3">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">Published</p>
-                    <p className="text-sm text-muted-foreground">
-                      {formatDate(new Date(announcement.published_at), "MMM d, yyyy")}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {announcement.auto_archive_date && (
-                <div className="flex items-center gap-3">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">Auto-Archive</p>
-                    <p className="text-sm text-muted-foreground">
-                      {formatDate(new Date(announcement.auto_archive_date), "MMM d, yyyy")}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex items-center gap-3">
-                <MapPin className="h-4 w-4 text-muted-foreground" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Location</p>
-                  <p className="text-sm text-muted-foreground">{getLocationDisplay()}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Created By</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {announcement.creator ? (
-                <Link
-                  href={`/t/${slug}/admin/residents/${announcement.creator.id}`}
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted transition-colors"
-                >
-                  <Avatar>
-                    {announcement.creator.profile_picture_url ? (
-                      <AvatarImage src={announcement.creator.profile_picture_url || "/placeholder.svg"} />
-                    ) : (
-                      <AvatarFallback>
-                        {getInitials(announcement.creator.first_name, announcement.creator.last_name)}
-                      </AvatarFallback>
-                    )}
-                  </Avatar>
-                  <div className="flex-1">
-                    <p className="font-medium text-sm">
-                      {announcement.creator.first_name} {announcement.creator.last_name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">Click to view profile</p>
-                  </div>
-                </Link>
-              ) : (
-                <p className="text-sm text-muted-foreground">Unknown</p>
-              )}
-            </CardContent>
-          </Card>
+            </div>
+          )}
         </div>
       </div>
     </div>

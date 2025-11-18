@@ -13,9 +13,9 @@ import useSWR from "swr"
 interface Announcement {
   id: string
   title: string
-  type: "general" | "maintenance" | "event" | "alert" | "community_update" | "resource"
+  announcement_type: "general" | "maintenance" | "event" | "alert" | "community_update" | "resource"
   priority: "urgent" | "important" | "normal"
-  content: string
+  description: string
   published_at: string
   auto_archive_date: string | null
 }
@@ -106,7 +106,7 @@ export function AnnouncementsWidget({ slug, tenantId, userId }: AnnouncementsWid
               <div className="flex gap-3 p-4 rounded-lg border hover:bg-accent transition-colors cursor-pointer">
                 {/* Type icon */}
                 <div className="flex-shrink-0 mt-0.5">
-                  <AnnouncementTypeIcon type={announcement.type} className="h-5 w-5" />
+                  <AnnouncementTypeIcon type={announcement.announcement_type} className="h-5 w-5" />
                 </div>
 
                 {/* Content */}
@@ -117,7 +117,7 @@ export function AnnouncementsWidget({ slug, tenantId, userId }: AnnouncementsWid
                   </div>
                   
                   <p className="text-xs text-muted-foreground line-clamp-2">
-                    {announcement.content}
+                    {announcement.description}
                   </p>
                   
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">

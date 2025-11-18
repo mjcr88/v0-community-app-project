@@ -18,70 +18,100 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Get user's neighborhoods
     const { data: userData } = await supabase
       .from("users")
-      .select("id, lot_id, lots(neighborhoods(id))")
+      .select("id, lot_id")
       .eq("id", user.id)
       .single()
 
-    const neighborhoodIds = userData?.lots?.neighborhoods?.id ? [userData.lots.neighborhoods.id] : []
+    // Get neighborhood from lot
+    let neighborhoodIds: string[] = []
+    if (userData?.lot_id) {
+      const { data: lotData } = await supabase
+        .from("lots")
+        .select("neighborhood_id")
+        .eq("id", userData.lot_id)
+        .single()
+      
+      if (lotData?.neighborhood_id) {
+        neighborhoodIds = [lotData.neighborhood_id]
+      }
+    }
 
-    // Get published announcements visible to user
-    let query = supabase
-      .from("announcements")
-      .select("id, title, type, priority, content, published_at, auto_archive_date, scope")
-      .eq("tenant_id", tenantId)
-      .eq("status", "published")
-      .or("auto_archive_date.is.null,auto_archive_date.gte." + new Date().toISOString())
-      .order("priority", { ascending: true }) // urgent first
-      .order("published_at", { ascending: false })
-      .limit(5)
-
-    // Apply scope filter
+    let announcementIds: string[] = []
+    
     if (neighborhoodIds.length > 0) {
-      // Get announcements that are community-wide OR targeted to user's neighborhood
       const { data: neighborhoodAnnouncements } = await supabase
         .from("announcement_neighborhoods")
         .select("announcement_id")
         .in("neighborhood_id", neighborhoodIds)
 
-      const neighborhoodAnnouncementIds = neighborhoodAnnouncements?.map((a) => a.announcement_id) || []
-
-      // Community-wide OR in user's neighborhood
-      query = query.or(`scope.eq.community_wide,id.in.(${neighborhoodAnnouncementIds.join(",") || "null"})`)
-    } else {
-      // Only community-wide if no neighborhood
-      query = query.eq("scope", "community_wide")
+      announcementIds = neighborhoodAnnouncements?.map((a) => a.announcement_id) || []
     }
 
-    const { data: announcements } = await query
+    const now = new Date().toISOString()
+    
+    // Get community-wide announcements
+    const communityQuery = supabase
+      .from("announcements")
+      .select("id, title, announcement_type, priority, description, published_at, auto_archive_date")
+      .eq("tenant_id", tenantId)
+      .eq("status", "published")
+      .is("location_type", null) // community-wide announcements have no location restrictions
+      .or(`auto_archive_date.is.null,auto_archive_date.gte.${now}`)
 
-    // Get read status for these announcements
-    const announcementIds = (announcements || []).map((a) => a.id)
+    const { data: communityAnnouncements } = await communityQuery
+
+    // Get neighborhood-specific announcements if user has neighborhoods
+    let neighborhoodAnnouncements: any[] = []
+    if (announcementIds.length > 0) {
+      const { data } = await supabase
+        .from("announcements")
+        .select("id, title, announcement_type, priority, description, published_at, auto_archive_date")
+        .eq("tenant_id", tenantId)
+        .eq("status", "published")
+        .in("id", announcementIds)
+        .or(`auto_archive_date.is.null,auto_archive_date.gte.${now}`)
+
+      neighborhoodAnnouncements = data || []
+    }
+
+    // Combine and deduplicate
+    const allAnnouncements = [...(communityAnnouncements || []), ...neighborhoodAnnouncements]
+    const uniqueAnnouncements = Array.from(
+      new Map(allAnnouncements.map(a => [a.id, a])).values()
+    )
+
+    // Sort by priority then date
+    const sortedAnnouncements = uniqueAnnouncements.sort((a, b) => {
+      const priorityOrder = { urgent: 0, important: 1, normal: 2 }
+      const priorityDiff = priorityOrder[a.priority as keyof typeof priorityOrder] - 
+                          priorityOrder[b.priority as keyof typeof priorityOrder]
+      if (priorityDiff !== 0) return priorityDiff
+      return new Date(b.published_at).getTime() - new Date(a.published_at).getTime()
+    })
+
+    // Get read status
+    const announcementIdsToCheck = sortedAnnouncements.map((a) => a.id)
     const { data: readAnnouncements } = await supabase
       .from("announcement_reads")
       .select("announcement_id")
       .eq("user_id", user.id)
-      .in("announcement_id", announcementIds)
+      .in("announcement_id", announcementIdsToCheck)
 
     const readIds = new Set(readAnnouncements?.map((r) => r.announcement_id) || [])
 
-    // Filter to only unread
-    const unread = (announcements || []).filter((a) => !readIds.has(a.id))
+    // Filter to only unread and limit to 5
+    const unread = sortedAnnouncements
+      .filter((a) => !readIds.has(a.id))
+      .slice(0, 5)
 
     // Get total unread count
-    const { count: totalUnread } = await supabase
-      .from("announcements")
-      .select("*", { count: "exact", head: true })
-      .eq("tenant_id", tenantId)
-      .eq("status", "published")
-      .or("auto_archive_date.is.null,auto_archive_date.gte." + new Date().toISOString())
-      .not("id", "in", `(${Array.from(readIds).join(",") || "null"})`)
+    const totalUnread = sortedAnnouncements.filter((a) => !readIds.has(a.id)).length
 
     return NextResponse.json({
       announcements: unread,
-      unreadCount: totalUnread || 0,
+      unreadCount: totalUnread,
     })
   } catch (error) {
     console.error("[v0] Error fetching unread announcements:", error)

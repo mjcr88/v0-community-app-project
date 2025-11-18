@@ -1,5 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getAnnouncements } from '@/app/actions/announcements'
+import { AnnouncementsPageClient } from './announcements-page-client'
 
 export default async function AnnouncementsPage({
   params,
@@ -32,17 +34,23 @@ export default async function AnnouncementsPage({
     redirect(`/t/${slug}/dashboard`)
   }
 
+  const result = await getAnnouncements(tenant.id, user.id)
+  
+  const announcements = result.success ? result.data : []
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-forest-900">Announcements</h1>
-        <p className="text-forest-600">View community announcements from your tenant admins</p>
+        <h1 className="text-3xl font-bold">Announcements</h1>
+        <p className="text-muted-foreground">View community announcements from your tenant admins</p>
       </div>
 
-      <div className="rounded-lg border border-forest-200 bg-white p-8 text-center">
-        <p className="text-forest-600">Announcements feature is being set up...</p>
-        <p className="mt-2 text-sm text-forest-500">Phase 2 implementation coming soon</p>
-      </div>
+      <AnnouncementsPageClient
+        announcements={announcements}
+        slug={slug}
+        userId={user.id}
+        tenantId={tenant.id}
+      />
     </div>
   )
 }

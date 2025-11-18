@@ -97,9 +97,11 @@ export default async function AnnouncementDetailPage({ params }: AnnouncementDet
             {/* Title & Badges */}
             <div className="space-y-4">
               <div className="flex flex-wrap items-center gap-3">
-                <AnnouncementTypeIcon type={announcement.type} className="h-8 w-8" />
+                <AnnouncementTypeIcon type={announcement.announcement_type} className="h-8 w-8" />
                 <AnnouncementPriorityBadge priority={announcement.priority} />
-                {announcement.scope === "neighborhood" && (
+                {announcement.scope === "community_wide" ? (
+                  <Badge variant="secondary">Community-Wide</Badge>
+                ) : (
                   <Badge variant="secondary">Neighborhood</Badge>
                 )}
                 <UpdatedIndicator
@@ -140,14 +142,14 @@ export default async function AnnouncementDetailPage({ params }: AnnouncementDet
           {/* Main Content */}
           <div className="prose prose-neutral dark:prose-invert max-w-none">
             <p className="text-lg leading-relaxed whitespace-pre-wrap text-pretty">
-              {announcement.content}
+              {announcement.description}
             </p>
           </div>
 
           {/* Info Grid */}
           <div className="grid md:grid-cols-2 gap-4">
             {/* Neighborhoods */}
-            {neighborhoods.length > 0 && (
+            {announcement.scope === "neighborhood" && neighborhoods.length > 0 && (
               <div className="p-6 border rounded-lg bg-card space-y-3">
                 <h3 className="font-semibold">Visible to Neighborhoods</h3>
                 <div className="flex flex-wrap gap-2">
@@ -194,7 +196,7 @@ export default async function AnnouncementDetailPage({ params }: AnnouncementDet
               <div className="flex items-center gap-3">
                 <MapPin className="h-5 w-5 text-primary" />
                 <div>
-                  <p className="text-sm text-muted-foreground">Location</p>
+                  <p className="text-sm text-muted-foreground">Custom Location</p>
                   <p className="font-medium">{announcement.custom_location_name}</p>
                 </div>
               </div>

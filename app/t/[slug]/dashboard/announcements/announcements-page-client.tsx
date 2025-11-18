@@ -37,7 +37,7 @@ export function AnnouncementsPageClient({
       const matchesSearch =
         search === "" ||
         announcement.title.toLowerCase().includes(search.toLowerCase()) ||
-        announcement.content.toLowerCase().includes(search.toLowerCase())
+        announcement.description.toLowerCase().includes(search.toLowerCase())
 
       const now = new Date()
       const isArchived = announcement.auto_archive_date && new Date(announcement.auto_archive_date) < now
@@ -136,7 +136,7 @@ export function AnnouncementsPageClient({
                       <div className="flex gap-4">
                         {/* Type icon */}
                         <div className="flex-shrink-0 mt-1">
-                          <AnnouncementTypeIcon type={announcement.type} className="h-6 w-6" />
+                          <AnnouncementTypeIcon type={announcement.announcement_type} className="h-6 w-6" />
                         </div>
 
                         {/* Content */}
@@ -146,11 +146,15 @@ export function AnnouncementsPageClient({
                             <AnnouncementPriorityBadge priority={announcement.priority} />
                           </div>
 
-                          <p className="text-sm text-muted-foreground line-clamp-2">{announcement.content}</p>
+                          <p className="text-sm text-muted-foreground line-clamp-2">{announcement.description}</p>
 
                           <div className="flex items-center gap-3 flex-wrap text-sm text-muted-foreground">
                             <span>{format(new Date(announcement.published_at), "MMM d, yyyy 'at' h:mm a")}</span>
-                            {announcement.scope === "neighborhood" && (
+                            {announcement.scope === "community_wide" ? (
+                              <Badge variant="secondary" className="text-xs">
+                                Community-Wide
+                              </Badge>
+                            ) : (
                               <Badge variant="secondary" className="text-xs">
                                 Neighborhood
                               </Badge>

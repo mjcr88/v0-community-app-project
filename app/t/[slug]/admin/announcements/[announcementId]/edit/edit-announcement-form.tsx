@@ -142,7 +142,7 @@ export function EditAnnouncementForm({
         auto_archive_date: hasAutoArchive && autoArchiveDate ? new Date(autoArchiveDate).toISOString() : null,
       }
 
-      const result = await updateAnnouncement(slug, tenantId, announcement.id, data)
+      const result = await updateAnnouncement(announcement.id, slug, tenantId, data)
 
       if (result.success) {
         toast.success(shouldPublish ? "Announcement published successfully!" : "Announcement updated successfully!")

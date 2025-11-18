@@ -129,6 +129,7 @@ export default async function AdminAnnouncementDetailPage({
               announcementId={announcement.id}
               announcementTitle={announcement.title}
               tenantSlug={slug}
+              tenantId={tenant.id}
             />
           )}
           <Button variant="outline" size="sm" asChild>
@@ -142,12 +143,16 @@ export default async function AdminAnnouncementDetailPage({
               announcementId={announcement.id}
               announcementTitle={announcement.title}
               tenantSlug={slug}
+              tenantId={tenant.id}
+              redirectAfter
             />
           )}
           <DeleteAnnouncementDialog
             announcementId={announcement.id}
             announcementTitle={announcement.title}
             tenantSlug={slug}
+            tenantId={tenant.id}
+            redirectAfter
           />
         </div>
       </div>

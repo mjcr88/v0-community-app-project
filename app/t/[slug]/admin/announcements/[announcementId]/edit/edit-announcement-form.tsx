@@ -252,6 +252,7 @@ export function EditAnnouncementForm({
 
             {visibilityScope === "neighborhood" && (
               <NeighborhoodMultiSelect
+                tenantId={tenantId}
                 neighborhoods={neighborhoods}
                 selectedNeighborhoodIds={selectedNeighborhoodIds}
                 onSelectionChange={setSelectedNeighborhoodIds}

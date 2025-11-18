@@ -443,13 +443,12 @@ export async function getAnnouncements(
   try {
     const supabase = await createServerClient()
 
-    // Get user's neighborhood (via lot)
     const { data: userResident } = await supabase
       .from("residents")
       .select("lot_id, lot:lots(neighborhood_id)")
       .eq("auth_user_id", userId)
       .eq("tenant_id", tenantId)
-      .single()
+      .maybeSingle()
 
     const userNeighborhoodId = userResident?.lot?.neighborhood_id
 
@@ -476,6 +475,8 @@ export async function getAnnouncements(
       query = query.eq("status", "published")
     }
 
+    query = query.or(`auto_archive_date.is.null,auto_archive_date.gte.${new Date().toISOString()}`)
+
     // Order by published_at desc
     query = query.order("published_at", { ascending: false })
 
@@ -491,8 +492,6 @@ export async function getAnnouncements(
     }
 
     // Filter in memory for complex logic (read status + neighborhood targeting)
-    // RLS handles the basic visibility, but we need to filter "read" vs "active" tabs
-    // and ensure neighborhood targeting is respected if RLS is broad
     const filtered = announcements.filter((a) => {
       // 1. Check neighborhood targeting
       const targetNeighborhoods = a.neighborhoods.map((n: any) => n.neighborhood_id)

@@ -34,11 +34,11 @@ export function AnnouncementsWidget({ slug, tenantId, userId }: AnnouncementsWid
     fetcher,
     {
       refreshInterval: 300000, // Refresh every 5 minutes
-      revalidateOnFocus: false,
+      revalidateOnFocus: true, // Revalidate when user returns to tab
     }
   )
 
-  const unreadAnnouncements = announcements?.announcements || []
+  const recentAnnouncements = announcements?.announcements || []
   const unreadCount = announcements?.unreadCount || 0
 
   if (isLoading) {
@@ -57,7 +57,7 @@ export function AnnouncementsWidget({ slug, tenantId, userId }: AnnouncementsWid
     )
   }
 
-  if (unreadAnnouncements.length === 0) {
+  if (recentAnnouncements.length === 0) {
     return (
       <Card>
         <CardHeader>
@@ -101,7 +101,7 @@ export function AnnouncementsWidget({ slug, tenantId, userId }: AnnouncementsWid
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {unreadAnnouncements.map((announcement) => (
+          {recentAnnouncements.map((announcement) => (
             <Link key={announcement.id} href={`/t/${slug}/dashboard/announcements/${announcement.id}`}>
               <div className="flex gap-3 p-4 rounded-lg border hover:bg-accent transition-colors cursor-pointer">
                 {/* Type icon */}

@@ -24,6 +24,8 @@ export async function GET(
       .eq("id", user.id)
       .single()
 
+    console.log("[v0] User data for announcements:", userData)
+
     // Get neighborhood from lot
     let neighborhoodIds: string[] = []
     if (userData?.lot_id) {
@@ -38,6 +40,8 @@ export async function GET(
       }
     }
 
+    console.log("[v0] User neighborhood IDs:", neighborhoodIds)
+
     const now = new Date().toISOString()
     
     const { data: allAnnouncements } = await supabase
@@ -47,6 +51,8 @@ export async function GET(
       .eq("status", "published")
       .or(`auto_archive_date.is.null,auto_archive_date.gte.${now}`)
       .order("published_at", { ascending: false })
+
+    console.log("[v0] All published announcements:", allAnnouncements?.length)
 
     if (!allAnnouncements) {
       return NextResponse.json({ announcements: [], unreadCount: 0 })
@@ -76,6 +82,8 @@ export async function GET(
     // Filter out nulls
     const filtered = visibleAnnouncements.filter((a): a is NonNullable<typeof a> => a !== null)
 
+    console.log("[v0] Visible announcements after filtering:", filtered.length)
+
     // Sort by priority then date
     const sortedAnnouncements = filtered.sort((a, b) => {
       const priorityOrder = { urgent: 0, important: 1, normal: 2 }
@@ -95,16 +103,17 @@ export async function GET(
 
     const readIds = new Set(readAnnouncements?.map((r) => r.announcement_id) || [])
 
-    // Filter to only unread and limit to 5
-    const unread = sortedAnnouncements
-      .filter((a) => !readIds.has(a.id))
-      .slice(0, 5)
+    console.log("[v0] Read announcement IDs:", Array.from(readIds))
 
-    // Get total unread count
+    const recentAnnouncements = sortedAnnouncements.slice(0, 5)
+
+    // Get total unread count for badge
     const totalUnread = sortedAnnouncements.filter((a) => !readIds.has(a.id)).length
 
+    console.log("[v0] Returning announcements:", recentAnnouncements.length, "with", totalUnread, "unread")
+
     return NextResponse.json({
-      announcements: unread,
+      announcements: recentAnnouncements,
       unreadCount: totalUnread,
     })
   } catch (error) {

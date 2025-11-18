@@ -14,21 +14,12 @@ import { DeleteAnnouncementDialog } from "@/components/announcements/delete-anno
 import { ArchiveAnnouncementDialog } from "@/components/announcements/archive-announcement-dialog"
 import { PublishAnnouncementDialog } from "@/components/announcements/publish-announcement-dialog"
 
-function isValidUUID(str: string): boolean {
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-  return uuidRegex.test(str)
-}
-
 export default async function AdminAnnouncementDetailPage({
   params,
 }: {
   params: { slug: string; announcementId: string }
 }) {
   const { slug, announcementId } = params
-  
-  if (!isValidUUID(announcementId)) {
-    notFound()
-  }
   
   const supabase = await createClient()
 

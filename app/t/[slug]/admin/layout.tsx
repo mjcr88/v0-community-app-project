@@ -140,12 +140,14 @@ export default async function TenantAdminLayout({
     lots: true,
     map: true,
     events_enabled: false,
+    requests_enabled: true,
   }
 
   const features = {
     ...defaultFeatures,
     ...(tenant?.features || {}),
     events_enabled: tenant?.events_enabled ?? false,
+    requests_enabled: tenant?.requests_enabled ?? true,
   } as {
     neighborhoods?: boolean
     interests?: boolean
@@ -153,6 +155,7 @@ export default async function TenantAdminLayout({
     lots?: boolean
     map?: boolean
     events_enabled?: boolean
+    requests_enabled?: boolean
     location_types?: Record<string, boolean>
   }
 
@@ -160,6 +163,7 @@ export default async function TenantAdminLayout({
   console.log("[v0] Merged features (layout):", features)
   console.log("[v0] Map feature enabled?", features.map)
   console.log("[v0] Events enabled?", features.events_enabled)
+  console.log("[v0] Requests enabled?", features.requests_enabled)
 
   return (
     <SidebarProvider>
@@ -268,14 +272,16 @@ export default async function TenantAdminLayout({
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <Link href={`/t/${slug}/admin/requests`}>
-                      <ClipboardList />
-                      <span>Requests</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                {features.requests_enabled && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link href={`/t/${slug}/admin/requests`}>
+                        <ClipboardList />
+                        <span>Requests</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

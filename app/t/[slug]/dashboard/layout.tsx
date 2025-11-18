@@ -81,6 +81,7 @@ export default async function ResidentDashboardLayout({
   const mapEnabled = mergedFeatures.map === true
   const eventsEnabled = tenant.events_enabled === true
   const exchangeEnabled = tenant.exchange_enabled === true
+  const requestsEnabled = tenant.requests_enabled ?? true
 
   return (
     <SidebarProvider>
@@ -149,14 +150,16 @@ export default async function ResidentDashboardLayout({
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 )}
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <Link href={`/t/${slug}/dashboard/requests`}>
-                      <ClipboardList />
-                      <span>Requests</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                {requestsEnabled && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link href={`/t/${slug}/dashboard/requests`}>
+                        <ClipboardList />
+                        <span>Requests</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

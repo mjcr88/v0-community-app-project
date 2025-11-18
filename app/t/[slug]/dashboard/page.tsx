@@ -109,6 +109,7 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
   const petsEnabled = tenant?.features?.pets === true
   const checkinsEnabled = tenant?.checkins_enabled === true
   const exchangeEnabled = tenant?.exchange_enabled === true
+  const requestsEnabled = tenant?.requests_enabled ?? true
   const defaultFeatures = {
     map: true,
   }
@@ -221,7 +222,7 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
     userTransactions = await getCachedUserTransactions(user.id, resident.tenant_id)
   }
 
-  if (resident.tenant_id) {
+  if (requestsEnabled && resident.tenant_id) {
     myRequests = await getMyRequests(resident.tenant_id)
     activeRequests = myRequests.filter(
       (r) => r.status === "pending" || r.status === "in_progress"
@@ -317,7 +318,7 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
         </DashboardSectionCollapsible>
       )}
 
-      {activeRequests.length > 0 && (
+      {requestsEnabled && activeRequests.length > 0 && (
         <DashboardSectionCollapsible
           title="My Active Requests"
           description="Track your submitted requests"

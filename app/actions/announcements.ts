@@ -506,3 +506,164 @@ async function sendAnnouncementNotifications(
     console.error("[v0] Error sending announcement notifications:", error)
   }
 }
+
+export async function archiveAnnouncements(announcementIds: string[], tenantId: string, tenantSlug: string) {
+  try {
+    const supabase = await createServerClient()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: "User not authenticated" }
+    }
+
+    // Verify user is admin
+    const { data: userData } = await supabase
+      .from("users")
+      .select("is_tenant_admin, role")
+      .eq("id", user.id)
+      .single()
+
+    const isAdmin = userData?.is_tenant_admin || userData?.role === "tenant_admin" || userData?.role === "super_admin"
+
+    if (!isAdmin) {
+      return { success: false, error: "Only tenant admins can archive announcements" }
+    }
+
+    const { error } = await supabase
+      .from("announcements")
+      .update({
+        status: "archived",
+        archived_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .in("id", announcementIds)
+      .eq("tenant_id", tenantId)
+
+    if (error) {
+      console.error("[v0] Error archiving announcements:", error)
+      return { success: false, error: error.message }
+    }
+
+    revalidatePath(`/t/${tenantSlug}/dashboard/announcements`)
+    revalidatePath(`/t/${tenantSlug}/admin/announcements`)
+
+    return { success: true }
+  } catch (error) {
+    console.error("[v0] Unexpected error archiving announcements:", error)
+    return {
+      success: false,
+      error: "An unexpected error occurred. Please try again.",
+    }
+  }
+}
+
+export async function deleteAnnouncements(announcementIds: string[], tenantId: string, tenantSlug: string) {
+  try {
+    const supabase = await createServerClient()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: "User not authenticated" }
+    }
+
+    // Verify user is admin
+    const { data: userData } = await supabase
+      .from("users")
+      .select("is_tenant_admin, role")
+      .eq("id", user.id)
+      .single()
+
+    const isAdmin = userData?.is_tenant_admin || userData?.role === "tenant_admin" || userData?.role === "super_admin"
+
+    if (!isAdmin) {
+      return { success: false, error: "Only tenant admins can delete announcements" }
+    }
+
+    // Hard delete
+    const { error } = await supabase
+      .from("announcements")
+      .delete()
+      .in("id", announcementIds)
+      .eq("tenant_id", tenantId)
+
+    if (error) {
+      console.error("[v0] Error deleting announcements:", error)
+      return { success: false, error: error.message }
+    }
+
+    revalidatePath(`/t/${tenantSlug}/dashboard/announcements`)
+    revalidatePath(`/t/${tenantSlug}/admin/announcements`)
+
+    return { success: true }
+  } catch (error) {
+    console.error("[v0] Unexpected error deleting announcements:", error)
+    return {
+      success: false,
+      error: "An unexpected error occurred. Please try again.",
+    }
+  }
+}
+
+export async function publishAnnouncements(announcementIds: string[], tenantId: string, tenantSlug: string) {
+  try {
+    const supabase = await createServerClient()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: "User not authenticated" }
+    }
+
+    // Verify user is admin
+    const { data: userData } = await supabase
+      .from("users")
+      .select("is_tenant_admin, role")
+      .eq("id", user.id)
+      .single()
+
+    const isAdmin = userData?.is_tenant_admin || userData?.role === "tenant_admin" || userData?.role === "super_admin"
+
+    if (!isAdmin) {
+      return { success: false, error: "Only tenant admins can publish announcements" }
+    }
+
+    const { error } = await supabase
+      .from("announcements")
+      .update({
+        status: "published",
+        published_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .in("id", announcementIds)
+      .eq("tenant_id", tenantId)
+
+    if (error) {
+      console.error("[v0] Error publishing announcements:", error)
+      return { success: false, error: error.message }
+    }
+
+    // Send notifications for each announcement
+    await Promise.all(
+      announcementIds.map((id) => sendAnnouncementNotifications(id, tenantId, tenantSlug, "published"))
+    )
+
+    revalidatePath(`/t/${tenantSlug}/dashboard/announcements`)
+    revalidatePath(`/t/${tenantSlug}/admin/announcements`)
+
+    return { success: true }
+  } catch (error) {
+    console.error("[v0] Unexpected error publishing announcements:", error)
+    return {
+      success: false,
+      error: "An unexpected error occurred. Please try again.",
+    }
+  }
+}

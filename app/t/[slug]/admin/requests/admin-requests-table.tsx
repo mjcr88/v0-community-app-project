@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { ArrowUpDown, MapPin, Search, X, ChevronDown, Eye, AlertCircle } from 'lucide-react'
+import { ArrowUpDown, MapPin, Search, X, ChevronDown, AlertCircle } from 'lucide-react'
 import Link from "next/link"
 import { formatDate } from "date-fns"
 import {
@@ -366,7 +366,6 @@ export function AdminRequestsTable({
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
               </TableHead>
-              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -378,8 +377,16 @@ export function AdminRequestsTable({
               </TableRow>
             ) : (
               sortedRequests.map((request) => (
-                <TableRow key={request.id}>
-                  <TableCell>
+                <TableRow 
+                  key={request.id}
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={(e) => {
+                    // Don't navigate if clicking checkbox or other interactive elements
+                    if ((e.target as HTMLElement).closest('button, input, a')) return
+                    window.location.href = `/t/${slug}/admin/requests/${request.id}`
+                  }}
+                >
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <Checkbox
                       checked={selectedRequests.includes(request.id)}
                       onCheckedChange={(checked) => handleSelectRequest(request.id, checked as boolean)}
@@ -389,12 +396,9 @@ export function AdminRequestsTable({
                     <RequestTypeIcon type={request.request_type} className="h-5 w-5" />
                   </TableCell>
                   <TableCell>
-                    <Link
-                      href={`/t/${slug}/admin/requests/${request.id}`}
-                      className="font-medium hover:underline line-clamp-1"
-                    >
+                    <div className="font-medium line-clamp-1">
                       {request.title}
-                    </Link>
+                    </div>
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline">{getRequestTypeLabel(request.request_type)}</Badge>
@@ -444,13 +448,6 @@ export function AdminRequestsTable({
                     <RequestStatusBadge status={request.status} />
                   </TableCell>
                   <TableCell className="text-sm">{getRequestDate(request)}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" asChild>
-                      <Link href={`/t/${slug}/admin/requests/${request.id}`}>
-                        <Eye className="h-4 w-4" />
-                      </Link>
-                    </Button>
-                  </TableCell>
                 </TableRow>
               ))
             )}

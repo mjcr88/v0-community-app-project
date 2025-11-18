@@ -104,22 +104,24 @@ export default async function RequestDetailPage({ params }: RequestDetailPagePro
           {request.creator && !request.is_anonymous && (
             <Card>
               <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <Link href={`/t/${slug}/residents/${request.creator.id}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-                    <Avatar className="h-12 w-12">
-                      <AvatarImage src={request.creator.profile_picture_url || undefined} />
-                      <AvatarFallback>
-                        {request.creator.first_name[0]}{request.creator.last_name[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Submitted by</p>
-                      <p className="font-medium">
-                        {request.creator.first_name} {request.creator.last_name}
-                      </p>
-                    </div>
-                  </Link>
-                </div>
+                <Link 
+                  href={`/t/${slug}/residents/${request.creator.id}`} 
+                  className="flex items-center gap-3 hover:bg-muted/50 -m-2 p-2 rounded-lg transition-colors"
+                >
+                  <Avatar className="h-12 w-12">
+                    <AvatarImage src={request.creator.profile_picture_url || undefined} />
+                    <AvatarFallback>
+                      {request.creator.first_name[0]}{request.creator.last_name[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Submitted by</p>
+                    <p className="font-medium">
+                      {request.creator.first_name} {request.creator.last_name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Click to view profile</p>
+                  </div>
+                </Link>
               </CardContent>
             </Card>
           )}

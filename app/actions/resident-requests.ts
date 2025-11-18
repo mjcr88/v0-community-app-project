@@ -284,7 +284,7 @@ export async function getAllRequests(tenantId: string) {
       .from("resident_requests")
       .select(`
         *,
-        creator:created_by(id, first_name, last_name, lot_id, lots(lot_number)),
+        creator:created_by(id, first_name, last_name, profile_picture_url),
         location:location_id(id, name, type),
         resolved_by_user:resolved_by(first_name, last_name)
       `)
@@ -344,5 +344,66 @@ export async function getCommunityRequests(tenantId: string) {
   } catch (error) {
     console.error("[v0] Unexpected error fetching community requests:", error)
     return []
+  }
+}
+
+export async function getRequestById(requestId: string, tenantId: string) {
+  try {
+    const supabase = await createServerClient()
+    
+    const { data: request, error } = await supabase
+      .from("resident_requests")
+      .select(`
+        *,
+        creator:created_by(id, first_name, last_name, profile_picture_url),
+        original_submitter:original_submitter_id(id, first_name, last_name, profile_picture_url),
+        location:location_id(id, name, type),
+        resolved_by_user:resolved_by(id, first_name, last_name)
+      `)
+      .eq("id", requestId)
+      .eq("tenant_id", tenantId)
+      .single()
+
+    if (error) {
+      console.error("[v0] Error fetching request:", error)
+      return null
+    }
+
+    let taggedResidents = []
+    if (request.tagged_resident_ids && request.tagged_resident_ids.length > 0) {
+      const { data: residents } = await supabase
+        .from("users")
+        .select("id, first_name, last_name, profile_picture_url")
+        .in("id", request.tagged_resident_ids)
+        .eq("tenant_id", tenantId)
+      
+      taggedResidents = residents || []
+    }
+
+    let taggedPets = []
+    if (request.tagged_pet_ids && request.tagged_pet_ids.length > 0) {
+      const { data: pets } = await supabase
+        .from("pets")
+        .select(`
+          id,
+          name,
+          species,
+          breed,
+          profile_picture_url,
+          family_unit:family_unit_id(id, name, primary_contact:primary_contact_id(id, first_name, last_name, profile_picture_url))
+        `)
+        .in("id", request.tagged_pet_ids)
+      
+      taggedPets = pets || []
+    }
+
+    return {
+      ...request,
+      tagged_residents: taggedResidents,
+      tagged_pets: taggedPets,
+    }
+  } catch (error) {
+    console.error("[v0] Unexpected error fetching request:", error)
+    return null
   }
 }

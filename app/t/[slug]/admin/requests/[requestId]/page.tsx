@@ -14,6 +14,7 @@ import { AdminReplyDialog } from "@/components/requests/admin-reply-dialog"
 import { MarkInProgressDialog } from "@/components/requests/mark-in-progress-dialog"
 import { MarkResolvedDialog } from "@/components/requests/mark-resolved-dialog"
 import { MarkRejectedDialog } from "@/components/requests/mark-rejected-dialog"
+import { getRequestById } from "@/app/actions/resident-requests"
 
 export default async function AdminRequestDetailPage({
   params,
@@ -50,20 +51,9 @@ export default async function AdminRequestDetailPage({
   }
 
   // Fetch request details
-  const { data: request, error } = await supabase
-    .from("resident_requests")
-    .select(`
-      *,
-      creator:created_by(id, first_name, last_name, profile_picture_url, email, phone),
-      original_submitter:original_submitter_id(id, first_name, last_name, profile_picture_url, email, phone),
-      location:location_id(id, name, type),
-      resolved_by_user:resolved_by(id, first_name, last_name)
-    `)
-    .eq("id", requestId)
-    .eq("tenant_id", tenant.id)
-    .single()
+  const request = await getRequestById(requestId, tenant.id)
 
-  if (error || !request) {
+  if (!request) {
     notFound()
   }
 
@@ -198,6 +188,78 @@ export default async function AdminRequestDetailPage({
               </div>
             )}
 
+            {request.request_type === 'complaint' && (request.tagged_residents?.length > 0 || request.tagged_pets?.length > 0) && (
+              <div className="border-t pt-4">
+                <h3 className="font-semibold mb-3">Complaint Regarding</h3>
+                
+                {request.tagged_residents && request.tagged_residents.length > 0 && (
+                  <div className="space-y-2 mb-4">
+                    <p className="text-sm text-muted-foreground">Residents:</p>
+                    <div className="flex flex-wrap gap-3">
+                      {request.tagged_residents.map((resident: any) => (
+                        <Link
+                          key={resident.id}
+                          href={`/t/${slug}/admin/residents/${resident.id}`}
+                          className="flex items-center gap-2 p-2 rounded-lg border hover:bg-muted transition-colors"
+                        >
+                          <Avatar className="h-8 w-8">
+                            {resident.profile_picture_url ? (
+                              <AvatarImage src={resident.profile_picture_url || "/placeholder.svg"} alt={`${resident.first_name} ${resident.last_name}`} />
+                            ) : (
+                              <AvatarFallback className="text-xs">
+                                {getInitials(resident.first_name, resident.last_name)}
+                              </AvatarFallback>
+                            )}
+                          </Avatar>
+                          <span className="text-sm font-medium">
+                            {resident.first_name} {resident.last_name}
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {request.tagged_pets && request.tagged_pets.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">Pets:</p>
+                    <div className="flex flex-wrap gap-3">
+                      {request.tagged_pets.map((pet: any) => (
+                        <div
+                          key={pet.id}
+                          className="flex items-center gap-2 p-2 rounded-lg border bg-muted/50"
+                        >
+                          <Avatar className="h-8 w-8">
+                            {pet.profile_picture_url ? (
+                              <AvatarImage src={pet.profile_picture_url || "/placeholder.svg"} alt={pet.name} />
+                            ) : (
+                              <AvatarFallback className="text-xs">
+                                {pet.name[0].toUpperCase()}
+                              </AvatarFallback>
+                            )}
+                          </Avatar>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium">{pet.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {pet.species} {pet.breed && `(${pet.breed})`}
+                            </p>
+                            {pet.family_unit?.primary_contact && (
+                              <Link
+                                href={`/t/${slug}/admin/residents/${pet.family_unit.primary_contact.id}`}
+                                className="text-xs text-primary hover:underline"
+                              >
+                                Owner: {pet.family_unit.primary_contact.first_name} {pet.family_unit.primary_contact.last_name}
+                              </Link>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="border-t pt-4">
               <AdminReplyDialog
                 requestId={request.id}
@@ -270,7 +332,10 @@ export default async function AdminRequestDetailPage({
                   {request.original_submitter && (
                     <div className="border-t pt-3">
                       <p className="text-xs text-muted-foreground mb-2">Actual Submitter (Admin Only):</p>
-                      <div className="flex items-center gap-3">
+                      <Link
+                        href={`/t/${slug}/admin/residents/${request.original_submitter.id}`}
+                        className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted transition-colors"
+                      >
                         <Avatar>
                           {request.original_submitter.profile_picture_url ? (
                             <AvatarImage src={request.original_submitter.profile_picture_url || "/placeholder.svg"} />
@@ -284,17 +349,17 @@ export default async function AdminRequestDetailPage({
                           <p className="font-medium text-sm">
                             {request.original_submitter.first_name} {request.original_submitter.last_name}
                           </p>
-                          <p className="text-xs text-muted-foreground">{request.original_submitter.email}</p>
-                          {request.original_submitter.phone && (
-                            <p className="text-xs text-muted-foreground">{request.original_submitter.phone}</p>
-                          )}
+                          <p className="text-xs text-muted-foreground">Click to view profile</p>
                         </div>
-                      </div>
+                      </Link>
                     </div>
                   )}
                 </div>
               ) : request.creator ? (
-                <div className="flex items-center gap-3">
+                <Link
+                  href={`/t/${slug}/admin/residents/${request.creator.id}`}
+                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted transition-colors"
+                >
                   <Avatar>
                     {request.creator.profile_picture_url ? (
                       <AvatarImage src={request.creator.profile_picture_url || "/placeholder.svg"} />
@@ -308,12 +373,9 @@ export default async function AdminRequestDetailPage({
                     <p className="font-medium text-sm">
                       {request.creator.first_name} {request.creator.last_name}
                     </p>
-                    <p className="text-xs text-muted-foreground">{request.creator.email}</p>
-                    {request.creator.phone && (
-                      <p className="text-xs text-muted-foreground">{request.creator.phone}</p>
-                    )}
+                    <p className="text-xs text-muted-foreground">Click to view profile</p>
                   </div>
-                </div>
+                </Link>
               ) : (
                 <p className="text-sm text-muted-foreground">Unknown</p>
               )}

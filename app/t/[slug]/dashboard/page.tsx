@@ -15,6 +15,8 @@ import { DashboardSectionCollapsible } from "@/components/dashboard/dashboard-se
 import { MyListingsAndTransactionsWidget } from "@/components/exchange/my-listings-and-transactions-widget"
 import { getMyTransactions } from "@/app/actions/exchange-transactions"
 import { CreateExchangeListingButton } from "@/components/exchange/create-exchange-listing-button"
+import { getMyRequests } from "@/app/actions/resident-requests"
+import { MyRequestsWidget } from "@/components/requests/my-requests-widget"
 
 const getCachedUser = cache(async () => {
   const supabase = await createClient()
@@ -209,12 +211,21 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
   let exchangeCategories: any[] = []
   let exchangeNeighborhoods: any[] = []
   let userTransactions: any[] = []
-  
+  let myRequests: any[] = []
+  let activeRequests: any[] = []
+
   if (exchangeEnabled) {
     userListings = await getCachedUserListings(user.id, resident.tenant_id)
     exchangeCategories = await getCachedExchangeCategories(resident.tenant_id)
     exchangeNeighborhoods = await getCachedNeighborhoods(resident.tenant_id)
     userTransactions = await getCachedUserTransactions(user.id, resident.tenant_id)
+  }
+
+  if (resident.tenant_id) {
+    myRequests = await getMyRequests(resident.tenant_id)
+    activeRequests = myRequests.filter(
+      (r) => r.status === "pending" || r.status === "in_progress"
+    )
   }
 
   return (
@@ -303,6 +314,16 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
             neighborhoods={exchangeNeighborhoods}
             locations={[]} // Will be fetched by modal on demand
           />
+        </DashboardSectionCollapsible>
+      )}
+
+      {activeRequests.length > 0 && (
+        <DashboardSectionCollapsible
+          title="My Active Requests"
+          description="Track your submitted requests"
+          defaultOpen={true}
+        >
+          <MyRequestsWidget requests={myRequests} tenantSlug={slug} />
         </DashboardSectionCollapsible>
       )}
 

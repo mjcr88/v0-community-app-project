@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Wrench, HelpCircle, AlertTriangle, Shield, MoreHorizontal, ArrowLeft } from 'lucide-react'
 import Link from "next/link"
-import { getMyRequests } from "@/app/actions/resident-requests"
+import { getMyRequests, getCommunityRequests } from "@/app/actions/resident-requests"
 import { MyRequestsTable } from "@/components/requests/my-requests-table"
 import { CreateRequestButton } from "@/components/requests/create-request-button"
+import { CommunityRequestsTable } from "@/components/requests/community-requests-table"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { RequestType } from "@/types/requests"
 
 interface RequestsPageProps {
@@ -73,7 +75,10 @@ export default async function RequestsPage({ params }: RequestsPageProps) {
     redirect("/")
   }
 
-  const requests = await getMyRequests(tenant.id)
+  const [requests, communityRequests] = await Promise.all([
+    getMyRequests(tenant.id),
+    getCommunityRequests(tenant.id),
+  ])
 
   return (
     <div className="min-h-screen bg-background">
@@ -127,8 +132,32 @@ export default async function RequestsPage({ params }: RequestsPageProps) {
           </div>
 
           <div className="space-y-4">
-            <h2 className="text-2xl font-semibold">My Requests</h2>
-            <MyRequestsTable requests={requests} tenantSlug={slug} />
+            <Tabs defaultValue="my-requests" className="w-full">
+              <TabsList>
+                <TabsTrigger value="my-requests">My Requests</TabsTrigger>
+                <TabsTrigger value="community">Community Requests</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="my-requests" className="space-y-4">
+                <div>
+                  <h2 className="text-2xl font-semibold mb-2">My Requests</h2>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    All requests you've submitted
+                  </p>
+                  <MyRequestsTable requests={requests} tenantSlug={slug} />
+                </div>
+              </TabsContent>
+
+              <TabsContent value="community" className="space-y-4">
+                <div>
+                  <h2 className="text-2xl font-semibold mb-2">Community Requests</h2>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Maintenance and safety requests from all residents
+                  </p>
+                  <CommunityRequestsTable requests={communityRequests} tenantSlug={slug} />
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </div>

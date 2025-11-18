@@ -1,7 +1,5 @@
 "use client"
 
-import { useState } from "react"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -24,9 +22,14 @@ interface Request {
   is_anonymous?: boolean
   location?: { name: string } | null
   custom_location_name?: string | null
+  creator?: {
+    first_name: string
+    last_name: string
+    lots?: { lot_number: string } | null
+  } | null
 }
 
-interface MyRequestsTableProps {
+interface CommunityRequestsTableProps {
   requests: Request[]
   tenantSlug: string
 }
@@ -39,13 +42,13 @@ const requestTypeLabels: Record<RequestType, string> = {
   other: "Other",
 }
 
-export function MyRequestsTable({ requests, tenantSlug }: MyRequestsTableProps) {
+export function CommunityRequestsTable({ requests, tenantSlug }: CommunityRequestsTableProps) {
   if (requests.length === 0) {
     return (
       <Card className="p-12 text-center border-dashed">
-        <p className="text-muted-foreground">No requests yet</p>
+        <p className="text-muted-foreground">No community requests yet</p>
         <p className="text-sm text-muted-foreground mt-2">
-          Submit a request to track it here
+          Maintenance and safety requests from residents will appear here
         </p>
       </Card>
     )
@@ -58,6 +61,7 @@ export function MyRequestsTable({ requests, tenantSlug }: MyRequestsTableProps) 
           <TableRow>
             <TableHead>Type</TableHead>
             <TableHead>Title</TableHead>
+            <TableHead>Submitted By</TableHead>
             <TableHead>Location</TableHead>
             <TableHead>Priority</TableHead>
             <TableHead>Status</TableHead>
@@ -74,16 +78,27 @@ export function MyRequestsTable({ requests, tenantSlug }: MyRequestsTableProps) 
                   <span className="text-sm">{requestTypeLabels[request.request_type]}</span>
                 </div>
               </TableCell>
-              <TableCell className="font-medium max-w-xs">
-                <div className="flex items-center gap-2">
-                  <span className="truncate">{request.title}</span>
-                  {request.is_anonymous && (
-                    <Badge variant="outline" className="text-xs">
-                      <EyeOff className="mr-1 h-3 w-3" />
-                      Anonymous
-                    </Badge>
-                  )}
-                </div>
+              <TableCell className="font-medium max-w-xs truncate">
+                {request.title}
+              </TableCell>
+              <TableCell>
+                {request.is_anonymous ? (
+                  <div className="flex items-center gap-1 text-muted-foreground">
+                    <EyeOff className="h-3 w-3" />
+                    <span className="text-sm">Anonymous</span>
+                  </div>
+                ) : request.creator ? (
+                  <div className="text-sm">
+                    {request.creator.first_name} {request.creator.last_name}
+                    {request.creator.lots?.lot_number && (
+                      <span className="ml-1 text-muted-foreground">
+                        (Lot {request.creator.lots.lot_number})
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <span className="text-sm text-muted-foreground">Unknown</span>
+                )}
               </TableCell>
               <TableCell>
                 {request.location?.name || request.custom_location_name ? (

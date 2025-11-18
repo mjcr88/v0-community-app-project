@@ -28,8 +28,8 @@ export type NotificationType =
   // Request-related
   | 'request_status_changed'
   | 'request_admin_reply'
-  // Announcements (future)
-  | 'announcement'
+  | 'announcement_published'
+  | 'announcement_updated'
   // Mentions (future)
   | 'mention'
 
@@ -61,6 +61,7 @@ export interface Notification {
   event_id: string | null
   check_in_id: string | null
   resident_request_id: string | null // Added for request notifications
+  announcement_id: string | null
   
   // Context
   actor_id: string | null
@@ -131,6 +132,7 @@ export interface CreateNotificationData {
   event_id?: string | null
   check_in_id?: string | null
   resident_request_id?: string | null // Added for request notifications
+  announcement_id?: string | null
   actor_id?: string | null
   action_url?: string | null
   metadata?: Record<string, any> | null

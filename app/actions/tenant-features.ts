@@ -180,3 +180,20 @@ export async function toggleRequestsFeature(tenantId: string, enabled: boolean) 
   revalidatePath("/backoffice/dashboard/tenants", "layout")
   return { success: true }
 }
+
+/**
+ * Toggle announcements feature for a tenant
+ */
+export async function toggleAnnouncementsFeature(tenantId: string, enabled: boolean) {
+  const supabase = await createServerClient()
+
+  const { error } = await supabase.from("tenants").update({ announcements_enabled: enabled }).eq("id", tenantId)
+
+  if (error) {
+    console.error("[v0] Error toggling announcements feature:", error)
+    throw new Error(error.message)
+  }
+
+  revalidatePath("/backoffice/dashboard/tenants", "layout")
+  return { success: true }
+}

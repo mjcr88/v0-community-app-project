@@ -16,7 +16,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
-import { Home, Users, Map, Calendar, Package, Bell, ClipboardList } from 'lucide-react'
+import { Home, Users, Map, Calendar, Package, Bell, ClipboardList, Megaphone } from 'lucide-react'
 import Link from "next/link"
 import { UserAvatarMenu } from "@/components/user-avatar-menu"
 import { NotificationBellButton } from "@/components/notifications/notification-bell-button"
@@ -82,6 +82,7 @@ export default async function ResidentDashboardLayout({
   const eventsEnabled = tenant.events_enabled === true
   const exchangeEnabled = tenant.exchange_enabled === true
   const requestsEnabled = tenant.requests_enabled ?? true
+  const announcementsEnabled = tenant.announcements_enabled ?? true
 
   return (
     <SidebarProvider>
@@ -156,6 +157,16 @@ export default async function ResidentDashboardLayout({
                       <Link href={`/t/${slug}/dashboard/requests`}>
                         <ClipboardList />
                         <span>Requests</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
+                {announcementsEnabled && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link href={`/t/${slug}/dashboard/announcements`}>
+                        <Megaphone />
+                        <span>Announcements</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

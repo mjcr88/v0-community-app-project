@@ -16,7 +16,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
-import { Home, MapPin, Users, Building2, HeartHandshake, Lightbulb, Map, Calendar, Package, ClipboardList } from 'lucide-react'
+import { Home, MapPin, Users, Building2, HeartHandshake, Lightbulb, Map, Calendar, Package, ClipboardList, Megaphone } from 'lucide-react'
 import Link from "next/link"
 import { UserAvatarMenu } from "@/components/user-avatar-menu"
 
@@ -148,6 +148,7 @@ export default async function TenantAdminLayout({
     ...(tenant?.features || {}),
     events_enabled: tenant?.events_enabled ?? false,
     requests_enabled: tenant?.requests_enabled ?? true,
+    announcements_enabled: tenant?.announcements_enabled ?? true,
   } as {
     neighborhoods?: boolean
     interests?: boolean
@@ -156,6 +157,7 @@ export default async function TenantAdminLayout({
     map?: boolean
     events_enabled?: boolean
     requests_enabled?: boolean
+    announcements_enabled?: boolean
     location_types?: Record<string, boolean>
   }
 
@@ -164,6 +166,7 @@ export default async function TenantAdminLayout({
   console.log("[v0] Map feature enabled?", features.map)
   console.log("[v0] Events enabled?", features.events_enabled)
   console.log("[v0] Requests enabled?", features.requests_enabled)
+  console.log("[v0] Announcements enabled?", features.announcements_enabled)
 
   return (
     <SidebarProvider>
@@ -278,6 +281,16 @@ export default async function TenantAdminLayout({
                       <Link href={`/t/${slug}/admin/requests`}>
                         <ClipboardList />
                         <span>Requests</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
+                {features.announcements_enabled && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link href={`/t/${slug}/admin/announcements`}>
+                        <Megaphone />
+                        <span>Announcements</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

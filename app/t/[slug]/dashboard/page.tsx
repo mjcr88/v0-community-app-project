@@ -17,6 +17,7 @@ import { getMyTransactions } from "@/app/actions/exchange-transactions"
 import { CreateExchangeListingButton } from "@/components/exchange/create-exchange-listing-button"
 import { getMyRequests } from "@/app/actions/resident-requests"
 import { MyRequestsWidget } from "@/components/requests/my-requests-widget"
+import { AnnouncementsWidget } from "@/components/dashboard/announcements-widget"
 
 const getCachedUser = cache(async () => {
   const supabase = await createClient()
@@ -271,6 +272,18 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
             />
           )}
         </div>
+      </DashboardSectionCollapsible>
+
+      <DashboardSectionCollapsible 
+        title="Community Announcements" 
+        description="Latest updates from management"
+        defaultOpen={true}
+      >
+        <AnnouncementsWidget
+          slug={slug}
+          userId={user.id}
+          tenantId={resident.tenant_id}
+        />
       </DashboardSectionCollapsible>
 
       <DashboardSectionCollapsible 

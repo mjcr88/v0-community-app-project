@@ -76,7 +76,7 @@ export function CommunityRequestsTable({ requests, tenantSlug }: CommunityReques
             <TableRow key={request.id}>
               <TableCell>
                 <div className="flex items-center gap-2">
-                  <RequestTypeIcon type={request.request_type} className="h-4 w-4 text-muted-foreground" />
+                  <RequestTypeIcon type={request.request_type} className="h-3.5 w-3.5 text-muted-foreground" />
                   <span className="text-sm">{requestTypeLabels[request.request_type]}</span>
                 </div>
               </TableCell>

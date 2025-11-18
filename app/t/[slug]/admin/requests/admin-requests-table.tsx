@@ -386,7 +386,7 @@ export function AdminRequestsTable({
                     />
                   </TableCell>
                   <TableCell>
-                    <RequestTypeIcon type={request.request_type} className="h-8 w-8" />
+                    <RequestTypeIcon type={request.request_type} className="h-5 w-5" />
                   </TableCell>
                   <TableCell>
                     <Link

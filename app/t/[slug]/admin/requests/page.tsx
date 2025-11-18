@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { Plus, ClipboardList } from 'lucide-react'
 import Link from "next/link"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AdminRequestsTable } from "./admin-requests-table"
 import { getAllRequests } from "@/app/actions/resident-requests"
 
@@ -28,8 +29,22 @@ export default async function AdminRequestsPage({
     redirect("/backoffice/login")
   }
 
+  const { data: userData } = await supabase
+    .from("users")
+    .select("role, is_tenant_admin")
+    .eq("id", user.id)
+    .eq("tenant_id", tenant.id)
+    .single()
+
+  if (!userData || (!['tenant_admin', 'super_admin'].includes(userData.role) && !userData.is_tenant_admin)) {
+    redirect(`/t/${slug}/dashboard`)
+  }
+
   // Fetch all requests
   const requests = await getAllRequests(tenant.id)
+
+  const activeRequests = requests.filter(r => r.status === 'pending' || r.status === 'in_progress')
+  const resolvedRequests = requests.filter(r => r.status === 'resolved' || r.status === 'rejected')
 
   return (
     <div className="space-y-6">
@@ -46,15 +61,58 @@ export default async function AdminRequestsPage({
         </Button>
       </div>
 
-      {!requests || requests.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
-          <ClipboardList className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">No requests yet</h3>
-          <p className="text-sm text-muted-foreground mb-4">Residents haven't submitted any requests</p>
-        </div>
-      ) : (
-        <AdminRequestsTable requests={requests} slug={slug} tenantId={tenant.id} />
-      )}
+      <Tabs defaultValue="active" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="active">
+            Active
+            {activeRequests.length > 0 && (
+              <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-primary text-primary-foreground">
+                {activeRequests.length}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="resolved">
+            Resolved
+            {resolvedRequests.length > 0 && (
+              <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-muted text-muted-foreground">
+                {resolvedRequests.length}
+              </span>
+            )}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="active" className="space-y-4">
+          {activeRequests.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
+              <ClipboardList className="h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No active requests</h3>
+              <p className="text-sm text-muted-foreground mb-4">All requests have been resolved</p>
+            </div>
+          ) : (
+            <AdminRequestsTable 
+              requests={activeRequests} 
+              slug={slug} 
+              tenantId={tenant.id}
+            />
+          )}
+        </TabsContent>
+
+        <TabsContent value="resolved" className="space-y-4">
+          {resolvedRequests.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
+              <ClipboardList className="h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No resolved requests</h3>
+              <p className="text-sm text-muted-foreground mb-4">Resolved requests will appear here</p>
+            </div>
+          ) : (
+            <AdminRequestsTable 
+              requests={resolvedRequests} 
+              slug={slug} 
+              tenantId={tenant.id}
+            />
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

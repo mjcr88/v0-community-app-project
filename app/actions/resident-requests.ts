@@ -244,6 +244,7 @@ export async function getMyRequests(tenantId: string) {
       `)
       .eq("tenant_id", tenantId)
       .eq("original_submitter_id", user.id)
+      .neq("status", "resolved")
       .order("created_at", { ascending: false })
 
     if (error) {

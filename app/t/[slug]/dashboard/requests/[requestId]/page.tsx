@@ -55,12 +55,13 @@ export default async function RequestDetailPage({ params }: RequestDetailPagePro
     .from("resident_requests")
     .select(`
       *,
+      creator:created_by(id, first_name, last_name, profile_picture_url),
       location:location_id(id, name, type),
       resolved_by_user:resolved_by(first_name, last_name)
     `)
     .eq("id", requestId)
     .eq("tenant_id", tenant.id)
-    .eq("created_by", user.id)
+    .eq("original_submitter_id", user.id)
     .single()
 
   if (error || !request) {
@@ -100,6 +101,29 @@ export default async function RequestDetailPage({ params }: RequestDetailPagePro
 
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto space-y-8">
+          {request.creator && !request.is_anonymous && (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <Link href={`/t/${slug}/residents/${request.creator.id}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={request.creator.profile_picture_url || undefined} />
+                      <AvatarFallback>
+                        {request.creator.first_name[0]}{request.creator.last_name[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Submitted by</p>
+                      <p className="font-medium">
+                        {request.creator.first_name} {request.creator.last_name}
+                      </p>
+                    </div>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <div className="space-y-4">
             <h2 className="text-2xl font-semibold">Request Details</h2>
             <div className="prose prose-neutral dark:prose-invert max-w-none">

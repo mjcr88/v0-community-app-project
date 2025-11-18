@@ -3,14 +3,14 @@ import { formatDistanceToNow } from "date-fns"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface UpdatedIndicatorProps {
-  updatedAt: string
   publishedAt: string | null
+  lastEditedAt: string
 }
 
-export function UpdatedIndicator({ updatedAt, publishedAt }: UpdatedIndicatorProps) {
+export function UpdatedIndicator({ publishedAt, lastEditedAt }: UpdatedIndicatorProps) {
   if (!publishedAt) return null
 
-  const updated = new Date(updatedAt)
+  const updated = new Date(lastEditedAt)
   const published = new Date(publishedAt)
 
   // Only show if updated at least 1 minute after publishing

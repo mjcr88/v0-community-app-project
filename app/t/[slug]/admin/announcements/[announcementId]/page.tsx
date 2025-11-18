@@ -80,7 +80,7 @@ export default async function AdminAnnouncementDetailPage({
   if (announcement.location_type === "community_location" && announcement.location_id) {
     const { data: locationData } = await supabase
       .from("locations")
-      .select("id, name, category")
+      .select("id, name, type")
       .eq("id", announcement.location_id)
       .single()
 

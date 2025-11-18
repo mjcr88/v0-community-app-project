@@ -19,6 +19,11 @@ export default async function AdminAnnouncementDetailPage({
   params: Promise<{ slug: string; announcementId: string }>
 }) {
   const { slug, announcementId } = await params
+  
+  if (announcementId === 'create' || announcementId === 'edit') {
+    notFound()
+  }
+
   const supabase = await createServerClient()
 
   const {

@@ -20,10 +20,6 @@ export default async function AdminAnnouncementDetailPage({
 }) {
   const { slug, announcementId } = await params
   
-  if (announcementId === 'create' || announcementId === 'edit') {
-    notFound()
-  }
-
   const supabase = await createServerClient()
 
   const {

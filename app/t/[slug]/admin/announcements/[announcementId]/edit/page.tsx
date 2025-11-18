@@ -71,7 +71,7 @@ export default async function EditAnnouncementPage({
 
   const { data: locations } = await supabase
     .from("locations")
-    .select("id, name, category")
+    .select("id, name, type")
     .eq("tenant_id", tenant.id)
     .order("name")
 

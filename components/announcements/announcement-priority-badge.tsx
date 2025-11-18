@@ -1,15 +1,31 @@
 import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils"
+import type { AnnouncementPriority } from "@/types/announcements"
 
-type Priority = "normal" | "important" | "urgent"
+interface AnnouncementPriorityBadgeProps {
+  priority: AnnouncementPriority
+  className?: string
+}
 
-export function AnnouncementPriorityBadge({ priority }: { priority: Priority }) {
-  const variants = {
-    normal: { variant: "secondary" as const, label: "Normal" },
-    important: { variant: "default" as const, label: "Important" },
-    urgent: { variant: "destructive" as const, label: "Urgent" },
+export function AnnouncementPriorityBadge({ priority, className }: AnnouncementPriorityBadgeProps) {
+  switch (priority) {
+    case "urgent":
+      return (
+        <Badge variant="destructive" className={cn("bg-red-100 text-red-800 hover:bg-red-100", className)}>
+          Urgent
+        </Badge>
+      )
+    case "important":
+      return (
+        <Badge variant="secondary" className={cn("bg-yellow-100 text-yellow-800 hover:bg-yellow-100", className)}>
+          Important
+        </Badge>
+      )
+    default:
+      return (
+        <Badge variant="outline" className={cn("text-gray-600", className)}>
+          Normal
+        </Badge>
+      )
   }
-
-  const config = variants[priority] || variants.normal
-
-  return <Badge variant={config.variant}>{config.label}</Badge>
 }

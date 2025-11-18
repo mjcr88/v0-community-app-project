@@ -1,10 +1,5 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { Button } from "@/components/ui/button"
-import { Plus, Megaphone } from 'lucide-react'
-import Link from "next/link"
-import { AdminAnnouncementsTable } from "./admin-announcements-table"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export default async function AdminAnnouncementsPage({
   params,
@@ -52,135 +47,17 @@ export default async function AdminAnnouncementsPage({
     redirect(`/t/${slug}/admin/dashboard`)
   }
 
-  const { data: announcements, error: announcementsError } = await supabase
-    .from("announcements")
-    .select(`
-      *,
-      users:created_by (
-        id,
-        first_name,
-        last_name,
-        email,
-        profile_picture_url
-      ),
-      locations:location_id (
-        id,
-        name,
-        type
-      ),
-      events:event_id (
-        id,
-        title
-      )
-    `)
-    .eq("tenant_id", tenant.id)
-    .neq("status", "deleted")
-    .order("created_at", { ascending: false })
-
-  if (announcementsError) {
-    console.error("[v0] Error fetching announcements:", announcementsError)
-  }
-
-  const publishedAnnouncements = announcements?.filter(
-    (a) => a.status === "published"
-  ) || []
-  const archivedAnnouncements = announcements?.filter(
-    (a) => a.status === "archived"
-  ) || []
-  const draftAnnouncements = announcements?.filter(
-    (a) => a.status === "draft"
-  ) || []
-
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Announcements</h2>
-          <p className="text-muted-foreground">
-            Manage community-wide and neighborhood-specific announcements
-          </p>
-        </div>
-        <Button asChild>
-          <Link href={`/t/${slug}/admin/announcements/create`}>
-            <Plus className="mr-2 h-4 w-4" />
-            Create Announcement
-          </Link>
-        </Button>
+      <div>
+        <h1 className="text-3xl font-bold text-forest-900">Manage Announcements</h1>
+        <p className="text-forest-600">Create and manage community announcements</p>
       </div>
 
-      <Tabs defaultValue="published" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="published">
-            Published ({publishedAnnouncements.length})
-          </TabsTrigger>
-          <TabsTrigger value="archived">
-            Archived ({archivedAnnouncements.length})
-          </TabsTrigger>
-          <TabsTrigger value="drafts">
-            Drafts ({draftAnnouncements.length})
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="published" className="space-y-4">
-          {publishedAnnouncements.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
-              <Megaphone className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No published announcements</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Get started by creating your first announcement
-              </p>
-              <Button asChild>
-                <Link href={`/t/${slug}/admin/announcements/create`}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create Announcement
-                </Link>
-              </Button>
-            </div>
-          ) : (
-            <AdminAnnouncementsTable
-              announcements={publishedAnnouncements}
-              slug={slug}
-              tenantId={tenant.id}
-            />
-          )}
-        </TabsContent>
-
-        <TabsContent value="archived" className="space-y-4">
-          {archivedAnnouncements.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
-              <Megaphone className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No archived announcements</h3>
-              <p className="text-sm text-muted-foreground">
-                Archived announcements will appear here
-              </p>
-            </div>
-          ) : (
-            <AdminAnnouncementsTable
-              announcements={archivedAnnouncements}
-              slug={slug}
-              tenantId={tenant.id}
-            />
-          )}
-        </TabsContent>
-
-        <TabsContent value="drafts" className="space-y-4">
-          {draftAnnouncements.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
-              <Megaphone className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No draft announcements</h3>
-              <p className="text-sm text-muted-foreground">
-                Draft announcements will appear here
-              </p>
-            </div>
-          ) : (
-            <AdminAnnouncementsTable
-              announcements={draftAnnouncements}
-              slug={slug}
-              tenantId={tenant.id}
-            />
-          )}
-        </TabsContent>
-      </Tabs>
+      <div className="rounded-lg border border-forest-200 bg-white p-8 text-center">
+        <p className="text-forest-600">Admin announcements interface is being set up...</p>
+        <p className="mt-2 text-sm text-forest-500">Phase 2 implementation coming soon</p>
+      </div>
     </div>
   )
 }

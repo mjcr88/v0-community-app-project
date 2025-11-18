@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
+import { useRouter } from 'next/navigation'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,62 +13,83 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { Button } from "@/components/ui/button"
 import { Send } from 'lucide-react'
-import { publishAnnouncements } from "@/app/actions/announcements"
-import { useRouter } from 'next/navigation'
-import { toast } from "sonner"
+import { publishAnnouncement } from "@/app/actions/announcements"
+import { useToast } from "@/hooks/use-toast"
+
+interface PublishAnnouncementDialogProps {
+  announcementId: string
+  tenantSlug: string
+  tenantId: string
+  trigger?: React.ReactNode
+}
 
 export function PublishAnnouncementDialog({
-  announcementIds,
-  tenantId,
+  announcementId,
   tenantSlug,
-}: {
-  announcementIds: string[]
-  tenantId: string
-  tenantSlug: string
-}) {
+  tenantId,
+  trigger,
+}: PublishAnnouncementDialogProps) {
+  const [open, setOpen] = useState(false)
+  const [isPublishing, setIsPublishing] = useState(false)
   const router = useRouter()
-  const [isProcessing, setIsProcessing] = useState(false)
+  const { toast } = useToast()
 
-  const handlePublish = async () => {
-    setIsProcessing(true)
+  async function handlePublish() {
+    setIsPublishing(true)
     try {
-      const result = await publishAnnouncements(announcementIds, tenantId, tenantSlug)
+      const result = await publishAnnouncement(announcementId, tenantSlug, tenantId)
+
       if (result.success) {
-        toast.success(`${announcementIds.length} announcement(s) published successfully`)
+        toast({
+          title: "Announcement published",
+          description: "Notifications have been sent to residents.",
+        })
+        setOpen(false)
         router.refresh()
       } else {
-        toast.error(result.error || "Failed to publish announcements")
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: result.error || "Failed to publish announcement",
+        })
       }
     } catch (error) {
-      toast.error("An unexpected error occurred")
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "An unexpected error occurred",
+      })
     } finally {
-      setIsProcessing(false)
+      setIsPublishing(false)
     }
   }
 
   return (
-    <AlertDialog>
+    <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
-        <Button size="sm">
-          <Send className="mr-2 h-4 w-4" />
-          Publish
-        </Button>
+        {trigger || (
+          <Button size="sm">
+            <Send className="mr-2 h-4 w-4" />
+            Publish
+          </Button>
+        )}
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>
-            Publish {announcementIds.length} announcement{announcementIds.length > 1 ? "s" : ""}?
-          </AlertDialogTitle>
+          <AlertDialogTitle>Publish Announcement?</AlertDialogTitle>
           <AlertDialogDescription>
-            This will send notifications to all targeted residents and make the announcement
-            {announcementIds.length > 1 ? "s" : ""} visible in the community.
+            This will make the announcement visible to residents and send notifications immediately.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isProcessing}>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={handlePublish} disabled={isProcessing}>
-            {isProcessing ? "Publishing..." : "Publish"}
+          <AlertDialogCancel disabled={isPublishing}>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={(e) => {
+            e.preventDefault()
+            handlePublish()
+          }} disabled={isPublishing}>
+            {isPublishing ? "Publishing..." : "Publish"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

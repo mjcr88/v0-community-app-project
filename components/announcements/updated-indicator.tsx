@@ -1,12 +1,34 @@
-import { Badge } from "@/components/ui/badge"
+import { Clock } from 'lucide-react'
 import { formatDistanceToNow } from "date-fns"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
-export function UpdatedIndicator({ lastEditedAt }: { lastEditedAt: string }) {
-  const timeAgo = formatDistanceToNow(new Date(lastEditedAt), { addSuffix: true })
+interface UpdatedIndicatorProps {
+  updatedAt: string
+  publishedAt: string | null
+}
+
+export function UpdatedIndicator({ updatedAt, publishedAt }: UpdatedIndicatorProps) {
+  if (!publishedAt) return null
+
+  const updated = new Date(updatedAt)
+  const published = new Date(publishedAt)
+
+  // Only show if updated at least 1 minute after publishing
+  if (updated.getTime() - published.getTime() < 60000) return null
 
   return (
-    <Badge variant="outline" className="text-xs">
-      Updated {timeAgo}
-    </Badge>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex items-center text-xs text-muted-foreground">
+            <Clock className="mr-1 h-3 w-3" />
+            <span>Updated</span>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Updated {formatDistanceToNow(updated, { addSuffix: true })}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   )
 }

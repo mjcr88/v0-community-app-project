@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
+import { useRouter } from 'next/navigation'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,62 +13,91 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { Button } from "@/components/ui/button"
 import { Archive } from 'lucide-react'
-import { archiveAnnouncements } from "@/app/actions/announcements"
-import { useRouter } from 'next/navigation'
-import { toast } from "sonner"
+import { archiveAnnouncement } from "@/app/actions/announcements"
+import { useToast } from "@/hooks/use-toast"
+
+interface ArchiveAnnouncementDialogProps {
+  announcementId: string
+  tenantSlug: string
+  tenantId: string
+  trigger?: React.ReactNode
+  redirectAfter?: boolean
+}
 
 export function ArchiveAnnouncementDialog({
-  announcementIds,
-  tenantId,
+  announcementId,
   tenantSlug,
-}: {
-  announcementIds: string[]
-  tenantId: string
-  tenantSlug: string
-}) {
+  tenantId,
+  trigger,
+  redirectAfter = false,
+}: ArchiveAnnouncementDialogProps) {
+  const [open, setOpen] = useState(false)
+  const [isArchiving, setIsArchiving] = useState(false)
   const router = useRouter()
-  const [isProcessing, setIsProcessing] = useState(false)
+  const { toast } = useToast()
 
-  const handleArchive = async () => {
-    setIsProcessing(true)
+  async function handleArchive() {
+    setIsArchiving(true)
     try {
-      const result = await archiveAnnouncements(announcementIds, tenantId, tenantSlug)
+      const result = await archiveAnnouncement(announcementId, tenantSlug, tenantId)
+
       if (result.success) {
-        toast.success(`${announcementIds.length} announcement(s) archived successfully`)
-        router.push(`/t/${tenantSlug}/admin/announcements`)
-        router.refresh()
+        toast({
+          title: "Announcement archived",
+          description: "The announcement has been moved to the archive.",
+        })
+        setOpen(false)
+        
+        if (redirectAfter) {
+          router.push(`/t/${tenantSlug}/admin/announcements`)
+        } else {
+          router.refresh()
+        }
       } else {
-        toast.error(result.error || "Failed to archive announcements")
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: result.error || "Failed to archive announcement",
+        })
       }
     } catch (error) {
-      toast.error("An unexpected error occurred")
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "An unexpected error occurred",
+      })
     } finally {
-      setIsProcessing(false)
+      setIsArchiving(false)
     }
   }
 
   return (
-    <AlertDialog>
+    <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Archive className="mr-2 h-4 w-4" />
-          Archive
-        </Button>
+        {trigger || (
+          <Button variant="outline" size="sm">
+            <Archive className="mr-2 h-4 w-4" />
+            Archive
+          </Button>
+        )}
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>
-            Archive {announcementIds.length} announcement{announcementIds.length > 1 ? "s" : ""}?
-          </AlertDialogTitle>
+          <AlertDialogTitle>Archive Announcement?</AlertDialogTitle>
           <AlertDialogDescription>
-            Archived announcements will still be visible to residents in their archived tab.
+            This will move the announcement to the archive. Residents will still be able to view it in their archived
+            tab.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isProcessing}>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={handleArchive} disabled={isProcessing}>
-            {isProcessing ? "Archiving..." : "Archive"}
+          <AlertDialogCancel disabled={isArchiving}>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={(e) => {
+            e.preventDefault()
+            handleArchive()
+          }} disabled={isArchiving}>
+            {isArchiving ? "Archiving..." : "Archive"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

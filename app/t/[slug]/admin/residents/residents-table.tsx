@@ -14,13 +14,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Pencil, Trash2, ArrowUpDown } from "lucide-react"
+import { Pencil, Trash2, ArrowUpDown } from 'lucide-react'
 import Link from "next/link"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
 
 type Resident = {
   id: string
@@ -77,6 +78,7 @@ type CombinedEntity = {
   species?: string
   created_at: string
   status?: "created" | "invited" | "active"
+  complaints?: { active: number; total: number }
 }
 
 export function ResidentsTable({
@@ -84,13 +86,18 @@ export function ResidentsTable({
   pets,
   slug,
   familyUnits,
+  residentComplaints,
+  petComplaints,
 }: {
   residents: Resident[]
   pets: Pet[]
   slug: string
   familyUnits: { id: string; primary_contact_id: string | null }[]
+  residentComplaints: Map<string, { active: number; total: number }>
+  petComplaints: Map<string, { active: number; total: number }>
 }) {
   const [showPets, setShowPets] = useState(true)
+  const [showOnlyWithComplaints, setShowOnlyWithComplaints] = useState(false)
   const [sortedEntities, setSortedEntities] = useState<CombinedEntity[]>([])
   const [sortField, setSortField] = useState<string | null>(null)
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
@@ -98,6 +105,7 @@ export function ResidentsTable({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [deleteDialogEntity, setDeleteDialogEntity] = useState<CombinedEntity | null>(null)
+  const [searchQuery, setSearchQuery] = useState("")
 
   const getResidentStatus = (resident: Resident): "created" | "invited" | "active" => {
     if (resident.onboarding_completed) return "active"
@@ -117,6 +125,7 @@ export function ResidentsTable({
       phone: r.phone,
       created_at: r.created_at,
       status: getResidentStatus(r),
+      complaints: residentComplaints.get(r.id) || { active: 0, total: 0 },
     })),
     ...pets.map((p) => ({
       id: p.id,
@@ -127,15 +136,29 @@ export function ResidentsTable({
       family: p.family_units?.name || null,
       species: p.species,
       created_at: p.created_at,
+      complaints: petComplaints.get(p.id) || { active: 0, total: 0 },
     })),
   ]
 
-  const filteredEntities = showPets ? combinedEntities : combinedEntities.filter((e) => e.type === "resident")
+  let filteredEntities = showPets ? combinedEntities : combinedEntities.filter((e) => e.type === "resident")
+
+  if (showOnlyWithComplaints) {
+    filteredEntities = filteredEntities.filter((e) => e.complaints && e.complaints.total > 0)
+  }
+
+  if (searchQuery) {
+    filteredEntities = filteredEntities.filter((e) =>
+      e.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      e.lot.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      e.neighborhood.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (e.family && e.family.toLowerCase().includes(searchQuery.toLowerCase()))
+    )
+  }
 
   useEffect(() => {
     setSortedEntities(filteredEntities)
     setSelectedEntities([])
-  }, [showPets, residents.length, pets.length])
+  }, [showPets, showOnlyWithComplaints, searchQuery, residents.length, pets.length])
 
   const handleSort = (field: string) => {
     const direction = sortField === field && sortDirection === "asc" ? "desc" : "asc"
@@ -143,6 +166,12 @@ export function ResidentsTable({
     setSortDirection(direction)
 
     const sorted = [...filteredEntities].sort((a, b) => {
+      if (field === "complaints") {
+        const aVal = a.complaints?.total || 0
+        const bVal = b.complaints?.total || 0
+        return direction === "asc" ? aVal - bVal : bVal - aVal
+      }
+
       let aVal: any = a[field as keyof CombinedEntity]
       let bVal: any = b[field as keyof CombinedEntity]
 
@@ -255,10 +284,22 @@ export function ResidentsTable({
   return (
     <>
       <div className="space-y-4">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-wrap">
+          <Input
+            placeholder="Search by name, lot, neighborhood..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="max-w-sm"
+          />
+
           <div className="flex items-center space-x-2">
             <Switch id="show-pets" checked={showPets} onCheckedChange={setShowPets} />
             <Label htmlFor="show-pets">Show Pets</Label>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Switch id="show-complaints" checked={showOnlyWithComplaints} onCheckedChange={setShowOnlyWithComplaints} />
+            <Label htmlFor="show-complaints">Only With Complaints</Label>
           </div>
 
           {selectedEntities.length > 0 && (
@@ -305,13 +346,19 @@ export function ResidentsTable({
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                   </Button>
                 </TableHead>
+                <TableHead>
+                  <Button variant="ghost" size="sm" onClick={() => handleSort("complaints")} className="-ml-3">
+                    Complaints
+                    <ArrowUpDown className="ml-2 h-4 w-4" />
+                  </Button>
+                </TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {sortedEntities.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground">
+                  <TableCell colSpan={9} className="text-center text-muted-foreground">
                     No {showPets ? "residents or pets" : "residents"} found
                   </TableCell>
                 </TableRow>
@@ -348,6 +395,26 @@ export function ResidentsTable({
                     <TableCell>{entity.lot}</TableCell>
                     <TableCell>{entity.neighborhood}</TableCell>
                     <TableCell className="text-muted-foreground">{entity.family || "—"}</TableCell>
+                    <TableCell>
+                      {entity.complaints && entity.complaints.total > 0 ? (
+                        <Link
+                          href={`/t/${slug}/admin/requests?type=complaint&tagged=${entity.type === "resident" ? "resident" : "pet"}&id=${entity.id}`}
+                          className="text-sm hover:underline"
+                        >
+                          {entity.complaints.active > 0 ? (
+                            <span className="font-medium text-destructive">
+                              {entity.complaints.active} active / {entity.complaints.total} total
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">
+                              {entity.complaints.total} total
+                            </span>
+                          )}
+                        </Link>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         <Button variant="ghost" size="icon" asChild>

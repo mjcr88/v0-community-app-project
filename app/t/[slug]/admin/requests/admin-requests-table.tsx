@@ -43,6 +43,8 @@ type AdminRequest = {
   admin_reply: string | null
   admin_internal_notes: string | null
   rejection_reason: string | null
+  tagged_resident_ids: string[] | null
+  tagged_pet_ids: string[] | null
   creator: {
     id: string
     first_name: string
@@ -78,6 +80,7 @@ export function AdminRequestsTable({
   const [requestTypeFilter, setRequestTypeFilter] = useState<string>("all")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [priorityFilter, setPriorityFilter] = useState<string>("all")
+  const [taggedFilter, setTaggedFilter] = useState<string>("all")
 
   const filteredRequests = useMemo(() => {
     let filtered = requests
@@ -111,8 +114,20 @@ export function AdminRequestsTable({
       filtered = filtered.filter((request) => request.priority === priorityFilter)
     }
 
+    if (taggedFilter !== "all") {
+      filtered = filtered.filter((request) => {
+        if (taggedFilter === "has_tagged") {
+          return (
+            (request.tagged_resident_ids && request.tagged_resident_ids.length > 0) ||
+            (request.tagged_pet_ids && request.tagged_pet_ids.length > 0)
+          )
+        }
+        return true
+      })
+    }
+
     return filtered
-  }, [requests, searchQuery, requestTypeFilter, statusFilter, priorityFilter])
+  }, [requests, searchQuery, requestTypeFilter, statusFilter, priorityFilter, taggedFilter])
 
   useEffect(() => {
     setSortedRequests(filteredRequests)
@@ -170,13 +185,15 @@ export function AdminRequestsTable({
     setRequestTypeFilter("all")
     setStatusFilter("all")
     setPriorityFilter("all")
+    setTaggedFilter("all")
   }
 
   const hasActiveFilters =
     searchQuery.trim() !== "" ||
     requestTypeFilter !== "all" ||
     statusFilter !== "all" ||
-    priorityFilter !== "all"
+    priorityFilter !== "all" ||
+    taggedFilter !== "all"
 
   const getRequestDate = (request: AdminRequest) => {
     try {
@@ -233,7 +250,6 @@ export function AdminRequestsTable({
         )}
       </div>
 
-      {/* Bulk action buttons */}
       {selectedRequests.length > 0 && (
         <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
           <span className="text-sm font-medium">
@@ -361,6 +377,29 @@ export function AdminRequestsTable({
                 </DropdownMenu>
               </TableHead>
               <TableHead>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="-ml-3">
+                      Tagged
+                      <ChevronDown className="ml-2 h-4 w-4" />
+                      {taggedFilter !== "all" && (
+                        <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
+                          1
+                        </Badge>
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuLabel>Filter by tagged</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setTaggedFilter("all")}>All</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setTaggedFilter("has_tagged")}>
+                      Has Tagged Residents/Pets
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </TableHead>
+              <TableHead>
                 <Button variant="ghost" size="sm" onClick={() => handleSort("created_at")} className="-ml-3">
                   Date
                   <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -371,7 +410,7 @@ export function AdminRequestsTable({
           <TableBody>
             {sortedRequests.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center text-muted-foreground">
+                <TableCell colSpan={11} className="text-center text-muted-foreground">
                   {hasActiveFilters ? "No requests found matching your filters" : "No requests found"}
                 </TableCell>
               </TableRow>
@@ -381,7 +420,6 @@ export function AdminRequestsTable({
                   key={request.id}
                   className="cursor-pointer hover:bg-muted/50"
                   onClick={(e) => {
-                    // Don't navigate if clicking checkbox or other interactive elements
                     if ((e.target as HTMLElement).closest('button, input, a')) return
                     window.location.href = `/t/${slug}/admin/requests/${request.id}`
                   }}
@@ -446,6 +484,14 @@ export function AdminRequestsTable({
                   </TableCell>
                   <TableCell>
                     <RequestStatusBadge status={request.status} />
+                  </TableCell>
+                  <TableCell>
+                    {((request.tagged_resident_ids && request.tagged_resident_ids.length > 0) ||
+                      (request.tagged_pet_ids && request.tagged_pet_ids.length > 0)) && (
+                      <Badge variant="secondary" className="text-xs">
+                        {(request.tagged_resident_ids?.length || 0) + (request.tagged_pet_ids?.length || 0)}
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell className="text-sm">{getRequestDate(request)}</TableCell>
                 </TableRow>

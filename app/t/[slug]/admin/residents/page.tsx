@@ -1,10 +1,10 @@
 import { createServerClient } from "@/lib/supabase/server"
-import { redirect } from "next/navigation"
+import { redirect } from 'next/navigation'
 import { Button } from "@/components/ui/button"
-import { Plus } from "lucide-react"
+import { Plus } from 'lucide-react'
 import Link from "next/link"
 import { ResidentsTable } from "./residents-table"
-import { Users } from "lucide-react"
+import { Users } from 'lucide-react'
 
 export default async function ResidentsPage({
   params,
@@ -77,6 +77,44 @@ export default async function ResidentsPage({
 
   const filteredPets = pets?.filter((p: any) => p.lots?.neighborhoods?.tenant_id === tenant.id) || []
 
+  const { data: complaints } = await supabase
+    .from("resident_requests")
+    .select("id, tagged_resident_ids, tagged_pet_ids, status")
+    .eq("tenant_id", tenant.id)
+    .eq("request_type", "complaint")
+
+  // Calculate complaint counts for each resident
+  const residentComplaints = new Map<string, { active: number; total: number }>()
+  residents?.forEach((resident) => {
+    const activeCount = complaints?.filter(
+      (c) => 
+        c.tagged_resident_ids?.includes(resident.id) && 
+        ['pending', 'in_progress'].includes(c.status)
+    ).length || 0
+    
+    const totalCount = complaints?.filter(
+      (c) => c.tagged_resident_ids?.includes(resident.id)
+    ).length || 0
+    
+    residentComplaints.set(resident.id, { active: activeCount, total: totalCount })
+  })
+
+  // Calculate complaint counts for each pet
+  const petComplaints = new Map<string, { active: number; total: number }>()
+  filteredPets?.forEach((pet) => {
+    const activeCount = complaints?.filter(
+      (c) => 
+        c.tagged_pet_ids?.includes(pet.id) && 
+        ['pending', 'in_progress'].includes(c.status)
+    ).length || 0
+    
+    const totalCount = complaints?.filter(
+      (c) => c.tagged_pet_ids?.includes(pet.id)
+    ).length || 0
+    
+    petComplaints.set(pet.id, { active: activeCount, total: totalCount })
+  })
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -99,7 +137,14 @@ export default async function ResidentsPage({
           <p className="text-sm text-muted-foreground mb-4">Get started by creating your first resident</p>
         </div>
       ) : (
-        <ResidentsTable residents={residents} pets={filteredPets} slug={slug} familyUnits={familyUnits || []} />
+        <ResidentsTable 
+          residents={residents} 
+          pets={filteredPets} 
+          slug={slug} 
+          familyUnits={familyUnits || []}
+          residentComplaints={residentComplaints}
+          petComplaints={petComplaints}
+        />
       )}
     </div>
   )

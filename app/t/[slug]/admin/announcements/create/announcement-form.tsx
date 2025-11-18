@@ -93,24 +93,26 @@ export function AnnouncementForm({
     setIsSubmitting(true)
 
     try {
-      const result = await createAnnouncement({
+      const result = await createAnnouncement(
+        slug,
         tenantId,
-        title: formData.title,
-        description: formData.description,
-        announcementType: formData.announcementType,
-        priority: formData.priority,
-        status: action === 'draft' ? 'draft' : 'published',
-        neighborhoodIds: formData.scope === 'neighborhood' ? formData.selectedNeighborhoods : [],
-        eventId: formData.eventId,
-        locationType: formData.locationType,
-        locationId: formData.locationId,
-        customLocationName: formData.customLocationName || null,
-        customLocationCoordinates: formData.customLocationCoordinates,
-        customLocationType: formData.customLocationType,
-        customLocationPath: formData.customLocationPath,
-        images: photos,
-        autoArchiveDate: formData.autoArchiveDate || null,
-      })
+        {
+          title: formData.title,
+          description: formData.description,
+          announcement_type: formData.announcementType,
+          priority: formData.priority,
+          status: action === 'draft' ? 'draft' : 'published',
+          neighborhood_ids: formData.scope === 'neighborhood' ? formData.selectedNeighborhoods : [],
+          event_id: formData.eventId,
+          location_type: formData.locationType === 'none' ? null : formData.locationType,
+          location_id: formData.locationId,
+          custom_location_name: formData.customLocationName || null,
+          custom_location_lat: formData.customLocationCoordinates?.lat || null,
+          custom_location_lng: formData.customLocationCoordinates?.lng || null,
+          images: photos,
+          auto_archive_date: formData.autoArchiveDate || null,
+        }
+      )
 
       if (result.success) {
         toast.success(

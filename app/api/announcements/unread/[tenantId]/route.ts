@@ -7,7 +7,7 @@ export async function GET(
 ) {
   try {
     const supabase = await createClient()
-    const { tenantId } = params
+    const { tenantId } = await params
 
     // Get current user
     const {
@@ -38,52 +38,46 @@ export async function GET(
       }
     }
 
-    let announcementIds: string[] = []
-    
-    if (neighborhoodIds.length > 0) {
-      const { data: neighborhoodAnnouncements } = await supabase
-        .from("announcement_neighborhoods")
-        .select("announcement_id")
-        .in("neighborhood_id", neighborhoodIds)
-
-      announcementIds = neighborhoodAnnouncements?.map((a) => a.announcement_id) || []
-    }
-
     const now = new Date().toISOString()
     
-    // Get community-wide announcements
-    const communityQuery = supabase
+    const { data: allAnnouncements } = await supabase
       .from("announcements")
       .select("id, title, announcement_type, priority, description, published_at, auto_archive_date")
       .eq("tenant_id", tenantId)
       .eq("status", "published")
-      .is("location_type", null) // community-wide announcements have no location restrictions
       .or(`auto_archive_date.is.null,auto_archive_date.gte.${now}`)
+      .order("published_at", { ascending: false })
 
-    const { data: communityAnnouncements } = await communityQuery
-
-    // Get neighborhood-specific announcements if user has neighborhoods
-    let neighborhoodAnnouncements: any[] = []
-    if (announcementIds.length > 0) {
-      const { data } = await supabase
-        .from("announcements")
-        .select("id, title, announcement_type, priority, description, published_at, auto_archive_date")
-        .eq("tenant_id", tenantId)
-        .eq("status", "published")
-        .in("id", announcementIds)
-        .or(`auto_archive_date.is.null,auto_archive_date.gte.${now}`)
-
-      neighborhoodAnnouncements = data || []
+    if (!allAnnouncements) {
+      return NextResponse.json({ announcements: [], unreadCount: 0 })
     }
 
-    // Combine and deduplicate
-    const allAnnouncements = [...(communityAnnouncements || []), ...neighborhoodAnnouncements]
-    const uniqueAnnouncements = Array.from(
-      new Map(allAnnouncements.map(a => [a.id, a])).values()
+    const visibleAnnouncements = await Promise.all(
+      allAnnouncements.map(async (announcement) => {
+        // Check if announcement has neighborhood targeting
+        const { data: targetedNeighborhoods } = await supabase
+          .from("announcement_neighborhoods")
+          .select("neighborhood_id")
+          .eq("announcement_id", announcement.id)
+
+        const isCommunityWide = !targetedNeighborhoods || targetedNeighborhoods.length === 0
+        const isTargetedToUser = targetedNeighborhoods?.some(
+          (n) => neighborhoodIds.includes(n.neighborhood_id)
+        )
+
+        // User can see if it's community-wide OR targeted to their neighborhood
+        if (isCommunityWide || isTargetedToUser) {
+          return announcement
+        }
+        return null
+      })
     )
 
+    // Filter out nulls
+    const filtered = visibleAnnouncements.filter((a): a is NonNullable<typeof a> => a !== null)
+
     // Sort by priority then date
-    const sortedAnnouncements = uniqueAnnouncements.sort((a, b) => {
+    const sortedAnnouncements = filtered.sort((a, b) => {
       const priorityOrder = { urgent: 0, important: 1, normal: 2 }
       const priorityDiff = priorityOrder[a.priority as keyof typeof priorityOrder] - 
                           priorityOrder[b.priority as keyof typeof priorityOrder]

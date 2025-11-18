@@ -46,17 +46,15 @@ export default async function AnnouncementDetailPage({ params }: AnnouncementDet
   const announcement = result.data
 
   // Mark as read
-  await markAnnouncementAsRead(announcementId, resident.tenant_id)
+  await markAnnouncementAsRead(announcementId, slug)
 
-  // Get neighborhoods if neighborhood-scoped
-  let neighborhoods: any[] = []
-  if (announcement.scope === "neighborhood") {
-    const { data } = await supabase
-      .from("announcement_neighborhoods")
-      .select("neighborhood:neighborhoods(id, name)")
-      .eq("announcement_id", announcementId)
-    neighborhoods = data?.map((n: any) => n.neighborhood) || []
-  }
+  const { data: neighborhoodData } = await supabase
+    .from("announcement_neighborhoods")
+    .select("neighborhood:neighborhoods(id, name)")
+    .eq("announcement_id", announcementId)
+
+  const neighborhoods = neighborhoodData?.map((n: any) => n.neighborhood).filter(Boolean) || []
+  const isCommunityWide = neighborhoods.length === 0
 
   // Get location if exists
   let location = null
@@ -99,10 +97,10 @@ export default async function AnnouncementDetailPage({ params }: AnnouncementDet
               <div className="flex flex-wrap items-center gap-3">
                 <AnnouncementTypeIcon type={announcement.announcement_type} className="h-8 w-8" />
                 <AnnouncementPriorityBadge priority={announcement.priority} />
-                {announcement.scope === "community_wide" ? (
+                {isCommunityWide ? (
                   <Badge variant="secondary">Community-Wide</Badge>
                 ) : (
-                  <Badge variant="secondary">Neighborhood</Badge>
+                  <Badge variant="secondary">Neighborhood-Specific</Badge>
                 )}
                 <UpdatedIndicator
                   publishedAt={announcement.published_at}
@@ -125,7 +123,12 @@ export default async function AnnouncementDetailPage({ params }: AnnouncementDet
       {/* Content Section */}
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto space-y-8">
-          {/* Images */}
+          <div className="prose prose-neutral dark:prose-invert max-w-none">
+            <p className="text-lg leading-relaxed whitespace-pre-wrap text-pretty">
+              {announcement.description}
+            </p>
+          </div>
+
           {announcement.images && announcement.images.length > 0 && (
             <div className="space-y-4">
               {announcement.images.map((image, index) => (
@@ -139,17 +142,9 @@ export default async function AnnouncementDetailPage({ params }: AnnouncementDet
             </div>
           )}
 
-          {/* Main Content */}
-          <div className="prose prose-neutral dark:prose-invert max-w-none">
-            <p className="text-lg leading-relaxed whitespace-pre-wrap text-pretty">
-              {announcement.description}
-            </p>
-          </div>
-
           {/* Info Grid */}
           <div className="grid md:grid-cols-2 gap-4">
-            {/* Neighborhoods */}
-            {announcement.scope === "neighborhood" && neighborhoods.length > 0 && (
+            {!isCommunityWide && neighborhoods.length > 0 && (
               <div className="p-6 border rounded-lg bg-card space-y-3">
                 <h3 className="font-semibold">Visible to Neighborhoods</h3>
                 <div className="flex flex-wrap gap-2">

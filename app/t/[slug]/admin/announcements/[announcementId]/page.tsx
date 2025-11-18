@@ -66,15 +66,13 @@ export default async function AdminAnnouncementDetailPage({
   }
 
   // Fetch neighborhoods if applicable
-  let neighborhoods: any[] = []
-  if (announcement.visibility_scope === "neighborhood") {
-    const { data: announcementNeighborhoods } = await supabase
-      .from("announcement_neighborhoods")
-      .select("neighborhood:neighborhoods(id, name)")
-      .eq("announcement_id", announcement.id)
+  const { data: neighborhoodData } = await supabase
+    .from("announcement_neighborhoods")
+    .select("neighborhood:neighborhoods(id, name)")
+    .eq("announcement_id", announcement.id)
 
-    neighborhoods = announcementNeighborhoods?.map((an: any) => an.neighborhood) || []
-  }
+  const neighborhoods = neighborhoodData?.map((n: any) => n.neighborhood).filter(Boolean) || []
+  const isCommunityWide = neighborhoods.length === 0
 
   // Fetch location if applicable
   let location = null
@@ -242,7 +240,7 @@ export default async function AdminAnnouncementDetailPage({
               <div>
                 <div className="font-medium">Audience</div>
                 <div className="text-sm text-muted-foreground">
-                  {announcement.visibility_scope === "community"
+                  {isCommunityWide
                     ? "Community-wide"
                     : `${neighborhoods.length} Neighborhood${neighborhoods.length !== 1 ? "s" : ""}`}
                 </div>

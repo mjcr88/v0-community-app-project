@@ -261,20 +261,22 @@ export function EditAnnouncementForm({
 
           {/* Location */}
           <LocationSelector
+            tenantId={tenantId}
             locationType={locationType}
-            onLocationTypeChange={setLocationType}
-            locationId={locationId}
-            onLocationIdChange={setLocationId}
+            communityLocationId={locationId}
+            onCommunityLocationChange={setLocationId}
             customLocationName={customLocationName}
             onCustomLocationNameChange={setCustomLocationName}
-            customLocationLat={customLocationLat}
-            customLocationLng={customLocationLng}
-            onCustomLocationChange={(lat, lng) => {
-              setCustomLocationLat(lat)
-              setCustomLocationLng(lng)
+            customLocationCoordinates={customLocationLat && customLocationLng ? { lat: customLocationLat, lng: customLocationLng } : null}
+            customLocationType="marker"
+            customLocationPath={null}
+            onCustomLocationChange={(data) => {
+              if (data.coordinates) {
+                setCustomLocationLat(data.coordinates.lat)
+                setCustomLocationLng(data.coordinates.lng)
+              }
             }}
-            locations={locations}
-            tenantId={tenantId}
+            onLocationTypeChange={setLocationType}
           />
 
           {/* Images */}

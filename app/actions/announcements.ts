@@ -645,7 +645,10 @@ async function sendAnnouncementNotifications(
       .eq("id", announcementId)
       .single()
 
-    if (!announcement) return
+    if (!announcement) {
+      console.log("[v0] Announcement not found for notifications")
+      return
+    }
 
     // Get neighborhood IDs if targeted
     const { data: neighborhoods } = await supabase
@@ -654,42 +657,83 @@ async function sendAnnouncementNotifications(
       .eq("announcement_id", announcementId)
 
     const neighborhoodIds = neighborhoods?.map((n) => n.neighborhood_id) || []
+    const isCommunityWide = neighborhoodIds.length === 0
+
+    console.log("[v0] Sending notifications:", {
+      announcementId,
+      notificationType,
+      isCommunityWide,
+      neighborhoodIds,
+    })
 
     // Get target residents
-    let recipientQuery = supabase.from("users").select("id").eq("tenant_id", tenantId)
+    let recipients: { id: string }[] = []
 
-    // If neighborhood-specific, filter by lot -> neighborhood
-    if (neighborhoodIds.length > 0) {
-      const { data: lots } = await supabase.from("lots").select("id").in("neighborhood_id", neighborhoodIds)
+    if (isCommunityWide) {
+      // Community-wide: All resident users in tenant
+      const { data: allUsers } = await supabase
+        .from("users")
+        .select("id")
+        .eq("tenant_id", tenantId)
+        .eq("role", "resident")
+
+      recipients = allUsers || []
+    } else {
+      // Neighborhood-specific: Users whose lot is in targeted neighborhoods
+      const { data: lots } = await supabase
+        .from("lots")
+        .select("id")
+        .eq("tenant_id", tenantId)
+        .in("neighborhood_id", neighborhoodIds)
 
       const lotIds = lots?.map((l) => l.id) || []
-      recipientQuery = recipientQuery.in("lot_id", lotIds)
+
+      if (lotIds.length > 0) {
+        const { data: targetedUsers } = await supabase
+          .from("users")
+          .select("id")
+          .eq("tenant_id", tenantId)
+          .eq("role", "resident")
+          .in("lot_id", lotIds)
+
+        recipients = targetedUsers || []
+      }
     }
 
-    const { data: recipients } = await recipientQuery
+    console.log("[v0] Found recipients:", recipients.length)
 
-    if (!recipients || recipients.length === 0) return
+    if (recipients.length === 0) {
+      console.log("[v0] No recipients found")
+      return
+    }
 
     // Create notifications for each recipient
     const notificationTitle =
-      notificationType === "published" ? `New ${announcement.announcement_type} announcement` : "Announcement updated"
+      notificationType === "published"
+        ? `New ${announcement.announcement_type} announcement`
+        : "Announcement updated"
 
     const notificationMessage = announcement.title
 
-    await Promise.all(
-      recipients.map((recipient) =>
-        createNotification({
-          tenant_id: tenantId,
-          recipient_id: recipient.id,
-          type: notificationType === "published" ? "announcement_published" : "announcement_updated",
-          title: notificationTitle,
-          message: notificationMessage,
-          announcement_id: announcementId,
-          actor_id: announcement.created_by,
-          action_url: `/t/${tenantSlug}/dashboard/announcements/${announcementId}`,
-        }),
-      ),
-    )
+    const notifications = recipients.map((recipient) => ({
+      tenant_id: tenantId,
+      recipient_id: recipient.id,
+      type: notificationType === "published" ? "announcement_published" : "announcement_updated",
+      title: notificationTitle,
+      message: notificationMessage,
+      announcement_id: announcementId,
+      actor_id: announcement.created_by,
+      action_url: `/t/${tenantSlug}/dashboard/announcements/${announcementId}`,
+    }))
+
+    // Batch insert all notifications
+    const { error: notifError } = await supabase.from("notifications").insert(notifications)
+
+    if (notifError) {
+      console.error("[v0] Error creating notifications:", notifError)
+    } else {
+      console.log("[v0] Successfully created", notifications.length, "notifications")
+    }
   } catch (error) {
     console.error("[v0] Error sending announcement notifications:", error)
   }

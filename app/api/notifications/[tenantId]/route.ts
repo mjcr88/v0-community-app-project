@@ -7,18 +7,13 @@ export async function GET(request: Request, context: { params: Promise<{ tenantI
     const { searchParams } = new URL(request.url)
     const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : undefined
 
-    console.log("[v0] Notifications API called for tenant:", tenantId)
-    
     const supabase = await createClient()
 
     const {
       data: { user },
     } = await supabase.auth.getUser()
 
-    console.log("[v0] Auth user in notifications API:", user?.id || "NO USER")
-
     if (!user) {
-      console.log("[v0] No user found, returning 401")
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -58,7 +53,6 @@ export async function GET(request: Request, context: { params: Promise<{ tenantI
       return NextResponse.json({ error: "Failed to fetch notifications" }, { status: 500 })
     }
 
-    console.log("[v0] Returning notifications:", notifications?.length || 0)
     return NextResponse.json(notifications || [])
   } catch (error) {
     console.error("[v0] Error in notifications API:", error)

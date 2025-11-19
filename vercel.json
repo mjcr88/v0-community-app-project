@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/check-return-dates",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/archive-announcements",
+      "schedule": "0 * * * *"
     }
   ]
 }

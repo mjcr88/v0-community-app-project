@@ -707,7 +707,6 @@ async function sendAnnouncementNotifications(
       return
     }
 
-    // Create notifications for each recipient
     const notificationTitle =
       notificationType === "published"
         ? `New ${announcement.announcement_type} announcement`
@@ -721,7 +720,11 @@ async function sendAnnouncementNotifications(
       type: notificationType === "published" ? "announcement_published" : "announcement_updated",
       title: notificationTitle,
       message: notificationMessage,
-      announcement_id: announcementId,
+      metadata: {
+        announcement_id: announcementId,
+        announcement_type: announcement.announcement_type,
+        priority: announcement.priority,
+      },
       actor_id: announcement.created_by,
       action_url: `/t/${tenantSlug}/dashboard/announcements/${announcementId}`,
     }))

@@ -42,6 +42,8 @@ type Tenant = {
   events_enabled?: boolean
   checkins_enabled?: boolean
   exchange_enabled?: boolean
+  requests_enabled?: boolean
+  announcements_enabled?: boolean
 }
 
 const FEATURES = [
@@ -117,6 +119,18 @@ const FEATURES = [
     description: "Enable community exchange for sharing tools, services, food, rides, and rentals",
     table: "exchange_listings",
   },
+  {
+    key: "requests",
+    label: "Resident Requests",
+    description: "Enable resident-submitted requests for maintenance, complaints, questions, and safety issues",
+    table: "resident_requests",
+  },
+  {
+    key: "announcements",
+    label: "Announcements",
+    description: "Enable community announcements for important updates, events, and news",
+    table: "announcements",
+  },
 ] as const
 
 const LOCATION_TYPE_OPTIONS = [
@@ -151,19 +165,8 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
     events: false,
     checkins: false,
     exchange: false,
-    location_types: {
-      facility: true,
-      lot: true,
-      walking_path: true,
-      neighborhood: true,
-      boundary: true,
-      protection_zone: true,
-      easement: true,
-      playground: true,
-      public_street: true,
-      green_area: true,
-      recreational_zone: true,
-    },
+    requests: true,
+    announcements: true,
   }
 
   const [features, setFeatures] = useState<{
@@ -179,6 +182,8 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
     events?: boolean
     checkins?: boolean
     exchange?: boolean
+    requests?: boolean
+    announcements?: boolean
     location_types?: {
       facility?: boolean
       lot?: boolean
@@ -198,6 +203,8 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
     events: tenant.events_enabled ?? false,
     checkins: tenant.checkins_enabled ?? false,
     exchange: tenant.exchange_enabled ?? false,
+    requests: tenant.requests_enabled ?? true,
+    announcements: tenant.announcements_enabled ?? true,
     location_types: {
       ...defaultFeatures.location_types,
       ...(tenant.features?.location_types || {}),
@@ -208,6 +215,8 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
   console.log("[v0] Tenant events_enabled:", tenant.events_enabled)
   console.log("[v0] Tenant checkins_enabled:", tenant.checkins_enabled)
   console.log("[v0] Tenant exchange_enabled:", tenant.exchange_enabled)
+  console.log("[v0] Tenant requests_enabled:", tenant.requests_enabled)
+  console.log("[v0] Tenant announcements_enabled:", tenant.announcements_enabled)
   console.log("[v0] Initialized form state:", features)
 
   const [visibilityScope, setVisibilityScope] = useState<"neighborhood" | "tenant">(
@@ -320,7 +329,7 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
     setLoading(true)
 
     try {
-      const { events, checkins, exchange, ...otherFeatures } = features
+      const { events, checkins, exchange, requests, announcements, ...otherFeatures } = features
 
       const wasEventsEnabled = tenant.events_enabled ?? false
       const willEnableEvents = !wasEventsEnabled && (events ?? false)
@@ -336,6 +345,8 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
           events_enabled: events ?? false,
           checkins_enabled: checkins ?? false,
           exchange_enabled: exchange ?? false,
+          requests_enabled: requests ?? true,
+          announcements_enabled: announcements ?? true,
         })
         .eq("id", tenant.id)
 
@@ -422,7 +433,7 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
 
         <div className="space-y-4 pt-4 border-t">
           <h3 className="text-sm font-semibold text-muted-foreground">Community Features</h3>
-          {FEATURES.filter((f) => ["pets", "interests", "skills", "events", "checkins", "exchange"].includes(f.key)).map(
+          {FEATURES.filter((f) => ["pets", "interests", "skills", "events", "checkins", "exchange", "requests", "announcements"].includes(f.key)).map(
             (feature) => (
               <div key={feature.key} className="flex items-center justify-between space-x-4">
                 <div className="flex-1 space-y-1">

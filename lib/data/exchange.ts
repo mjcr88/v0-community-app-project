@@ -9,39 +9,72 @@ export interface ExchangeListing {
     category_id: string | null
     created_by: string
     tenant_id: string
-    status: 'active' | 'completed' | 'archived'
+    status: 'draft' | 'published' | 'archived' | 'completed'
+    pricing_type: 'free' | 'fixed_price' | 'negotiable'
     price: number | null
-    currency: string
+    condition: 'new' | 'like_new' | 'good' | 'fair' | 'poor' | null
+    available_quantity: number
     images: string[] | null
+    hero_photo: string | null
+    custom_location_name: string | null
+    custom_location_lat: number | null
+    custom_location_lng: number | null
+    location_id: string | null
+    visibility_scope: 'community' | 'neighborhood'
+    is_available: boolean
+    photos: string[] | null
     created_at: string
     updated_at: string
+    published_at: string | null
+    archived_at: string | null
 }
 
 export interface ExchangeListingWithRelations extends ExchangeListing {
     category?: {
         id: string
         name: string
-        icon: string | null
+        description: string | null
     } | null
     creator?: {
         id: string
         first_name: string
         last_name: string
         profile_picture_url: string | null
+        email?: string
+        phone?: string
     } | null
+    location?: {
+        id: string
+        name: string
+        type?: string
+        coordinates?: any
+        path_coordinates?: any
+        boundary_coordinates?: any
+    } | null
+    neighborhoods?: {
+        id: string
+        name: string
+    }[]
+    flag_count?: number
+    price_amount?: number | null // Alias for price for compatibility
 }
 
 export interface GetExchangeListingsOptions {
     // Filter options
     type?: ('offer' | 'request')[]
-    status?: ('active' | 'completed' | 'archived')[]
+    status?: ('draft' | 'published' | 'archived' | 'completed')[]
     categoryId?: string
     creatorId?: string
     search?: string
+    includeDraftsByCreator?: string // userId to include drafts for
+    excludeArchived?: boolean
 
     // Enrichment options
     enrichWithCategory?: boolean
     enrichWithCreator?: boolean
+    enrichWithLocation?: boolean
+    enrichWithNeighborhoods?: boolean
+    enrichWithFlagCount?: boolean
 }
 
 export const getExchangeListings = cache(async (
@@ -54,8 +87,13 @@ export const getExchangeListings = cache(async (
         categoryId,
         creatorId,
         search,
+        includeDraftsByCreator,
+        excludeArchived = true,
         enrichWithCategory = false,
         enrichWithCreator = false,
+        enrichWithLocation = false,
+        enrichWithNeighborhoods = false,
+        enrichWithFlagCount = false,
     } = options
 
     const supabase = await createServerClient()
@@ -64,41 +102,85 @@ export const getExchangeListings = cache(async (
     id,
     title,
     description,
-    type,
     category_id,
     created_by,
     tenant_id,
     status,
+    pricing_type,
     price,
-    currency,
-    images,
+    condition,
+    available_quantity,
+    photos,
+    hero_photo,
+    custom_location_name,
+    custom_location_lat,
+    custom_location_lng,
+    location_id,
+    visibility_scope,
+    is_available,
     created_at,
-    updated_at
+    updated_at,
+    published_at,
+    archived_at
   `
 
     if (enrichWithCategory) {
         selectQuery += `,
-      exchange_categories:category_id(id, name, icon)
+      exchange_categories:category_id(id, name, description)
     `
     }
 
     if (enrichWithCreator) {
         selectQuery += `,
-      creator:created_by(id, first_name, last_name, profile_picture_url)
+      creator:users!created_by(id, first_name, last_name, profile_picture_url, email, phone)
+    `
+    }
+
+    if (enrichWithLocation) {
+        selectQuery += `,
+      locations:location_id(id, name, type, coordinates, path_coordinates, boundary_coordinates)
+    `
+    }
+
+    if (enrichWithNeighborhoods) {
+        selectQuery += `,
+      exchange_neighborhoods(neighborhood:neighborhoods(id, name))
     `
     }
 
     let query = supabase.from("exchange_listings").select(selectQuery).eq("tenant_id", tenantId)
 
-    if (type && type.length > 0) {
-        query = query.in("type", type)
-    }
+    // Note: 'type' column does not exist in exchange_listings table
+    // if (type && type.length > 0) {
+    //     query = query.in("type", type)
+    // }
 
-    if (status && status.length > 0) {
+    // Status filtering logic
+    if (includeDraftsByCreator) {
+        // Logic: (status = published) OR (status = draft AND created_by = user)
+        // If other status filters are present, we need to combine them.
+        // This is complex with Supabase query builder.
+        // Simplified approach: Use .or() with the specific logic
+        // Note: This overrides the 'status' array filter if present, which might be acceptable or needs combination.
+        // If 'status' is provided (e.g. ['completed']), we might want to respect it.
+        // But the use case for includeDraftsByCreator is usually the main feed.
+        query = query.or(`status.eq.published,and(status.eq.draft,created_by.eq.${includeDraftsByCreator})`)
+    } else if (status && status.length > 0) {
         query = query.in("status", status)
     } else {
-        // Default to active listings if not specified
-        query = query.eq("status", "active")
+        // Default behavior if no status filter: show active/published
+        // If we are not including drafts, we probably just want published?
+        // Or if no status specified, maybe we want all?
+        // The original action defaulted to: .or(`status.eq.published,and(status.eq.draft,created_by.eq.${user.id})`)
+        // So if includeDraftsByCreator is NOT set, we probably just want published?
+        // Let's default to published if nothing else specified.
+        if (!creatorId) { // If filtering by creator, we might want all their statuses
+            query = query.eq("status", "published")
+        }
+    }
+
+    if (excludeArchived) {
+        query = query.is("archived_at", null)
     }
 
     if (categoryId) {
@@ -124,6 +206,22 @@ export const getExchangeListings = cache(async (
         return []
     }
 
+    // Handle Flag Counts via RPC if requested
+    let flagCountMap = new Map<string, number>()
+    if (enrichWithFlagCount) {
+        const listingIds = (listings as any[]).map((l) => l.id)
+        const flagCountResults = await Promise.all(
+            listingIds.map(async (listingId) => {
+                const { data: count } = await supabase.rpc("get_exchange_listing_flag_count", {
+                    p_listing_id: listingId,
+                    p_tenant_id: tenantId,
+                })
+                return { listingId, count: count ?? 0 }
+            })
+        )
+        flagCountMap = new Map(flagCountResults.map((r) => [r.listingId, r.count]))
+    }
+
     return listings.map((listing: any) => {
         const base: ExchangeListingWithRelations = {
             id: listing.id,
@@ -134,11 +232,24 @@ export const getExchangeListings = cache(async (
             created_by: listing.created_by,
             tenant_id: listing.tenant_id,
             status: listing.status,
+            pricing_type: listing.pricing_type,
             price: listing.price,
-            currency: listing.currency,
+            condition: listing.condition,
+            available_quantity: listing.available_quantity,
             images: listing.images,
+            hero_photo: listing.hero_photo,
+            custom_location_name: listing.custom_location_name,
+            custom_location_lat: listing.custom_location_lat,
+            custom_location_lng: listing.custom_location_lng,
+            location_id: listing.location_id,
+            visibility_scope: listing.visibility_scope,
+            is_available: listing.is_available,
+            photos: listing.images, // Alias images to photos
             created_at: listing.created_at,
             updated_at: listing.updated_at,
+            published_at: listing.published_at,
+            archived_at: listing.archived_at,
+            price_amount: listing.price, // Alias
         }
 
         if (enrichWithCategory && listing.exchange_categories) {
@@ -147,6 +258,18 @@ export const getExchangeListings = cache(async (
 
         if (enrichWithCreator && listing.creator) {
             base.creator = listing.creator
+        }
+
+        if (enrichWithLocation && listing.locations) {
+            base.location = listing.locations
+        }
+
+        if (enrichWithNeighborhoods && listing.exchange_neighborhoods) {
+            base.neighborhoods = listing.exchange_neighborhoods.map((n: any) => n.neighborhood)
+        }
+
+        if (enrichWithFlagCount) {
+            base.flag_count = flagCountMap.get(listing.id) || 0
         }
 
         return base
@@ -167,8 +290,26 @@ export async function getExchangeListingById(
 
     const listings = await getExchangeListings(listing.tenant_id, {
         ...options,
-        status: undefined // Override status filter to find specific listing
+        status: undefined, // Override status filter to find specific listing
+        excludeArchived: false, // Allow finding archived listings by ID
+        search: undefined, // Clear search
     })
 
     return listings.find((l) => l.id === listingId) || null
+}
+
+export async function getExchangeCategories() {
+    const supabase = await createServerClient()
+
+    const { data: categories, error } = await supabase
+        .from("exchange_categories")
+        .select("*")
+        .order("name")
+
+    if (error) {
+        console.error("Error fetching exchange categories:", error)
+        return []
+    }
+
+    return categories || []
 }

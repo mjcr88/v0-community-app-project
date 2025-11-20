@@ -60,7 +60,7 @@ export function EventsPageClient({
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [eventType, setEventType] = useState("all")
-  const [timeFilter, setTimeFilter] = useState("all")
+  const [timeFilter, setTimeFilter] = useState("upcoming") // Default to upcoming events
 
   const filteredEvents = useMemo(() => {
     return events.filter((event) => {

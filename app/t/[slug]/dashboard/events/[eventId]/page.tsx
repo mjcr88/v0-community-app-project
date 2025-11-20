@@ -79,7 +79,7 @@ function getInitials(firstName?: string | null, lastName?: string | null): strin
   return (first + last).toUpperCase() || "U"
 }
 
-export default async function EventDetailPage({ params }: EventDetailPageProps) {
+export default async function EventDetailPage({ params }: { params: Promise<{ slug: string; eventId: string }> }) {
   const { slug, eventId } = await params
 
   const supabase = await createServerClient()
@@ -231,7 +231,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
 
   let flagDetails = null
   if (canManageEvent && flagCount > 0) {
-    const isAdmin = userData.is_tenant_admin || userData.role === "super_admin" || userData.role === "tenant_admin"
+    const isAdmin = userData && (userData.is_tenant_admin || userData.role === "super_admin" || userData.role === "tenant_admin")
     if (isAdmin) {
       const flagDetailsResult = await getEventFlagDetails(eventId, tenant.id)
       if (flagDetailsResult.success && flagDetailsResult.data) {
@@ -413,7 +413,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             </div>
           )}
 
-          {flagDetails && flagDetails.length > 0 && <EventFlagDetails flags={flagDetails} tenantSlug={slug} />}
+          {flagDetails && flagDetails.length > 0 && <EventFlagDetails flags={flagDetails as any} tenantSlug={slug} />}
 
           {canManageEvent && visibilityDetails && (
             <div className="p-6 border rounded-lg bg-muted/30 space-y-3">
@@ -427,7 +427,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                   {visibilityDetails.type === "neighborhood" ? "Neighborhood Visibility" : "Private Event"}
                 </h3>
               </div>
-              {visibilityDetails.type === "neighborhood" && visibilityDetails.data.length > 0 && (
+              {visibilityDetails.type === "neighborhood" && visibilityDetails.data && visibilityDetails.data.length > 0 && (
                 <div className="space-y-2">
                   <p className="text-sm text-muted-foreground">Visible to residents in:</p>
                   <div className="flex flex-wrap gap-2">

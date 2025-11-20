@@ -6,6 +6,9 @@ export interface FamilyUnit {
     name: string
     description: string | null
     profile_picture_url: string | null
+    primary_contact_id: string | null
+    photos: string[] | null
+    hero_photo: string | null
     tenant_id: string
     created_at: string
     updated_at: string
@@ -53,6 +56,9 @@ export const getFamilies = cache(async (
     name,
     description,
     profile_picture_url,
+    primary_contact_id,
+    photos,
+    hero_photo,
     tenant_id,
     created_at,
     updated_at
@@ -93,6 +99,9 @@ export const getFamilies = cache(async (
             name: family.name,
             description: family.description,
             profile_picture_url: family.profile_picture_url,
+            primary_contact_id: family.primary_contact_id,
+            photos: family.photos,
+            hero_photo: family.hero_photo,
             tenant_id: family.tenant_id,
             created_at: family.created_at,
             updated_at: family.updated_at,

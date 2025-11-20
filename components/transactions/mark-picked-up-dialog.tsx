@@ -18,7 +18,8 @@ interface MarkPickedUpDialogProps {
   onOpenChange: (open: boolean) => void
   onConfirm: () => Promise<void>
   itemName: string
-  categoryName: string
+  categoryName?: string
+  isLoading?: boolean
 }
 
 export function MarkPickedUpDialog({
@@ -26,25 +27,27 @@ export function MarkPickedUpDialog({
   onOpenChange,
   onConfirm,
   itemName,
-  categoryName,
+  categoryName = "",
+  isLoading: externalIsLoading,
 }: MarkPickedUpDialogProps) {
-  const [isLoading, setIsLoading] = useState(false)
+  const [internalIsLoading, setInternalIsLoading] = useState(false)
+  const isLoading = externalIsLoading || internalIsLoading
 
   const handleConfirm = async () => {
-    setIsLoading(true)
+    setInternalIsLoading(true)
     try {
       await onConfirm()
       onOpenChange(false)
     } catch (error) {
       console.error("[v0] Error confirming pickup:", error)
     } finally {
-      setIsLoading(false)
+      setInternalIsLoading(false)
     }
   }
 
   // Determine if this is a service or item
   const isService = ["Services & Skills", "Food & Produce"].includes(categoryName)
-  
+
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
@@ -54,7 +57,7 @@ export function MarkPickedUpDialog({
             {isService ? "Confirm Completion" : "Confirm Pickup"}
           </AlertDialogTitle>
           <AlertDialogDescription>
-            {isService 
+            {isService
               ? `Confirm that "${itemName}" has been completed. This will mark the transaction as finished.`
               : `Confirm that "${itemName}" has been picked up. This will start the borrowing period.`
             }

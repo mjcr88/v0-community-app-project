@@ -47,7 +47,16 @@ type Tenant = {
   announcements_enabled?: boolean
 }
 
-const FEATURES = [
+type Feature = {
+  key: string
+  label: string
+  description: string
+} & (
+    | { table: string; checkField?: never }
+    | { checkField: string | null; table?: never }
+  )
+
+const FEATURES: Feature[] = [
   {
     key: "neighborhoods",
     label: "Neighborhoods",
@@ -132,7 +141,7 @@ const FEATURES = [
     description: "Enable community announcements for important updates, events, and news",
     table: "announcements",
   },
-] as const
+]
 
 const LOCATION_TYPE_OPTIONS = [
   { key: "facility", label: "Facilities", description: "Community amenities like pools, clubs, offices" },
@@ -169,6 +178,19 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
     exchange: false,
     requests: true,
     announcements: true,
+    location_types: {
+      facility: true,
+      lot: true,
+      walking_path: true,
+      neighborhood: true,
+      boundary: true,
+      protection_zone: true,
+      easement: true,
+      playground: true,
+      public_street: true,
+      green_area: true,
+      recreational_zone: true,
+    },
   }
 
   const [features, setFeatures] = useState<{
@@ -216,6 +238,13 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
   const [visibilityScope, setVisibilityScope] = useState<"neighborhood" | "tenant">(
     tenant.resident_visibility_scope || "tenant",
   )
+
+  const getFeatureValue = (key: string): boolean => {
+    if (key === "location_types") return false
+    const val = features[key as keyof typeof features]
+    if (typeof val === "boolean") return val
+    return true
+  }
 
   const handleToggle = async (featureKey: string, enabled: boolean) => {
     if (featureKey === "map" && !enabled) {
@@ -321,7 +350,7 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
     setFeatures((prev) => ({
       ...prev,
       location_types: {
-        ...prev.location_types,
+        ...(prev.location_types || {}),
         [typeKey]: enabled,
       },
     }))
@@ -436,7 +465,7 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
               </div>
               <Switch
                 id={feature.key}
-                checked={features[feature.key as keyof typeof features] ?? true}
+                checked={getFeatureValue(feature.key)}
                 onCheckedChange={(checked) => handleToggle(feature.key, checked)}
               />
             </div>
@@ -457,7 +486,7 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
                 <Switch
                   id={feature.key}
                   checked={
-                    features[feature.key as keyof typeof features] ??
+                    getFeatureValue(feature.key) &&
                     (feature.key === "events" || feature.key === "checkins" || feature.key === "exchange" ? false : true)
                   }
                   onCheckedChange={(checked) => handleToggle(feature.key, checked)}
@@ -479,7 +508,7 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
               </div>
               <Switch
                 id={feature.key}
-                checked={features[feature.key as keyof typeof features] ?? true}
+                checked={getFeatureValue(feature.key)}
                 onCheckedChange={(checked) => handleToggle(feature.key, checked)}
               />
             </div>

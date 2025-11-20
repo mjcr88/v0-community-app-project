@@ -3,7 +3,7 @@ import { NextResponse } from "next/server"
 
 export async function GET(
   request: Request,
-  { params }: { params: { tenantId: string } }
+  { params }: { params: Promise<{ tenantId: string }> }
 ) {
   try {
     const supabase = await createClient()
@@ -34,7 +34,7 @@ export async function GET(
         .select("neighborhood_id")
         .eq("id", userData.lot_id)
         .single()
-      
+
       if (lotData?.neighborhood_id) {
         neighborhoodIds = [lotData.neighborhood_id]
       }
@@ -43,7 +43,7 @@ export async function GET(
     console.log("[v0] User neighborhood IDs:", neighborhoodIds)
 
     const now = new Date().toISOString()
-    
+
     const { data: allAnnouncements } = await supabase
       .from("announcements")
       .select("id, title, announcement_type, priority, description, published_at, auto_archive_date")
@@ -87,8 +87,8 @@ export async function GET(
     // Sort by priority then date
     const sortedAnnouncements = filtered.sort((a, b) => {
       const priorityOrder = { urgent: 0, important: 1, normal: 2 }
-      const priorityDiff = priorityOrder[a.priority as keyof typeof priorityOrder] - 
-                          priorityOrder[b.priority as keyof typeof priorityOrder]
+      const priorityDiff = priorityOrder[a.priority as keyof typeof priorityOrder] -
+        priorityOrder[b.priority as keyof typeof priorityOrder]
       if (priorityDiff !== 0) return priorityDiff
       return new Date(b.published_at).getTime() - new Date(a.published_at).getTime()
     })

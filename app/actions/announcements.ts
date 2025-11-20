@@ -420,7 +420,9 @@ export async function markAnnouncementAsRead(announcementId: string, tenantSlug:
       return { success: false, error: error.message }
     }
 
-    revalidatePath(`/t/${tenantSlug}/dashboard/announcements`)
+    // Note: revalidatePath during render causes Next.js 15 warning
+    // The announcement reads are cached and will update on next navigation
+    // revalidatePath(`/t/${tenantSlug}/dashboard/announcements`)
 
     return { success: true }
   } catch (error) {
@@ -451,7 +453,10 @@ export async function getAnnouncements(
       .eq("role", "resident")
       .maybeSingle()
 
-    const userNeighborhoodId = userResident?.lot?.neighborhood_id
+    const userResidentAny = userResident as any
+    const userNeighborhoodId = Array.isArray(userResidentAny?.lot)
+      ? userResidentAny?.lot[0]?.neighborhood_id
+      : userResidentAny?.lot?.neighborhood_id
 
     // Base query
     let query = supabase

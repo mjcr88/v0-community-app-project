@@ -21,11 +21,49 @@ import { createClient } from "@/lib/supabase/client"
 import { PhotoManager } from "@/components/photo-manager"
 import { useToast } from "@/hooks/use-toast"
 
+interface Resident {
+  id: string
+  tenant_id: string
+  first_name: string | null
+  last_name: string | null
+  phone: string | null
+  birthday: string | null
+  birth_country: string | null
+  current_country: string | null
+  languages: string[] | null
+  preferred_language: string | null
+  photos: string[] | null
+  hero_photo: string | null
+  journey_stage: string | null
+  estimated_move_in_date: string | null
+  user_interests?: { interest_id: string }[]
+  user_skills?: { skill_id: string; skills?: { name: string }; open_to_requests: boolean }[]
+}
+
+interface Tenant {
+  features?: {
+    interests?: boolean
+  }
+}
+
+interface Interest {
+  id: string
+  name: string
+  description?: string | null
+  user_interests?: { count: number }[]
+}
+
+interface Skill {
+  id: string
+  name: string
+  user_skills?: { count: number }[]
+}
+
 interface ProfileEditFormProps {
-  resident: any
-  tenant: any
-  availableInterests: any[]
-  availableSkills: any[]
+  resident: Resident
+  tenant: Tenant
+  availableInterests: Interest[]
+  availableSkills: Skill[]
   tenantSlug: string
 }
 
@@ -52,13 +90,13 @@ export function ProfileEditForm({
     heroPhoto: resident.hero_photo || (resident.photos && resident.photos.length > 0 ? resident.photos[0] : null),
     journeyStage: resident.journey_stage || "",
     estimatedMoveInDate: resident.estimated_move_in_date || "",
-    selectedInterests: resident.user_interests?.map((ui: any) => ui.interest_id) || [],
+    selectedInterests: resident.user_interests?.map((ui) => ui.interest_id) || [],
     skills:
-      resident.user_skills?.map((us: any) => ({
+      resident.user_skills?.map((us) => ({
         skill_id: us.skill_id,
         skill_name: us.skills?.name || "",
         open_to_requests: us.open_to_requests || false,
-      })) || [],
+      })) || [] as { skill_id?: string; skill_name: string; open_to_requests: boolean }[],
     interestSearch: "",
     skillSearch: "",
     newSkill: "",
@@ -329,7 +367,7 @@ export function ProfileEditForm({
   )
 
   const unselectedSkills = filteredSkills.filter(
-    (skill) => !formData.skills.some((s: any) => s.skill_name === skill.name),
+    (skill) => !formData.skills.some((s) => s.skill_name === skill.name),
   )
 
   return (
@@ -424,7 +462,7 @@ export function ProfileEditForm({
             <div className="space-y-2">
               <Label htmlFor="birthCountry">Country of Origin *</Label>
               <Combobox
-                options={COUNTRIES}
+                options={COUNTRIES.map((c) => ({ value: c, label: c }))}
                 value={formData.birthCountry}
                 onValueChange={(value) => setFormData({ ...formData, birthCountry: value })}
                 placeholder="Select country"
@@ -435,7 +473,7 @@ export function ProfileEditForm({
             <div className="space-y-2">
               <Label htmlFor="currentCountry">Current Country *</Label>
               <Combobox
-                options={COUNTRIES}
+                options={COUNTRIES.map((c) => ({ value: c, label: c }))}
                 value={formData.currentCountry}
                 onValueChange={(value) => setFormData({ ...formData, currentCountry: value })}
                 placeholder="Select country"
@@ -448,7 +486,7 @@ export function ProfileEditForm({
           <div className="space-y-2">
             <Label>Languages You Speak *</Label>
             <Combobox
-              options={LANGUAGES}
+              options={LANGUAGES.map((l) => ({ value: l, label: l }))}
               value={formData.languageSearch}
               onValueChange={(value) => {
                 addLanguage(value)
@@ -479,7 +517,7 @@ export function ProfileEditForm({
           <div className="space-y-2">
             <Label htmlFor="preferredLanguage">Preferred Language *</Label>
             <Combobox
-              options={LANGUAGES}
+              options={LANGUAGES.map((l) => ({ value: l, label: l }))}
               value={formData.preferredLanguage}
               onValueChange={(value) => setFormData({ ...formData, preferredLanguage: value })}
               placeholder="Select preferred language"

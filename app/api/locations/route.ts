@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getLocations } from "@/lib/queries/get-locations"
+import { getLocations } from "@/lib/data/locations"
 
 export async function GET(request: NextRequest) {
   try {

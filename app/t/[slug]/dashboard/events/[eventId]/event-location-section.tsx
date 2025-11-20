@@ -162,7 +162,7 @@ export function EventLocationSection({
               minimal={true}
               showInfoCard={false}
               drawnCoordinates={customCenter}
-              drawnType="pin"
+              drawnType="marker"
               enableClickablePlaces={true}
             />
           </div>

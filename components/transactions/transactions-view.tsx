@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TransactionCard } from "./transaction-card"
 import { Package } from 'lucide-react'
 
-interface Transaction {
+export interface Transaction {
   id: string
   tenant_id: string
   listing_id: string
@@ -70,7 +70,7 @@ export function TransactionsView({
 }: TransactionsViewProps) {
   // Filter active and completed transactions
   console.log("[v0] All transactions:", transactions.map(t => ({ id: t.id, status: t.status, listing: t.exchange_listings?.title })))
-  
+
   const active = transactions.filter((t) =>
     ["requested", "confirmed", "picked_up", "returned"].includes(t.status)
   )

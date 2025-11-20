@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
-import { getLocations } from "@/lib/queries/get-locations"
+import { getLocations } from "@/lib/data/locations"
 import { GoogleMapViewer } from "@/components/map/google-map-viewer"
 
 export default async function ResidentMapPage({

@@ -67,6 +67,7 @@ export default async function EventsPage({
     .eq("tenant_id", resident.tenant_id)
     .in("id", visibleEventIds)
     .in("status", ["published", "cancelled"])
+    // Let client handle date filtering for past/upcoming toggle
     .order("start_date", { ascending: true })
     .order("start_time", { ascending: true })
 

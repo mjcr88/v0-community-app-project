@@ -2,13 +2,13 @@ import { createClient } from "@/lib/supabase/server"
 import { redirect } from 'next/navigation'
 import { getExchangeListings, getExchangeCategories } from "@/app/actions/exchange-listings"
 import { getNeighborhoods } from "@/app/actions/neighborhoods"
-import { getLocations } from "@/lib/queries/get-locations"
+import { getLocations } from "@/lib/data/locations"
 import { CreateExchangeListingButton } from "@/components/exchange/create-exchange-listing-button"
 import { ExchangePageClient } from "./exchange-page-client"
 import { cache } from 'react'
 
 const getCachedExchangeCategories = cache(async (tenantId: string) => {
-  return await getExchangeCategories(tenantId)
+  return await getExchangeCategories()
 })
 
 const getCachedNeighborhoods = cache(async (tenantId: string) => {
@@ -57,6 +57,15 @@ export default async function ExchangePage({ params }: { params: Promise<{ slug:
 
   const neighborhoods = neighborhoodsResult.success ? neighborhoodsResult.data : []
 
+  const mappedListings = listings.map(listing => ({
+    ...listing,
+    photos: listing.photos || [],
+    condition: listing.condition || null,
+    category: listing.category || null,
+    creator: listing.creator || null,
+    location: listing.location || null,
+  }))
+
   const isAdmin = userData.is_tenant_admin || userData.role === "super_admin" || userData.role === "tenant_admin"
 
   return (
@@ -67,8 +76,8 @@ export default async function ExchangePage({ params }: { params: Promise<{ slug:
           <p className="text-muted-foreground">Share, borrow, and trade within your community</p>
         </div>
         {userData.onboarding_completed && (
-          <CreateExchangeListingButton 
-            tenantSlug={slug} 
+          <CreateExchangeListingButton
+            tenantSlug={slug}
             tenantId={userData.tenant_id}
             categories={categories}
             neighborhoods={neighborhoods}
@@ -76,8 +85,8 @@ export default async function ExchangePage({ params }: { params: Promise<{ slug:
         )}
       </div>
 
-      <ExchangePageClient 
-        listings={listings}
+      <ExchangePageClient
+        listings={mappedListings}
         categories={categories}
         neighborhoods={neighborhoods}
         locations={locations}

@@ -1,22 +1,35 @@
 // Notification types enum
 export type NotificationType =
-  // Exchange-related
-  | 'exchange_request'
-  | 'exchange_confirmed'
-  | 'exchange_rejected'
-  | 'exchange_picked_up'
-  | 'exchange_returned' // Added exchange_returned for when lender marks item as returned
-  | 'exchange_return_initiated'
-  | 'exchange_completed'
+  | "request_status_changed"
+  | "request_admin_reply"
+  | "exchange_request"
+  | "exchange_confirmed"
+  | "exchange_rejected"
+  | "exchange_picked_up"
+  | "exchange_returned"
+  | "exchange_return_initiated"
+  | "exchange_completed"
+  | "exchange_flagged"
+  | "exchange_request_created"
+  | "exchange_request_accepted"
+  | "exchange_request_rejected"
+  | "exchange_request_cancelled"
+  | "exchange_pickup_confirmed"
+  | "exchange_return_confirmed"
+  | "exchange_listing_flagged"
+  | "exchange_listing_archived"
+  | "exchange_listing_unflagged"
+  | "announcement"
   | 'exchange_extension_request'
   | 'exchange_extension_approved'
   | 'exchange_extension_rejected'
   | 'exchange_cancelled'
   | 'exchange_request_cancelled'
-  | 'exchange_flagged'
   | 'exchange_flag_resolved'
   | 'exchange_reminder' // 2 days before return date
   | 'exchange_overdue' // When return date has passed
+  | 'exchange_listing_archived'
+  | 'exchange_listing_unflagged'
   // Event-related (future)
   | 'event_invite'
   | 'event_rsvp'
@@ -38,23 +51,23 @@ export interface Notification {
   id: string
   tenant_id: string
   recipient_id: string
-  
+
   // Content
   type: NotificationType
   title: string
   message: string | null
-  
+
   // Status
   is_read: boolean
   is_archived: boolean
   action_required: boolean
   action_taken: boolean
   action_response: 'confirmed' | 'rejected' | 'approved' | 'declined' | 'accepted' | null
-  
+
   // Timestamps
   created_at: string
   read_at: string | null
-  
+
   // Polymorphic relationships
   exchange_transaction_id: string | null
   exchange_listing_id: string | null
@@ -62,7 +75,7 @@ export interface Notification {
   check_in_id: string | null
   resident_request_id: string | null // Added for request notifications
   announcement_id: string | null
-  
+
   // Context
   actor_id: string | null
   action_url: string | null
@@ -104,6 +117,10 @@ export interface NotificationWithExchangeTransaction extends NotificationWithExc
     actual_return_date: string | null
     return_condition: string | null
     return_notes: string | null
+    borrower_message?: string | null
+    lender_message?: string | null
+    lender_id?: string
+    borrower_id?: string
   } | null
 }
 

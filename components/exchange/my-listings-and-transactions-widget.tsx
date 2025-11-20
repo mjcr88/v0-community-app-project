@@ -56,11 +56,7 @@ interface Listing {
   archived_at: string | null
 }
 
-interface Transaction {
-  id: string
-  status: string
-  created_at: string
-}
+import { Transaction } from "@/components/transactions/transactions-view"
 
 interface MyListingsAndTransactionsWidgetProps {
   listings: Listing[]
@@ -102,7 +98,7 @@ export function MyListingsAndTransactionsWidget({
     const params = new URLSearchParams(window.location.search)
     const tab = params.get('tab')
     const highlight = params.get('highlight')
-    
+
     if (tab === 'transactions') {
       setTopLevelTab('transactions')
     }

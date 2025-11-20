@@ -47,7 +47,7 @@ export async function createResidentRequest(
 
     revalidatePath(`/t/${tenantSlug}/dashboard/requests`)
     revalidatePath(`/t/${tenantSlug}/admin/requests`)
-    
+
     return { success: true }
   } catch (error) {
     console.error("[v0] Unexpected error creating request:", error)
@@ -118,7 +118,7 @@ export async function updateRequestStatus(
         recipient_id: request.created_by,
         type: 'request_status_changed',
         title: `Request ${status}: ${request.title}`,
-        message: status === 'rejected' && reason 
+        message: status === 'rejected' && reason
           ? `Reason: ${reason}`
           : `Your ${request.request_type} request has been ${status}.`,
         actor_id: user.id,
@@ -131,7 +131,7 @@ export async function updateRequestStatus(
     revalidatePath(`/t/${tenantSlug}/dashboard/requests/${requestId}`)
     revalidatePath(`/t/${tenantSlug}/admin/requests`)
     revalidatePath(`/t/${tenantSlug}/admin/requests/${requestId}`)
-    
+
     return { success: true }
   } catch (error) {
     console.error("[v0] Unexpected error updating request status:", error)
@@ -218,13 +218,17 @@ export async function addAdminReply(
     revalidatePath(`/t/${tenantSlug}/dashboard/requests/${requestId}`)
     revalidatePath(`/t/${tenantSlug}/admin/requests`)
     revalidatePath(`/t/${tenantSlug}/admin/requests/${requestId}`)
-    
+
     return { success: true }
   } catch (error) {
     console.error("[v0] Unexpected error adding admin reply:", error)
     return { success: false, error: "An unexpected error occurred" }
   }
 }
+
+import { getResidentRequests, getResidentRequestById } from "@/lib/data/resident-requests"
+
+// ... (keep createResidentRequest, updateRequestStatus, addAdminReply)
 
 export async function getMyRequests(tenantId: string) {
   try {
@@ -235,24 +239,14 @@ export async function getMyRequests(tenantId: string) {
       return []
     }
 
-    const { data: requests, error } = await supabase
-      .from("resident_requests")
-      .select(`
-        *,
-        location:location_id(id, name, type),
-        resolved_by_user:resolved_by(first_name, last_name)
-      `)
-      .eq("tenant_id", tenantId)
-      .eq("original_submitter_id", user.id)
-      .neq("status", "resolved")
-      .order("created_at", { ascending: false })
+    const requests = await getResidentRequests(tenantId, {
+      originalSubmitterId: user.id,
+      excludeStatus: "resolved",
+      enrichWithLocation: true,
+      enrichWithResolvedBy: true,
+    })
 
-    if (error) {
-      console.error("[v0] Error fetching my requests:", error)
-      return []
-    }
-
-    return requests || []
+    return requests
   } catch (error) {
     console.error("[v0] Unexpected error fetching my requests:", error)
     return []
@@ -280,23 +274,13 @@ export async function getAllRequests(tenantId: string) {
       return []
     }
 
-    const { data: requests, error } = await supabase
-      .from("resident_requests")
-      .select(`
-        *,
-        creator:created_by(id, first_name, last_name, profile_picture_url),
-        location:location_id(id, name, type),
-        resolved_by_user:resolved_by(first_name, last_name)
-      `)
-      .eq("tenant_id", tenantId)
-      .order("created_at", { ascending: false })
+    const requests = await getResidentRequests(tenantId, {
+      enrichWithCreator: true,
+      enrichWithLocation: true,
+      enrichWithResolvedBy: true,
+    })
 
-    if (error) {
-      console.error("[v0] Error fetching all requests:", error)
-      return []
-    }
-
-    return requests || []
+    return requests
   } catch (error) {
     console.error("[v0] Unexpected error fetching all requests:", error)
     return []
@@ -314,33 +298,17 @@ export async function getCommunityRequests(tenantId: string) {
     }
 
     console.log("[v0] Fetching community requests for tenant:", tenantId)
-    console.log("[v0] User ID:", user.id)
 
-    const { data: requests, error } = await supabase
-      .from("resident_requests")
-      .select(`
-        *,
-        creator:created_by(id, first_name, last_name, profile_picture_url),
-        location:location_id(id, name, type),
-        resolved_by_user:resolved_by(first_name, last_name)
-      `)
-      .eq("tenant_id", tenantId)
-      .in("request_type", ["maintenance", "safety"])
-      .order("created_at", { ascending: false })
+    const requests = await getResidentRequests(tenantId, {
+      types: ["maintenance", "safety"],
+      enrichWithCreator: true,
+      enrichWithLocation: true,
+      enrichWithResolvedBy: true,
+    })
 
-    console.log("[v0] Community requests query error:", error)
-    console.log("[v0] Community requests count:", requests?.length || 0)
-    
-    if (requests && requests.length > 0) {
-      console.log("[v0] First request sample:", JSON.stringify(requests[0], null, 2))
-    }
+    console.log("[v0] Community requests count:", requests.length)
 
-    if (error) {
-      console.error("[v0] Error fetching community requests:", error)
-      return []
-    }
-
-    return requests || []
+    return requests
   } catch (error) {
     console.error("[v0] Unexpected error fetching community requests:", error)
     return []
@@ -349,59 +317,19 @@ export async function getCommunityRequests(tenantId: string) {
 
 export async function getRequestById(requestId: string, tenantId: string) {
   try {
-    const supabase = await createServerClient()
-    
-    const { data: request, error } = await supabase
-      .from("resident_requests")
-      .select(`
-        *,
-        creator:created_by(id, first_name, last_name, profile_picture_url),
-        original_submitter:original_submitter_id(id, first_name, last_name, profile_picture_url),
-        location:location_id(id, name, type),
-        resolved_by_user:resolved_by(id, first_name, last_name)
-      `)
-      .eq("id", requestId)
-      .eq("tenant_id", tenantId)
-      .single()
+    const request = await getResidentRequestById(requestId, {
+      enrichWithCreator: true,
+      enrichWithOriginalSubmitter: true,
+      enrichWithLocation: true,
+      enrichWithResolvedBy: true,
+      enrichWithTaggedEntities: true,
+    })
 
-    if (error) {
-      console.error("[v0] Error fetching request:", error)
+    if (!request || request.tenant_id !== tenantId) {
       return null
     }
 
-    let taggedResidents = []
-    if (request.tagged_resident_ids && request.tagged_resident_ids.length > 0) {
-      const { data: residents } = await supabase
-        .from("users")
-        .select("id, first_name, last_name, profile_picture_url")
-        .in("id", request.tagged_resident_ids)
-        .eq("tenant_id", tenantId)
-      
-      taggedResidents = residents || []
-    }
-
-    let taggedPets = []
-    if (request.tagged_pet_ids && request.tagged_pet_ids.length > 0) {
-      const { data: pets } = await supabase
-        .from("pets")
-        .select(`
-          id,
-          name,
-          species,
-          breed,
-          profile_picture_url,
-          family_unit:family_unit_id(id, name, primary_contact:primary_contact_id(id, first_name, last_name, profile_picture_url))
-        `)
-        .in("id", request.tagged_pet_ids)
-      
-      taggedPets = pets || []
-    }
-
-    return {
-      ...request,
-      tagged_residents: taggedResidents,
-      tagged_pets: taggedPets,
-    }
+    return request
   } catch (error) {
     console.error("[v0] Unexpected error fetching request:", error)
     return null

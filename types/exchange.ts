@@ -12,10 +12,10 @@ export type ExchangeCategory = {
 export type ExchangeListingStatus = 'draft' | 'published' | 'paused' | 'cancelled'
 
 // Exchange pricing type
-export type ExchangePricingType = 'free' | 'fixed_price' | 'pay_what_you_want'
+export type ExchangePricingType = 'free' | 'fixed_price' | 'pay_what_you_want' | 'negotiable'
 
 // Exchange item condition
-export type ExchangeCondition = 'new' | 'slightly_used' | 'used' | 'slightly_damaged' | 'maintenance'
+export type ExchangeCondition = 'new' | 'like_new' | 'good' | 'fair' | 'poor' | 'slightly_used' | 'used' | 'slightly_damaged' | 'maintenance'
 
 // Exchange visibility scope
 export type ExchangeVisibilityScope = 'community' | 'neighborhood'
@@ -26,47 +26,47 @@ export type ExchangeListing = {
   tenant_id: string
   created_by: string
   category_id: string
-  
+
   // Basic info
   title: string
   description: string
-  
+
   // Status
   status: ExchangeListingStatus
   is_available: boolean
-  
+
   // Pricing
   pricing_type: ExchangePricingType
   price: number | null
-  
+
   // Condition
   condition: ExchangeCondition | null
-  
+
   // Quantity
   available_quantity: number
-  
+
   // Location
   location_id: string | null
   custom_location_name: string | null
   custom_location_lat: number | null
   custom_location_lng: number | null
   custom_location_address: string | null
-  
+
   // Visibility
   visibility_scope: ExchangeVisibilityScope
-  
+
   // Flagging
   is_flagged: boolean
   flagged_at: string | null
-  
+
   // Cancellation
   cancelled_at: string | null
   cancellation_reason: string | null
-  
+
   // Archive
   archived_at: string | null
   archived_by: string | null
-  
+
   // Timestamps
   created_at: string
   updated_at: string
@@ -130,11 +130,11 @@ export type ExchangeTransaction = {
   listing_id: string
   borrower_id: string
   lender_id: string
-  
+
   // Transaction details
   quantity: number
   status: ExchangeTransactionStatus
-  
+
   // Dates
   proposed_pickup_date: string | null
   proposed_return_date: string | null
@@ -142,22 +142,22 @@ export type ExchangeTransaction = {
   expected_return_date: string | null
   actual_pickup_date: string | null
   actual_return_date: string | null
-  
+
   // Messages
   borrower_message: string | null
   lender_message: string | null
   rejection_reason: string | null
-  
+
   // Extension requests
   extension_requested: boolean
   extension_new_date: string | null
   extension_message: string | null
-  
+
   // Return condition
   return_condition: ExchangeReturnCondition | null
   return_notes: string | null
   return_damage_photo_url: string | null
-  
+
   // Timestamps
   created_at: string
   updated_at: string

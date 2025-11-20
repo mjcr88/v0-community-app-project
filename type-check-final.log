@@ -1,0 +1,148 @@
+
+> my-v0-project@0.1.0 type-check
+> tsc --noEmit
+
+app/backoffice/dashboard/layout.tsx(58,15): error TS7006: Parameter 'n' implicitly has an 'any' type.
+app/backoffice/dashboard/layout.tsx(116,37): error TS2873: This kind of expression is always falsy.
+app/backoffice/invite/[token]/page.tsx(77,30): error TS2322: Type '{ tenants: { id: any; name: any; slug: any; } | null; id: any; email: any; name: any; role: any; tenant_id: any; invite_token: any; }' is not assignable to type 'UserInvite'.
+  Types of property 'tenants' are incompatible.
+    Type '{ id: any; name: any; slug: any; } | null' is not assignable to type '{ id: string; name: string; slug: string; }'.
+      Type 'null' is not assignable to type '{ id: string; name: string; slug: string; }'.
+app/t/[slug]/admin/announcements/(management)/[announcementId]/edit/edit-announcement-form.tsx(256,17): error TS2322: Type '{ tenantId: string; neighborhoods: Neighborhood[]; selectedNeighborhoodIds: string[]; onSelectionChange: Dispatch<SetStateAction<string[]>>; }' is not assignable to type 'IntrinsicAttributes & NeighborhoodMultiSelectProps'.
+  Property 'neighborhoods' does not exist on type 'IntrinsicAttributes & NeighborhoodMultiSelectProps'.
+app/t/[slug]/admin/announcements/(management)/[announcementId]/edit/edit-announcement-form.tsx(289,15): error TS2322: Type '{ photos: string[]; onPhotosChange: Dispatch<SetStateAction<string[]>>; heroImageIndex: number; onHeroImageChange: Dispatch<SetStateAction<number>>; maxPhotos: number; }' is not assignable to type 'IntrinsicAttributes & PhotoManagerProps'.
+  Property 'heroImageIndex' does not exist on type 'IntrinsicAttributes & PhotoManagerProps'.
+app/t/[slug]/admin/announcements/(management)/[announcementId]/edit/page.tsx(84,9): error TS2322: Type '{ id: any; name: any; type: any; }[]' is not assignable to type 'Location[]'.
+  Property 'category' is missing in type '{ id: any; name: any; type: any; }' but required in type 'Location'.
+app/t/[slug]/admin/announcements/(management)/create/announcement-form.tsx(90,9): error TS2322: Type '"community_location" | "custom_temporary" | null' is not assignable to type '"community" | "custom" | "none" | undefined'.
+  Type 'null' is not assignable to type '"community" | "custom" | "none" | undefined'.
+app/t/[slug]/admin/announcements/[announcementId]/page.tsx(129,15): error TS2322: Type '{ announcementId: any; announcementTitle: any; tenantSlug: string; tenantId: any; }' is not assignable to type 'IntrinsicAttributes & PublishAnnouncementDialogProps'.
+  Property 'announcementTitle' does not exist on type 'IntrinsicAttributes & PublishAnnouncementDialogProps'. Did you mean 'announcementId'?
+app/t/[slug]/admin/announcements/[announcementId]/page.tsx(143,15): error TS2322: Type '{ announcementId: any; announcementTitle: any; tenantSlug: string; tenantId: any; redirectAfter: true; }' is not assignable to type 'IntrinsicAttributes & ArchiveAnnouncementDialogProps'.
+  Property 'announcementTitle' does not exist on type 'IntrinsicAttributes & ArchiveAnnouncementDialogProps'. Did you mean 'announcementId'?
+app/t/[slug]/admin/announcements/[announcementId]/page.tsx(151,13): error TS2322: Type '{ announcementId: any; announcementTitle: any; tenantSlug: string; tenantId: any; redirectAfter: true; }' is not assignable to type 'IntrinsicAttributes & DeleteAnnouncementDialogProps'.
+  Property 'announcementTitle' does not exist on type 'IntrinsicAttributes & DeleteAnnouncementDialogProps'. Did you mean 'announcementId'?
+app/t/[slug]/admin/announcements/admin-announcements-table.tsx(340,25): error TS2322: Type '{ publishedAt: string; lastEditedAt: string; className: string; }' is not assignable to type 'IntrinsicAttributes & UpdatedIndicatorProps'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & UpdatedIndicatorProps'.
+app/t/[slug]/admin/families/[id]/edit/edit-family-form.tsx(128,33): error TS2339: Property 'tenant_id' does not exist on type 'Family'.
+app/t/[slug]/admin/families/create/page.tsx(67,9): error TS2322: Type '{ id: any; lot_number: any; neighborhoods: { name: any; }[]; }[]' is not assignable to type 'Lot[]'.
+  Type '{ id: any; lot_number: any; neighborhoods: { name: any; }[]; }' is not assignable to type 'Lot'.
+    Types of property 'neighborhoods' are incompatible.
+      Property 'name' is missing in type '{ name: any; }[]' but required in type '{ name: string; }'.
+app/t/[slug]/admin/families/create/page.tsx(68,9): error TS2322: Type '{ id: any; first_name: any; last_name: any; email: any; phone: any; lots: { lot_number: any; neighborhoods: { name: any; }[]; }[]; }[]' is not assignable to type 'Resident[]'.
+  Type '{ id: any; first_name: any; last_name: any; email: any; phone: any; lots: { lot_number: any; neighborhoods: { name: any; }[]; }[]; }' is not assignable to type 'Resident'.
+    Types of property 'lots' are incompatible.
+      Type '{ lot_number: any; neighborhoods: { name: any; }[]; }[]' is missing the following properties from type '{ lot_number: string; neighborhoods: { name: string; } | null; }': lot_number, neighborhoods
+app/t/[slug]/admin/layout.tsx(128,42): error TS2339: Property 'neighborhoods' does not exist on type '{ neighborhood_id: any; neighborhoods: { tenant_id: any; }[]; }[]'.
+app/t/[slug]/admin/map/viewer/page.tsx(40,9): error TS2322: Type '{ tenantSlug: string; tenantId: any; mode: "view"; initialLocations: any[]; mapCenter: { lat: number; lng: number; } | null; mapZoom: any; communityBoundary: any; initialHighlightLocationId: string | undefined; }' is not assignable to type 'IntrinsicAttributes & GoogleMapEditorProps'.
+  Property 'communityBoundary' does not exist on type 'IntrinsicAttributes & GoogleMapEditorProps'.
+app/t/[slug]/admin/requests/[requestId]/page.tsx(125,34): error TS2322: Type 'string' is not assignable to type 'RequestType'.
+app/t/[slug]/admin/requests/[requestId]/page.tsx(134,37): error TS2322: Type 'string' is not assignable to type 'RequestStatus'.
+app/t/[slug]/admin/requests/[requestId]/page.tsx(135,39): error TS2322: Type 'string' is not assignable to type 'RequestPriority'.
+app/t/[slug]/admin/requests/[requestId]/page.tsx(190,55): error TS18048: 'request.tagged_residents.length' is possibly 'undefined'.
+app/t/[slug]/admin/requests/[requestId]/page.tsx(190,95): error TS18048: 'request.tagged_pets.length' is possibly 'undefined'.
+app/t/[slug]/admin/requests/page.tsx(93,15): error TS2322: Type 'ResidentRequestWithRelations[]' is not assignable to type 'AdminRequest[]'.
+  Type 'ResidentRequestWithRelations' is not assignable to type 'AdminRequest'.
+    Types of property 'description' are incompatible.
+      Type 'string | null' is not assignable to type 'string'.
+        Type 'null' is not assignable to type 'string'.
+app/t/[slug]/admin/requests/page.tsx(109,15): error TS2322: Type 'ResidentRequestWithRelations[]' is not assignable to type 'AdminRequest[]'.
+  Type 'ResidentRequestWithRelations' is not assignable to type 'AdminRequest'.
+    Types of property 'description' are incompatible.
+      Type 'string | null' is not assignable to type 'string'.
+        Type 'null' is not assignable to type 'string'.
+app/t/[slug]/admin/residents/create/create-resident-form.tsx(82,30): error TS2345: Argument of type '{ id: any; first_name: any; last_name: any; family_unit_id: any; family_units: { id: any; name: any; }[]; }[]' is not assignable to parameter of type 'SetStateAction<ExistingResident[]>'.
+  Type '{ id: any; first_name: any; last_name: any; family_unit_id: any; family_units: { id: any; name: any; }[]; }[]' is not assignable to type 'ExistingResident[]'.
+    Type '{ id: any; first_name: any; last_name: any; family_unit_id: any; family_units: { id: any; name: any; }[]; }' is not assignable to type 'ExistingResident'.
+      Types of property 'family_units' are incompatible.
+        Type '{ id: any; name: any; }[]' is missing the following properties from type '{ id: string; name: string; }': id, name
+app/t/[slug]/admin/residents/create/create-resident-form.tsx(86,64): error TS2339: Property 'name' does not exist on type '{ id: any; name: any; }[]'.
+app/t/[slug]/dashboard/announcements/[announcementId]/page.tsx(134,41): error TS7006: Parameter 'image' implicitly has an 'any' type.
+app/t/[slug]/dashboard/announcements/[announcementId]/page.tsx(134,48): error TS7006: Parameter 'index' implicitly has an 'any' type.
+app/t/[slug]/dashboard/announcements/announcements-page-client.tsx(40,9): error TS18047: 'announcement.description' is possibly 'null'.
+app/t/[slug]/dashboard/announcements/announcements-page-client.tsx(152,52): error TS2769: No overload matches this call.
+  Overload 1 of 4, '(value: string | number | Date): Date', gave the following error.
+    Argument of type 'string | null' is not assignable to parameter of type 'string | number | Date'.
+      Type 'null' is not assignable to type 'string | number | Date'.
+  Overload 2 of 4, '(value: string | number): Date', gave the following error.
+    Argument of type 'string | null' is not assignable to parameter of type 'string | number'.
+      Type 'null' is not assignable to type 'string | number'.
+app/t/[slug]/dashboard/announcements/announcements-page-client.tsx(153,43): error TS2339: Property 'scope' does not exist on type 'AnnouncementWithRead'.
+app/t/[slug]/dashboard/announcements/announcements-page-client.tsx(164,31): error TS2322: Type 'string | null' is not assignable to type 'string'.
+  Type 'null' is not assignable to type 'string'.
+app/t/[slug]/dashboard/announcements/page.tsx(49,9): error TS2322: Type 'any[] | undefined' is not assignable to type 'AnnouncementWithRead[]'.
+  Type 'undefined' is not assignable to type 'AnnouncementWithRead[]'.
+app/t/[slug]/dashboard/events/(management)/[eventId]/edit/edit-event-form.tsx(226,15): error TS2322: Type 'Element' is not assignable to type 'string | (string & ReactElement<unknown, string | JSXElementConstructor<any>>) | (string & Iterable<ReactNode>) | (string & ReactPortal) | (string & Promise<...>) | undefined'.
+  Type 'ReactElement<any, any>' is not assignable to type 'string & ReactPortal'.
+    Type 'ReactElement<any, any>' is not assignable to type 'string'.
+app/t/[slug]/dashboard/events/(management)/[eventId]/edit/edit-event-form.tsx(448,13): error TS2322: Type '"polygon" | "pin" | null' is not assignable to type '"marker" | "polygon" | null | undefined'.
+  Type '"pin"' is not assignable to type '"marker" | "polygon" | null | undefined'.
+app/t/[slug]/dashboard/events/(management)/[eventId]/edit/edit-event-form.tsx(455,13): error TS2322: Type '(data: { coordinates?: { lat: number; lng: number; } | null; type?: "pin" | "polygon" | null; path?: Array<{ lat: number; lng: number; }> | null; }) => void' is not assignable to type '(data: { coordinates?: { lat: number; lng: number; } | null | undefined; type?: "marker" | "polygon" | null | undefined; path?: { lat: number; lng: number; }[] | null | undefined; }) => void'.
+  Types of parameters 'data' and 'data' are incompatible.
+    Type '{ coordinates?: { lat: number; lng: number; } | null | undefined; type?: "marker" | "polygon" | null | undefined; path?: { lat: number; lng: number; }[] | null | undefined; }' is not assignable to type '{ coordinates?: { lat: number; lng: number; } | null | undefined; type?: "polygon" | "pin" | null | undefined; path?: { lat: number; lng: number; }[] | null | undefined; }'.
+      Types of property 'type' are incompatible.
+        Type '"marker" | "polygon" | null | undefined' is not assignable to type '"polygon" | "pin" | null | undefined'.
+          Type '"marker"' is not assignable to type '"polygon" | "pin" | null | undefined'.
+app/t/[slug]/dashboard/events/(management)/[eventId]/edit/page.tsx(103,11): error TS2322: Type 'string | null' is not assignable to type 'string'.
+  Type 'null' is not assignable to type 'string'.
+app/t/[slug]/dashboard/events/(management)/[eventId]/edit/page.tsx(115,11): error TS2322: Type '"community_location" | "custom_temporary" | null' is not assignable to type '"community" | "custom" | "none" | null'.
+  Type '"community_location"' is not assignable to type '"community" | "custom" | "none" | null'.
+app/t/[slug]/dashboard/events/(management)/[eventId]/edit/page.tsx(119,11): error TS2322: Type '"marker" | "polygon" | "polyline" | null' is not assignable to type '"polygon" | "pin" | null'.
+  Type '"marker"' is not assignable to type '"polygon" | "pin" | null'.
+app/t/[slug]/dashboard/events/(management)/create/event-form.tsx(398,13): error TS2322: Type '"polygon" | "pin" | null' is not assignable to type '"marker" | "polygon" | null | undefined'.
+  Type '"pin"' is not assignable to type '"marker" | "polygon" | null | undefined'.
+app/t/[slug]/dashboard/events/(management)/create/event-form.tsx(413,13): error TS2322: Type '(data: { coordinates?: { lat: number; lng: number; } | null; type?: "pin" | "polygon" | null; path?: Array<{ lat: number; lng: number; }> | null; }) => void' is not assignable to type '(data: { coordinates?: { lat: number; lng: number; } | null | undefined; type?: "marker" | "polygon" | null | undefined; path?: { lat: number; lng: number; }[] | null | undefined; }) => void'.
+  Types of parameters 'data' and 'data' are incompatible.
+    Type '{ coordinates?: { lat: number; lng: number; } | null | undefined; type?: "marker" | "polygon" | null | undefined; path?: { lat: number; lng: number; }[] | null | undefined; }' is not assignable to type '{ coordinates?: { lat: number; lng: number; } | null | undefined; type?: "polygon" | "pin" | null | undefined; path?: { lat: number; lng: number; }[] | null | undefined; }'.
+      Types of property 'type' are incompatible.
+        Type '"marker" | "polygon" | null | undefined' is not assignable to type '"polygon" | "pin" | null | undefined'.
+          Type '"marker"' is not assignable to type '"polygon" | "pin" | null | undefined'.
+app/t/[slug]/dashboard/events/[eventId]/event-location-section.tsx(165,15): error TS2322: Type '"pin"' is not assignable to type '"marker" | "polygon" | null | undefined'.
+app/t/[slug]/dashboard/events/[eventId]/save-event-button.tsx(42,28): error TS2554: Expected 2 arguments, but got 1.
+app/t/[slug]/dashboard/events/[eventId]/save-event-button.tsx(51,28): error TS2554: Expected 2 arguments, but got 1.
+app/t/[slug]/dashboard/events/events-page-client.tsx(290,13): error TS2719: Type 'Event[]' is not assignable to type 'Event[]'. Two different types with this name exist, but they are unrelated.
+  Type 'Event' is missing the following properties from type 'Event': tenant_id, requires_rsvp, max_attendees, attending_count, rsvp_deadline
+app/t/[slug]/dashboard/events/events-page-client.tsx(292,13): error TS2322: Type 'string | boolean' is not assignable to type 'boolean'.
+  Type 'string' is not assignable to type 'boolean'.
+app/t/[slug]/dashboard/events/events-page-client.tsx(300,13): error TS2719: Type 'Event[]' is not assignable to type 'Event[]'. Two different types with this name exist, but they are unrelated.
+  Type 'Event' is missing the following properties from type 'Event': tenant_id, requires_rsvp, max_attendees, attending_count, rsvp_deadline
+app/t/[slug]/dashboard/events/events-page-client.tsx(302,13): error TS2322: Type 'string | boolean' is not assignable to type 'boolean'.
+  Type 'string' is not assignable to type 'boolean'.
+app/t/[slug]/dashboard/locations/[id]/location-checkins-section.tsx(77,22): error TS2322: Type '{ children: (string | Element)[]; tenantSlug: string; tenantId: string; initialLocation: { type: string; id: string; name: string; }; variant: "outline"; size: string; onClick: (e: any) => any; }' is not assignable to type 'IntrinsicAttributes & CreateCheckInButtonProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & CreateCheckInButtonProps'.
+app/t/[slug]/dashboard/locations/[id]/location-checkins-section.tsx(87,33): error TS7006: Parameter 'e' implicitly has an 'any' type.
+app/t/[slug]/dashboard/locations/[id]/location-checkins-section.tsx(119,10): error TS2741: Property 'userId' is missing in type '{ checkInId: string; tenantSlug: string; tenantId: string; open: boolean; onOpenChange: (open: boolean) => false | void; }' but required in type 'CheckInDetailModalProps'.
+app/t/[slug]/dashboard/locations/[id]/location-events-section.tsx(128,33): error TS2719: Type 'Event[]' is not assignable to type 'Event[]'. Two different types with this name exist, but they are unrelated.
+  Type 'Event' is not assignable to type 'Event'. Two different types with this name exist, but they are unrelated.
+    Types of property 'requires_rsvp' are incompatible.
+      Type 'boolean | null' is not assignable to type 'boolean'.
+        Type 'null' is not assignable to type 'boolean'.
+app/t/[slug]/dashboard/locations/[id]/page.tsx(141,46): error TS2554: Expected 0 arguments, but got 1.
+app/t/[slug]/dashboard/locations/[id]/page.tsx(331,46): error TS7006: Parameter 'amenity' implicitly has an 'any' type.
+app/t/[slug]/dashboard/locations/[id]/page.tsx(355,72): error TS7006: Parameter 'feature' implicitly has an 'any' type.
+app/t/[slug]/dashboard/locations/[id]/page.tsx(355,81): error TS7006: Parameter 'idx' implicitly has an 'any' type.
+app/t/[slug]/dashboard/locations/[id]/page.tsx(472,31): error TS7006: Parameter 'n' implicitly has an 'any' type.
+app/t/[slug]/dashboard/locations/[id]/page.tsx(610,35): error TS7006: Parameter 'photo' implicitly has an 'any' type.
+app/t/[slug]/dashboard/locations/[id]/page.tsx(610,42): error TS7006: Parameter 'index' implicitly has an 'any' type.
+app/t/[slug]/dashboard/map/page.tsx(111,9): error TS2322: Type 'LocationWithRelations[]' is not assignable to type 'Location[]'.
+  Type 'LocationWithRelations' is not assignable to type 'Location'.
+    Types of property 'type' are incompatible.
+      Type 'LocationType' is not assignable to type '"neighborhood" | "lot" | "facility" | "walking_path" | "boundary" | "public_street" | "protection_zone" | "easement"'.
+        Type '"green_area"' is not assignable to type '"neighborhood" | "lot" | "facility" | "walking_path" | "boundary" | "public_street" | "protection_zone" | "easement"'.
+app/t/[slug]/dashboard/neighbours/[id]/page.tsx(167,58): error TS7006: Parameter 'p' implicitly has an 'any' type.
+app/t/[slug]/dashboard/neighbours/[id]/page.tsx(177,46): error TS2554: Expected 0 arguments, but got 1.
+app/t/[slug]/dashboard/neighbours/[id]/page.tsx(178,5): error TS2322: Type '{ success: boolean; error: string; data: never[]; } | { success: boolean; data: { id: any; name: any; description: any; }[]; error?: undefined; }' is not assignable to type 'any[]'.
+  Type '{ success: boolean; error: string; data: never[]; }' is missing the following properties from type 'any[]': length, pop, push, concat, and 35 more.
+app/t/[slug]/dashboard/neighbours/[id]/page.tsx(235,20): error TS2741: Property 'tenantId' is missing in type '{ tenantSlug: string; locations: any[]; mapCenter: { lat: any; lng: any; } | null; highlightLocationId: any; }' but required in type 'MapPreviewWidgetProps'.
+app/t/[slug]/dashboard/neighbours/[id]/page.tsx(428,29): error TS7006: Parameter 'n' implicitly has an 'any' type.
+app/t/[slug]/dashboard/neighbours/[id]/page.tsx(482,41): error TS7006: Parameter 'photo' implicitly has an 'any' type.
+app/t/[slug]/dashboard/neighbours/[id]/page.tsx(482,48): error TS7006: Parameter 'index' implicitly has an 'any' type.
+app/t/[slug]/dashboard/neighbours/page.tsx(115,44): error TS2339: Property 'neighborhoods' does not exist on type '{ id: any; lot_number: any; neighborhoods: { name: any; }[]; }[]'.
+app/t/[slug]/dashboard/neighbours/page.tsx(192,13): error TS2322: Type '{ id: any; name: any; profile_picture_url: any; primary_contact_id: any; users: { id: any; first_name: any; last_name: any; lots: { id: any; lot_number: any; neighborhoods: { name: any; }[]; }[]; }[]; pets: { id: any; }[]; }[]' is not assignable to type 'Family[]'.
+  Type '{ id: any; name: any; profile_picture_url: any; primary_contact_id: any; users: { id: any; first_name: any; last_name: any; lots: { id: any; lot_number: any; neighborhoods: { name: any; }[]; }[]; }[]; pets: { id: any; }[]; }' is not assignable to type 'Family'.
+    Types of property 'users' are incompatible.
+      Type '{ id: any; first_name: any; last_name: any; lots: { id: any; lot_number: any; neighborhoods: { name: any; }[]; }[]; }[]' is not assignable to type 'FamilyMember[]'.
+        Type '{ id: any; first_name: any; last_name: any; lots: { id: any; lot_number: any; neighborhoods: { name: any; }[]; }[]; }' is not assignable to type 'FamilyMember'.
+          Types of property 'lots' are incompatible.
+            Type '{ id: any; lot_number: any; neighborhoods: { name: any; }[]; }[]' is missing the following properties from type '{ id: string; lot_number: string; neighborhoods: { name: string; }; }': id, lot_number, neighborhoods
+app/t/[slug]/dashboard/page.tsx(183,61): error TS2322: Type '"only"' is not assignable to type '"exact" | "planned" | "estimated" | undefined'.

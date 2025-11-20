@@ -110,6 +110,12 @@ dependencies:
   '@tiptap/starter-kit':
     specifier: latest
     version: 3.11.0
+  '@upstash/ratelimit':
+    specifier: ^2.0.7
+    version: 2.0.7(@upstash/redis@1.35.6)
+  '@upstash/redis':
+    specifier: ^1.35.6
+    version: 1.35.6
   '@vercel/analytics':
     specifier: latest
     version: 1.5.0(next@16.0.0)(react@19.2.0)
@@ -3113,6 +3119,28 @@ packages:
       '@types/node': 22.19.1
     dev: false
 
+  /@upstash/core-analytics@0.0.10:
+    resolution: {integrity: sha512-7qJHGxpQgQr9/vmeS1PktEwvNAF7TI4iJDi8Pu2CFZ9YUGHZH4fOP5TfYlZ4aVxfopnELiE4BS4FBjyK7V1/xQ==}
+    engines: {node: '>=16.0.0'}
+    dependencies:
+      '@upstash/redis': 1.35.6
+    dev: false
+
+  /@upstash/ratelimit@2.0.7(@upstash/redis@1.35.6):
+    resolution: {integrity: sha512-qNQW4uBPKVk8c4wFGj2S/vfKKQxXx1taSJoSGBN36FeiVBBKHQgsjPbKUijZ9Xu5FyVK+pfiXWKIsQGyoje8Fw==}
+    peerDependencies:
+      '@upstash/redis': ^1.34.3
+    dependencies:
+      '@upstash/core-analytics': 0.0.10
+      '@upstash/redis': 1.35.6
+    dev: false
+
+  /@upstash/redis@1.35.6:
+    resolution: {integrity: sha512-aSEIGJgJ7XUfTYvhQcQbq835re7e/BXjs8Janq6Pvr6LlmTZnyqwT97RziZLO/8AVUL037RLXqqiQC6kCt+5pA==}
+    dependencies:
+      uncrypto: 0.1.3
+    dev: false
+
   /@vercel/analytics@1.5.0(next@16.0.0)(react@19.2.0):
     resolution: {integrity: sha512-MYsBzfPki4gthY5HnYN7jgInhAZ7Ac1cYDoRWFomwGHWEX7odTEzbtg9kf/QSo7XEsEAqlQugA6gJ2WS2DEa3g==}
     peerDependencies:
@@ -4719,6 +4747,10 @@ packages:
 
   /uc.micro@2.1.0:
     resolution: {integrity: sha512-ARDJmphmdvUk6Glw7y9DQ2bFkKBHwQHLi2lsaH6PPmz/Ka9sFOBsBluozhDltWmnv9u/cF6Rt87znRTPV+yp/A==}
+    dev: false
+
+  /uncrypto@0.1.3:
+    resolution: {integrity: sha512-Ql87qFHB3s/De2ClA9e0gsnS6zXG27SkTiSJwjCc9MebbfapQfuPzumMIUMi38ezPZVNFcHI9sUIepeQfw8J8Q==}
     dev: false
 
   /undici-types@6.21.0:

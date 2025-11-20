@@ -195,10 +195,11 @@ export default function CreateNeighborhoodForm({ slug, tenantId }: { slug: strin
             <div className="grid grid-cols-2 gap-2">
               {uploadedPhotos.map((url, index) => (
                 <div key={url} className="relative group aspect-square rounded-lg overflow-hidden border">
-                  <img
+                  <Image
                     src={url || "/placeholder.svg"}
                     alt={`Upload ${index + 1}`}
-                    className="w-full h-full object-cover"
+                    fill
+                    className="object-cover"
                   />
                   <Button
                     type="button"

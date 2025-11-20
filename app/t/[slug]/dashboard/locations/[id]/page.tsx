@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { MapPin, Users, ArrowLeft, Home, MapIcon, Calendar, Star } from 'lucide-react'
 import Link from "next/link"
+import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { Suspense } from "react"
 import { LocationEventsSection } from "./location-events-section"
@@ -266,7 +267,13 @@ export default async function LocationDetailsPage({ params }: { params: Promise<
       {/* Hero Image - Display hero photo */}
       {mainPhoto && (
         <div className="relative w-full rounded-xl overflow-hidden border bg-muted aspect-[2/1]">
-          <img src={mainPhoto || "/placeholder.svg"} alt={location.name} className="w-full h-full object-cover" />
+          <Image
+            src={mainPhoto || "/placeholder.svg"}
+            alt={location.name}
+            fill
+            className="object-cover"
+            priority
+          />
           {location.hero_photo && (
             <Badge className="absolute top-4 left-4 bg-primary/90 text-primary-foreground shadow-lg">
               <Star className="h-3 w-3 mr-1 fill-current" />

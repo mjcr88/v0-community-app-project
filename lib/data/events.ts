@@ -68,6 +68,7 @@ export interface GetEventsOptions {
     search?: string
     requestingUserId?: string
     status?: string[]
+    visibilityScope?: string
 
     // Enrichment options
     enrichWithLocation?: boolean
@@ -77,6 +78,10 @@ export interface GetEventsOptions {
     enrichWithUserRsvp?: boolean
     enrichWithSavedStatus?: boolean
     enrichWithFlagCount?: boolean
+
+    // Pagination
+    limit?: number
+    offset?: number
 }
 
 export const getEvents = cache(async (
@@ -100,6 +105,8 @@ export const getEvents = cache(async (
         enrichWithUserRsvp = false,
         enrichWithSavedStatus = false,
         enrichWithFlagCount = false,
+        limit,
+        offset,
     } = options
 
     const supabase = await createServerClient()
@@ -192,6 +199,14 @@ export const getEvents = cache(async (
 
     if (status && status.length > 0) {
         query = query.in("status", status)
+    }
+
+    if (limit) {
+        query = query.limit(limit)
+    }
+
+    if (offset !== undefined) {
+        query = query.range(offset, offset + (limit || 10) - 1)
     }
 
     const { data: events, error } = await query

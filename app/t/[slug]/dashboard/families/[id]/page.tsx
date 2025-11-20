@@ -4,8 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { MapPin, Users, ArrowLeft, Briefcase, Star } from "lucide-react"
+import { Loader2, Map, Upload, X, ImageIcon } from "lucide-react"
 import Link from "next/link"
+import Image from "next/image"
 import { filterPrivateData } from "@/lib/privacy-utils"
 import { getFamilyById } from "@/lib/data/families"
 import { getResidentById } from "@/lib/data/residents"
@@ -278,11 +279,12 @@ export default async function FamilyProfilePage({ params }: { params: Promise<{ 
                       <Star className="h-3 w-3 fill-current" />
                       Featured Photo
                     </Badge>
-                    <div className="rounded-lg overflow-hidden aspect-video">
-                      <img
+                    <div className="relative rounded-lg overflow-hidden aspect-video">
+                      <Image
                         src={familyHeroPhoto || "/placeholder.svg"}
                         alt="Featured family photo"
-                        className="w-full h-full object-cover"
+                        fill
+                        className="object-cover"
                       />
                     </div>
                   </div>

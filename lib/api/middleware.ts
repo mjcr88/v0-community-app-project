@@ -47,6 +47,35 @@ export function withAuth(
                 throw new AuthError('Authentication required')
             }
 
+            // Rate limiting
+            // We limit by user ID to prevent abuse from a single user
+            // Default: 10 requests per 10 seconds
+            try {
+                const { rateLimit } = await import('@/lib/rate-limit')
+                const { success, limit, remaining, reset } = await rateLimit(user.id)
+
+                if (!success) {
+                    return new NextResponse(JSON.stringify({
+                        success: false,
+                        error: {
+                            message: 'Too many requests',
+                            code: 'RATE_LIMIT_EXCEEDED'
+                        }
+                    }), {
+                        status: 429,
+                        headers: {
+                            'X-RateLimit-Limit': limit.toString(),
+                            'X-RateLimit-Remaining': remaining.toString(),
+                            'X-RateLimit-Reset': reset.toString(),
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                }
+            } catch (rateLimitError) {
+                // Fail open if rate limiting fails (e.g. Redis down)
+                console.error('Rate limiting failed:', rateLimitError)
+            }
+
             return handler(request, {
                 user: {
                     id: user.id,

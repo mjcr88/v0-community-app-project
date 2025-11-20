@@ -5,6 +5,7 @@ import { ArrowLeft, MapPin, Calendar } from 'lucide-react'
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import Image from "next/image"
 import { AnnouncementTypeIcon } from "@/components/announcements/announcement-type-icon"
 import { AnnouncementPriorityBadge } from "@/components/announcements/announcement-priority-badge"
 import { UpdatedIndicator } from "@/components/announcements/updated-indicator"
@@ -132,12 +133,14 @@ export default async function AnnouncementDetailPage({ params }: AnnouncementDet
           {announcement.images && announcement.images.length > 0 && (
             <div className="space-y-4">
               {announcement.images.map((image, index) => (
-                <img
-                  key={index}
-                  src={image || "/placeholder.svg"}
-                  alt={`Announcement image ${index + 1}`}
-                  className="w-full rounded-lg border"
-                />
+                <div key={index} className="relative w-full h-64 rounded-lg border overflow-hidden">
+                  <Image
+                    src={image || "/placeholder.svg"}
+                    alt={`Announcement image ${index + 1}`}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
               ))}
             </div>
           )}

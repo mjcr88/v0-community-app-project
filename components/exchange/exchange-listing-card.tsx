@@ -9,6 +9,8 @@ import { ExchangePriceBadge } from "./exchange-price-badge"
 import { cn } from "@/lib/utils"
 import { MapPin, Flag } from 'lucide-react'
 
+import type { ExchangePricingType } from "@/types/exchange"
+
 interface ExchangeListingCardProps {
   listing: {
     id: string
@@ -16,7 +18,7 @@ interface ExchangeListingCardProps {
     description?: string | null
     status: string
     is_available?: boolean
-    pricing_type: string
+    pricing_type: ExchangePricingType
     price_amount?: number | null
     condition?: string | null
     available_quantity?: number | null
@@ -51,12 +53,12 @@ export function ExchangeListingCard({ listing, onClick, className }: ExchangeLis
     : "?"
   const avatarUrl = listing.creator?.profile_picture_url
 
-  const conditionDisplay = listing.condition 
+  const conditionDisplay = listing.condition
     ? listing.condition.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
     : null
 
-  const shouldShowQuantity = 
-    listing.available_quantity !== null && 
+  const shouldShowQuantity =
+    listing.available_quantity !== null &&
     listing.available_quantity !== undefined &&
     listing.category &&
     (listing.category.name === "Tools & Equipment" || listing.category.name === "Food & Produce")
@@ -67,14 +69,14 @@ export function ExchangeListingCard({ listing, onClick, className }: ExchangeLis
     <Card className={cn("hover:bg-accent transition-colors cursor-pointer overflow-hidden", className)} onClick={onClick}>
       {listing.hero_photo && (
         <div className="aspect-video w-full overflow-hidden">
-          <img 
-            src={listing.hero_photo || "/placeholder.svg"} 
+          <img
+            src={listing.hero_photo || "/placeholder.svg"}
             alt={listing.title}
             className="w-full h-full object-cover"
           />
         </div>
       )}
-      
+
       <CardHeader className="space-y-3 pb-3">
         {/* Header: Creator and status */}
         <div className="flex items-start justify-between gap-2">
@@ -97,8 +99,8 @@ export function ExchangeListingCard({ listing, onClick, className }: ExchangeLis
                 Draft
               </Badge>
             ) : (
-              <ExchangeStatusBadge 
-                status={listing.status as any} 
+              <ExchangeStatusBadge
+                status={listing.status as any}
                 isAvailable={listing.is_available ?? true}
               />
             )}

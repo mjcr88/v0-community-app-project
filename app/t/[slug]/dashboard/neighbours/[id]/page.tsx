@@ -3,6 +3,7 @@ import { redirect, notFound } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { MapPin, Calendar, Phone, Mail, Globe, Languages, Lightbulb, Wrench, Users, ArrowLeft, CheckCircle2, Star } from 'lucide-react'
 import Link from "next/link"
@@ -251,62 +252,62 @@ export default async function PublicProfilePage({
         <div className="lg:col-span-2 space-y-6">
           {((filteredResident.show_email && filteredResident.email) ||
             (filteredResident.show_phone && filteredResident.phone)) && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Contact Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {filteredResident.show_email && filteredResident.email && (
-                  <div className="flex items-center gap-3">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <a href={`mailto:${filteredResident.email}`} className="text-sm hover:underline">
-                      {filteredResident.email}
-                    </a>
-                  </div>
-                )}
-                {filteredResident.show_phone && filteredResident.phone && (
-                  <div className="flex items-center gap-3">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <a href={`tel:${filteredResident.phone}`} className="text-sm hover:underline">
-                      {filteredResident.phone}
-                    </a>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Contact Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {filteredResident.show_email && filteredResident.email && (
+                    <div className="flex items-center gap-3">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <a href={`mailto:${filteredResident.email}`} className="text-sm hover:underline">
+                        {filteredResident.email}
+                      </a>
+                    </div>
+                  )}
+                  {filteredResident.show_phone && filteredResident.phone && (
+                    <div className="flex items-center gap-3">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <a href={`tel:${filteredResident.phone}`} className="text-sm hover:underline">
+                        {filteredResident.phone}
+                      </a>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
           {((filteredResident.show_birth_country && filteredResident.birth_country) ||
             (filteredResident.show_current_country && filteredResident.current_country) ||
             (filteredResident.show_birthday && filteredResident.birthday)) && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Personal Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {filteredResident.show_birthday && filteredResident.birthday && (
-                  <div className="flex items-center gap-3">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">
-                      Birthday: {new Date(filteredResident.birthday).toLocaleDateString()}
-                    </span>
-                  </div>
-                )}
-                {filteredResident.show_birth_country && filteredResident.birth_country && (
-                  <div className="flex items-center gap-3">
-                    <Globe className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">From: {filteredResident.birth_country}</span>
-                  </div>
-                )}
-                {filteredResident.show_current_country && filteredResident.current_country && (
-                  <div className="flex items-center gap-3">
-                    <Globe className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">Currently in: {filteredResident.current_country}</span>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Personal Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {filteredResident.show_birthday && filteredResident.birthday && (
+                    <div className="flex items-center gap-3">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">
+                        Birthday: {new Date(filteredResident.birthday).toLocaleDateString()}
+                      </span>
+                    </div>
+                  )}
+                  {filteredResident.show_birth_country && filteredResident.birth_country && (
+                    <div className="flex items-center gap-3">
+                      <Globe className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">From: {filteredResident.birth_country}</span>
+                    </div>
+                  )}
+                  {filteredResident.show_current_country && filteredResident.current_country && (
+                    <div className="flex items-center gap-3">
+                      <Globe className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">Currently in: {filteredResident.current_country}</span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
           {filteredResident.show_languages && filteredResident.languages && filteredResident.languages.length > 0 && (
             <Card>
@@ -466,10 +467,11 @@ export default async function PublicProfilePage({
                       Featured Photo
                     </Badge>
                     <div className="rounded-lg overflow-hidden aspect-video">
-                      <img
-                        src={heroPhoto || "/placeholder.svg"}
-                        alt="Featured"
-                        className="w-full h-full object-cover"
+                      <Image
+                        src={member.profile_picture_url || "/placeholder.svg"}
+                        alt={`${member.first_name} ${member.last_name}`}
+                        fill
+                        className="object-cover"
                       />
                     </div>
                   </div>

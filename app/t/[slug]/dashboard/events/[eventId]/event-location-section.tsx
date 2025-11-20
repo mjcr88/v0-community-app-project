@@ -3,7 +3,15 @@
 import { MapPin, ExternalLink } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { GoogleMapViewer } from "@/components/map/google-map-viewer"
+import dynamic from "next/dynamic"
+// Lazy load map component
+const GoogleMapViewer = dynamic(
+  () => import("@/components/map/google-map-viewer").then((mod) => mod.GoogleMapViewer),
+  {
+    loading: () => <div className="h-full w-full bg-muted animate-pulse" />,
+    ssr: false,
+  }
+)
 import { useEffect, useState } from "react"
 import { createBrowserClient } from "@/lib/supabase/client"
 
@@ -162,7 +170,7 @@ export function EventLocationSection({
               minimal={true}
               showInfoCard={false}
               drawnCoordinates={customCenter}
-              drawnType="pin"
+              drawnType="marker"
               enableClickablePlaces={true}
             />
           </div>

@@ -58,7 +58,7 @@ export function ResidentPetSelector({
         ])
 
         if (residentsResult.success) setResidents(residentsResult.data || [])
-        if (petsResult.success) setPets(petsResult.data || [])
+        if (petsResult.success) setPets((petsResult.data || []) as any[])
       } catch (error) {
         console.error("[v0] Error fetching residents/pets:", error)
       } finally {

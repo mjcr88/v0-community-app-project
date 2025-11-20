@@ -10,6 +10,7 @@ import { createBrowserClient } from "@/lib/supabase/client"
 import { Loader2 } from 'lucide-react'
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
+import { useToast } from "@/hooks/use-toast"
 
 type Tenant = {
   id: string
@@ -46,7 +47,16 @@ type Tenant = {
   announcements_enabled?: boolean
 }
 
-const FEATURES = [
+type Feature = {
+  key: string
+  label: string
+  description: string
+} & (
+    | { table: string; checkField?: never }
+    | { checkField: string | null; table?: never }
+  )
+
+const FEATURES: Feature[] = [
   {
     key: "neighborhoods",
     label: "Neighborhoods",
@@ -131,7 +141,7 @@ const FEATURES = [
     description: "Enable community announcements for important updates, events, and news",
     table: "announcements",
   },
-] as const
+]
 
 const LOCATION_TYPE_OPTIONS = [
   { key: "facility", label: "Facilities", description: "Community amenities like pools, clubs, offices" },
@@ -150,6 +160,7 @@ const LOCATION_TYPE_OPTIONS = [
 export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
   const router = useRouter()
   const supabase = createBrowserClient()
+  const { toast } = useToast()
   const [loading, setLoading] = useState(false)
 
   const defaultFeatures = {
@@ -167,6 +178,19 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
     exchange: false,
     requests: true,
     announcements: true,
+    location_types: {
+      facility: true,
+      lot: true,
+      walking_path: true,
+      neighborhood: true,
+      boundary: true,
+      protection_zone: true,
+      easement: true,
+      playground: true,
+      public_street: true,
+      green_area: true,
+      recreational_zone: true,
+    },
   }
 
   const [features, setFeatures] = useState<{
@@ -211,31 +235,32 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
     },
   })
 
-  console.log("[v0] Tenant features from DB:", tenant.features)
-  console.log("[v0] Tenant events_enabled:", tenant.events_enabled)
-  console.log("[v0] Tenant checkins_enabled:", tenant.checkins_enabled)
-  console.log("[v0] Tenant exchange_enabled:", tenant.exchange_enabled)
-  console.log("[v0] Tenant requests_enabled:", tenant.requests_enabled)
-  console.log("[v0] Tenant announcements_enabled:", tenant.announcements_enabled)
-  console.log("[v0] Initialized form state:", features)
-
   const [visibilityScope, setVisibilityScope] = useState<"neighborhood" | "tenant">(
     tenant.resident_visibility_scope || "tenant",
   )
+
+  const getFeatureValue = (key: string): boolean => {
+    if (key === "location_types") return false
+    const val = features[key as keyof typeof features]
+    if (typeof val === "boolean") return val
+    return true
+  }
 
   const handleToggle = async (featureKey: string, enabled: boolean) => {
     if (featureKey === "map" && !enabled) {
       const feature = FEATURES.find((f) => f.key === featureKey)
       if (feature?.table) {
-        const { count } = await supabase
+        const { count, error } = await supabase
           .from(feature.table)
           .select("*", { count: "exact", head: true })
           .eq("tenant_id", tenant.id)
 
         if (count && count > 0) {
-          alert(
-            `Cannot disable ${feature.label} because there are ${count} existing records. Please delete all ${feature.label.toLowerCase()} first.`,
-          )
+          toast({
+            variant: "destructive",
+            title: "Cannot disable feature",
+            description: `Cannot disable ${feature.label} because there are ${count} existing records. Please delete all ${feature.label.toLowerCase()} first.`,
+          })
           return
         }
       }
@@ -285,27 +310,33 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
       const feature = FEATURES.find((f) => f.key === featureKey)
       if (feature) {
         if (feature.table) {
-          const { count } = await supabase
+          const { count, error } = await supabase
             .from(feature.table)
             .select("*", { count: "exact", head: true })
             .eq("tenant_id", tenant.id)
 
           if (count && count > 0) {
-            alert(
-              `Cannot disable ${feature.label} because there are ${count} existing records. Please delete all ${feature.label.toLowerCase()} first.`,
-            )
+            toast({
+              variant: "destructive",
+              title: "Cannot disable feature",
+              description: `Cannot disable ${feature.label} because there are ${count} existing records. Please delete all ${feature.label.toLowerCase()} first.`,
+            })
             return
           }
         } else if (feature.checkField) {
-          const { count } = await supabase
-            .from("residents")
+          const { count, error } = await supabase
+            .from("users")
             .select("*", { count: "exact", head: true })
+            .eq("role", "resident")
+            .eq("tenant_id", tenant.id)
             .not(feature.checkField, "is", null)
 
           if (count && count > 0) {
-            alert(
-              `Cannot disable ${feature.label} because ${count} residents have this data set. Please clear the data first.`,
-            )
+            toast({
+              variant: "destructive",
+              title: "Cannot disable feature",
+              description: `Cannot disable ${feature.label} because ${count} residents have this data set. Please clear the data first.`,
+            })
             return
           }
         }
@@ -319,7 +350,7 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
     setFeatures((prev) => ({
       ...prev,
       location_types: {
-        ...prev.location_types,
+        ...(prev.location_types || {}),
         [typeKey]: enabled,
       },
     }))
@@ -333,7 +364,7 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
 
       const wasEventsEnabled = tenant.events_enabled ?? false
       const willEnableEvents = !wasEventsEnabled && (events ?? false)
-      
+
       const wasExchangeEnabled = tenant.exchange_enabled ?? false
       const willEnableExchange = !wasExchangeEnabled && (exchange ?? false)
 
@@ -351,8 +382,11 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
         .eq("id", tenant.id)
 
       if (error) {
-        console.error("[v0] Error saving features:", error)
-        alert("Failed to save features")
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to save features",
+        })
         return
       }
 
@@ -365,16 +399,16 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
           })
 
           if (!response.ok) {
-            console.error("[v0] Failed to seed event categories")
+            console.error("Failed to seed event categories")
           } else {
             const result = await response.json()
-            console.log("[v0] Seeded categories:", result)
+            console.log("Seeded categories:", result)
           }
         } catch (seedError) {
-          console.error("[v0] Error seeding categories:", seedError)
+          console.error("Error seeding categories:", seedError)
         }
       }
-      
+
       if (willEnableExchange) {
         try {
           const response = await fetch("/api/seed-exchange-categories", {
@@ -384,20 +418,27 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
           })
 
           if (!response.ok) {
-            console.error("[v0] Failed to seed exchange categories")
+            console.error("Failed to seed exchange categories")
           } else {
             const result = await response.json()
-            console.log("[v0] Seeded exchange categories:", result)
+            console.log("Seeded exchange categories:", result)
           }
         } catch (seedError) {
-          console.error("[v0] Error seeding exchange categories:", seedError)
+          console.error("Error seeding exchange categories:", seedError)
         }
       }
 
+      toast({
+        title: "Success",
+        description: "Features updated successfully",
+      })
       router.refresh()
     } catch (error) {
-      console.error("[v0] Error:", error)
-      alert("An error occurred")
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "An error occurred",
+      })
     } finally {
       setLoading(false)
     }
@@ -424,7 +465,7 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
               </div>
               <Switch
                 id={feature.key}
-                checked={features[feature.key as keyof typeof features] ?? true}
+                checked={getFeatureValue(feature.key)}
                 onCheckedChange={(checked) => handleToggle(feature.key, checked)}
               />
             </div>
@@ -445,7 +486,7 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
                 <Switch
                   id={feature.key}
                   checked={
-                    features[feature.key as keyof typeof features] ??
+                    getFeatureValue(feature.key) &&
                     (feature.key === "events" || feature.key === "checkins" || feature.key === "exchange" ? false : true)
                   }
                   onCheckedChange={(checked) => handleToggle(feature.key, checked)}
@@ -467,7 +508,7 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
               </div>
               <Switch
                 id={feature.key}
-                checked={features[feature.key as keyof typeof features] ?? true}
+                checked={getFeatureValue(feature.key)}
                 onCheckedChange={(checked) => handleToggle(feature.key, checked)}
               />
             </div>

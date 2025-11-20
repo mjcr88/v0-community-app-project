@@ -57,7 +57,7 @@ interface Location {
   id: string
   name: string
   type: string
-  coordinates?: { lat: number; lng: number }
+  coordinates?: { lat: number; lng: number } | null
 }
 
 export function ExchangePageClient({
@@ -467,8 +467,8 @@ export function ExchangePageClient({
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {filteredAndSortedListings.map((listing) => (
-            <ExchangeListingCard 
-              key={listing.id} 
+            <ExchangeListingCard
+              key={listing.id}
               listing={listing}
               onClick={() => handleCardClick(listing.id)}
             />

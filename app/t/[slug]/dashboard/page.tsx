@@ -89,8 +89,8 @@ const getCachedUserTransactions = cache(async (userId: string, tenantId: string)
   return await getMyTransactions(userId, tenantId)
 })
 
-export default async function ResidentDashboardPage({ params }: { params: { slug: string } }) {
-  const { slug } = params
+export default async function ResidentDashboardPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
   const supabase = await createClient()
 
   const user = await getCachedUser()
@@ -125,7 +125,7 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
       .eq("lot_id", resident.lot_id)
       .eq("type", "lot")
       .maybeSingle()
-    
+
     lotLocationId = lotLocation?.id
   }
 
@@ -274,8 +274,8 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
         </div>
       </DashboardSectionCollapsible>
 
-      <DashboardSectionCollapsible 
-        title="Community Announcements" 
+      <DashboardSectionCollapsible
+        title="Community Announcements"
         description="Latest updates from management"
         defaultOpen={true}
       >
@@ -286,8 +286,8 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
         />
       </DashboardSectionCollapsible>
 
-      <DashboardSectionCollapsible 
-        title="Upcoming Events" 
+      <DashboardSectionCollapsible
+        title="Upcoming Events"
         description="Your next events"
         defaultOpen={false}
       >
@@ -299,7 +299,7 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
       </DashboardSectionCollapsible>
 
       {checkinsEnabled && (
-        <DashboardSectionCollapsible 
+        <DashboardSectionCollapsible
           title="Live Check-ins"
           description="Active residents now"
           defaultOpen={false}
@@ -313,7 +313,7 @@ export default async function ResidentDashboardPage({ params }: { params: { slug
       )}
 
       {exchangeEnabled && (userListings.length > 0 || userTransactions.length > 0) && (
-        <DashboardSectionCollapsible 
+        <DashboardSectionCollapsible
           title="My Listings & Transactions"
           description="Manage your exchange listings and track active exchanges"
           defaultOpen={true}

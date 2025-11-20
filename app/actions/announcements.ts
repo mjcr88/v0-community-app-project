@@ -420,7 +420,9 @@ export async function markAnnouncementAsRead(announcementId: string, tenantSlug:
       return { success: false, error: error.message }
     }
 
-    revalidatePath(`/t/${tenantSlug}/dashboard/announcements`)
+    // Note: revalidatePath during render causes Next.js 15 warning
+    // The announcement reads are cached and will update on next navigation
+    // revalidatePath(`/t/${tenantSlug}/dashboard/announcements`)
 
     return { success: true }
   } catch (error) {
@@ -444,13 +446,17 @@ export async function getAnnouncements(
     const supabase = await createServerClient()
 
     const { data: userResident } = await supabase
-      .from("residents")
+      .from("users")
       .select("lot_id, lot:lots(neighborhood_id)")
       .eq("auth_user_id", userId)
       .eq("tenant_id", tenantId)
+      .eq("role", "resident")
       .maybeSingle()
 
-    const userNeighborhoodId = userResident?.lot?.neighborhood_id
+    const userResidentAny = userResident as any
+    const userNeighborhoodId = Array.isArray(userResidentAny?.lot)
+      ? userResidentAny?.lot[0]?.neighborhood_id
+      : userResidentAny?.lot?.neighborhood_id
 
     // Base query
     let query = supabase
@@ -505,7 +511,7 @@ export async function getAnnouncements(
 
       if (filters?.status === "read") return isRead
       if (filters?.status === "active") return !isRead
-      
+
       return true
     })
 
@@ -603,16 +609,16 @@ export async function getAnnouncementById(announcementId: string, tenantId: stri
         .select("id, name, coordinates")
         .eq("id", announcement.location_id)
         .single()
-      
+
       locationData = loc
     }
 
-    return { 
-      success: true, 
-      data: { 
-        ...announcement, 
-        location: locationData 
-      } 
+    return {
+      success: true,
+      data: {
+        ...announcement,
+        location: locationData
+      }
     }
   } catch (error) {
     console.error("[v0] Unexpected error fetching announcement details:", error)

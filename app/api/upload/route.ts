@@ -11,15 +11,18 @@ export async function POST(request: Request) {
     }
 
     // Validate file type
-    const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"]
-    if (!validTypes.includes(file.type)) {
-      return NextResponse.json({ error: "Invalid file type. Only JPEG, PNG, and WebP are allowed." }, { status: 400 })
+    const { validateFileType, validateFileSize, ALLOWED_FILE_TYPES } = await import("@/lib/upload-security")
+
+    const typeValidation = validateFileType(file, ALLOWED_FILE_TYPES.image)
+    if (!typeValidation.valid) {
+      return NextResponse.json({ error: typeValidation.error }, { status: 400 })
     }
 
     // Validate file size (max 5MB)
     const maxSize = 5 * 1024 * 1024 // 5MB
-    if (file.size > maxSize) {
-      return NextResponse.json({ error: "File too large. Maximum size is 5MB." }, { status: 400 })
+    const sizeValidation = validateFileSize(file, maxSize)
+    if (!sizeValidation.valid) {
+      return NextResponse.json({ error: sizeValidation.error }, { status: 400 })
     }
 
     // Upload to Vercel Blob

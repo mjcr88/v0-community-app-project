@@ -6,16 +6,19 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { MapPin, Users, ArrowLeft, Home, MapIcon, Calendar, Star } from 'lucide-react'
 import Link from "next/link"
+import Image from "next/image"
 import { cn } from "@/lib/utils"
+import { Suspense } from "react"
 import { LocationEventsSection } from "./location-events-section"
 import { LocationCheckinsSection } from "./location-checkins-section"
+import { LocationPhotoGallery } from "@/components/locations/location-photo-gallery"
 import { LocationExchangeSection } from "./location-exchange-section"
 import { getEventsByLocation } from "@/app/actions/events"
 import { getCheckInsByLocation } from "@/app/actions/check-ins"
 import { getExchangeListingsByLocation, getExchangeCategories } from "@/app/actions/exchange-listings"
 
-export default async function LocationDetailsPage({ params }: { params: { slug: string; id: string } }) {
-  const { slug, id } = params
+export default async function LocationDetailsPage({ params }: { params: Promise<{ slug: string; id: string }> }) {
+  const { slug, id } = await params
   const supabase = await createClient()
 
   const {
@@ -264,7 +267,13 @@ export default async function LocationDetailsPage({ params }: { params: { slug: 
       {/* Hero Image - Display hero photo */}
       {mainPhoto && (
         <div className="relative w-full rounded-xl overflow-hidden border bg-muted aspect-[2/1]">
-          <img src={mainPhoto || "/placeholder.svg"} alt={location.name} className="w-full h-full object-cover" />
+          <Image
+            src={mainPhoto || "/placeholder.svg"}
+            alt={location.name}
+            fill
+            className="object-cover"
+            priority
+          />
           {location.hero_photo && (
             <Badge className="absolute top-4 left-4 bg-primary/90 text-primary-foreground shadow-lg">
               <Star className="h-3 w-3 mr-1 fill-current" />
@@ -598,7 +607,7 @@ export default async function LocationDetailsPage({ params }: { params: { slug: 
         </div>
       )}
 
-      {/* Photo Gallery - Show all photos in gallery */}
+      {/* Photo Gallery */}
       {galleryPhotos.length > 1 && (
         <Card>
           <CardHeader>
@@ -606,34 +615,11 @@ export default async function LocationDetailsPage({ params }: { params: { slug: 
             <CardDescription>{galleryPhotos.length} photos</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {galleryPhotos.map((photo, index) => {
-                const isHero = photo === location.hero_photo
-
-                return (
-                  <div
-                    key={photo}
-                    className={cn(
-                      "aspect-square rounded-lg overflow-hidden border bg-muted cursor-pointer group relative",
-                      isHero && "ring-2 ring-primary ring-offset-2",
-                    )}
-                    onClick={() => window.open(photo, "_blank")}
-                  >
-                    <img
-                      src={photo || "/placeholder.svg"}
-                      alt={`${location.name} - Photo ${index + 1}`}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                    />
-                    {isHero && (
-                      <Badge className="absolute top-2 left-2 bg-primary text-primary-foreground shadow-lg">
-                        <Star className="h-3 w-3 mr-1 fill-current" />
-                        Hero
-                      </Badge>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
+            <LocationPhotoGallery
+              photos={galleryPhotos}
+              heroPhoto={location.hero_photo}
+              locationName={location.name}
+            />
           </CardContent>
         </Card>
       )}

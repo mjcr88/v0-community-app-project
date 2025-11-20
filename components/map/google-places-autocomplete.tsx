@@ -59,10 +59,17 @@ export function GooglePlacesAutocomplete({
     setShowPredictions(true)
 
     try {
-      const result = await autocompleteService.current.getPlacePredictions({
-        input: value,
-        // Optionally restrict to specific region
-        // componentRestrictions: { country: "cr" }, // Costa Rica
+      const result = await new Promise<any>((resolve, reject) => {
+        autocompleteService.current?.getPlacePredictions(
+          { input: value },
+          (predictions, status) => {
+            if (status !== window.google.maps.places.PlacesServiceStatus.OK && status !== window.google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
+              reject(status)
+              return
+            }
+            resolve({ predictions })
+          }
+        )
       })
 
       console.log("[v0] Autocomplete predictions:", result?.predictions?.length || 0)

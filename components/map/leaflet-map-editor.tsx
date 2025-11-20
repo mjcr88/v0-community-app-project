@@ -51,11 +51,17 @@ interface LeafletMapEditorProps {
   }) => Promise<void>
 }
 
-function TileLayerSwitcher({ layer }: { layer: string }) {
+function TileLayerSwitcher({ layer }: { layer: keyof typeof TILE_LAYERS }) {
   const map = useMap()
 
   return (
-    <TileLayer key={layer} url={TILE_LAYERS[layer].url} attribution={TILE_LAYERS[layer].attribution} maxZoom={19} />
+    <TileLayer
+      key={layer}
+      url={TILE_LAYERS[layer].url}
+      // @ts-ignore
+      attribution={TILE_LAYERS[layer].attribution}
+      maxZoom={19}
+    />
   )
 }
 
@@ -156,8 +162,14 @@ export function LeafletMapEditor({ tenantSlug, onSave }: LeafletMapEditorProps) 
   return (
     <div className="flex flex-col h-screen">
       <div className="flex-1 relative">
-        <MapContainer center={[9.9312, -84.0739]} zoom={15} className="h-full w-full" ref={mapRef}>
-          <TileLayerSwitcher layer={tileLayer} />
+        <MapContainer
+          // @ts-ignore
+          center={new L.LatLng(9.9312, -84.0739)}
+          zoom={15}
+          className="h-full w-full"
+          ref={mapRef}
+        >
+          <TileLayerSwitcher layer={tileLayer as keyof typeof TILE_LAYERS} />
 
           <FeatureGroup>
             <EditControl

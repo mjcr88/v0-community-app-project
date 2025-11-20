@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import Image from "next/image"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ArrowLeft, Pencil, Archive, Trash2, Send, MapPin, Calendar } from 'lucide-react'
 import Link from "next/link"
@@ -20,7 +21,7 @@ export default async function AdminAnnouncementDetailPage({
   params: { slug: string; announcementId: string }
 }) {
   const { slug, announcementId } = params
-  
+
   const supabase = await createClient()
 
   const {
@@ -221,7 +222,12 @@ export default async function AdminAnnouncementDetailPage({
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {announcement.images.map((imageUrl: string, index: number) => (
                   <div key={index} className="relative aspect-video overflow-hidden rounded-lg border">
-                    <img src={imageUrl || "/placeholder.svg"} alt={`Announcement image ${index + 1}`} className="object-cover w-full h-full" />
+                    <Image
+                      src={imageUrl || "/placeholder.svg"}
+                      alt={`Announcement image ${index + 1}`}
+                      fill
+                      className="object-cover"
+                    />
                   </div>
                 ))}
               </div>
@@ -258,7 +264,7 @@ export default async function AdminAnnouncementDetailPage({
 
             {/* Location */}
             {(announcement.location_type === "community_location" && location) ||
-            announcement.location_type === "custom_temporary" ? (
+              announcement.location_type === "custom_temporary" ? (
               <div className="flex items-start gap-3">
                 <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
                 <div>

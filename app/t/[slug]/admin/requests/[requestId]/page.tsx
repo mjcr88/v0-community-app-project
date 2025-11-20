@@ -3,6 +3,7 @@ import { redirect, notFound } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import Image from "next/image"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ArrowLeft, Calendar, MapPin, AlertCircle, User, MessageSquare } from 'lucide-react'
 import Link from "next/link"
@@ -122,7 +123,18 @@ export default async function AdminRequestDetailPage({
           <CardHeader>
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
-                <RequestTypeIcon type={request.request_type} className="h-12 w-12" />
+                {request.photo_url ? (
+                  <div className="relative h-12 w-12 rounded-lg overflow-hidden border">
+                    <Image
+                      src={request.photo_url}
+                      alt="Request photo"
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                ) : (
+                  <RequestTypeIcon type={request.request_type} className="h-12 w-12" />
+                )}
                 <div>
                   <CardTitle>{getRequestTypeLabel(request.request_type)} Request</CardTitle>
                   <CardDescription>
@@ -190,7 +202,7 @@ export default async function AdminRequestDetailPage({
             {request.request_type === 'complaint' && (request.tagged_residents?.length > 0 || request.tagged_pets?.length > 0) && (
               <div className="border-t pt-4">
                 <h3 className="font-semibold mb-3">Complaint Regarding</h3>
-                
+
                 {request.tagged_residents && request.tagged_residents.length > 0 && (
                   <div className="space-y-2 mb-4">
                     <p className="text-sm text-muted-foreground">Residents:</p>

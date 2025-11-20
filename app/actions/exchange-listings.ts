@@ -9,6 +9,16 @@ import { createNotification } from "@/app/actions/notifications"
  * Server actions for exchange listing operations
  */
 
+import { getExchangeListings as getExchangeListingsFromLib, getExchangeListingById as getExchangeListingByIdFromLib, getExchangeCategories as getExchangeCategoriesFromLib } from "@/lib/data/exchange"
+
+// ... (keep imports)
+
+// ... (keep createNotification)
+
+/**
+ * Server actions for exchange listing operations
+ */
+
 export async function getExchangeListings(tenantId: string) {
   try {
     const supabase = await createServerClient()
@@ -21,59 +31,16 @@ export async function getExchangeListings(tenantId: string) {
       return []
     }
 
-    const { data: listings, error } = await supabase
-      .from("exchange_listings")
-      .select(`
-        id,
-        title,
-        description,
-        status,
-        is_available,
-        pricing_type,
-        price,
-        condition,
-        available_quantity,
-        created_by,
-        photos,
-        hero_photo,
-        custom_location_name,
-        custom_location_lat,
-        custom_location_lng,
-        category:exchange_categories(id, name, description),
-        creator:users!created_by(id, first_name, last_name, profile_picture_url),
-        location:locations(name)
-      `)
-      .eq("tenant_id", tenantId)
-      .or(`status.eq.published,and(status.eq.draft,created_by.eq.${user.id})`)
-      .is("archived_at", null) // Only show non-archived listings
-      .order("created_at", { ascending: false })
+    const listings = await getExchangeListingsFromLib(tenantId, {
+      includeDraftsByCreator: user.id,
+      enrichWithCategory: true,
+      enrichWithCreator: true,
+      enrichWithLocation: true,
+      enrichWithFlagCount: true,
+      excludeArchived: true,
+    })
 
-    if (error) {
-      console.error("Error fetching exchange listings:", error)
-      return []
-    }
-
-    const listingIds = listings?.map((l) => l.id) || []
-    
-    const flagCountResults = await Promise.all(
-      listingIds.map(async (listingId) => {
-        const { data: count } = await supabase.rpc("get_exchange_listing_flag_count", {
-          p_listing_id: listingId,
-          p_tenant_id: tenantId,
-        })
-        return { listingId, count: count ?? 0 }
-      })
-    )
-
-    const flagCountMap = new Map(flagCountResults.map((r) => [r.listingId, r.count]))
-
-    const transformedListings = listings?.map((listing: any) => ({
-      ...listing,
-      price_amount: listing.price,
-      flag_count: flagCountMap.get(listing.id) || 0,
-    }))
-
-    return transformedListings || []
+    return listings
   } catch (error) {
     console.error("Unexpected error fetching exchange listings:", error)
     return []
@@ -92,43 +59,15 @@ export async function getExchangeListingById(listingId: string, tenantId: string
       return { success: false, error: "User not authenticated", data: null }
     }
 
-    const { data: listing, error } = await supabase
-      .from("exchange_listings")
-      .select(`
-        id,
-        title,
-        description,
-        status,
-        is_available,
-        pricing_type,
-        price,
-        condition,
-        available_quantity,
-        created_by,
-        created_at,
-        published_at,
-        photos,
-        hero_photo,
-        visibility_scope,
-        location_id,
-        custom_location_name,
-        custom_location_lat,
-        custom_location_lng,
-        category:exchange_categories(id, name, description),
-        creator:users!created_by(id, first_name, last_name, profile_picture_url, phone, email),
-        location:locations(id, name, type, coordinates, path_coordinates, boundary_coordinates),
-        neighborhoods:exchange_neighborhoods(neighborhood:neighborhoods(id, name))
-      `)
-      .eq("id", listingId)
-      .eq("tenant_id", tenantId)
-      .single()
+    const listing = await getExchangeListingByIdFromLib(listingId, {
+      enrichWithCategory: true,
+      enrichWithCreator: true,
+      enrichWithLocation: true,
+      enrichWithNeighborhoods: true,
+      excludeArchived: false,
+    })
 
-    if (error) {
-      console.error("Error fetching exchange listing:", error)
-      return { success: false, error: error.message, data: null }
-    }
-
-    if (!listing) {
+    if (!listing || listing.tenant_id !== tenantId) {
       return { success: false, error: "Listing not found", data: null }
     }
 
@@ -148,26 +87,8 @@ export async function getExchangeListingById(listingId: string, tenantId: string
   }
 }
 
-export async function getExchangeCategories(tenantId: string) {
-  try {
-    const supabase = await createServerClient()
-
-    const { data: categories, error } = await supabase
-      .from("exchange_categories")
-      .select("*")
-      .eq("tenant_id", tenantId)
-      .order("name", { ascending: true })
-
-    if (error) {
-      console.error("Error fetching exchange categories:", error)
-      return []
-    }
-
-    return categories || []
-  } catch (error) {
-    console.error("Unexpected error fetching exchange categories:", error)
-    return []
-  }
+export async function getExchangeCategories() {
+  return getExchangeCategoriesFromLib()
 }
 
 export async function createExchangeListing(
@@ -309,6 +230,7 @@ export async function createExchangeListing(
   }
 }
 
+
 export async function getUserListings(userId: string, tenantId: string) {
   try {
     const supabase = await createServerClient()
@@ -321,41 +243,14 @@ export async function getUserListings(userId: string, tenantId: string) {
       return []
     }
 
-    const { data: listings, error } = await supabase
-      .from("exchange_listings")
-      .select(`
-        id,
-        title,
-        status,
-        is_available,
-        pricing_type,
-        price,
-        condition,
-        available_quantity,
-        photos,
-        hero_photo,
-        created_at,
-        published_at,
-        category:exchange_categories(id, name),
-        location:locations(name),
-        custom_location_name
-      `)
-      .eq("created_by", userId)
-      .eq("tenant_id", tenantId)
-      .is("archived_at", null) // Only show non-archived listings
-      .order("created_at", { ascending: false })
+    const listings = await getExchangeListingsFromLib(tenantId, {
+      creatorId: userId,
+      enrichWithCategory: true,
+      enrichWithLocation: true,
+      excludeArchived: true,
+    })
 
-    if (error) {
-      console.error("Error fetching user listings:", error)
-      return []
-    }
-
-    const transformedListings = listings?.map((listing: any) => ({
-      ...listing,
-      price_amount: listing.price,
-    }))
-
-    return transformedListings || []
+    return listings
   } catch (error) {
     console.error("Unexpected error fetching user listings:", error)
     return []
@@ -994,7 +889,7 @@ export async function confirmBorrowRequest(
 
     await supabase
       .from("notifications")
-      .update({ 
+      .update({
         action_taken: true,
         action_response: 'confirmed'
       })
@@ -1088,7 +983,7 @@ export async function rejectBorrowRequest(
 
     await supabase
       .from("notifications")
-      .update({ 
+      .update({
         action_taken: true,
         action_response: 'rejected'
       })
@@ -1477,7 +1372,7 @@ export async function adminArchiveListings(
       // Notify users with pending requests
       if (pendingTransactions && pendingTransactions.length > 0) {
         const listingMap = new Map(listings.map(l => [l.id, l]))
-        
+
         for (const transaction of pendingTransactions) {
           const listing = listingMap.get(transaction.listing_id)
           if (listing && transaction.borrower_id) {
@@ -1613,7 +1508,7 @@ export async function dismissListingFlag(flagId: string, tenantSlug: string) {
       return { success: false, error: "You don't have permission to dismiss flags" }
     }
 
-    const { data: flag, error: flagError} = await supabase
+    const { data: flag, error: flagError } = await supabase
       .from("exchange_flags")
       .select("id, listing_id")
       .eq("id", flagId)

@@ -153,7 +153,9 @@ export function LocationInfoCard({
           )
           setResidents(data)
 
-          const family = data.find((resident: any) => resident.family_units)?.family_units
+          const familyData = data.find((resident: any) => resident.family_units)?.family_units
+          const family = Array.isArray(familyData) ? familyData[0] : familyData
+
           if (family) {
             console.log("[v0] Family unit found:", family.name)
             setFamilyUnit(family)
@@ -314,7 +316,11 @@ export function LocationInfoCard({
               src={location.photos[0] || "/placeholder.svg"}
               alt={location.name}
               className="w-full aspect-[2/1] object-cover hover:scale-105 transition-transform"
-              onClick={() => window.open(location.photos[0], "_blank")}
+              onClick={() => {
+                if (location.photos && location.photos.length > 0) {
+                  window.open(location.photos[0], "_blank")
+                }
+              }}
             />
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
           </div>

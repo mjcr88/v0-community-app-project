@@ -3,21 +3,10 @@
 import { createServerClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 
+import { getLocations as getLocationsFromLib } from "@/lib/data/locations"
+
 export async function getLocations(tenantId: string) {
-  const supabase = await createServerClient()
-
-  const { data: locations, error } = await supabase
-    .from("locations")
-    .select("*")
-    .eq("tenant_id", tenantId)
-    .order("name")
-
-  if (error) {
-    console.error("Error fetching locations:", error)
-    return []
-  }
-
-  return locations || []
+  return getLocationsFromLib(tenantId)
 }
 
 export async function createLocation(data: {

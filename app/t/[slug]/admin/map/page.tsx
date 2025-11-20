@@ -6,7 +6,7 @@ import { LocationsTable } from "@/components/map/locations-table"
 import { GeoJSONUploadButton } from "@/components/map/geojson-upload-button"
 import { AdminMapClient } from "./admin-map-client"
 import { redirect } from "next/navigation"
-import { getLocationCounts } from "@/lib/queries/get-locations"
+import { getLocationCounts } from "@/lib/data/locations"
 import { MapSettingsDialog } from "./map-settings-dialog"
 
 export default async function MapManagementPage({

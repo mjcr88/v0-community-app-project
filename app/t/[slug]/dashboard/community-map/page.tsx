@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
-import { getLocations, getLocationCounts } from "@/lib/queries/get-locations"
+import { getLocations, getLocationCounts } from "@/lib/data/locations"
 import { CommunityMapClient } from "./community-map-client"
 
 export default async function ResidentCommunityMapPage({

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback } from "react"
-import { APIProvider, Map, Marker, AdvancedMarker } from "@vis.gl/react-google-maps"
+import { APIProvider, Map, Marker, AdvancedMarker, useMap } from "@vis.gl/react-google-maps"
 import { Polygon } from "./polygon"
 import { Polyline } from "./polyline"
 import { createBrowserClient } from "@/lib/supabase/client"
@@ -23,11 +23,11 @@ import { MapPin, Trash2, Filter, Layers, Locate, Plus } from 'lucide-react'
 import { getLocationEventCount } from "@/app/actions/events"
 import { CheckInDetailModal } from "@/components/check-ins/check-in-detail-modal" // Declare the CheckInDetailModal variable
 
-interface Location {
+export interface Location {
   id: string
   name: string
-  type: "facility" | "lot" | "walking_path" | "neighborhood" | "boundary" | "public_street"
-  coordinates?: { lat: number; lng: number }
+  type: "facility" | "lot" | "walking_path" | "neighborhood" | "boundary" | "public_street" | "protection_zone" | "easement"
+  coordinates?: { lat: number; lng: number } | null
   boundary_coordinates?: Array<[number, number]>
   path_coordinates?: Array<[number, number]>
   description?: string | null
@@ -37,6 +37,14 @@ interface Location {
   lot_id?: string | null
   neighborhood_id?: string
   tenant_id?: string
+}
+
+// Helper to cast Location to the type expected by LocationInfoCard
+function toInfoCardLocation(loc: Location): any {
+  return {
+    ...loc,
+    type: loc.type === "boundary" || loc.type === "public_street" ? "facility" : loc.type, // Fallback for types not supported by InfoCard
+  }
 }
 
 interface GoogleMapViewerProps {
@@ -220,6 +228,17 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null)
   const [locatingUser, setLocatingUser] = useState(false)
 
+  // Helper component to access map instance
+  function MapHandler() {
+    const map = useMap()
+    useEffect(() => {
+      if (map) {
+        setMapInstance(map)
+      }
+    }, [map])
+    return null
+  }
+
   const [showFacilities, setShowFacilities] = useState(true)
   const [showLots, setShowLots] = useState(true)
   const [showWalkingPaths, setShowWalkingPaths] = useState(true)
@@ -233,7 +252,7 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
 
   useEffect(() => {
     if (!initialCheckIns || !Array.isArray(initialCheckIns)) return
-    
+
     // Only update if the actual data changed, not just the array reference
     const hasChanged = JSON.stringify(checkIns) !== JSON.stringify(initialCheckIns)
     if (hasChanged) {
@@ -823,11 +842,8 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
           onCenterChanged={(e) => setCenter(e.detail.center)}
           onZoomChanged={(e) => setZoom(e.detail.zoom)}
           onClick={handleMapClick}
-          onLoad={(map) => {
-            console.log("[v0] Map loaded, setting instance")
-            setMapInstance(map.map)
-          }}
         >
+          <MapHandler />
           {showBoundary && tenantBoundary && (
             <Polygon
               paths={convertCoordinates(tenantBoundary as any)}
@@ -1180,52 +1196,31 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
             }
 
             // Individual marker
-            const firstName = checkIn.created_by_user?.first_name || ""
-            const lastName = checkIn.created_by_user?.last_name || ""
-            const initials = (firstName.charAt(0) + lastName.charAt(0)).toUpperCase() || "?"
-            const hasProfilePicture = checkIn.created_by_user?.profile_picture_url
-
             return (
               <AdvancedMarker
                 key={checkIn.id}
                 position={checkIn.coordinates}
+                title={checkIn.title}
+                zIndex={100}
                 onClick={() => handleCheckInClick(checkIn)}
-                zIndex={200}
               >
-                <div className="relative cursor-pointer" style={{ transform: "translateY(-100%)" }}>
-                  {/* Profile Picture Circle */}
-                  <div className="relative w-12 h-12 rounded-full border-4 border-green-500 bg-white overflow-hidden shadow-lg hover:border-green-600 transition-colors">
-                    {hasProfilePicture ? (
-                      <img
-                        src={checkIn.created_by_user.profile_picture_url || "/placeholder.svg"}
-                        alt={checkIn.title}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-white text-green-600 font-bold text-lg">
-                        {initials}
-                      </div>
-                    )}
-
-                    {/* Attending Count Badge */}
-                    {checkIn.attending_count > 0 && (
-                      <div className="absolute -top-1 -right-1 bg-green-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center border-2 border-white">
-                        {checkIn.attending_count}
-                      </div>
-                    )}
+                <div className="relative">
+                  <div className="absolute -top-10 -left-4 bg-white p-1 rounded-full shadow-lg border-2 border-primary">
+                    <div className="w-8 h-8 rounded-full overflow-hidden">
+                      {checkIn.user?.profile_picture_url ? (
+                        <img
+                          src={checkIn.user.profile_picture_url || "/placeholder.svg"}
+                          alt={checkIn.user.first_name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
+                          {checkIn.user?.first_name?.[0]}
+                        </div>
+                      )}
+                    </div>
                   </div>
-
-                  {/* Pointer Stem */}
-                  <div
-                    className="absolute left-1/2 -translate-x-1/2"
-                    style={{
-                      width: 0,
-                      height: 0,
-                      borderLeft: "8px solid transparent",
-                      borderRight: "8px solid transparent",
-                      borderTop: "8px solid rgb(34, 197, 94)", // green-500
-                    }}
-                  />
+                  <div className="w-4 h-4 bg-primary rounded-full border-2 border-white shadow-sm" />
                 </div>
               </AdvancedMarker>
             )
@@ -1238,8 +1233,8 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
               onClick={handleCustomMarkerClick}
               icon={{
                 url: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='48' viewBox='0 0 32 48'%3E%3Cpath fill='%239333ea' stroke='%23ffffff' strokeWidth='2' d='M16 0C8.8 0 3 5.8 3 13c0 8.5 13 35 13 35s13-26.5 13-35c0-7.2-5.8-13-13-13zm0 18c-2.8 0-5-2.2-5-5s2.2-5 5-5 5 2.2 5 5-2.2 5-5 5z'/%3E%3C/svg%3E",
-                scaledSize: { width: 32, height: 48 },
-                anchor: { x: 16, y: 48 },
+                scaledSize: { width: 32, height: 48 } as any,
+                anchor: { x: 16, y: 48 } as any,
               }}
             />
           )}
@@ -1311,8 +1306,8 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
               }}
               icon={{
                 url: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='48' viewBox='0 0 32 48'%3E%3Cpath fill='%239333ea' stroke='%23ffffff' strokeWidth='2' d='M16 0C8.8 0 3 5.8 3 13c0 8.5 13 35 13 35s13-26.5 13-35c0-7.2-5.8-13-13-13zm0 18c-2.8 0-5-2.2-5-5s2.2-5 5-5 5 2.2 5 5-2.2 5-5 5z'/%3E%3C/svg%3E",
-                scaledSize: { width: 32, height: 48 },
-                anchor: { x: 16, y: 48 },
+                scaledSize: { width: 32, height: 48 } as any,
+                anchor: { x: 16, y: 48 } as any,
               }}
             />
           )}
@@ -1331,12 +1326,12 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
           )}
 
           {userLocation && (
-            <Marker position={userLocation} title="Your Location" zIndex={300}>
+            <AdvancedMarker position={userLocation} title="Your Location" zIndex={300}>
               <div className="relative flex items-center justify-center">
                 <div className="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-lg" />
                 <div className="absolute w-8 h-8 bg-blue-400 rounded-full opacity-30 animate-ping" />
               </div>
-            </Marker>
+            </AdvancedMarker>
           )}
         </Map>
       </APIProvider>
@@ -1344,11 +1339,10 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
       {selectedLocation && (
         <div className="absolute top-4 right-4 z-20 max-w-sm">
           <LocationInfoCard
-            location={selectedLocation}
+            location={toInfoCardLocation(selectedLocation)}
             onClose={handleCloseInfoCard}
-            minimal={minimal}
-            eventCount={loadingEventCount ? undefined : selectedLocationEventCount}
-            tenantSlug={tenantSlug} // Pass tenantSlug instead of tenantId
+            eventCount={selectedLocationEventCount}
+            tenantSlug={tenantSlug}
           />
         </div>
       )}
@@ -1456,7 +1450,11 @@ export const GoogleMapViewer = React.memo(function GoogleMapViewer({
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => setMapType("satellite")}>Satellite</DropdownMenuItem>
             <DropdownMenuItem onClick={() => setMapType("terrain")}>Terrain</DropdownMenuItem>
-            <DropdownMenuRadioItem onClick={() => setMapType("roadmap")}>Street</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="roadmap" onClick={() => setMapType("roadmap")}>Street</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="marker" onClick={() => onDrawingModeChange?.("marker")}>
+              <MapPin className="mr-2 h-4 w-4" />
+              <span>Place Marker</span>
+            </DropdownMenuRadioItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

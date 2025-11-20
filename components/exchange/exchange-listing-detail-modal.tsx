@@ -2,15 +2,15 @@
 
 import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { 
-  AlertDialog, 
-  AlertDialogAction, 
-  AlertDialogCancel, 
-  AlertDialogContent, 
-  AlertDialogDescription, 
-  AlertDialogFooter, 
-  AlertDialogHeader, 
-  AlertDialogTitle 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -47,7 +47,7 @@ interface ExchangeListingDetailModalProps {
 
 function parseLocationCoordinates(coords: any): { lat: number; lng: number } | any[] | null {
   if (!coords) return null
-  
+
   // Handle string JSON
   if (typeof coords === 'string') {
     try {
@@ -57,36 +57,36 @@ function parseLocationCoordinates(coords: any): { lat: number; lng: number } | a
       return null
     }
   }
-  
+
   // Handle object - try multiple formats
   if (typeof coords === 'object') {
     // Format 1: {lat, lng}
     if (typeof coords.lat === 'number' && typeof coords.lng === 'number') {
       return { lat: coords.lat, lng: coords.lng }
     }
-    
+
     // Format 2: {latitude, longitude}
     if (typeof coords.latitude === 'number' && typeof coords.longitude === 'number') {
       return { lat: coords.latitude, lng: coords.longitude }
     }
-    
+
     // Format 3: {x, y} (PostGIS format)
     if (typeof coords.x === 'number' && typeof coords.y === 'number') {
       return { lat: coords.x, lng: coords.y }
     }
-    
+
     // Format 4: [lat, lng] single point array
     if (Array.isArray(coords) && coords.length === 2 && typeof coords[0] === 'number' && typeof coords[1] === 'number') {
       return { lat: Number(coords[0]), lng: Number(coords[1]) }
     }
-    
+
     // Format 5: [[lat, lng], [lat, lng], ...] path/boundary array (return as-is for caller to handle)
     if (Array.isArray(coords) && coords.length > 0 && Array.isArray(coords[0])) {
       console.log("[v0] Detected path/boundary array format, returning as-is")
       return coords
     }
   }
-  
+
   console.warn("[v0] Unknown coordinate format:", coords)
   return null
 }
@@ -137,7 +137,7 @@ export function ExchangeListingDetailModal({
     if (result.success && result.data) {
       setListing(result.data)
       setSelectedPhoto(result.data.hero_photo || result.data.photos?.[0] || null)
-      
+
       console.log("[v0] LOCATION DEBUG:", {
         hasLocationObject: !!result.data.location,
         locationId: result.data.location?.id,
@@ -165,13 +165,13 @@ export function ExchangeListingDetailModal({
 
   async function loadFlagStatus() {
     if (!userId) return
-    
+
     const result = await getExchangeListingFlagCount(listingId, userId, tenantId)
-    
+
     if (result.success) {
       setFlagCount(result.flagCount ?? 0)
       setHasUserFlagged(result.hasUserFlagged ?? false)
-      
+
       if (isAdmin && result.flagCount && result.flagCount > 0) {
         const flagDetailsResult = await getListingFlagDetails(listingId, tenantId)
         if (flagDetailsResult.success && flagDetailsResult.data) {
@@ -192,7 +192,7 @@ export function ExchangeListingDetailModal({
     const result = await pauseExchangeListing(listingId, tenantSlug, tenantId)
 
     if (result.success) {
-      toast.success(result.data?.is_available ? "Listing resumed" : "Listing paused")
+      toast.success(result.is_available ? "Listing resumed" : "Listing paused")
       await loadListing()
     } else {
       toast.error(result.error || "Failed to update listing")
@@ -217,15 +217,15 @@ export function ExchangeListingDetailModal({
 
   async function handleArchive() {
     if (!listing) return
-    
+
     setIsArchiving(true)
-    const result = listing.archived_at 
+    const result = listing.archived_at
       ? await unarchiveListing(listingId, userId!, tenantId, tenantSlug)
       : await archiveListing(listingId, userId!, tenantId, tenantSlug)
 
     if (result.success) {
       if (listing.archived_at) {
-        toast.success(result.message || "Listing restored successfully")
+        toast.success((result as any).warning || "Listing restored successfully")
       } else {
         toast.success("Listing archived successfully")
       }
@@ -284,7 +284,7 @@ export function ExchangeListingDetailModal({
 
   let listingLocationForMap = null
   let locationName = null
-  
+
   if (listing.location_id && listing.location) {
     locationName = listing.location.name
     let coords: { lat: number; lng: number } | null = null
@@ -300,7 +300,7 @@ export function ExchangeListingDetailModal({
     if (!coords && listing.location.path_coordinates) {
       const pathData = listing.location.path_coordinates
       console.log("[v0] Raw path_coordinates:", pathData)
-      
+
       if (Array.isArray(pathData) && pathData.length > 0) {
         const firstPoint = pathData[0]
         if (Array.isArray(firstPoint) && firstPoint.length === 2) {
@@ -313,7 +313,7 @@ export function ExchangeListingDetailModal({
     if (!coords && listing.location.boundary_coordinates) {
       const boundaryData = listing.location.boundary_coordinates
       console.log("[v0] Raw boundary_coordinates:", boundaryData)
-      
+
       if (Array.isArray(boundaryData) && boundaryData.length > 0) {
         const lats = boundaryData.map((point: any) => (Array.isArray(point) ? Number(point[0]) : 0))
         const lngs = boundaryData.map((point: any) => (Array.isArray(point) ? Number(point[1]) : 0))
@@ -328,17 +328,17 @@ export function ExchangeListingDetailModal({
       listingLocationForMap = {
         id: listing.location.id,
         name: listing.location.name,
-        type: (listing.location.type || "facility") as const,
+        type: (listing.location.type || "facility") as any,
         coordinates: coords
       }
       console.log("[v0] Community location resolved:", listingLocationForMap)
     }
   }
-  
+
   if (!locationName && listing.custom_location_name) {
     locationName = listing.custom_location_name
   }
-  
+
   if (!listingLocationForMap && listing.custom_location_lat && listing.custom_location_lng) {
     listingLocationForMap = {
       id: "custom-location",
@@ -352,7 +352,7 @@ export function ExchangeListingDetailModal({
     console.log("[v0] Custom location resolved:", listingLocationForMap)
   }
 
-  const mapLocations = listingLocationForMap 
+  const mapLocations = listingLocationForMap
     ? [...locations, listingLocationForMap]
     : locations
 
@@ -408,8 +408,8 @@ export function ExchangeListingDetailModal({
 
           <div className="space-y-6">
             {isAdmin && flagDetails.length > 0 && (
-              <ListingFlagDetails 
-                flags={flagDetails} 
+              <ListingFlagDetails
+                flags={flagDetails}
                 listingId={listingId}
                 listingTitle={listing.title}
                 tenantId={tenantId}
@@ -434,9 +434,8 @@ export function ExchangeListingDetailModal({
                       <button
                         key={index}
                         onClick={() => setSelectedPhoto(photo)}
-                        className={`flex-shrink-0 w-20 h-20 rounded-md overflow-hidden border-2 transition-all ${
-                          selectedPhoto === photo ? "border-primary ring-2 ring-primary" : "border-border hover:border-primary/50"
-                        }`}
+                        className={`flex-shrink-0 w-20 h-20 rounded-md overflow-hidden border-2 transition-all ${selectedPhoto === photo ? "border-primary ring-2 ring-primary" : "border-border hover:border-primary/50"
+                          }`}
                       >
                         <img src={photo || "/placeholder.svg"} alt={`${listing.title} ${index + 1}`} className="w-full h-full object-cover" />
                       </button>
@@ -524,8 +523,8 @@ export function ExchangeListingDetailModal({
                     <div className="flex flex-wrap gap-2">
                       {listing.archived_at ? (
                         <>
-                          <Button 
-                            variant="default" 
+                          <Button
+                            variant="default"
                             size="sm"
                             onClick={handleArchive}
                             disabled={isArchiving}
@@ -540,8 +539,8 @@ export function ExchangeListingDetailModal({
                             <Pencil className="h-4 w-4 mr-2" />
                             Edit Listing
                           </Button>
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             size="sm"
                             onClick={handleTogglePause}
                             disabled={isPausing}
@@ -558,7 +557,7 @@ export function ExchangeListingDetailModal({
                               </>
                             )}
                           </Button>
-                          <Button 
+                          <Button
                             variant="outline"
                             size="sm"
                             onClick={handleArchive}
@@ -567,7 +566,7 @@ export function ExchangeListingDetailModal({
                             <Archive className="h-4 w-4 mr-2" />
                             {isArchiving ? "Archiving..." : "Archive Listing"}
                           </Button>
-                          <Button 
+                          <Button
                             variant="destructive"
                             size="sm"
                             onClick={() => setShowDeleteDialog(true)}
@@ -612,8 +611,8 @@ export function ExchangeListingDetailModal({
                     </div>
                   </div>
                 ) : (
-                  <Button 
-                    className="w-full" 
+                  <Button
+                    className="w-full"
                     size="lg"
                     onClick={() => setIsRequestDialogOpen(true)}
                   >
@@ -695,8 +694,8 @@ export function ExchangeListingDetailModal({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDelete} 
+            <AlertDialogAction
+              onClick={handleDelete}
               disabled={isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >

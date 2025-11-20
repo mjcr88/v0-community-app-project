@@ -321,9 +321,9 @@ export function CreateRequestModal({
                   photos={formData.images}
                   heroPhoto={null}
                   onPhotosChange={(photos) => setFormData(prev => ({ ...prev, images: photos }))}
-                  onHeroPhotoChange={() => {}}
+                  onHeroPhotoChange={() => { }}
                   maxPhotos={5}
-                  entityType="request"
+                  entityType={"request" as any}
                 />
                 <p className="text-sm text-muted-foreground">
                   Add photos to help us understand the issue better
@@ -388,10 +388,10 @@ export function CreateRequestModal({
                   {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {isSubmitting ? "Submitting..." : "Submit Request"}
                 </Button>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => onOpenChange(false)} 
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
                   disabled={isSubmitting}
                 >
                   Cancel

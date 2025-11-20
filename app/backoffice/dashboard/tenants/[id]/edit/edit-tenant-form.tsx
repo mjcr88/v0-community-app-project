@@ -182,7 +182,12 @@ export default function EditTenantForm({ tenant }: { tenant: Tenant }) {
         return
       }
 
-      const { data: residents } = await supabase.from("residents").select("id").eq("tenant_id", tenant.id).limit(1)
+      const { data: residents } = await supabase
+        .from("users")
+        .select("id")
+        .eq("tenant_id", tenant.id)
+        .eq("role", "resident")
+        .limit(1)
 
       if (residents && residents.length > 0) {
         alert("Cannot delete tenant with existing residents. Please delete all residents first.")

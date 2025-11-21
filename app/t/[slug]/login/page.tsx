@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation"
+import Image from "next/image"
 import { createClient } from "@/lib/supabase/server"
 import { TenantLoginForm } from "./login-form"
 
@@ -15,49 +16,56 @@ export default async function TenantLoginPage({
 
   if (error || !tenant) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-forest-50 to-sky-50 p-4">
-        <div className="w-full max-w-md space-y-4 rounded-lg border bg-white p-8 shadow-lg">
-          <div className="space-y-2 text-center">
-            <h1 className="text-2xl font-bold text-red-600">Community Not Found</h1>
-            <p className="text-muted-foreground">The community "{slug}" does not exist or is not available.</p>
-            {error && <p className="text-sm text-red-500">Error: {error.message}</p>}
-          </div>
+      <div className="flex min-h-screen items-center justify-center bg-earth-cloud p-4">
+        <div className="w-full max-w-md space-y-4 rounded-lg border border-clay-red/20 bg-white p-8 shadow-lg text-center">
+          <h1 className="text-2xl font-bold text-clay-red">Community Not Found</h1>
+          <p className="text-mist-gray">The community "{slug}" does not exist or is not available.</p>
         </div>
       </div>
     )
   }
 
-  try {
-    // Check if already logged in
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
+  // Check if already logged in
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
 
-    if (user && !authError) {
-      const { data: userData, error: userDataError } = await supabase
-        .from("users")
-        .select("role, is_tenant_admin, onboarding_completed")
-        .eq("id", user.id)
-        .single()
+  if (user && !authError) {
+    const { data: userData } = await supabase
+      .from("users")
+      .select("role, is_tenant_admin, onboarding_completed")
+      .eq("id", user.id)
+      .single()
 
-      if (userData && !userDataError) {
-        if (userData.role === "super_admin" || userData.is_tenant_admin) {
-          redirect(`/t/${slug}/admin/dashboard`)
-        } else if (userData.onboarding_completed) {
-          redirect(`/t/${slug}/dashboard`)
-        } else {
-          redirect(`/t/${slug}/onboarding`)
-        }
+    if (userData) {
+      if (userData.role === "super_admin" || userData.is_tenant_admin) {
+        redirect(`/t/${slug}/admin/dashboard`)
+      } else if (userData.onboarding_completed) {
+        redirect(`/t/${slug}/dashboard`)
+      } else {
+        redirect(`/t/${slug}/onboarding`)
       }
     }
-  } catch (error) {
-    console.error("[v0] Auth check failed:", error)
   }
 
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-forest-50 to-sky-50 p-4">
-      <TenantLoginForm tenant={tenant} />
+  return <div className="grid min-h-screen lg:grid-cols-2">
+    {/* Left Panel: Login Form */}
+    <div className="flex items-center justify-center p-8 bg-earth-cloud/30">
+      <TenantLoginForm tenant={tenant as any} />
     </div>
-  )
+
+    {/* Right Side - Hero/Brand */}
+    <div className="hidden lg:block relative h-full overflow-hidden bg-forest-deep">
+      <Image
+        src="/login.png"
+        alt="Login Hero"
+        fill
+        className="object-cover object-center saturate-150 brightness-90"
+        priority
+      />
+      {/* Overlay */}
+      <div className="absolute inset-0 bg-forest-canopy/20 mix-blend-overlay" />
+    </div>
+  </div>
 }

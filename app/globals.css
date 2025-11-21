@@ -1,122 +1,509 @@
+/**
+ * Ecovilla Community Platform - Design Tokens
+ * Version: 1.0
+ * 
+ * This file contains all design tokens for the Ecovilla platform.
+ * Copy this entire file content into your app/globals.css
+ * 
+ * DO NOT modify token values here - refer to WP2_Design_Tokens_Specification.md
+ * for rationale and usage guidelines.
+ */
+
 @import "tailwindcss";
-@import "tw-animate-css";
+
+/*---break---
+ */
 
 @custom-variant dark (&:is(.dark *));
+@config "../tailwind.config.ts";
+
+@layer base {
+
+  /**
+   * ===================
+   * LIGHT MODE (Default)
+   * ===================
+   */
+  :root {
+    /* ===== FOREST CANOPY (Primary Brand) ===== */
+    --forest-deep: 100 54% 16%;
+    /* #2D5016 - Deep Forest */
+    --forest-canopy: 100 48% 33%;
+    /* #4A7C2C - Living Canopy */
+    --forest-growth: 96 38% 45%;
+    /* #6B9B47 - Fresh Growth */
+
+    /* ===== SUNRISE (Accent & Energy) ===== */
+    --sunrise: 20 61% 55%;
+    /* #D97742 - Sunrise Orange */
+    --sunrise-soft: 20 61% 95%;
+    /* Soft tint for backgrounds */
+
+    /* ===== SKY & WATER (Supporting - Information) ===== */
+    --river: 196 28% 50%;
+    /* #5B8FA3 - River Current */
+    --sky: 196 35% 60%;
+    /* #7BA5B8 - Clear Sky */
+    --dew: 196 47% 93%;
+    /* #E8F2F5 - Morning Dew */
+
+    /* ===== SEMANTIC COLORS (Status & Feedback) ===== */
+    --success: var(--forest-growth);
+    /* Success/Available */
+    --warning: 33 47% 64%;
+    /* #D4A574 - Honey */
+    --error: 6 50% 55%;
+    /* #C25B4F - Clay */
+    --info: var(--river);
+    /* Information */
+
+    /* ===== EARTH & CLAY (Neutrals) ===== */
+    --soil: 0 0% 10%;
+    /* #1A1A1A - Rich Soil (primary text) */
+    --stone: 0 0% 29%;
+    /* #4A4A4A - Weathered Stone (secondary text) */
+    --mist: 0 0% 55%;
+    /* #8C8C8C - Morning Mist (disabled) */
+    --sand: 36 9% 89%;
+    /* #E8E5E0 - Sand (borders) */
+    --cloud: 40 17% 97%;
+    /* #F8F6F3 - Cloud (canvas) */
+    --sunlight: 0 0% 100%;
+    /* #FFFFFF - Sunlight (cards) */
+
+    /* ===== SHADCN COMPATIBILITY (Semantic Mappings) ===== */
+    --background: var(--cloud);
+    --foreground: var(--soil);
+
+    --card: var(--sunlight);
+    --card-foreground: var(--soil);
+
+    --popover: var(--sunlight);
+    --popover-foreground: var(--soil);
+
+    --primary: var(--forest-growth);
+    --primary-foreground: var(--sunlight);
+
+    --secondary: var(--sunrise);
+    --secondary-foreground: var(--sunlight);
+
+    --muted: var(--cloud);
+    --muted-foreground: var(--stone);
+
+    --accent: var(--dew);
+    --accent-foreground: var(--forest-deep);
+
+    --destructive: var(--error);
+    --destructive-foreground: var(--sunlight);
+
+    --border: var(--sand);
+    --input: var(--sand);
+    --ring: var(--forest-canopy);
+
+    /* ===== SPACING SCALE (8pt Grid System) ===== */
+    --space-1: 0.25rem;
+    /* 4px - Tight groupings */
+    --space-2: 0.5rem;
+    /* 8px - Related elements */
+    --space-3: 0.75rem;
+    /* 12px - Form fields, compact */
+    --space-4: 1rem;
+    /* 16px - Base unit (default) */
+    --space-5: 1.5rem;
+    /* 24px - Section spacing */
+    --space-6: 2rem;
+    /* 32px - Major sections */
+    --space-8: 3rem;
+    /* 48px - Large breaks */
+    --space-10: 4rem;
+    /* 64px - Page-level separation */
+
+    /* Semantic Spacing */
+    --space-comfortable: var(--space-4);
+    /* Default spacing */
+    --space-cozy: var(--space-3);
+    /* Compact */
+    --space-relaxed: var(--space-6);
+    /* Generous */
+
+    /* ===== BORDER RADIUS (Organic Feel) ===== */
+    --radius-sm: 0.5rem;
+    /* 8px - Badges, tags */
+    --radius-md: 0.75rem;
+    /* 12px - Buttons, inputs (default) */
+    --radius-lg: 1rem;
+    /* 16px - Cards */
+    --radius-xl: 1.25rem;
+    /* 20px - Modals, dialogs */
+    --radius-full: 9999px;
+    /* Pills, avatars */
+
+    /* Shadcn radius compatibility */
+    --radius: var(--radius-md);
+
+    /* ===== SHADOWS (Nature-Inspired, Soft) ===== */
+    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+
+    /* Special Shadows */
+    --shadow-sunrise: 0 2px 8px rgb(217 119 66 / 0.2);
+    /* For Sunrise CTAs */
+
+    /* ===== TYPOGRAPHY ===== */
+    --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+
+    /* Font Sizes - Mobile First (320px-767px) */
+    --text-xs: 0.75rem;
+    /* 12px - Caption */
+    --text-sm: 0.8125rem;
+    /* 13px - Body Small, Labels */
+    --text-base: 0.9375rem;
+    /* 15px - Body (default) */
+    --text-lg: 1.0625rem;
+    /* 17px - Body Large */
+    --text-xl: 1.125rem;
+    /* 18px - H3 */
+    --text-2xl: 1.375rem;
+    /* 22px - H2 */
+    --text-3xl: 1.75rem;
+    /* 28px - H1 */
+
+    /* Line Heights */
+    --leading-none: 1;
+    --leading-tight: 1.2;
+    --leading-snug: 1.3;
+    --leading-normal: 1.5;
+    --leading-relaxed: 1.6;
+
+    /* Font Weights */
+    --font-normal: 400;
+    --font-medium: 500;
+    --font-semibold: 600;
+    --font-bold: 700;
+
+    /* Letter Spacing */
+    --tracking-tighter: -0.5px;
+    --tracking-tight: -0.25px;
+    --tracking-normal: 0;
+    --tracking-wide: 0.25px;
+    --tracking-wider: 0.5px;
+
+    /* ===== ANIMATIONS & TRANSITIONS ===== */
+    /* UI Transitions */
+    --transition-fast: 150ms;
+    /* Hover, focus */
+    --transition-base: 200ms;
+    /* Default */
+    --transition-slow: 300ms;
+    /* Complex changes */
+    --transition-wind: 400ms;
+    /* "Wind through leaves" */
+
+    /* Easing Curves */
+    --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-out: cubic-bezier(0, 0, 0.2, 1);
+    --ease-in: cubic-bezier(0.4, 0, 1, 1);
+    --ease-wind: cubic-bezier(0.4, 0.0, 0.2, 1);
+    --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+    /* Character Animation (Río Avatar - Placeholder for WP4) */
+    --animation-character-enter: 500ms;
+    --animation-character-idle: 2000ms;
+    --animation-character-exit: 400ms;
+    --animation-character-react: 300ms;
+    --ease-character: cubic-bezier(0.4, 0.0, 0.2, 1);
+
+    /* ===== ACCESSIBILITY ===== */
+    --focus-ring-width: 2px;
+    --focus-ring-offset: 2px;
+    --focus-ring-color: hsl(var(--forest-canopy));
+
+    --touch-target-min: 44px;
+    /* iOS standard */
+    --touch-target-comfortable: 48px;
+  }
+
+  /**
+   * ===================
+   * DARK MODE
+   * ===================
+   * Contextual dark - maintains warmth and earth tones
+   */
+  .dark {
+    /* Background & Surfaces */
+    --background: var(--soil);
+    /* Deep Soil #1A1A1A */
+    --foreground: var(--sunlight);
+    /* White text */
+
+    --card: 0 0% 18%;
+    /* Night Forest #2D2D2D */
+    --card-foreground: var(--sunlight);
+
+    --popover: 0 0% 20%;
+    --popover-foreground: var(--sunlight);
+
+    /* Primary colors - lightened for contrast */
+    --primary: 96 38% 55%;
+    /* Lightened Forest Growth */
+    --primary-foreground: var(--soil);
+
+    --secondary: var(--sunrise);
+    /* Sunrise unchanged */
+    --secondary-foreground: var(--sunlight);
+
+    /* Neutrals - inverted */
+    --muted: var(--stone);
+    --muted-foreground: var(--sand);
+
+    --accent: 0 0% 25%;
+    --accent-foreground: var(--sunlight);
+
+    --destructive: var(--error);
+    --destructive-foreground: var(--sunlight);
+
+    /* Borders */
+    --border: 0 0% 25%;
+    /* Twilight Stone #404040 */
+    --input: 0 0% 25%;
+    --ring: var(--forest-growth);
+
+    /* Shadows - higher opacity for dark mode */
+    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.4);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.4), 0 8px 10px -6px rgb(0 0 0 / 0.4);
+  }
+
+  /**
+   * ===================
+   * RESPONSIVE TYPOGRAPHY
+   * Desktop Enhancement (768px+)
+   * ===================
+   */
+  @media (min-width: 768px) {
+    :root {
+      --text-base: 1rem;
+      /* 16px */
+      --text-lg: 1.125rem;
+      /* 18px */
+      --text-xl: 1.25rem;
+      /* 20px */
+      --text-2xl: 1.5rem;
+      /* 24px */
+      --text-3xl: 2rem;
+      /* 32px */
+    }
+  }
+
+  /**
+   * ===================
+   * ACCESSIBILITY: HIGH CONTRAST MODE
+   * ===================
+   */
+  @media (prefers-contrast: high) {
+    :root {
+      /* Increase contrast by 20% */
+      --color-border: hsl(0, 0%, 0%);
+      --color-text: hsl(0, 0%, 0%);
+      --border-width: 2px;
+    }
+
+    .dark {
+      --color-border: hsl(0, 0%, 100%);
+      --color-text: hsl(0, 0%, 100%);
+    }
+  }
+
+  /**
+   * ===================
+   * ACCESSIBILITY: REDUCED MOTION
+   * ===================
+   */
+  @media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /**
+   * ===================
+   * BASE STYLES
+   * ===================
+   */
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: var(--font-sans);
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Smooth scrolling (respects reduced motion) */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Ensure proper font size inheritance */
+  html {
+    font-size: 100%;
+    /* Respects browser/system defaults */
+  }
+}
+
+/**
+ * ===================
+ * UTILITY CLASSES
+ * (Optional - for quick prototyping)
+ * ===================
+ */
+@layer utilities {
+
+  /* Touch Targets */
+  .touch-target {
+    min-height: var(--touch-target-min);
+    min-width: var(--touch-target-min);
+  }
+
+  .touch-target-comfortable {
+    min-height: var(--touch-target-comfortable);
+    min-width: var(--touch-target-comfortable);
+  }
+
+  /* Focus Ring */
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
+    --tw-ring-color: var(--focus-ring-color);
+  }
+
+  /* Sunrise Shadow (for CTAs) */
+  .shadow-sunrise {
+    box-shadow: var(--shadow-sunrise);
+  }
+}
+
+/**
+ * ===================
+ * COMPONENT STATE TOKENS
+ * (Reference - actual implementation in components)
+ * ===================
+ */
+
+/* 
+Default State: Base appearance
+- Use standard tokens
+
+Hover State: Mouse over
+- Duration: var(--transition-fast)
+- Effect: Lighten/darken 10%, optional lift
+
+Active State: Being clicked
+- Duration: Instant
+- Effect: Scale 98%, darken 5%
+
+Focus State: Keyboard navigation
+- Ring: var(--focus-ring-width) solid var(--focus-ring-color)
+- Offset: var(--focus-ring-offset)
+
+Disabled State: Cannot interact
+- Opacity: 50%
+- Cursor: not-allowed
+- Color: var(--mist)
+
+Loading State: Processing
+- Spinner in primary color
+- Layout preserved
+
+Success State: Confirmation
+- Color: var(--success) / var(--forest-growth)
+- Icon: Checkmark
+- Optional: Auto-dismiss
+
+Error State: Problem indication
+- Color: var(--error) / var(--clay)
+- Icon: Alert/X
+- Clear next step message
+*/
+
+/**
+ * ===================
+ * NOTES FOR WP3
+ * ===================
+ * 
+ * Next Steps (Component Building):
+ * 1. Install shadcn/ui components
+ * 2. Apply these tokens to all components
+ * 3. Build custom Ecovilla components
+ * 4. Create Storybook documentation
+ * 5. Implement 8-state system per component
+ * 
+ * Río Avatar Animation:
+ * - Full implementation in WP4
+ * - Tokens reserved above
+ * - Technology TBD (Lottie/SVG/Rive)
+ * 
+ * Design References:
+ * - See WP2_Design_Tokens_Specification.md for rationale
+ * - See WP2_Component_Guidelines.md for usage patterns
+ * - Gather Mobbin references before WP3
+ */
+
+/*---break---
+ */
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: #6b9b47;
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: #d97742;
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: #d4a574;
-  --destructive-foreground: oklch(1 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.81 0.1 252);
-  --chart-2: oklch(0.62 0.19 260);
-  --chart-3: oklch(0.55 0.22 263);
-  --chart-4: oklch(0.49 0.22 264);
-  --chart-5: oklch(0.42 0.18 266);
-  --radius: 0.5rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-  --shadow-x: 0px;
-  --shadow-y: 1px;
-  --shadow-blur: 2px;
-  --shadow-spread: 0px;
-  --shadow-opacity: 0.05;
-  --shadow-color: #000000;
+  --sidebar: hsl(0 0% 98%);
+  --sidebar-foreground: hsl(240 5.3% 26.1%);
+  --sidebar-primary: hsl(240 5.9% 10%);
+  --sidebar-primary-foreground: hsl(0 0% 98%);
+  --sidebar-accent: hsl(240 4.8% 95.9%);
+  --sidebar-accent-foreground: hsl(240 5.9% 10%);
+  --sidebar-border: hsl(220 13% 91%);
+  --sidebar-ring: hsl(217.2 91.2% 59.8%);
+  --color-1: oklch(66.2% 0.225 25.9);
+  --color-2: oklch(60.4% 0.26 302);
+  --color-3: oklch(69.6% 0.165 251);
+  --color-4: oklch(80.2% 0.134 225);
+  --color-5: oklch(90.7% 0.231 133);
 }
+
+/*---break---
+ */
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.269 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: #6b9b47;
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: #d97742;
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.371 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: #d4a574;
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.275 0 0);
-  --input: oklch(0.325 0 0);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.81 0.1 252);
-  --chart-2: oklch(0.62 0.19 260);
-  --chart-3: oklch(0.55 0.22 263);
-  --chart-4: oklch(0.49 0.22 264);
-  --chart-5: oklch(0.42 0.18 266);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.275 0 0);
-  --sidebar-ring: oklch(0.439 0 0);
-  --shadow-x: 0px;
-  --shadow-y: 1px;
-  --shadow-blur: 2px;
-  --shadow-spread: 0px;
-  --shadow-opacity: 0.05;
-  --shadow-color: #000000;
+  --sidebar: hsl(240 5.9% 10%);
+  --sidebar-foreground: hsl(240 4.8% 95.9%);
+  --sidebar-primary: hsl(224.3 76.3% 48%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(240 3.7% 15.9%);
+  --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
+  --sidebar-border: hsl(240 3.7% 15.9%);
+  --sidebar-ring: hsl(217.2 91.2% 59.8%);
+  --color-1: oklch(66.2% 0.225 25.9);
+  --color-2: oklch(60.4% 0.26 302);
+  --color-3: oklch(69.6% 0.165 251);
+  --color-4: oklch(80.2% 0.134 225);
+  --color-5: oklch(90.7% 0.231 133);
 }
 
+/*---break---
+ */
+
 @theme inline {
-  --font-sans: "Geist", "Geist Fallback";
-  --font-mono: "Geist Mono", "Geist Mono Fallback";
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -125,57 +512,222 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  --font-serif: "Source Serif 4", "Source Serif 4 Fallback";
-  /* computed shadow variables below - do not modify */
-  --shadow-2xs: var(--shadow-x) var(--shadow-y)
-    color-mix(in srgb, var(--shadow-color) calc(var(--shadow-opacity) * 100%), transparent);
-  --shadow-xs: var(--shadow-x) var(--shadow-y) var(--shadow-blur) var(--shadow-spread)
-    color-mix(in srgb, var(--shadow-color) calc(var(--shadow-opacity) * 100%), transparent);
-  --shadow-sm: var(--shadow-x) var(--shadow-y) calc(var(--shadow-blur) * 1.5) var(--shadow-spread)
-    color-mix(in srgb, var(--shadow-color) calc(var(--shadow-opacity) * 100%), transparent);
-  --shadow-md: calc(var(--shadow-x) * 2) calc(var(--shadow-y) * 2) calc(var(--shadow-blur) * 3)
-    calc(var(--shadow-spread) - 1px)
-    color-mix(in srgb, var(--shadow-color) calc(var(--shadow-opacity) * 100%), transparent);
-  --shadow-lg: calc(var(--shadow-x) * 4) calc(var(--shadow-y) * 4) calc(var(--shadow-blur) * 5)
-    calc(var(--shadow-spread) - 3px)
-    color-mix(in srgb, var(--shadow-color) calc(var(--shadow-opacity) * 100%), transparent);
-  --shadow-xl: calc(var(--shadow-x) * 6) calc(var(--shadow-y) * 6) calc(var(--shadow-blur) * 7)
-    calc(var(--shadow-spread) - 5px)
-    color-mix(in srgb, var(--shadow-color) calc(var(--shadow-opacity) * 100%), transparent);
-  --shadow-2xl: calc(var(--shadow-x) * 8) calc(var(--shadow-y) * 8) calc(max(0px, var(--shadow-blur) * 9 - 8px))
-    calc(var(--shadow-spread) - 12px)
-    color-mix(in srgb, var(--shadow-color) calc(var(--shadow-opacity) * 250%), transparent);
-  --shadow: var(--shadow-md);
-  --color-shadow-color: var(--shadow-color);
-  --shadow-opacity: var(--shadow-opacity);
-  --shadow-spread: var(--shadow-spread);
-  --shadow-blur: var(--shadow-blur);
-  --shadow-y: var(--shadow-y);
-  --shadow-x: var(--shadow-x);
+  --animate-ripple: ripple var(--duration, 2s) ease calc(var(--i, 0)*.2s) infinite;
+
+  @keyframes ripple {
+
+    0%,
+    100% {
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    50% {
+      transform: translate(-50%, -50%) scale(0.9);
+    }
+  }
+
+  --animate-shiny-text: shiny-text 8s infinite;
+
+  @keyframes shiny-text {
+
+    0%,
+    90%,
+    100% {
+      background-position: calc(-100% - var(--shiny-width)) 0;
+    }
+
+    30%,
+    60% {
+      background-position: calc(100% + var(--shiny-width)) 0;
+    }
+  }
+
+  --animate-pulse: pulse var(--duration) ease-out infinite;
+  --animate-rainbow: rainbow var(--speed, 2s) infinite linear;
+  --animate-rippling: rippling var(--duration) ease-out;
+  --animate-shimmer-slide: shimmer-slide var(--speed) ease-in-out infinite alternate;
+  --animate-spin-around: spin-around calc(var(--speed) * 2) infinite linear;
+  --color-color-5: var(--color-5);
+  --color-color-4: var(--color-4);
+  --color-color-3: var(--color-3);
+  --color-color-2: var(--color-2);
+  --color-color-1: var(--color-1);
+
+  @keyframes pulse {
+
+    0%,
+    100% {
+      boxShadow: 0 0 0 0 var(--pulse-color);
+    }
+
+    50% {
+      boxShadow: 0 0 0 8px var(--pulse-color);
+    }
+  }
+
+  @keyframes rainbow {
+    0% {
+      background-position: 0%;
+    }
+
+    100% {
+      background-position: 200%;
+    }
+  }
+
+  @keyframes rippling {
+    0% {
+      opacity: 1;
+    }
+
+    100% {
+      transform: scale(2);
+      opacity: 0;
+    }
+  }
+
+  @keyframes shimmer-slide {
+    to {
+      transform: translate(calc(100cqw - 100%), 0);
+    }
+  }
+
+  @keyframes spin-around {
+    0% {
+      transform: translateZ(0) rotate(0);
+    }
+
+    15%,
+    35% {
+      transform: translateZ(0) rotate(90deg);
+    }
+
+    65%,
+    85% {
+      transform: translateZ(0) rotate(270deg);
+    }
+
+    100% {
+      transform: translateZ(0) rotate(360deg);
+    }
+  }
+
+  --animate-shine: shine var(--duration) infinite linear;
+
+  @keyframes shine {
+    0% {
+      background-position: 0% 0%;
+    }
+
+    50% {
+      background-position: 100% 100%;
+    }
+
+    to {
+      background-position: 0% 0%;
+    }
+  }
+
+  --animate-blink-cursor: blink-cursor 1.2s step-end infinite;
+  --animate-gradient: gradient 8s linear infinite;
+
+  @keyframes blink-cursor {
+
+    0%,
+    49% {
+      opacity: 1;
+    }
+
+    50%,
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes gradient {
+    to {
+      background-position: var(--bg-size, 300%) 0;
+    }
+  }
+
+  --animate-aurora: aurora 8s ease-in-out infinite alternate;
+  --animate-marquee: marquee var(--duration) infinite linear;
+  --animate-marquee-vertical: marquee-vertical var(--duration) linear infinite;
+  --animate-orbit: orbit calc(var(--duration)*1s) linear infinite;
+
+  @keyframes aurora {
+    0% {
+      background-position: 0% 50%;
+      transform: rotate(-5deg) scale(0.9);
+    }
+
+    25% {
+      background-position: 50% 100%;
+      transform: rotate(5deg) scale(1.1);
+    }
+
+    50% {
+      background-position: 100% 50%;
+      transform: rotate(-3deg) scale(0.95);
+    }
+
+    75% {
+      background-position: 50% 0%;
+      transform: rotate(3deg) scale(1.05);
+    }
+
+    100% {
+      background-position: 0% 50%;
+      transform: rotate(-5deg) scale(0.9);
+    }
+  }
+
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+
+    to {
+      transform: translateX(calc(-100% - var(--gap)));
+    }
+  }
+
+  @keyframes marquee-vertical {
+    from {
+      transform: translateY(0);
+    }
+
+    to {
+      transform: translateY(calc(-100% - var(--gap)));
+    }
+  }
+
+  @keyframes orbit {
+    0% {
+      transform: rotate(calc(var(--angle) * 1deg)) translateY(calc(var(--radius) * 1px)) rotate(calc(var(--angle) * -1deg));
+    }
+
+    100% {
+      transform: rotate(calc(var(--angle) * 1deg + 360deg)) translateY(calc(var(--radius) * 1px)) rotate(calc((var(--angle) * -1deg) - 360deg));
+    }
+  }
 }
+
+/*---break---
+ */
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
+}
 
-  /* Increased responsive calendar cell sizing to make it bigger */
-  .rdp {
-    --cell-size: 3rem;
-  }
-
-  @media (min-width: 640px) {
-    .rdp {
-      --cell-size: 4rem;
-    }
-  }
-
-  @media (min-width: 1024px) {
-    .rdp {
-      --cell-size: 5rem;
-    }
-  }
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
 }

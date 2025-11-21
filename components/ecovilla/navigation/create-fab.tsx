@@ -1,0 +1,32 @@
+"use client"
+
+import React, { useState } from "react"
+import { Plus } from "lucide-react"
+import { CreatePopover } from "./create-popover"
+
+interface CreateFabProps {
+    tenantSlug: string
+}
+
+export function CreateFab({ tenantSlug }: CreateFabProps) {
+    const [open, setOpen] = useState(false)
+
+    return (
+        <div className="hidden md:block fixed bottom-8 right-8 z-40">
+            <CreatePopover
+                open={open}
+                onOpenChange={setOpen}
+                tenantSlug={tenantSlug}
+                side="left"
+                align="end"
+            >
+                <button
+                    className="flex w-14 h-14 rounded-full bg-forest-canopy shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all items-center justify-center group"
+                    aria-label="Create new item"
+                >
+                    <Plus className="w-6 h-6 text-white group-hover:rotate-90 transition-transform duration-200" />
+                </button>
+            </CreatePopover>
+        </div>
+    )
+}

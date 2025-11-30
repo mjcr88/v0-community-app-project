@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
+import { getLocations } from "@/lib/data/locations"
 
 export async function GET(
   request: Request,
@@ -26,15 +27,11 @@ export async function GET(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
-  const { data: locations, error } = await supabase
-    .from("locations")
-    .select("*")
-    .eq("tenant_id", tenantId)
+  const locations = await getLocations(tenantId, {
+    enrichWithNeighborhood: true,
+    enrichWithLot: true,
+    enrichWithResidents: true,
+  })
 
-  if (error) {
-    console.error("[v0] Error fetching locations:", error)
-    return NextResponse.json({ error: "Failed to fetch locations" }, { status: 500 })
-  }
-
-  return NextResponse.json(locations || [])
+  return NextResponse.json(locations)
 }

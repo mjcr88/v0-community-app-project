@@ -69,9 +69,14 @@ export function SaveEventButton({ eventId, userId }: SaveEventButtonProps) {
       size="sm"
       onClick={handleSaveToggle}
       disabled={isLoading}
-      className="gap-2 bg-transparent"
+      className="gap-2 bg-transparent group"
     >
-      <Heart className={`h-4 w-4 ${isSaved ? "fill-red-500 text-red-500" : ""}`} />
+      <Heart
+        className={`h-4 w-4 transition-all ${isSaved
+            ? "fill-red-500 text-red-500 heart-bounce"
+            : "group-hover:scale-110"
+          }`}
+      />
       {isSaved ? "Saved" : "Save"}
     </Button>
   )

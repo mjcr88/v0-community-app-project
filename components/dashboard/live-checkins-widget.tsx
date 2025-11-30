@@ -1,12 +1,14 @@
 "use client"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { Activity, Loader2 } from 'lucide-react'
 import { CheckInCard } from "@/components/check-ins/check-in-card"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { CreateCheckInButton } from "@/components/check-ins/create-check-in-button"
 import { CheckInDetailModal } from "@/components/check-ins/check-in-detail-modal"
 import useSWR from "swr"
+import { useSearchParams } from "next/navigation"
 
 interface CheckIn {
   id: string
@@ -40,14 +42,17 @@ interface LiveCheckInsWidgetProps {
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 export function LiveCheckInsWidget({ tenantSlug, tenantId, userId }: LiveCheckInsWidgetProps) {
+  const searchParams = useSearchParams()
+  const urlCheckInId = searchParams.get("checkInId")
+
   const { data: checkIns, error, isLoading } = useSWR<CheckIn[]>(
     `/api/check-ins/${tenantId}`,
     fetcher,
     {
-      refreshInterval: 30000, // Refresh every 30 seconds
+      refreshInterval: 30000,
       revalidateOnFocus: false,
-      shouldRetryOnError: false, // Don't retry on errors to prevent cascade
-      errorRetryCount: 0, // No retries on error
+      shouldRetryOnError: false,
+      errorRetryCount: 0,
       onError: (err) => {
         console.log("[v0] Check-ins widget fetch error (non-critical):", err.message)
       },
@@ -57,6 +62,13 @@ export function LiveCheckInsWidget({ tenantSlug, tenantId, userId }: LiveCheckIn
   const [selectedCheckInId, setSelectedCheckInId] = useState<string | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
 
+  useEffect(() => {
+    if (urlCheckInId) {
+      setSelectedCheckInId(urlCheckInId)
+      setIsDetailOpen(true)
+    }
+  }, [urlCheckInId])
+
   function handleCheckInClick(checkInId: string) {
     setSelectedCheckInId(checkInId)
     setIsDetailOpen(true)
@@ -64,81 +76,56 @@ export function LiveCheckInsWidget({ tenantSlug, tenantId, userId }: LiveCheckIn
 
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Live Check-ins</CardTitle>
-          <CardDescription>See who's active in your community right now</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
     )
   }
 
   if (error) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Live Check-ins</CardTitle>
-          <CardDescription>See who's active in your community right now</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center text-muted-foreground py-8">
-            Failed to load check-ins. Please refresh the page.
-          </div>
-        </CardContent>
-      </Card>
+      <div className="text-center text-muted-foreground py-8">
+        Failed to load check-ins. Please refresh the page.
+      </div>
     )
   }
 
   if (!checkIns || checkIns.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Live Check-ins</CardTitle>
-          <CardDescription>See who's active in your community right now</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-6">
-            <Activity className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-sm text-muted-foreground mb-4">No one is checked in right now. Be the first!</p>
-            <CreateCheckInButton tenantSlug={tenantSlug} tenantId={tenantId} />
-          </div>
-        </CardContent>
-      </Card>
+      <div className="text-center py-8">
+        <Activity className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
+        <p className="text-sm text-muted-foreground mb-4">No one is checked in right now</p>
+        <CreateCheckInButton tenantSlug={tenantSlug} tenantId={tenantId} />
+      </div>
     )
   }
 
   return (
     <>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <div>
-            <CardTitle>Live Check-ins</CardTitle>
-            <CardDescription>
-              {checkIns.length} {checkIns.length === 1 ? "resident" : "residents"} active now
-            </CardDescription>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-semibold">Live Check-ins</h3>
+            <Badge variant="secondary" className="bg-orange-100 text-orange-700 hover:bg-orange-100 border-none">
+              {checkIns.length} Active
+            </Badge>
           </div>
           <CreateCheckInButton tenantSlug={tenantSlug} tenantId={tenantId} />
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {checkIns.map((checkIn) => (
-              <CheckInCard
-                key={checkIn.id}
-                checkIn={checkIn}
-                tenantSlug={tenantSlug}
-                userId={userId}
-                tenantId={tenantId}
-                onClick={() => handleCheckInClick(checkIn.id)}
-              />
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {checkIns.map((checkIn) => (
+            <CheckInCard
+              key={checkIn.id}
+              checkIn={checkIn}
+              tenantSlug={tenantSlug}
+              userId={userId}
+              tenantId={tenantId}
+              onClick={() => handleCheckInClick(checkIn.id)}
+            />
+          ))}
+        </div>
+      </div>
 
       {selectedCheckInId && (
         <CheckInDetailModal

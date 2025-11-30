@@ -1,21 +1,18 @@
 "use client"
 
-import { useState, useMemo } from "react"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Card, CardContent } from "@/components/ui/card"
+import { useState, useMemo, useEffect } from "react"
+import { motion } from "framer-motion"
+import { Search, Inbox, CheckCircle2, Archive } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { Search, Megaphone } from 'lucide-react'
-import Link from "next/link"
-import { AnnouncementTypeIcon } from "@/components/announcements/announcement-type-icon"
-import { AnnouncementPriorityBadge } from "@/components/announcements/announcement-priority-badge"
-import { UpdatedIndicator } from "@/components/announcements/updated-indicator"
-import { format } from "date-fns"
+import { AnnouncementList } from "@/components/announcements/announcement-list"
+import { AnnouncementEmptyState } from "@/components/announcements/announcement-empty-state"
+import { cn } from "@/lib/utils"
+import type { AnnouncementWithRelations } from "@/types/announcements"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import type { Announcement } from "@/types/announcements"
 
-interface AnnouncementWithRead extends Announcement {
-  is_read: boolean
-  read_at: string | null
+interface AnnouncementWithRead extends AnnouncementWithRelations {
+  is_read?: boolean
 }
 
 interface AnnouncementsPageClientProps {
@@ -28,152 +25,157 @@ interface AnnouncementsPageClientProps {
 export function AnnouncementsPageClient({
   announcements,
   slug,
+  userId,
 }: AnnouncementsPageClientProps) {
   const [search, setSearch] = useState("")
-  const [activeTab, setActiveTab] = useState("active")
+  const [activeTab, setActiveTab] = useState<string>("new")
+  const [localAnnouncements, setLocalAnnouncements] = useState<AnnouncementWithRead[]>(announcements)
+
+  // Sync local state with props when they change (e.g. on router.refresh())
+  useEffect(() => {
+    console.log("AnnouncementsPageClient received:", announcements.length, "announcements")
+    announcements.forEach(a => {
+      if (a.status === 'archived') console.log("Received archived:", a.title)
+    })
+    setLocalAnnouncements(announcements)
+  }, [announcements])
+
+  const handleMarkAsRead = (id: string) => {
+    setLocalAnnouncements((prev) =>
+      prev.map((a) =>
+        a.id === id
+          ? { ...a, is_read: true, reads: [...(a.reads || []), { user_id: userId }] }
+          : a
+      )
+    )
+  }
 
   const filteredAnnouncements = useMemo(() => {
-    return announcements.filter((announcement) => {
+    return localAnnouncements.filter((announcement) => {
       const matchesSearch =
         search === "" ||
         announcement.title.toLowerCase().includes(search.toLowerCase()) ||
-        announcement.description.toLowerCase().includes(search.toLowerCase())
+        announcement.description?.toLowerCase().includes(search.toLowerCase())
 
       const now = new Date()
       const isArchived = announcement.auto_archive_date && new Date(announcement.auto_archive_date) < now
+      const isRead = announcement.is_read
 
-      if (activeTab === "active") {
-        return matchesSearch && !announcement.is_read && !isArchived
+      if (activeTab === "new") {
+        return matchesSearch && !isRead && !isArchived && announcement.status !== "archived"
       } else if (activeTab === "read") {
-        return matchesSearch && announcement.is_read && !isArchived
+        return matchesSearch && isRead && !isArchived && announcement.status !== "archived"
       } else {
-        return matchesSearch && isArchived
+        // archived
+        return matchesSearch && (isArchived || announcement.status === "archived")
       }
     })
-  }, [announcements, search, activeTab])
+  }, [localAnnouncements, search, activeTab])
 
-  const activeCount = announcements.filter((a) => {
+  const counts = useMemo(() => {
     const now = new Date()
-    const isArchived = a.auto_archive_date && new Date(a.auto_archive_date) < now
-    return !a.is_read && !isArchived
-  }).length
+    return {
+      new: localAnnouncements.filter((a) => {
+        const isArchived = a.auto_archive_date && new Date(a.auto_archive_date) < now
+        return !a.is_read && !isArchived && a.status !== "archived"
+      }).length,
+      read: localAnnouncements.filter((a) => {
+        const isArchived = a.auto_archive_date && new Date(a.auto_archive_date) < now
+        return a.is_read && !isArchived && a.status !== "archived"
+      }).length,
+      archived: localAnnouncements.filter((a) => {
+        return (a.auto_archive_date && new Date(a.auto_archive_date) < now) || a.status === "archived"
+      }).length,
+    }
+  }, [localAnnouncements])
 
-  const readCount = announcements.filter((a) => {
-    const now = new Date()
-    const isArchived = a.auto_archive_date && new Date(a.auto_archive_date) < now
-    return a.is_read && !isArchived
-  }).length
-
-  const archivedCount = announcements.filter((a) => {
-    const now = new Date()
-    return a.auto_archive_date && new Date(a.auto_archive_date) < now
-  }).length
+  const tabs = [
+    { value: "new", label: "New", count: counts.new, icon: Inbox },
+    { value: "read", label: "Read", count: counts.read, icon: CheckCircle2 },
+    { value: "archived", label: "Archived", count: counts.archived, icon: Archive },
+  ]
 
   return (
-    <div className="space-y-6">
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search announcements..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9"
-        />
+    <div className="space-y-6 max-w-5xl mx-auto pb-12">
+      {/* Header Section */}
+      <div className="space-y-2">
+        <h1 className="text-3xl font-bold text-foreground tracking-tight">
+          Community Announcements
+        </h1>
+        <p className="text-muted-foreground text-lg">
+          Stay updated with what's happening in your neighborhood
+        </p>
       </div>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="active" className="gap-2">
-            Active
-            {activeCount > 0 && (
-              <Badge variant="secondary" className="h-5 px-1.5 text-xs">
-                {activeCount}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="read" className="gap-2">
-            Read
-            {readCount > 0 && (
-              <Badge variant="secondary" className="h-5 px-1.5 text-xs">
-                {readCount}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="archived" className="gap-2">
-            Archived
-            {archivedCount > 0 && (
-              <Badge variant="secondary" className="h-5 px-1.5 text-xs">
-                {archivedCount}
-              </Badge>
-            )}
-          </TabsTrigger>
-        </TabsList>
+      {/* Search & Tabs Section */}
+      <div className="space-y-4">
+        {/* Search - Left Aligned */}
+        <div className="relative w-full md:w-72">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search announcements..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 bg-background border-input focus:bg-background transition-colors"
+          />
+        </div>
 
-        <TabsContent value={activeTab} className="mt-6">
-          {filteredAnnouncements.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Megaphone className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">
-                  {search
-                    ? "No announcements match your search"
-                    : activeTab === "active"
-                      ? "No new announcements"
-                      : activeTab === "read"
-                        ? "No read announcements"
-                        : "No archived announcements"}
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {filteredAnnouncements.map((announcement) => (
-                <Link key={announcement.id} href={`/t/${slug}/dashboard/announcements/${announcement.id}`}>
-                  <Card className="hover:bg-accent transition-colors cursor-pointer">
-                    <CardContent className="p-6">
-                      <div className="flex gap-4">
-                        {/* Type icon */}
-                        <div className="flex-shrink-0 mt-1">
-                          <AnnouncementTypeIcon type={announcement.announcement_type} className="h-6 w-6" />
-                        </div>
+        {/* Custom Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="bg-muted/30 p-1 rounded-full h-auto inline-flex">
+            {tabs.map((tab) => (
+              <TabsTrigger
+                key={tab.value}
+                value={tab.value}
+                className="rounded-full px-6 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all"
+              >
+                <span className="flex items-center gap-2">
+                  <tab.icon className="h-4 w-4" />
+                  {tab.label}
+                  {tab.count > 0 && (
+                    <Badge
+                      variant="secondary"
+                      className={cn(
+                        "px-1.5 py-0.5 text-[10px] h-auto min-w-[1.25rem] justify-center",
+                        activeTab === tab.value
+                          ? "bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/30"
+                          : "bg-muted text-muted-foreground"
+                      )}
+                    >
+                      {tab.count}
+                    </Badge>
+                  )}
+                </span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+      </div>
 
-                        {/* Content */}
-                        <div className="flex-1 min-w-0 space-y-2">
-                          <div className="flex items-start justify-between gap-3">
-                            <h3 className="font-semibold text-lg leading-tight">{announcement.title}</h3>
-                            <AnnouncementPriorityBadge priority={announcement.priority} />
-                          </div>
+      {/* Divider */}
+      <div className="flex items-center gap-3">
+        <div className="h-px flex-1 bg-border"></div>
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+          {filteredAnnouncements.length} {filteredAnnouncements.length === 1 ? 'Announcement' : 'Announcements'}
+        </h2>
+        <div className="h-px flex-1 bg-border"></div>
+      </div>
 
-                          <p className="text-sm text-muted-foreground line-clamp-2">{announcement.description}</p>
-
-                          <div className="flex items-center gap-3 flex-wrap text-sm text-muted-foreground">
-                            <span>{format(new Date(announcement.published_at), "MMM d, yyyy 'at' h:mm a")}</span>
-                            {announcement.scope === "community_wide" ? (
-                              <Badge variant="secondary" className="text-xs">
-                                Community-Wide
-                              </Badge>
-                            ) : (
-                              <Badge variant="secondary" className="text-xs">
-                                Neighborhood
-                              </Badge>
-                            )}
-                            <UpdatedIndicator
-                              publishedAt={announcement.published_at}
-                              lastEditedAt={announcement.last_edited_at}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+      {/* Content */}
+      <div className="min-h-[400px]">
+        {filteredAnnouncements.length > 0 ? (
+          <AnnouncementList
+            announcements={filteredAnnouncements}
+            slug={slug}
+            onMarkAsRead={handleMarkAsRead}
+          />
+        ) : (
+          <AnnouncementEmptyState
+            type={search ? "search" : (activeTab as "new" | "read" | "archived")}
+            onClearSearch={() => setSearch("")}
+          />
+        )}
+      </div>
     </div>
   )
 }

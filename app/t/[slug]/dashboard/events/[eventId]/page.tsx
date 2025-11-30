@@ -168,9 +168,9 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
           : "default"
 
   let attendees = null
-  if (canManageEvent && event.requires_rsvp) {
+  if (event.requires_rsvp) {
     const attendeesResult = await getEventAttendees(eventId, tenant.id)
-    if (attendeesResult.success && attendeesResult.data) {
+    if (attendeesResult.success) {
       attendees = attendeesResult.data
     }
   }
@@ -333,18 +333,33 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                 )}
               </div>
 
-              <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-balance">{event.title}</h1>
+              <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-balance bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                {event.title}
+              </h1>
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-wrap gap-2">
-              <SaveEventButton eventId={eventId} userId={user?.id || null} />
+            <div className="flex flex-wrap gap-3">
+              {event.status !== "cancelled" && (
+                <div className="flex gap-2">
+                  <SaveEventButton eventId={eventId} userId={user?.id || null} />
+                  {event.requires_rsvp && (
+                    <Link href="#rsvp-section">
+                      <Button variant="default" size="sm" className="gap-2">
+                        <Users className="h-4 w-4" />
+                        RSVP
+                      </Button>
+                    </Link>
+                  )}
+                </div>
+              )}
+
               {canManageEvent && event.status !== "cancelled" && (
-                <>
+                <div className="flex gap-2">
                   <Link href={`/t/${slug}/dashboard/events/${eventId}/edit`}>
-                    <Button variant="default" size="sm" className="gap-2">
+                    <Button variant="outline" size="sm" className="gap-2">
                       <Pencil className="h-4 w-4" />
-                      Edit Event
+                      Edit
                     </Button>
                   </Link>
                   <CancelEventDialog eventId={eventId} tenantSlug={slug} eventTitle={event.title} />
@@ -356,28 +371,30 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                       eventTitle={event.title}
                     />
                   )}
-                </>
+                </div>
               )}
+
               {canManageEvent && event.status === "cancelled" && userData?.is_tenant_admin && (
                 <UncancelEventButton eventId={eventId} tenantSlug={slug} />
               )}
-              <Button variant="outline" size="sm" className="gap-2 bg-transparent">
+
+              <Button variant="outline" size="sm" className="gap-2">
                 <Share2 className="h-4 w-4" />
-                Share Event
+                Share
               </Button>
-              {event.status !== "cancelled" && (
-                <FlagEventDialog
-                  eventId={eventId}
-                  tenantSlug={slug}
-                  triggerLabel={hasUserFlagged ? "Flagged" : "Flag Event"}
-                  triggerVariant={hasUserFlagged ? "secondary" : "outline"}
-                  triggerSize="sm"
-                  disabled={hasUserFlagged}
-                  initialFlagCount={flagCount}
-                  initialHasUserFlagged={hasUserFlagged}
-                />
-              )}
             </div>
+            {event.status !== "cancelled" && (
+              <FlagEventDialog
+                eventId={eventId}
+                tenantSlug={slug}
+                triggerLabel={hasUserFlagged ? "Flagged" : "Flag Event"}
+                triggerVariant={hasUserFlagged ? "secondary" : "outline"}
+                triggerSize="sm"
+                disabled={hasUserFlagged}
+                initialFlagCount={flagCount}
+                initialHasUserFlagged={hasUserFlagged}
+              />
+            )}
           </div>
         </div>
       </div>
@@ -570,6 +587,6 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
           )}
         </div>
       </div>
-    </div>
+    </div >
   )
 }

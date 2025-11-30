@@ -5,8 +5,8 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import dynamic from "next/dynamic"
 // Lazy load map component
-const GoogleMapViewer = dynamic(
-  () => import("@/components/map/google-map-viewer").then((mod) => mod.GoogleMapViewer),
+const MapboxFullViewer = dynamic(
+  () => import("@/components/map/MapboxViewer").then((mod) => mod.MapboxFullViewer),
   {
     loading: () => <div className="h-full w-full bg-muted animate-pulse" />,
     ssr: false,
@@ -117,15 +117,16 @@ export function EventLocationSection({
         </div>
 
         <div className="h-[300px] rounded-lg overflow-hidden border">
-          <GoogleMapViewer
+          <MapboxFullViewer
             locations={allLocations}
             tenantId={tenantId}
-            selectedLocationId={location.id}
+            tenantSlug={tenantSlug}
+            highlightLocationId={location.id}
             mapCenter={mapCenter}
             mapZoom={16}
-            minimal={true}
-            showInfoCard={false}
-            enableClickablePlaces={true}
+            showControls={false}
+            enableSelection={false}
+            checkIns={[]}
           />
         </div>
       </div>
@@ -162,16 +163,20 @@ export function EventLocationSection({
 
         {customCenter && (
           <div className="h-[300px] rounded-lg overflow-hidden border">
-            <GoogleMapViewer
+            <MapboxFullViewer
               locations={allLocations}
               tenantId={tenantId}
+              tenantSlug={tenantSlug}
               mapCenter={customCenter}
-              mapZoom={15}
-              minimal={true}
-              showInfoCard={false}
-              drawnCoordinates={customCenter}
-              drawnType="marker"
-              enableClickablePlaces={true}
+              mapZoom={16}
+              showControls={false}
+              enableSelection={false}
+              customMarker={{
+                lat: customCenter.lat,
+                lng: customCenter.lng,
+                label: customLocationName
+              }}
+              checkIns={[]}
             />
           </div>
         )}

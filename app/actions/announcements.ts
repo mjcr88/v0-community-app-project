@@ -416,13 +416,15 @@ export async function markAnnouncementAsRead(announcementId: string, tenantSlug:
     )
 
     if (error) {
-      console.error("[v0] Error marking announcement as read:", error)
+      console.error("Error marking announcement as read:", error)
       return { success: false, error: error.message }
     }
 
-    // Note: revalidatePath during render causes Next.js 15 warning
-    // The announcement reads are cached and will update on next navigation
-    // revalidatePath(`/t/${tenantSlug}/dashboard/announcements`)
+    console.log("Successfully marked announcement as read:", { announcementId, userId: user.id })
+
+    // Revalidate to update UI immediately
+    revalidatePath(`/t/${tenantSlug}/dashboard/announcements`)
+    revalidatePath(`/t/${tenantSlug}/dashboard`) // Also revalidate dashboard widget if exists
 
     return { success: true }
   } catch (error) {
@@ -466,7 +468,8 @@ export async function getAnnouncements(
         *,
         creator:users!created_by(id, first_name, last_name, profile_picture_url),
         reads:announcement_reads(user_id),
-        neighborhoods:announcement_neighborhoods(neighborhood_id)
+        neighborhoods:announcement_neighborhoods(neighborhood_id),
+        location:locations(id, name)
       `,
       )
       .eq("tenant_id", tenantId)
@@ -476,12 +479,13 @@ export async function getAnnouncements(
     // Filter by status
     if (filters?.status === "archived") {
       query = query.eq("status", "archived")
-    } else {
+    } else if (filters?.status === "active" || filters?.status === "read") {
       // For active/read, we look for published
       query = query.eq("status", "published")
+    } else {
+      // No specific filter, get both published and archived
+      query = query.in("status", ["published", "archived"])
     }
-
-    query = query.or(`auto_archive_date.is.null,auto_archive_date.gte.${new Date().toISOString()}`)
 
     // Order by published_at desc
     query = query.order("published_at", { ascending: false })
@@ -497,6 +501,13 @@ export async function getAnnouncements(
       return { success: false, error: error.message }
     }
 
+    console.log("[getAnnouncements] Raw fetched count:", announcements.length)
+    announcements.forEach(a => {
+      if (a.status === 'archived') {
+        console.log("[getAnnouncements] Found archived:", a.id, a.title)
+      }
+    })
+
     // Filter in memory for complex logic (read status + neighborhood targeting)
     const filtered = announcements.filter((a) => {
       // 1. Check neighborhood targeting
@@ -509,13 +520,32 @@ export async function getAnnouncements(
       // 2. Check read status
       const isRead = a.reads.some((r: any) => r.user_id === userId)
 
+      // Debug logging
+      if (a.id === 'b919e948-3ff3-4485-acd3-52e24db6bbdb') {
+        console.log(`[getAnnouncements] Debug ${a.id}:`, {
+          userId,
+          reads: a.reads,
+          isRead,
+          filterStatus: filters?.status
+        })
+      }
+
       if (filters?.status === "read") return isRead
       if (filters?.status === "active") return !isRead
 
       return true
     })
 
-    return { success: true, data: filtered }
+    // Map to include is_read property
+    const mapped = filtered.map((a) => {
+      const isRead = a.reads.some((r: any) => r.user_id === userId)
+      return {
+        ...a,
+        is_read: isRead,
+      }
+    })
+
+    return { success: true, data: mapped }
   } catch (error) {
     console.error("[v0] Unexpected error fetching announcements:", error)
     return { success: false, error: "An unexpected error occurred" }

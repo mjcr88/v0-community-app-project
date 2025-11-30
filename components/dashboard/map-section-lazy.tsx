@@ -1,10 +1,8 @@
 "use client"
 
-import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { ChevronDown, MapPin } from 'lucide-react'
-import { MapPreviewWidget } from "@/components/map/map-preview-widget"
+import { MapPin } from 'lucide-react'
+import { MapboxFullViewer } from "@/components/map/MapboxViewer"
 import useSWR from "swr"
 
 interface MapSectionLazyProps {
@@ -28,11 +26,9 @@ export function MapSectionLazy({
   neighborhoodName,
   lotNumber,
 }: MapSectionLazyProps) {
-  const [isOpen, setIsOpen] = useState(false)
-  
-  // Only fetch locations when section is opened
+  // Always fetch locations
   const { data: locations, error, isLoading } = useSWR(
-    isOpen ? `/api/locations/${tenantId}` : null,
+    `/api/locations/${tenantId}`,
     fetcher,
     {
       revalidateOnFocus: false,
@@ -41,56 +37,45 @@ export function MapSectionLazy({
   )
 
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="md:col-span-2 lg:col-span-2 lg:row-span-6">
-      <Card>
-        <CollapsibleTrigger asChild>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 cursor-pointer hover:bg-accent/50 transition-colors">
-            <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-muted-foreground" />
-              <CardTitle className="text-sm font-medium">Your Neighborhood</CardTitle>
-            </div>
-            <ChevronDown
-              className={`h-4 w-4 text-muted-foreground transition-transform ${isOpen ? "transform rotate-180" : ""}`}
-            />
-          </CardHeader>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <CardContent className="space-y-2 pt-2">
-            <div>
-              <div className="text-2xl font-bold">{neighborhoodName || "Not assigned"}</div>
-              <p className="text-xs text-muted-foreground">Lot #{lotNumber || "N/A"}</p>
-            </div>
-            
-            {isLoading && (
-              <div className="h-64 flex items-center justify-center bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground">Loading map...</p>
-              </div>
-            )}
-            
-            {error && (
-              <div className="h-64 flex items-center justify-center bg-muted rounded-lg">
-                <p className="text-sm text-destructive">Failed to load map</p>
-              </div>
-            )}
-            
-            {locations && (
-              <>
-                <MapPreviewWidget
-                  tenantSlug={tenantSlug}
-                  tenantId={tenantId}
-                  locations={locations}
-                  mapCenter={mapCenter}
-                  highlightLocationId={lotLocationId}
-                  checkIns={checkIns}
-                />
-                <p className="text-xs text-center text-muted-foreground">
-                  Interact with map or click expand button to view full map
-                </p>
-              </>
-            )}
-          </CardContent>
-        </CollapsibleContent>
-      </Card>
-    </Collapsible>
+    <div className="md:col-span-2 lg:col-span-2 lg:row-span-6 h-full flex flex-col overflow-hidden rounded-xl border bg-card text-card-foreground shadow">
+      <div className="flex flex-row items-center justify-between p-6 pb-2 shrink-0">
+        <div className="flex items-center gap-2">
+          <MapPin className="h-4 w-4 text-muted-foreground" />
+          <h3 className="font-semibold leading-none tracking-tight">Community Map</h3>
+        </div>
+        <a
+          href={`/t/${tenantSlug}/dashboard/community-map`}
+          className="text-sm text-primary hover:underline font-medium"
+        >
+          View full map
+        </a>
+      </div>
+      <div className="p-0 flex-1 relative min-h-[400px]" style={{ touchAction: 'none' }}>
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-muted">
+            <p className="text-sm text-muted-foreground">Loading map...</p>
+          </div>
+        )}
+
+        {error && (
+          <div className="absolute inset-0 flex items-center justify-center bg-muted">
+            <p className="text-sm text-destructive">Failed to load map</p>
+          </div>
+        )}
+
+        {locations && (
+          <MapboxFullViewer
+            tenantSlug={tenantSlug}
+            tenantId={tenantId}
+            locations={locations}
+            mapCenter={mapCenter}
+            highlightLocationId={lotLocationId}
+            checkIns={checkIns}
+            showControls={false}
+            className="h-full w-full"
+          />
+        )}
+      </div>
+    </div>
   )
 }

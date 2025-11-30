@@ -18,9 +18,9 @@ import { PublishAnnouncementDialog } from "@/components/announcements/publish-an
 export default async function AdminAnnouncementDetailPage({
   params,
 }: {
-  params: { slug: string; announcementId: string }
+  params: Promise<{ slug: string; announcementId: string }>
 }) {
-  const { slug, announcementId } = params
+  const { slug, announcementId } = await params
 
   const supabase = await createClient()
 
@@ -39,6 +39,7 @@ export default async function AdminAnnouncementDetailPage({
     .single()
 
   if (!tenant) {
+    console.log("Admin Announcement Detail: Tenant not found for slug", slug)
     notFound()
   }
 
@@ -52,6 +53,7 @@ export default async function AdminAnnouncementDetailPage({
   const isTenantAdmin = userProfile?.is_tenant_admin || userProfile?.role === "super_admin" || userProfile?.role === "tenant_admin"
 
   if (!isTenantAdmin) {
+    console.log("Admin Announcement Detail: User is not admin", user.id)
     redirect(`/t/${slug}/dashboard`)
   }
 
@@ -63,6 +65,7 @@ export default async function AdminAnnouncementDetailPage({
     .single()
 
   if (!announcement) {
+    console.log("Admin Announcement Detail: Announcement not found", { announcementId, tenantId: tenant.id })
     notFound()
   }
 
@@ -127,7 +130,6 @@ export default async function AdminAnnouncementDetailPage({
           {announcement.status === "draft" && (
             <PublishAnnouncementDialog
               announcementId={announcement.id}
-              announcementTitle={announcement.title}
               tenantSlug={slug}
               tenantId={tenant.id}
             />
@@ -141,7 +143,6 @@ export default async function AdminAnnouncementDetailPage({
           {announcement.status === "published" && (
             <ArchiveAnnouncementDialog
               announcementId={announcement.id}
-              announcementTitle={announcement.title}
               tenantSlug={slug}
               tenantId={tenant.id}
               redirectAfter
@@ -149,7 +150,6 @@ export default async function AdminAnnouncementDetailPage({
           )}
           <DeleteAnnouncementDialog
             announcementId={announcement.id}
-            announcementTitle={announcement.title}
             tenantSlug={slug}
             tenantId={tenant.id}
             redirectAfter

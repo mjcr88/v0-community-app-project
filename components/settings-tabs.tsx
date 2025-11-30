@@ -15,14 +15,26 @@ export function SettingsTabs({ tenantSlug }: SettingsTabsProps) {
 
   return (
     <Tabs value={currentTab} className="w-full">
-      <TabsList className="grid w-full max-w-2xl grid-cols-3">
-        <TabsTrigger value="profile" asChild>
+      <TabsList className="bg-muted/30 p-1 rounded-full h-auto inline-flex">
+        <TabsTrigger
+          value="profile"
+          asChild
+          className="rounded-full px-6 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all"
+        >
           <Link href={`/t/${tenantSlug}/dashboard/settings/profile`}>Profile</Link>
         </TabsTrigger>
-        <TabsTrigger value="family" asChild>
+        <TabsTrigger
+          value="family"
+          asChild
+          className="rounded-full px-6 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all"
+        >
           <Link href={`/t/${tenantSlug}/dashboard/settings/family`}>Family</Link>
         </TabsTrigger>
-        <TabsTrigger value="privacy" asChild>
+        <TabsTrigger
+          value="privacy"
+          asChild
+          className="rounded-full px-6 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all"
+        >
           <Link href={`/t/${tenantSlug}/dashboard/settings/privacy`}>Privacy</Link>
         </TabsTrigger>
       </TabsList>

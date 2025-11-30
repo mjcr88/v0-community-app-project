@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import {
@@ -17,12 +17,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
 import { createBorrowRequest } from "@/app/actions/exchange-listings"
-import { Calendar } from 'lucide-react'
+import { DateTimePicker } from "@/components/ui/date-time-picker"
 
 const createBorrowRequestSchema = (requiresReturnDate: boolean) => z.object({
   quantity: z.coerce.number().min(1, "Quantity must be at least 1"),
   proposed_pickup_date: z.string().min(1, "Date is required"),
-  proposed_return_date: requiresReturnDate 
+  proposed_return_date: requiresReturnDate
     ? z.string().min(1, "Return date is required")
     : z.string().optional(),
   borrower_message: z.string().optional(),
@@ -58,10 +58,10 @@ function getCategoryConfig(categoryName: string) {
 
   // Categories that need return dates
   const needsReturnDate = isToolsEquipment || isHouseSitting || isRides
-  
+
   // Categories that show quantity
   const showsQuantity = isToolsEquipment || isFoodProduce
-  
+
   // Button text
   let buttonText = "Request to Borrow"
   if (isServices) buttonText = "Request Service"
@@ -72,7 +72,7 @@ function getCategoryConfig(categoryName: string) {
   // Date labels
   let pickupLabel = "Proposed Pickup Date"
   let returnLabel = "Proposed Return Date"
-  
+
   if (isServices) {
     pickupLabel = "Preferred Appointment Date"
   } else if (isHouseSitting || isRides) {
@@ -111,13 +111,14 @@ export function RequestBorrowDialog({
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const config = getCategoryConfig(listingCategory)
-  
+
   const {
     register,
     handleSubmit,
     formState: { errors },
     reset,
     watch,
+    control,
   } = useForm<BorrowRequestFormData>({
     resolver: zodResolver(createBorrowRequestSchema(config.needsReturnDate)),
     defaultValues: {
@@ -169,14 +170,6 @@ export function RequestBorrowDialog({
     setIsSubmitting(false)
   }
 
-  const today = new Date()
-  const minDate = today.toISOString().split("T")[0]
-
-  // Get min return/end date (day after pickup or tomorrow)
-  const minReturnDate = pickupDate
-    ? new Date(new Date(pickupDate).getTime() + 86400000).toISOString().split("T")[0]
-    : new Date(today.getTime() + 86400000).toISOString().split("T")[0]
-
   const showPriceReminder = pricingType !== "free" && price
 
   return (
@@ -193,8 +186,8 @@ export function RequestBorrowDialog({
           <div className="p-3 bg-muted rounded-lg border">
             <p className="text-sm">
               <strong>Price:</strong>{" "}
-              {pricingType === "pay_what_you_want" 
-                ? "Pay what you want" 
+              {pricingType === "pay_what_you_want"
+                ? "Pay what you want"
                 : `$${price?.toFixed(2)}`}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
@@ -226,15 +219,17 @@ export function RequestBorrowDialog({
             <Label htmlFor="pickup_date">
               {config.pickupLabel}
             </Label>
-            <div className="relative">
-              <Input
-                id="pickup_date"
-                type="date"
-                min={minDate}
-                {...register("proposed_pickup_date")}
-              />
-              <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-            </div>
+            <Controller
+              control={control}
+              name="proposed_pickup_date"
+              render={({ field }) => (
+                <DateTimePicker
+                  date={field.value ? new Date(field.value) : undefined}
+                  setDate={(date) => field.onChange(date ? date.toISOString() : "")}
+                  placeholder="Pick a date"
+                />
+              )}
+            />
             {errors.proposed_pickup_date && (
               <p className="text-sm text-destructive">{errors.proposed_pickup_date.message}</p>
             )}
@@ -245,15 +240,17 @@ export function RequestBorrowDialog({
               <Label htmlFor="return_date">
                 {config.returnLabel}
               </Label>
-              <div className="relative">
-                <Input
-                  id="return_date"
-                  type="date"
-                  min={minReturnDate}
-                  {...register("proposed_return_date")}
-                />
-                <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-              </div>
+              <Controller
+                control={control}
+                name="proposed_return_date"
+                render={({ field }) => (
+                  <DateTimePicker
+                    date={field.value ? new Date(field.value) : undefined}
+                    setDate={(date) => field.onChange(date ? date.toISOString() : "")}
+                    placeholder="Pick a date"
+                  />
+                )}
+              />
               {errors.proposed_return_date && (
                 <p className="text-sm text-destructive">{errors.proposed_return_date.message}</p>
               )}
@@ -267,11 +264,11 @@ export function RequestBorrowDialog({
             <Textarea
               id="message"
               placeholder={
-                config.isServices 
+                config.isServices
                   ? "Describe what you need help with..."
                   : config.isFoodProduce
-                  ? "Any special requests or notes..."
-                  : "Let them know why you need this..."
+                    ? "Any special requests or notes..."
+                    : "Let them know why you need this..."
               }
               rows={3}
               {...register("borrower_message")}

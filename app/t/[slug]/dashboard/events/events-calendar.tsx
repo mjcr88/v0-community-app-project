@@ -10,6 +10,7 @@ import { format, parseISO } from "date-fns"
 import { useState } from "react"
 import { EventRsvpQuickAction } from "@/components/event-rsvp-quick-action"
 import { LocationBadge } from "@/components/events/location-badge"
+import { RioImage } from "@/components/library/rio-image"
 
 interface Event {
   id: string
@@ -229,7 +230,10 @@ export function EventsCalendar({
               })}
             </div>
           ) : selectedDate ? (
-            <p className="text-sm text-muted-foreground text-center py-8">No events scheduled for this date</p>
+            <div className="flex flex-col items-center justify-center py-8 space-y-4">
+              <RioImage pose="waiting" size="md" />
+              <p className="text-sm text-muted-foreground text-center">No events scheduled for this date</p>
+            </div>
           ) : (
             <p className="text-sm text-muted-foreground text-center py-8">Select a date to view events</p>
           )}

@@ -131,6 +131,9 @@ export function CheckInDetailModal({
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="sr-only">Loading Check-in</DialogTitle>
+          </DialogHeader>
           <div className="flex items-center justify-center py-12">
             <div className="text-muted-foreground">Loading...</div>
           </div>

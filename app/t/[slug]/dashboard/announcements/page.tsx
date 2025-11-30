@@ -35,15 +35,12 @@ export default async function AnnouncementsPage({
   }
 
   const result = await getAnnouncements(tenant.id, user.id)
-  
+
   const announcements = result.success ? result.data : []
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Announcements</h1>
-        <p className="text-muted-foreground">View community announcements from your tenant admins</p>
-      </div>
+
 
       <AnnouncementsPageClient
         announcements={announcements}

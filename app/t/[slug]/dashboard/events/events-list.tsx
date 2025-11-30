@@ -2,11 +2,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { Calendar, Plus, CalendarClock, Lock, Building, Flag } from "lucide-react"
+import { Calendar, Plus, CalendarClock, Lock, Building, Flag, Users } from "lucide-react"
 import Link from "next/link"
 import { format, isPast, parseISO } from "date-fns"
 import { EventRsvpQuickAction } from "@/components/event-rsvp-quick-action"
 import { LocationBadge } from "@/components/events/location-badge"
+import { RioImage } from "@/components/library/rio-image"
+import { PulsatingButton } from "@/components/library/pulsating-button"
+import { EnhancedEventCard } from "@/components/events/enhanced-event-card"
 
 interface Event {
   id: string
@@ -35,6 +38,12 @@ interface Event {
   user_rsvp_status?: string | null
   is_saved?: boolean
   visibility_scope?: string | null
+  event_neighborhoods?: {
+    id: string
+    neighborhoods: {
+      name: string
+    } | null
+  }[]
   location_type?: "community_location" | "custom_temporary" | null
   location?: {
     id: string
@@ -65,9 +74,7 @@ export function EventsList({
       <Card className="border-dashed">
         <CardHeader className="text-center pb-4">
           <div className="flex justify-center mb-4">
-            <div className="rounded-full bg-primary/10 p-4">
-              <CalendarClock className="h-12 w-12 text-primary" />
-            </div>
+            <RioImage pose="encouraging" size="lg" />
           </div>
           <CardTitle className="text-2xl">
             {hasActiveFilters ? "No events match your filters" : "No events yet"}
@@ -80,12 +87,12 @@ export function EventsList({
         </CardHeader>
         {!hasActiveFilters && (
           <CardContent className="flex justify-center pb-8">
-            <Button asChild size="lg">
-              <Link href={`/t/${slug}/dashboard/events/create`}>
-                <Plus className="h-4 w-4 mr-2" />
+            <Link href={`/t/${slug}/dashboard/events/create`}>
+              <PulsatingButton className="gap-2">
+                <Plus className="h-4 w-4" />
                 Create Your First Event
-              </Link>
-            </Button>
+              </PulsatingButton>
+            </Link>
           </CardContent>
         )}
       </Card>
@@ -134,19 +141,26 @@ export function EventsList({
             ? `${event.creator.first_name[0]}${event.creator.last_name[0]}`.toUpperCase()
             : "?"
 
+        // Check if event is upcoming within 48 hours for priority styling
+        const now = new Date()
+        const hoursDiff = (startDate.getTime() - now.getTime()) / (1000 * 60 * 60)
+        const isPriority = !eventIsPast && hoursDiff > 0 && hoursDiff <= 48
+
         return (
-          <Card
+          <EnhancedEventCard
             key={event.id}
-            className={`hover:shadow-lg transition-all cursor-pointer h-full ${
-              eventIsPast || isCancelled ? "opacity-60 hover:opacity-80" : ""
-            }`}
+            eventDate={event.start_date}
+            isPriority={isPriority}
+            isCancelled={isCancelled}
           >
             <Link href={`/t/${slug}/dashboard/events/${event.id}`}>
               <CardHeader>
                 <div className="flex items-start justify-between gap-2">
                   <CardTitle className="line-clamp-2 text-balance">{event.title}</CardTitle>
                   {event.event_categories?.icon && (
-                    <span className="text-2xl flex-shrink-0">{event.event_categories.icon}</span>
+                    <span className="text-2xl flex-shrink-0 transition-transform hover:scale-110">
+                      {event.event_categories.icon}
+                    </span>
                   )}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -154,17 +168,17 @@ export function EventsList({
                     {event.event_categories?.name || "Uncategorized"}
                   </CardDescription>
                   {isCancelled && (
-                    <Badge variant="destructive" className="text-xs">
+                    <Badge variant="destructive" className="text-xs badge-enter">
                       Cancelled
                     </Badge>
                   )}
                   {eventIsPast && !isCancelled && (
-                    <Badge variant="outline" className="text-xs">
+                    <Badge variant="outline" className="text-xs badge-enter">
                       Past Event
                     </Badge>
                   )}
                   {event.flag_count !== undefined && event.flag_count > 0 && (
-                    <Badge variant="destructive" className="text-xs gap-1">
+                    <Badge variant="destructive" className="text-xs gap-1 badge-enter">
                       <Flag className="h-3 w-3" />
                       {event.flag_count}
                     </Badge>
@@ -188,11 +202,15 @@ export function EventsList({
                       All Day
                     </Badge>
                   )}
-                  {event.visibility_scope === "neighborhood" && (
-                    <Badge variant="outline" className="text-xs gap-1">
-                      <Building className="h-3 w-3" />
-                      Neighborhood
-                    </Badge>
+                  {event.visibility_scope === "neighborhood" && event.event_neighborhoods && event.event_neighborhoods.length > 0 && (
+                    <>
+                      {event.event_neighborhoods.map((en: any) => (
+                        <Badge key={en.id} variant="secondary" className="text-xs">
+                          <Users className="h-3 w-3 mr-1" />
+                          {en.neighborhoods?.name || "Neighborhood"}
+                        </Badge>
+                      ))}
+                    </>
                   )}
                   {event.visibility_scope === "private" && (
                     <Badge variant="outline" className="text-xs gap-1">
@@ -206,32 +224,31 @@ export function EventsList({
                     customLocationName={event.custom_location_name}
                   />
                 </div>
-                <div className="flex items-center gap-2 pt-2 border-t">
-                  <Avatar className="h-6 w-6">
-                    <AvatarImage src={event.creator?.profile_picture_url || undefined} alt={creatorName} />
-                    <AvatarFallback className="text-xs">{creatorInitials}</AvatarFallback>
-                  </Avatar>
-                  <span className="text-xs text-muted-foreground line-clamp-1">Organized by {creatorName}</span>
+
+                {/* Organizer Info and Actions */}
+                <div className="flex items-center justify-between gap-3 border-t pt-4 mt-auto flex-wrap">
+                  <div className="flex items-center gap-2 min-w-0 flex-shrink">
+                    <Avatar className="h-6 w-6 flex-shrink-0">
+                      <AvatarImage src={event.creator?.profile_picture_url || undefined} alt={creatorName} />
+                      <AvatarFallback className="text-xs">{creatorInitials}</AvatarFallback>
+                    </Avatar>
+                    <span className="text-xs text-muted-foreground truncate">Organized by {creatorName}</span>
+                  </div>
+                  <EventRsvpQuickAction
+                    eventId={event.id}
+                    tenantId={tenantId}
+                    userId={userId}
+                    currentRsvpStatus={event.user_rsvp_status as "yes" | "maybe" | "no" | null}
+                    isSaved={event.is_saved || false}
+                    requiresRsvp={event.requires_rsvp || false}
+                    maxAttendees={event.max_attendees}
+                    currentAttendeeCount={event.attending_count || 0}
+                    rsvpDeadline={event.rsvp_deadline}
+                  />
                 </div>
               </CardContent>
             </Link>
-
-            <CardContent className="pt-0">
-              <div className="flex items-center justify-between pt-3 border-t">
-                <EventRsvpQuickAction
-                  eventId={event.id}
-                  tenantId={tenantId}
-                  userId={userId}
-                  currentRsvpStatus={event.user_rsvp_status as "yes" | "maybe" | "no" | null}
-                  isSaved={event.is_saved || false}
-                  requiresRsvp={event.requires_rsvp || false}
-                  maxAttendees={event.max_attendees}
-                  currentAttendeeCount={event.attending_count || 0}
-                  rsvpDeadline={event.rsvp_deadline}
-                />
-              </div>
-            </CardContent>
-          </Card>
+          </EnhancedEventCard>
         )
       })}
     </div>

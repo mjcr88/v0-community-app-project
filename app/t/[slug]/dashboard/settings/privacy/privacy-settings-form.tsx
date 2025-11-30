@@ -3,23 +3,42 @@
 import type React from "react"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
-import { Loader2, Lock } from "lucide-react"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Switch } from "@/components/ui/switch"
+import { Button } from "@/components/ui/button"
+import { Loader2, AlertCircle, Eye, EyeOff } from "lucide-react"
+import { updatePrivacySettings } from "@/app/actions/privacy-settings"
 import { useToast } from "@/hooks/use-toast"
-import { updatePrivacySettings } from "./update-privacy-settings-action"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+
+interface PrivacySettings {
+  id: string
+  user_id: string
+  show_email: boolean
+  show_phone: boolean
+  show_birthday: boolean
+  show_birth_country: boolean
+  show_current_country: boolean
+  show_languages: boolean
+  show_preferred_language: boolean
+  show_journey_stage: boolean
+  show_estimated_move_in_date: boolean
+  show_construction_dates: boolean
+  show_neighborhood: boolean
+  show_family: boolean
+  show_family_relationships: boolean
+  show_interests: boolean
+  show_skills: boolean
+  show_open_to_requests: boolean
+}
 
 interface PrivacySettingsFormProps {
-  privacySettings: any
+  privacySettings: PrivacySettings
   tenantSlug: string
 }
 
 export function PrivacySettingsForm({ privacySettings, tenantSlug }: PrivacySettingsFormProps) {
-  const router = useRouter()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
   const [settings, setSettings] = useState({
@@ -32,6 +51,8 @@ export function PrivacySettingsForm({ privacySettings, tenantSlug }: PrivacySett
     showPreferredLanguage: privacySettings?.show_preferred_language ?? true,
     showJourneyStage: privacySettings?.show_journey_stage ?? true,
     showEstimatedMoveInDate: privacySettings?.show_estimated_move_in_date ?? true,
+    showConstructionDates: privacySettings?.show_construction_dates ?? true,
+    showNeighborhood: privacySettings?.show_neighborhood ?? true,
     showFamily: privacySettings?.show_family ?? true,
     showFamilyRelationships: privacySettings?.show_family_relationships ?? true,
     showInterests: privacySettings?.show_interests ?? true,
@@ -44,28 +65,36 @@ export function PrivacySettingsForm({ privacySettings, tenantSlug }: PrivacySett
     setIsLoading(true)
 
     try {
-      console.log("[v0] Submitting privacy settings:", settings)
-      const result = await updatePrivacySettings(tenantSlug, settings)
-      console.log("[v0] Privacy settings update result:", result)
+      const result = await updatePrivacySettings({
+        show_email: settings.showEmail,
+        show_phone: settings.showPhone,
+        show_birthday: settings.showBirthday,
+        show_birth_country: settings.showBirthCountry,
+        show_current_country: settings.showCurrentCountry,
+        show_languages: settings.showLanguages,
+        show_preferred_language: settings.showPreferredLanguage,
+        show_journey_stage: settings.showJourneyStage,
+        show_estimated_move_in_date: settings.showEstimatedMoveInDate,
+        show_construction_dates: settings.showConstructionDates,
+        show_family: settings.showFamily,
+        show_family_relationships: settings.showFamilyRelationships,
+        show_interests: settings.showInterests,
+        show_skills: settings.showSkills,
+        show_open_to_requests: settings.showOpenToRequests,
+      })
 
       if (result.success) {
         toast({
-          title: "Privacy settings updated",
-          description: "Your privacy preferences have been saved successfully.",
+          title: "Settings updated",
+          description: "Your privacy preferences have been saved.",
         })
-        router.refresh()
       } else {
-        toast({
-          title: "Error",
-          description: result.error || "Failed to update privacy settings",
-          variant: "destructive",
-        })
+        throw new Error(result.error)
       }
     } catch (error) {
-      console.error("[v0] Error updating privacy settings:", error)
       toast({
         title: "Error",
-        description: "An unexpected error occurred",
+        description: "Failed to update privacy settings. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -76,79 +105,93 @@ export function PrivacySettingsForm({ privacySettings, tenantSlug }: PrivacySett
   const privacyGroups = [
     {
       title: "Contact Information",
-      description: "Control who can see your contact details",
+      description: "Control who can contact you",
       settings: [
-        { key: "showEmail", label: "Email Address", value: settings.showEmail },
-        { key: "showPhone", label: "Phone Number", value: settings.showPhone },
+        { key: "showEmail", label: "Show Email Address", value: settings.showEmail },
+        { key: "showPhone", label: "Show Phone Number", value: settings.showPhone },
       ],
     },
     {
-      title: "Personal Information",
-      description: "Manage visibility of your personal details",
+      title: "Personal Details",
+      description: "Manage visibility of your personal info",
       settings: [
-        { key: "showBirthday", label: "Birthday", value: settings.showBirthday },
-        { key: "showBirthCountry", label: "Country of Birth", value: settings.showBirthCountry },
-        { key: "showCurrentCountry", label: "Current Country", value: settings.showCurrentCountry },
-        { key: "showLanguages", label: "Languages", value: settings.showLanguages },
-        { key: "showPreferredLanguage", label: "Preferred Language", value: settings.showPreferredLanguage },
+        { key: "showBirthday", label: "Show Birthday", value: settings.showBirthday },
+        { key: "showBirthCountry", label: "Show Country of Origin", value: settings.showBirthCountry },
+        { key: "showCurrentCountry", label: "Show Current Country", value: settings.showCurrentCountry },
+        { key: "showLanguages", label: "Show Languages", value: settings.showLanguages },
       ],
     },
     {
       title: "Journey Information",
-      description: "Control visibility of your community journey",
+      description: "Share your progress in the community",
       settings: [
-        { key: "showJourneyStage", label: "Journey Stage", value: settings.showJourneyStage },
-        { key: "showEstimatedMoveInDate", label: "Estimated Move-in Date", value: settings.showEstimatedMoveInDate },
+        { key: "showJourneyStage", label: "Show Journey Stage", value: settings.showJourneyStage },
+        { key: "showEstimatedMoveInDate", label: "Show Move-in Date", value: settings.showEstimatedMoveInDate },
+        { key: "showConstructionDates", label: "Show Construction Dates", value: settings.showConstructionDates },
       ],
     },
     {
-      title: "Community Information",
-      description: "Manage what community details are visible",
+      title: "Community & Family",
+      description: "Manage family and community visibility",
       settings: [
-        { key: "showFamily", label: "Family Members", value: settings.showFamily },
-        { key: "showFamilyRelationships", label: "Family Relationship Types", value: settings.showFamilyRelationships },
-        { key: "showInterests", label: "Interests", value: settings.showInterests },
-        { key: "showSkills", label: "Skills", value: settings.showSkills },
-        { key: "showOpenToRequests", label: "Open to Help Requests", value: settings.showOpenToRequests },
+        { key: "showFamily", label: "Show Family Members", value: settings.showFamily },
+        { key: "showInterests", label: "Show Interests", value: settings.showInterests },
+        { key: "showSkills", label: "Show Skills", value: settings.showSkills },
       ],
     },
   ]
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl mx-auto">
       <Alert>
-        <Lock className="h-4 w-4" />
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Public Information</AlertTitle>
         <AlertDescription>
-          Your name, profile picture, lot assignment, and neighborhood are always visible to other residents. All other
-          fields can be hidden below.
+          Your name, profile picture, lot number, and neighborhood are always visible to other residents to help identify
+          neighbors.
         </AlertDescription>
       </Alert>
 
-      {privacyGroups.map((group) => (
-        <Card key={group.title}>
-          <CardHeader>
-            <CardTitle>{group.title}</CardTitle>
-            <CardDescription>{group.description}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {group.settings.map((setting) => (
-              <div key={setting.key} className="flex items-center justify-between">
-                <Label htmlFor={setting.key} className="cursor-pointer">
-                  {setting.label}
-                </Label>
-                <Switch
-                  id={setting.key}
-                  checked={setting.value}
-                  onCheckedChange={(checked) => setSettings({ ...settings, [setting.key]: checked })}
-                />
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      ))}
+      <div className="grid gap-6">
+        {privacyGroups.map((group) => (
+          <Card key={group.title}>
+            <CardHeader>
+              <CardTitle className="text-lg">{group.title}</CardTitle>
+              <CardDescription>{group.description}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {group.settings.map((setting) => (
+                <div key={setting.key} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                  <div className="space-y-0.5">
+                    <Label htmlFor={setting.key} className="text-base cursor-pointer">
+                      {setting.label}
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      {setting.value ? (
+                        <span className="flex items-center gap-1 text-green-600">
+                          <Eye className="h-3 w-3" /> Visible to neighbors
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-muted-foreground">
+                          <EyeOff className="h-3 w-3" /> Hidden from neighbors
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  <Switch
+                    id={setting.key}
+                    checked={setting.value}
+                    onCheckedChange={(checked) => setSettings({ ...settings, [setting.key]: checked })}
+                  />
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
-      <div className="flex justify-end">
-        <Button type="submit" disabled={isLoading}>
+      <div className="sticky bottom-6 flex justify-end pt-4">
+        <Button type="submit" size="lg" className="shadow-lg" disabled={isLoading}>
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Save Privacy Settings
         </Button>

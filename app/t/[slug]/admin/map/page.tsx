@@ -2,12 +2,11 @@ import { createServerClient } from "@/lib/supabase/server"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { Plus } from "lucide-react"
-import { LocationsTable } from "@/components/map/locations-table"
 import { GeoJSONUploadButton } from "@/components/map/geojson-upload-button"
-import { AdminMapClient } from "./admin-map-client"
 import { redirect } from "next/navigation"
-import { getLocationCounts } from "@/lib/data/locations"
 import { MapSettingsDialog } from "./map-settings-dialog"
+import { AdminMapWrapper } from "./viewer/admin-map-wrapper"
+import { getCheckIns } from "@/lib/data/check-ins"
 
 export default async function MapManagementPage({
   params,
@@ -31,8 +30,6 @@ export default async function MapManagementPage({
   if (features?.map === false) {
     redirect(`/t/${slug}/admin/dashboard`)
   }
-
-  const counts = await getLocationCounts(tenant.id)
 
   const { data: locations } = await supabase
     .from("locations")
@@ -59,9 +56,11 @@ export default async function MapManagementPage({
     .eq("tenant_id", tenant.id)
     .order("created_at", { ascending: false })
 
+  const checkIns = await getCheckIns(tenant.id)
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 h-[calc(100vh-100px)] flex flex-col">
+      <div className="flex items-center justify-between flex-shrink-0">
         <div>
           <h1 className="text-2xl font-bold">Community Map</h1>
           <p className="text-muted-foreground">Manage locations, boundaries, and walking paths</p>
@@ -72,9 +71,6 @@ export default async function MapManagementPage({
             currentCenter={tenant.map_center_coordinates as { lat: number; lng: number } | null}
             currentZoom={tenant.map_default_zoom}
           />
-          <Button asChild variant="outline">
-            <Link href={`/t/${slug}/admin/map/viewer`}>View Map</Link>
-          </Button>
           <GeoJSONUploadButton tenantId={tenant.id} tenantSlug={slug} />
           <Button asChild>
             <Link href={`/t/${slug}/admin/map/locations/create`}>
@@ -85,28 +81,14 @@ export default async function MapManagementPage({
         </div>
       </div>
 
-      {/* Use client component for clickable cards */}
-      <AdminMapClient
-        counts={{
-          facilities: counts.facility || 0,
-          lots: counts.lot || 0,
-          neighborhoods: counts.neighborhood || 0,
-          walkingPaths: counts.walking_path || 0,
-          protectionZones: counts.protection_zone || 0,
-          easements: counts.easement || 0,
-          playgrounds: counts.playground || 0,
-          publicStreets: counts.public_street || 0,
-          greenAreas: counts.green_area || 0,
-          recreationalZones: counts.recreational_zone || 0,
-        }}
-      />
-
-      <LocationsTable
-        locations={locations || []}
-        tenantSlug={slug}
-        tenantId={tenant.id}
-        initialTypeFilter={initialTypeFilter}
-      />
+      <div className="flex-1 min-h-0 border rounded-lg overflow-hidden shadow-sm">
+        <AdminMapWrapper
+          locations={locations || []}
+          tenantId={tenant.id}
+          tenantSlug={slug}
+          checkIns={checkIns}
+        />
+      </div>
     </div>
   )
 }

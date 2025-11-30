@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from 'next/navigation'
-import { NotificationsClient } from "./notifications-client"
+import { NotificationPageClient } from "@/components/notifications/notification-page-client"
 import { getNotifications } from "@/app/actions/notifications"
 
 export default async function NotificationsPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -42,7 +42,7 @@ export default async function NotificationsPage({ params }: { params: Promise<{ 
         <p className="text-muted-foreground">Stay updated on your community activity</p>
       </div>
 
-      <NotificationsClient 
+      <NotificationPageClient
         tenantSlug={slug}
         tenantId={tenant.id}
         userId={user.id}

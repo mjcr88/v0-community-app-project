@@ -1,6 +1,6 @@
 "use client"
 
-import { GoogleMapViewer } from "@/components/map/google-map-viewer"
+import { MapboxFullViewer } from "@/components/map/MapboxViewer"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import Link from "next/link"
 import { ExternalLink } from 'lucide-react'
@@ -13,7 +13,8 @@ interface MapPreviewWidgetProps {
   mapCenter: { lat: number; lng: number } | null
   highlightLocationId?: string
   mapZoom?: number
-  checkIns?: any[] // Add checkIns prop
+  checkIns?: any[]
+  hideHeader?: boolean
 }
 
 export function MapPreviewWidget({
@@ -23,8 +24,28 @@ export function MapPreviewWidget({
   mapCenter,
   highlightLocationId,
   mapZoom = 12,
-  checkIns = [], // Add checkIns with default empty array
+  checkIns = [],
+  hideHeader = false,
 }: MapPreviewWidgetProps) {
+  const content = (
+    <div className="h-[300px] rounded-lg overflow-hidden border bg-muted">
+      <MapboxFullViewer
+        locations={locations}
+        tenantId={tenantId}
+        tenantSlug={tenantSlug}
+        checkIns={checkIns}
+        mapCenter={mapCenter}
+        mapZoom={mapZoom}
+        highlightLocationId={highlightLocationId}
+        showControls={false}
+      />
+    </div>
+  )
+
+  if (hideHeader) {
+    return content
+  }
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
@@ -40,19 +61,7 @@ export function MapPreviewWidget({
         </Button>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="h-96 rounded-lg overflow-hidden border bg-muted">
-          <GoogleMapViewer
-            locations={locations}
-            tenantId={tenantId}
-            tenantSlug={tenantSlug}
-            checkIns={checkIns}
-            mapCenter={mapCenter}
-            mapZoom={mapZoom}
-            isAdmin={false}
-            highlightLocationId={highlightLocationId}
-            minimal={true}
-          />
-        </div>
+        {content}
       </CardContent>
     </Card>
   )

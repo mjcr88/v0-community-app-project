@@ -9,20 +9,31 @@ export async function getLocations(tenantId: string) {
   return getLocationsFromLib(tenantId)
 }
 
-export async function createLocation(data: {
-  tenant_id: string
-  name: string
-  type: "facility" | "lot" | "walking_path" | "neighborhood"
-  description?: string | null
-  coordinates?: { lat: number; lng: number } | null
-  boundary_coordinates?: Array<[number, number]> | null
-  path_coordinates?: Array<[number, number]> | null
-  facility_type?: string | null
-  icon?: string | null
-  lot_id?: string | null
-  neighborhood_id?: string | null
-  photos?: string[] | null
-}) {
+export async function createLocation(
+  data: {
+    tenant_id: string
+    name: string
+    type: "facility" | "lot" | "walking_path" | "neighborhood"
+    description?: string | null
+    coordinates?: { lat: number; lng: number } | null
+    boundary_coordinates?: Array<[number, number]> | null
+    path_coordinates?: Array<[number, number]> | null
+    facility_type?: string | null
+    icon?: string | null
+    lot_id?: string | null
+    neighborhood_id?: string | null
+    photos?: string[] | null
+    accessibility_features?: string[] | null
+    parking_spaces?: number | null
+    opening_hours?: any | null
+    contact_phone?: string | null
+    contact_email?: string | null
+    website?: string | null
+    capacity?: number | null
+    rules?: string | null
+  },
+  path?: string
+) {
   const supabase = await createServerClient()
 
   const {
@@ -68,7 +79,11 @@ export async function createLocation(data: {
         throw new Error("Failed to update location")
       }
 
-      revalidatePath("/", "layout")
+      if (path) {
+        revalidatePath(path)
+      } else {
+        revalidatePath("/", "layout")
+      }
       return updatedLocation
     }
   }
@@ -94,7 +109,11 @@ export async function createLocation(data: {
         throw new Error("Failed to update location")
       }
 
-      revalidatePath("/", "layout")
+      if (path) {
+        revalidatePath(path)
+      } else {
+        revalidatePath("/", "layout")
+      }
       return updatedLocation
     }
   }
@@ -115,7 +134,11 @@ export async function createLocation(data: {
     await supabase.from("neighborhoods").update({ location_id: newLocation.id }).eq("id", data.neighborhood_id)
   }
 
-  revalidatePath("/", "layout")
+  if (path) {
+    revalidatePath(path)
+  } else {
+    revalidatePath("/", "layout")
+  }
   return newLocation
 }
 
@@ -134,7 +157,16 @@ export async function updateLocation(
     lot_id?: string | null
     neighborhood_id?: string | null
     photos?: string[] | null
+    accessibility_features?: string[] | null
+    parking_spaces?: number | null
+    opening_hours?: any | null
+    contact_phone?: string | null
+    contact_email?: string | null
+    website?: string | null
+    capacity?: number | null
+    rules?: string | null
   },
+  path?: string
 ) {
   const supabase = await createServerClient()
 
@@ -167,10 +199,14 @@ export async function updateLocation(
     throw new Error("Failed to update location")
   }
 
-  revalidatePath(`/t/[slug]/admin/map`, "page")
+  if (path) {
+    revalidatePath(path)
+  } else {
+    revalidatePath(`/t/[slug]/admin/map`, "page")
+  }
 }
 
-export async function deleteLocation(locationId: string, tenantId: string) {
+export async function deleteLocation(locationId: string, tenantId: string, path?: string) {
   const supabase = await createServerClient()
 
   const {
@@ -215,5 +251,9 @@ export async function deleteLocation(locationId: string, tenantId: string) {
     throw new Error("Failed to delete location")
   }
 
-  revalidatePath("/", "layout")
+  if (path) {
+    revalidatePath(path)
+  } else {
+    revalidatePath("/", "layout")
+  }
 }

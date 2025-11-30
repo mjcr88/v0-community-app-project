@@ -64,12 +64,26 @@ export default async function ResidentDashboardLayout({
     unreadEvents: 0,
   }
 
+  const { data: categories } = await supabase
+    .from("exchange_categories")
+    .select("id, name")
+    .order("name")
+
+  const { data: neighborhoods } = await supabase
+    .from("neighborhoods")
+    .select("id, name")
+    .eq("tenant_id", tenant.id)
+    .order("name")
+
   return (
     <DashboardLayoutClient
       slug={slug}
       tenantName={tenant.name}
       tenantLogoUrl={tenant.logo_url}
       user={userNavData}
+      tenantId={tenant.id}
+      categories={categories || []}
+      neighborhoods={neighborhoods || []}
     >
       {children}
     </DashboardLayoutClient>

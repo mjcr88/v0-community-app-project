@@ -85,9 +85,7 @@ export function FlagListingDialog({
           router.refresh()
         }, 500)
       } else {
-        toast.error(result.error || "Failed to flag listing. Please try again.", {
-          duration: 5000,
-        })
+        toast.error(result.error || "Failed to flag listing")
       }
     })
   }
@@ -102,10 +100,9 @@ export function FlagListingDialog({
           variant={triggerVariant}
           size={triggerSize}
           disabled={disabled || localHasUserFlagged}
-          className="gap-2"
         >
-          <Flag className="h-4 w-4" />
-          {localHasUserFlagged ? "Flagged" : triggerLabel}
+          <Flag className="h-4 w-4 mr-2" />
+          {localHasUserFlagged ? "Already Flagged" : triggerLabel}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
@@ -113,7 +110,7 @@ export function FlagListingDialog({
           <DialogHeader>
             <DialogTitle>Flag Listing</DialogTitle>
             <DialogDescription>
-              Help keep our community safe. Please provide a reason for flagging this listing.
+              Report a listing that violates community guidelines. Admins will review your report.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">

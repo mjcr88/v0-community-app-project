@@ -8,18 +8,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Combobox } from "@/components/ui/combobox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Loader2, X, Plus, AlertCircle, Search, Check } from "lucide-react"
+import { Textarea } from "@/components/ui/textarea"
+import { Loader2, X, Plus, AlertCircle, Mail, Phone, Languages, Lightbulb, Wrench, MapPin } from "lucide-react"
 import { COUNTRIES, LANGUAGES } from "@/lib/data/countries-languages"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Switch } from "@/components/ui/switch"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { createClient } from "@/lib/supabase/client"
-import { PhotoManager } from "@/components/photo-manager"
 import { useToast } from "@/hooks/use-toast"
+import { EditableProfileBanner } from "@/components/profile/editable-profile-banner"
+import { MapPreviewWidget } from "@/components/map/map-preview-widget"
+import { PhotoManager } from "@/components/photo-manager"
+import { MultiSelect } from "@/components/ui/multi-select"
 
 interface Resident {
   id: string
@@ -34,15 +35,31 @@ interface Resident {
   preferred_language: string | null
   photos: string[] | null
   hero_photo: string | null
+  profile_picture_url: string | null
+  banner_image_url: string | null
+  about: string | null
   journey_stage: string | null
   estimated_move_in_date: string | null
+  estimated_construction_start_date: string | null
+  estimated_construction_end_date: string | null
   user_interests?: { interest_id: string }[]
   user_skills?: { skill_id: string; skills?: { name: string }; open_to_requests: boolean }[]
+  lot_id?: string
+  lots?: {
+    lot_number: string
+    neighborhoods?: {
+      name: string
+    }
+  }
 }
 
 interface Tenant {
   features?: {
     interests?: boolean
+  }
+  map_center_coordinates?: {
+    lat: number
+    lng: number
   }
 }
 
@@ -65,6 +82,7 @@ interface ProfileEditFormProps {
   availableInterests: Interest[]
   availableSkills: Skill[]
   tenantSlug: string
+  locations?: any[]
 }
 
 export function ProfileEditForm({
@@ -73,10 +91,12 @@ export function ProfileEditForm({
   availableInterests,
   availableSkills,
   tenantSlug,
+  locations = [],
 }: ProfileEditFormProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
+
   const [formData, setFormData] = useState({
     firstName: resident.first_name || "",
     lastName: resident.last_name || "",
@@ -87,9 +107,13 @@ export function ProfileEditForm({
     languages: resident.languages || [],
     preferredLanguage: resident.preferred_language || "",
     photos: resident.photos || [],
-    heroPhoto: resident.hero_photo || (resident.photos && resident.photos.length > 0 ? resident.photos[0] : null),
+    heroPhoto: resident.hero_photo || resident.profile_picture_url || null,
+    bannerImageUrl: resident.banner_image_url || null,
+    about: resident.about || "",
     journeyStage: resident.journey_stage || "",
     estimatedMoveInDate: resident.estimated_move_in_date || "",
+    estimatedConstructionStartDate: resident.estimated_construction_start_date || "",
+    estimatedConstructionEndDate: resident.estimated_construction_end_date || "",
     selectedInterests: resident.user_interests?.map((ui) => ui.interest_id) || [],
     skills:
       resident.user_skills?.map((us) => ({
@@ -97,8 +121,6 @@ export function ProfileEditForm({
         skill_name: us.skills?.name || "",
         open_to_requests: us.open_to_requests || false,
       })) || [] as { skill_id?: string; skill_name: string; open_to_requests: boolean }[],
-    interestSearch: "",
-    skillSearch: "",
     newSkill: "",
     languageSearch: "",
   })
@@ -109,8 +131,8 @@ export function ProfileEditForm({
     .join("")
     .toUpperCase()
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
     setIsLoading(true)
 
     try {
@@ -127,88 +149,65 @@ export function ProfileEditForm({
           current_country: formData.currentCountry || null,
           languages: formData.languages,
           preferred_language: formData.preferredLanguage || null,
-          photos: formData.photos,
-          hero_photo: formData.heroPhoto,
-          profile_picture_url: formData.heroPhoto || null,
+          about: formData.about || null,
           journey_stage: formData.journeyStage || null,
           estimated_move_in_date: formData.estimatedMoveInDate || null,
+          estimated_construction_start_date: formData.estimatedConstructionStartDate || null,
+          estimated_construction_end_date: formData.estimatedConstructionEndDate || null,
+          photos: formData.photos,
+          hero_photo: formData.heroPhoto,
+          profile_picture_url: formData.heroPhoto, // Sync profile picture with hero photo
+          banner_image_url: formData.bannerImageUrl,
         })
         .eq("id", resident.id)
 
-      if (userError) {
-        console.error("[v0] Error updating profile:", userError)
-        toast({
-          title: "Update failed",
-          description: "Failed to update profile. Please try again.",
-          variant: "destructive",
-        })
-        return
-      }
+      if (userError) throw userError
 
+      // Handle Interests
       const { error: deleteInterestsError } = await supabase.from("user_interests").delete().eq("user_id", resident.id)
-
-      if (deleteInterestsError) {
-        console.error("[v0] Error deleting interests:", deleteInterestsError)
-      }
+      if (deleteInterestsError) console.error("Error deleting interests:", deleteInterestsError)
 
       if (formData.selectedInterests.length > 0) {
-        const { error: insertInterestsError } = await supabase.from("user_interests").insert(
-          formData.selectedInterests.map((interestId) => ({
-            user_id: resident.id,
-            interest_id: interestId,
-            tenant_id: resident.tenant_id,
-          })),
-        )
-
-        if (insertInterestsError) {
-          console.error("[v0] Error inserting interests:", insertInterestsError)
-        }
+        const interestsToInsert = formData.selectedInterests.map((interestId) => ({
+          user_id: resident.id,
+          interest_id: interestId,
+        }))
+        const { error: insertInterestsError } = await supabase.from("user_interests").insert(interestsToInsert)
+        if (insertInterestsError) throw insertInterestsError
       }
 
+      // Handle Skills
       const { error: deleteSkillsError } = await supabase.from("user_skills").delete().eq("user_id", resident.id)
-
-      if (deleteSkillsError) {
-        console.error("[v0] Error deleting skills:", deleteSkillsError)
-      }
+      if (deleteSkillsError) console.error("Error deleting skills:", deleteSkillsError)
 
       if (formData.skills.length > 0) {
         const skillsToInsert = []
-
         for (const skill of formData.skills) {
           if (skill.skill_id) {
             skillsToInsert.push({
               user_id: resident.id,
               skill_id: skill.skill_id,
               open_to_requests: skill.open_to_requests,
-              tenant_id: resident.tenant_id,
             })
           } else {
-            const { data: newSkillData, error: createSkillError } = await supabase
+            const { data: newSkillData } = await supabase
               .from("skills")
-              .insert({
-                name: skill.skill_name,
-                tenant_id: resident.tenant_id,
-              })
+              .insert({ name: skill.skill_name, tenant_id: resident.tenant_id })
               .select()
               .single()
 
-            if (!createSkillError && newSkillData) {
+            if (newSkillData) {
               skillsToInsert.push({
                 user_id: resident.id,
                 skill_id: newSkillData.id,
                 open_to_requests: skill.open_to_requests,
-                tenant_id: resident.tenant_id,
               })
             }
           }
         }
-
         if (skillsToInsert.length > 0) {
           const { error: insertSkillsError } = await supabase.from("user_skills").insert(skillsToInsert)
-
-          if (insertSkillsError) {
-            console.error("[v0] Error inserting skills:", insertSkillsError)
-          }
+          if (insertSkillsError) throw insertSkillsError
         }
       }
 
@@ -218,10 +217,10 @@ export function ProfileEditForm({
       })
       router.refresh()
     } catch (error) {
-      console.error("[v0] Error updating profile:", error)
+      console.error("Error updating profile:", error)
       toast({
         title: "Error",
-        description: "An error occurred while updating your profile. Please try again.",
+        description: "Failed to update profile. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -229,77 +228,30 @@ export function ProfileEditForm({
     }
   }
 
-  const handlePhotosChange = async (photos: string[]) => {
-    setFormData({ ...formData, photos })
-
+  const handleBannerChange = async (url: string | null) => {
+    setFormData(prev => ({ ...prev, bannerImageUrl: url }))
+    // We don't save immediately here to allow batch saving with the form, 
+    // but EditableProfileBanner might expect immediate feedback. 
+    // The previous implementation saved immediately. Let's keep that for banner/profile photo 
+    // as they are "header" elements, but also update local state.
     const supabase = createClient()
-    try {
-      const updateData: any = {
-        photos: photos,
-      }
-
-      // If hero photo was deleted, set first photo as new hero
-      if (formData.heroPhoto && !photos.includes(formData.heroPhoto)) {
-        const newHero = photos[0] || null
-        updateData.hero_photo = newHero
-        updateData.profile_picture_url = newHero
-        setFormData({ ...formData, photos, heroPhoto: newHero })
-      }
-
-      const { error } = await supabase.from("users").update(updateData).eq("id", resident.id)
-
-      if (error) throw error
-
-      toast({
-        description: "Photos updated successfully",
-      })
-      router.refresh()
-    } catch (error) {
-      console.error("[v0] Error saving photos:", error)
-      toast({
-        title: "Save failed",
-        description: "Failed to save photos. Please try again.",
-        variant: "destructive",
-      })
-      // Revert on error
-      setFormData({ ...formData, photos: resident.photos || [] })
-    }
+    await supabase.from("users").update({ banner_image_url: url }).eq("id", resident.id)
+    router.refresh()
   }
 
-  const handleHeroPhotoChange = async (heroPhoto: string | null) => {
-    setFormData({ ...formData, heroPhoto })
-
+  const handleProfilePhotoChange = async (url: string | null) => {
+    setFormData(prev => ({ ...prev, heroPhoto: url }))
     const supabase = createClient()
-    try {
-      const { error } = await supabase
-        .from("users")
-        .update({
-          hero_photo: heroPhoto,
-          profile_picture_url: heroPhoto,
-        })
-        .eq("id", resident.id)
-
-      if (error) throw error
-
-      toast({
-        description: "Hero photo updated",
-      })
-      router.refresh()
-    } catch (error) {
-      console.error("[v0] Error saving hero photo:", error)
-      toast({
-        title: "Save failed",
-        description: "Failed to save hero photo. Please try again.",
-        variant: "destructive",
-      })
-      // Revert on error
-      setFormData({ ...formData, heroPhoto: resident.hero_photo || null })
-    }
+    await supabase.from("users").update({
+      hero_photo: url,
+      profile_picture_url: url
+    }).eq("id", resident.id)
+    router.refresh()
   }
 
   const addLanguage = (language: string) => {
     if (language && !formData.languages.includes(language)) {
-      setFormData({ ...formData, languages: [...formData.languages, language] })
+      setFormData({ ...formData, languages: [...formData.languages, language], languageSearch: "" })
     }
   }
 
@@ -310,11 +262,14 @@ export function ProfileEditForm({
   const addSkill = () => {
     const newSkillTrimmed = formData.newSkill.trim()
     if (newSkillTrimmed) {
-      setFormData({
-        ...formData,
-        skills: [...formData.skills, { skill_name: newSkillTrimmed, open_to_requests: false }],
-        newSkill: "",
-      })
+      // Check if skill already exists in selected skills
+      if (!formData.skills.some(s => s.skill_name.toLowerCase() === newSkillTrimmed.toLowerCase())) {
+        setFormData({
+          ...formData,
+          skills: [...formData.skills, { skill_name: newSkillTrimmed, open_to_requests: false }],
+          newSkill: "",
+        })
+      }
     }
   }
 
@@ -331,15 +286,11 @@ export function ProfileEditForm({
     setFormData({ ...formData, skills: updatedSkills })
   }
 
-  const toggleInterest = (interestId: string) => {
-    const isSelected = formData.selectedInterests.includes(interestId)
-    setFormData({
-      ...formData,
-      selectedInterests: isSelected
-        ? formData.selectedInterests.filter((id) => id !== interestId)
-        : [...formData.selectedInterests, interestId],
-    })
-  }
+  // Find the location for this resident's lot
+  const lotLocation = locations?.find((loc) => loc.lot_id === resident.lot_id && loc.type === "lot")
+  const mapCenter = tenant?.map_center_coordinates
+    ? { lat: tenant.map_center_coordinates.lat, lng: tenant.map_center_coordinates.lng }
+    : null
 
   const hasEmptyFields =
     !formData.firstName ||
@@ -352,26 +303,16 @@ export function ProfileEditForm({
     !formData.preferredLanguage ||
     !formData.journeyStage
 
-  const filteredInterests = availableInterests.filter((interest) =>
-    interest.name.toLowerCase().includes(formData.interestSearch.toLowerCase()),
-  )
-
-  const unselectedInterests = filteredInterests.filter((interest) => !formData.selectedInterests.includes(interest.id))
-
-  const selectedInterestObjects = availableInterests.filter((interest) =>
-    formData.selectedInterests.includes(interest.id),
-  )
-
-  const filteredSkills = availableSkills.filter((skill) =>
-    skill.name.toLowerCase().includes(formData.skillSearch.toLowerCase()),
-  )
-
-  const unselectedSkills = filteredSkills.filter(
-    (skill) => !formData.skills.some((s) => s.skill_name === skill.name),
-  )
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="space-y-6">
+      <EditableProfileBanner
+        bannerUrl={formData.bannerImageUrl}
+        profileUrl={formData.heroPhoto}
+        initials={initials}
+        onBannerChange={handleBannerChange}
+        onProfilePhotoChange={handleProfilePhotoChange}
+      />
+
       {hasEmptyFields && (
         <Alert>
           <AlertCircle className="h-4 w-4" />
@@ -381,365 +322,390 @@ export function ProfileEditForm({
         </Alert>
       )}
 
-      {/* Basic Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Basic Information</CardTitle>
-          <CardDescription>Your name and contact details</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex flex-col items-center gap-4">
-            <Avatar className="h-24 w-24">
-              <AvatarImage src={formData.heroPhoto || "/placeholder.svg"} alt={initials} />
-              <AvatarFallback className="text-2xl">{initials || "?"}</AvatarFallback>
-            </Avatar>
-          </div>
-
-          <PhotoManager
-            photos={formData.photos}
-            heroPhoto={formData.heroPhoto}
-            onPhotosChange={handlePhotosChange}
-            onHeroPhotoChange={handleHeroPhotoChange}
-            maxPhotos={10}
-            entityType="user"
-          />
-
+      <form onSubmit={handleSubmit} className="grid gap-6 lg:grid-cols-2">
+        {/* LEFT COLUMN */}
+        <div className="space-y-6">
+          {/* Identity & Contact */}
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="firstName">First Name *</Label>
-              <Input
-                id="firstName"
-                value={formData.firstName}
-                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="lastName">Last Name *</Label>
-              <Input
-                id="lastName"
-                value={formData.lastName}
-                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                required
-              />
-            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Identity</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">First Name</Label>
+                  <Input
+                    id="firstName"
+                    value={formData.firstName}
+                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last Name</Label>
+                  <Input
+                    id="lastName"
+                    value={formData.lastName}
+                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Contact</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground p-2 bg-muted rounded-md overflow-hidden">
+                    <Mail className="h-4 w-4 shrink-0" />
+                    <span className="truncate">Contact Admin to change</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone Number</Label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="phone"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      className="pl-9"
+                      placeholder="+1 (555) 000-0000"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number *</Label>
-              <Input
-                id="phone"
-                type="tel"
-                placeholder="+1 (555) 123-4567"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                required
+          {/* About */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">About</CardTitle>
+              <CardDescription>Tell your neighbors a bit about yourself</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                value={formData.about}
+                onChange={(e) => setFormData({ ...formData, about: e.target.value })}
+                placeholder="I love gardening and community dinners..."
+                rows={4}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="birthday">Birthday *</Label>
-              <Input
-                id="birthday"
-                type="date"
-                value={formData.birthday}
-                onChange={(e) => setFormData({ ...formData, birthday: e.target.value })}
-                required
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
 
-      {/* Location & Languages */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Location & Languages</CardTitle>
-          <CardDescription>Where you're from and languages you speak</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="birthCountry">Country of Origin *</Label>
-              <Combobox
-                options={COUNTRIES.map((c) => ({ value: c, label: c }))}
-                value={formData.birthCountry}
-                onValueChange={(value) => setFormData({ ...formData, birthCountry: value })}
-                placeholder="Select country"
-                searchPlaceholder="Search countries..."
-                emptyText="No country found."
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="currentCountry">Current Country *</Label>
-              <Combobox
-                options={COUNTRIES.map((c) => ({ value: c, label: c }))}
-                value={formData.currentCountry}
-                onValueChange={(value) => setFormData({ ...formData, currentCountry: value })}
-                placeholder="Select country"
-                searchPlaceholder="Search countries..."
-                emptyText="No country found."
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Languages You Speak *</Label>
-            <Combobox
-              options={LANGUAGES.map((l) => ({ value: l, label: l }))}
-              value={formData.languageSearch}
-              onValueChange={(value) => {
-                addLanguage(value)
-                setFormData({ ...formData, languageSearch: value })
-              }}
-              placeholder="Select languages"
-              searchPlaceholder="Search languages..."
-              emptyText="No language found."
-            />
-            {formData.languages.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {formData.languages.map((language) => (
-                  <Badge key={language} variant="secondary" className="gap-1">
-                    {language}
-                    <button
-                      type="button"
-                      onClick={() => removeLanguage(language)}
-                      className="ml-1 hover:text-destructive"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                ))}
+          {/* Personal Details */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Personal Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="birthday">Birthday</Label>
+                  <Input
+                    id="birthday"
+                    type="date"
+                    value={formData.birthday}
+                    onChange={(e) => setFormData({ ...formData, birthday: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="birthCountry">Country of Origin</Label>
+                  <Combobox
+                    options={COUNTRIES.map((c) => ({ value: c, label: c }))}
+                    value={formData.birthCountry}
+                    onValueChange={(value) => setFormData({ ...formData, birthCountry: value })}
+                    placeholder="Select country"
+                    searchPlaceholder="Search countries..."
+                  />
+                </div>
               </div>
-            )}
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="currentCountry">Current Country</Label>
+                <Combobox
+                  options={COUNTRIES.map((c) => ({ value: c, label: c }))}
+                  value={formData.currentCountry}
+                  onValueChange={(value) => setFormData({ ...formData, currentCountry: value })}
+                  placeholder="Select country"
+                  searchPlaceholder="Search countries..."
+                />
+              </div>
+            </CardContent>
+          </Card>
 
-          <div className="space-y-2">
-            <Label htmlFor="preferredLanguage">Preferred Language *</Label>
-            <Combobox
-              options={LANGUAGES.map((l) => ({ value: l, label: l }))}
-              value={formData.preferredLanguage}
-              onValueChange={(value) => setFormData({ ...formData, preferredLanguage: value })}
-              placeholder="Select preferred language"
-              searchPlaceholder="Search languages..."
-              emptyText="No language found."
-            />
-          </div>
-        </CardContent>
-      </Card>
+          {/* Languages */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Languages className="h-5 w-5" />
+                Languages
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Languages You Speak</Label>
+                <Combobox
+                  options={LANGUAGES.map((l) => ({ value: l, label: l }))}
+                  value={formData.languageSearch}
+                  onValueChange={(value) => {
+                    addLanguage(value)
+                  }}
+                  placeholder="Add a language"
+                  searchPlaceholder="Search languages..."
+                />
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {formData.languages.map((language) => (
+                    <Badge key={language} variant="secondary" className="gap-1 pl-2 pr-1 py-1">
+                      {language}
+                      <button
+                        type="button"
+                        onClick={() => removeLanguage(language)}
+                        className="ml-1 hover:text-destructive rounded-full p-0.5"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Preferred Language</Label>
+                <Combobox
+                  options={LANGUAGES.map((l) => ({ value: l, label: l }))}
+                  value={formData.preferredLanguage}
+                  onValueChange={(value) => setFormData({ ...formData, preferredLanguage: value })}
+                  placeholder="Select preferred language"
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-      {/* Journey Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Your Journey</CardTitle>
-          <CardDescription>Your timeline and stage in the community</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="journeyStage">Journey Stage *</Label>
-            <Select
-              value={formData.journeyStage}
-              onValueChange={(value) => setFormData({ ...formData, journeyStage: value })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select your stage" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="planning">Planning - Researching and deciding</SelectItem>
-                <SelectItem value="building">Building - Construction in progress</SelectItem>
-                <SelectItem value="arriving">Arriving - Moving in soon</SelectItem>
-                <SelectItem value="integrating">Integrating - Settling into the community</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        {/* RIGHT COLUMN */}
+        <div className="space-y-6">
+          {/* Journey Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">My Journey</CardTitle>
+              <CardDescription>Track your progress in the community</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="journeyStage">Journey Stage *</Label>
+                <Select
+                  value={formData.journeyStage}
+                  onValueChange={(value) => setFormData({ ...formData, journeyStage: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select stage" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="planning">Planning</SelectItem>
+                    <SelectItem value="building">Building</SelectItem>
+                    <SelectItem value="arriving">Arriving</SelectItem>
+                    <SelectItem value="integrating">Integrating</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="estimatedMoveInDate">Estimated Move-in Date</Label>
-            <Input
-              id="estimatedMoveInDate"
-              type="date"
-              value={formData.estimatedMoveInDate}
-              onChange={(e) => setFormData({ ...formData, estimatedMoveInDate: e.target.value })}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Interests */}
-      {tenant?.features?.interests && availableInterests.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Your Interests</CardTitle>
-            <CardDescription>Select interests to connect with like-minded neighbours</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label className="text-sm">Search Interests</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <div className="space-y-2">
+                <Label>Estimated Move-in Date</Label>
                 <Input
-                  placeholder="Search interests..."
-                  value={formData.interestSearch}
-                  onChange={(e) => setFormData({ ...formData, interestSearch: e.target.value })}
-                  className="pl-9"
+                  type="date"
+                  value={formData.estimatedMoveInDate}
+                  onChange={(e) => setFormData({ ...formData, estimatedMoveInDate: e.target.value })}
                 />
               </div>
 
-              {unselectedInterests.length > 0 && (
-                <ScrollArea className="h-[200px] border rounded-lg">
-                  <div className="p-2 space-y-1">
-                    {unselectedInterests.map((interest) => (
-                      <button
-                        key={interest.id}
-                        type="button"
-                        onClick={() => toggleInterest(interest.id)}
-                        className="w-full text-left px-3 py-2 rounded-md hover:bg-accent transition-colors"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="font-medium text-sm">{interest.name}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {interest.user_interests?.[0]?.count || 0}{" "}
-                            {interest.user_interests?.[0]?.count === 1 ? "person" : "people"}
-                          </div>
-                        </div>
-                        {interest.description && (
-                          <div className="text-xs text-muted-foreground mt-0.5">{interest.description}</div>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                </ScrollArea>
-              )}
-            </div>
-
-            {selectedInterestObjects.length > 0 && (
-              <div className="space-y-2">
-                <Label className="text-sm">Selected Interests</Label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {selectedInterestObjects.map((interest) => (
-                    <Card key={interest.id} className="border-primary bg-primary/5">
-                      <CardContent className="p-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-sm font-medium">{interest.name}</span>
-                          <button type="button" onClick={() => toggleInterest(interest.id)} className="flex-shrink-0">
-                            <div className="h-4 w-4 rounded-full bg-primary flex items-center justify-center hover:bg-primary/80 transition-colors">
-                              <Check className="h-2.5 w-2.5 text-primary-foreground" />
-                            </div>
-                          </button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Construction Start</Label>
+                  <Input
+                    type="date"
+                    value={formData.estimatedConstructionStartDate}
+                    onChange={(e) => setFormData({ ...formData, estimatedConstructionStartDate: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Construction End</Label>
+                  <Input
+                    type="date"
+                    value={formData.estimatedConstructionEndDate}
+                    onChange={(e) => setFormData({ ...formData, estimatedConstructionEndDate: e.target.value })}
+                  />
                 </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+            </CardContent>
+          </Card>
 
-      {/* Skills */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Your Skills</CardTitle>
-          <CardDescription>Share skills you'd like to offer to the community</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label className="text-sm">Add Skills</Label>
-            <div className="flex gap-2">
-              <Input
-                placeholder="Search or add a skill (e.g., Plumbing, Gardening)"
-                value={formData.newSkill}
-                onChange={(e) => setFormData({ ...formData, newSkill: e.target.value })}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault()
-                    addSkill()
-                  }
-                }}
-              />
-              <Button type="button" onClick={addSkill} size="icon">
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-
-            {formData.newSkill && availableSkills.length > 0 && (
-              <ScrollArea className="h-[150px] border rounded-lg">
-                <div className="p-2 space-y-1">
-                  {unselectedSkills.map((skill) => (
-                    <button
-                      key={skill.id}
-                      type="button"
-                      onClick={() => {
-                        setFormData({
-                          ...formData,
-                          skills: [
-                            ...formData.skills,
-                            { skill_id: skill.id, skill_name: skill.name, open_to_requests: false },
-                          ],
-                          newSkill: "",
-                        })
-                      }}
-                      className="w-full text-left px-3 py-2 rounded-md hover:bg-accent transition-colors"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="font-medium text-sm">{skill.name}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {skill.user_skills?.[0]?.count || 0}{" "}
-                          {skill.user_skills?.[0]?.count === 1 ? "person" : "people"}
-                        </div>
-                      </div>
-                    </button>
-                  ))}
+          {/* Interests */}
+          {tenant?.features?.interests && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Lightbulb className="h-5 w-5" />
+                  Interests
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Interests</Label>
+                  <MultiSelect
+                    options={availableInterests.map(i => ({ value: i.id, label: i.name }))}
+                    selected={formData.selectedInterests}
+                    onChange={(selected) => setFormData({ ...formData, selectedInterests: selected })}
+                    placeholder="Select interests..."
+                    searchPlaceholder="Search interests..."
+                    emptyMessage="No interests found."
+                  />
                 </div>
-              </ScrollArea>
-            )}
-          </div>
+              </CardContent>
+            </Card>
+          )}
 
-          {formData.skills.length > 0 && (
-            <div className="space-y-2">
-              <Label className="text-sm">Your Skills</Label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {formData.skills.map((skill: any, index: number) => (
-                  <Card key={index} className="border-primary bg-primary/5">
-                    <CardContent className="p-4 space-y-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <span className="font-medium text-sm">{skill.skill_name}</span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-5 w-5 -mt-1 -mr-1"
-                          onClick={() => removeSkill(index)}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                      <div className="flex items-center justify-between gap-2 pt-2 border-t">
-                        <Label htmlFor={`skill-${index}`} className="text-xs font-normal cursor-pointer">
-                          Open to help requests
-                        </Label>
-                        <Switch
-                          id={`skill-${index}`}
-                          checked={skill.open_to_requests}
-                          onCheckedChange={() => toggleSkillOpenToRequests(index)}
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
+          {/* Skills */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Wrench className="h-5 w-5" />
+                Skills
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Skills</Label>
+                <MultiSelect
+                  options={availableSkills.map(s => ({ value: s.id, label: s.name }))}
+                  selected={formData.skills.filter(s => s.skill_id).map(s => s.skill_id!)}
+                  onChange={(selectedIds) => {
+                    // Handle selection changes
+                    // Keep existing skills that are still selected
+                    const existingSkills = formData.skills.filter(s => s.skill_id && selectedIds.includes(s.skill_id))
+
+                    // Find newly selected skills
+                    const newIds = selectedIds.filter(id => !formData.skills.some(s => s.skill_id === id))
+                    const newSkills = newIds.map(id => {
+                      const skill = availableSkills.find(s => s.id === id)
+                      return {
+                        skill_id: id,
+                        skill_name: skill?.name || "",
+                        open_to_requests: false
+                      }
+                    })
+
+                    // Keep custom skills (no skill_id)
+                    const customSkills = formData.skills.filter(s => !s.skill_id)
+
+                    setFormData({
+                      ...formData,
+                      skills: [...existingSkills, ...newSkills, ...customSkills]
+                    })
+                  }}
+                  placeholder="Select skills..."
+                  searchPlaceholder="Search skills..."
+                  emptyMessage="No skills found."
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Add a custom skill..."
+                  value={formData.newSkill}
+                  onChange={(e) => setFormData({ ...formData, newSkill: e.target.value })}
+                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addSkill())}
+                />
+                <Button type="button" onClick={addSkill} size="icon">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <div className="space-y-3">
+                {formData.skills.map((skill, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 border rounded-lg bg-card">
+                    <span className="font-medium">{skill.skill_name}</span>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant={skill.open_to_requests ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => toggleSkillOpenToRequests(index)}
+                        className="text-xs h-7"
+                      >
+                        {skill.open_to_requests ? "Open to Help" : "Not Open"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeSkill(index)}
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
                 ))}
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Photo Gallery */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Photo Gallery</CardTitle>
+              <CardDescription>Share photos of yourself and your life</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PhotoManager
+                photos={formData.photos}
+                heroPhoto={formData.heroPhoto}
+                onPhotosChange={(photos) => setFormData({ ...formData, photos })}
+                onHeroPhotoChange={(heroPhoto) => setFormData({ ...formData, heroPhoto })}
+                entityType="user"
+                maxPhotos={10}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Location Map */}
+          {lotLocation && locations && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-lg font-semibold">My Location</Label>
+                {resident.lots && (
+                  <Badge variant="outline" className="gap-1">
+                    <MapPin className="h-3 w-3" />
+                    Lot {resident.lots.lot_number}
+                  </Badge>
+                )}
+              </div>
+              <div className="rounded-xl overflow-hidden border shadow-sm">
+                <MapPreviewWidget
+                  tenantSlug={tenantSlug}
+                  tenantId={resident.tenant_id}
+                  locations={locations}
+                  mapCenter={mapCenter}
+                  highlightLocationId={lotLocation.id}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground text-center">
+                Location is managed by administrators
+              </p>
             </div>
           )}
-        </CardContent>
-      </Card>
 
-      <div className="flex justify-end">
-        <Button type="submit" disabled={isLoading}>
-          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Save Changes
-        </Button>
-      </div>
-    </form>
+          {/* Save Button (Sticky on mobile or bottom of column) */}
+          <div className="sticky bottom-6 pt-4">
+            <Button type="submit" size="lg" className="w-full shadow-lg" disabled={isLoading}>
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Changes
+            </Button>
+          </div>
+        </div>
+      </form>
+    </div>
   )
 }

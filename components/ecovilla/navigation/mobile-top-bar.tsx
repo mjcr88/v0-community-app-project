@@ -2,7 +2,7 @@
 
 import React from "react"
 import Link from "next/link"
-import { LogOut, User } from "lucide-react"
+import { LogOut, User, Bell } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/library/avatar"
 import { HamburgerMenu } from "./hamburger-menu"
 import { AnimatedThemeToggler } from "@/components/library/animated-theme-toggler"
@@ -58,7 +58,7 @@ export function MobileTopBar({ tenantSlug, user, className }: MobileTopBarProps)
     return (
         <header
             className={cn(
-                "fixed top-0 left-0 right-0 z-40 h-16 px-4 flex items-center justify-between bg-earth-snow/90 backdrop-blur-md border-b border-earth-pebble/50 transition-transform duration-300",
+                "fixed top-0 left-0 right-0 z-40 h-16 px-4 flex items-center justify-between bg-earth-snow/90 backdrop-blur-md border-b border-earth-pebble/50 transition-transform duration-300 rounded-b-[20px]",
                 !isVisible && "-translate-y-full",
                 className
             )}
@@ -70,6 +70,12 @@ export function MobileTopBar({ tenantSlug, user, className }: MobileTopBarProps)
             />
 
             <div className="flex items-center gap-3">
+                <Link href={`/t/${tenantSlug}/dashboard/notifications`}>
+                    <button className="p-2 rounded-full text-earth-soil hover:bg-earth-cloud transition-colors relative">
+                        <Bell className="w-5 h-5" />
+                    </button>
+                </Link>
+
                 <Popover>
                     <PopoverTrigger asChild>
                         <button className="rounded-full focus:outline-none focus:ring-2 focus:ring-forest-canopy focus:ring-offset-2">

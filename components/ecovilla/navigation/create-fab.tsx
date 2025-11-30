@@ -6,17 +6,23 @@ import { CreatePopover } from "./create-popover"
 
 interface CreateFabProps {
     tenantSlug: string
+    tenantId: string
+    categories: Array<{ id: string; name: string }>
+    neighborhoods: Array<{ id: string; name: string }>
 }
 
-export function CreateFab({ tenantSlug }: CreateFabProps) {
+export function CreateFab({ tenantSlug, tenantId, categories, neighborhoods }: CreateFabProps) {
     const [open, setOpen] = useState(false)
 
     return (
-        <div className="hidden md:block fixed bottom-8 right-8 z-40">
+        <div className="hidden md:block fixed top-[88px] right-8 z-40">
             <CreatePopover
                 open={open}
                 onOpenChange={setOpen}
                 tenantSlug={tenantSlug}
+                tenantId={tenantId}
+                categories={categories}
+                neighborhoods={neighborhoods}
                 side="left"
                 align="end"
             >

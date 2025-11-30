@@ -11,10 +11,17 @@ import {
 import { Button } from "@/components/library/button"
 import { cn } from "@/lib/utils"
 
+import { useState } from "react"
+import { CreateCheckInModal } from "@/components/check-ins/create-check-in-modal"
+import { CreateExchangeListingModal } from "@/components/exchange/create-exchange-listing-modal"
+
 interface CreatePopoverProps {
     open: boolean
     onOpenChange: (open: boolean) => void
     tenantSlug: string
+    tenantId: string
+    categories: Array<{ id: string; name: string }>
+    neighborhoods: Array<{ id: string; name: string }>
     children: React.ReactNode
     align?: "center" | "end" | "start"
     side?: "top" | "bottom" | "left" | "right"
@@ -24,16 +31,25 @@ export function CreatePopover({
     open,
     onOpenChange,
     tenantSlug,
+    tenantId,
+    categories,
+    neighborhoods,
     children,
     align = "center",
     side = "top"
 }: CreatePopoverProps) {
+    const [showCheckIn, setShowCheckIn] = useState(false)
+    const [showListing, setShowListing] = useState(false)
+
     const actions = [
         {
             icon: MapPin,
             title: "Check-in",
             description: "Share location",
-            href: `/t/${tenantSlug}/dashboard/locations`,
+            onClick: () => {
+                onOpenChange(false)
+                setShowCheckIn(true)
+            },
             color: "text-sky-600",
             bgColor: "bg-sky-50",
             borderColor: "border-sky-100",
@@ -51,7 +67,10 @@ export function CreatePopover({
             icon: ShoppingBag,
             title: "Listing",
             description: "Share/Borrow",
-            href: `/t/${tenantSlug}/dashboard/exchange`,
+            onClick: () => {
+                onOpenChange(false)
+                setShowListing(true)
+            },
             color: "text-green-600",
             bgColor: "bg-green-50",
             borderColor: "border-green-100",
@@ -68,44 +87,84 @@ export function CreatePopover({
     ]
 
     return (
-        <Popover open={open} onOpenChange={onOpenChange}>
-            <PopoverTrigger asChild>
-                {children}
-            </PopoverTrigger>
-            <PopoverContent
-                side={side}
-                align={align}
-                className="w-72 p-4 rounded-2xl bg-white/95 backdrop-blur-xl border border-earth-pebble shadow-xl"
-                sideOffset={16}
-            >
-                <div className="mb-3 px-1">
-                    <h3 className="font-bold text-forest-canopy text-lg">Create</h3>
-                    <p className="text-xs text-mist-gray">Contribute to your community</p>
-                </div>
+        <>
+            <Popover open={open} onOpenChange={onOpenChange}>
+                <PopoverTrigger asChild>
+                    {children}
+                </PopoverTrigger>
+                <PopoverContent
+                    side={side}
+                    align={align}
+                    className="w-72 p-4 rounded-2xl bg-white/95 backdrop-blur-xl border border-earth-pebble shadow-xl"
+                    sideOffset={16}
+                >
+                    <div className="mb-3 px-1">
+                        <h3 className="font-bold text-forest-canopy text-lg">Create</h3>
+                        <p className="text-xs text-mist-gray">Contribute to your community</p>
+                    </div>
 
-                <div className="grid grid-cols-1 gap-2">
-                    {actions.map((action) => (
-                        <Link
-                            key={action.title}
-                            href={action.href}
-                            onClick={() => onOpenChange(false)}
-                            className={cn(
-                                "flex items-center gap-3 p-2.5 rounded-xl border transition-all hover:shadow-md active:scale-[0.98]",
+                    <div className="grid grid-cols-1 gap-2">
+                        {actions.map((action) => {
+                            const content = (
+                                <>
+                                    <div className={cn("p-2 rounded-full bg-white shadow-sm", action.color)}>
+                                        <action.icon className="w-4 h-4" />
+                                    </div>
+                                    <div className="text-left">
+                                        <h4 className={cn("font-semibold text-sm", action.color)}>{action.title}</h4>
+                                        <p className="text-[10px] text-earth-soil/70">{action.description}</p>
+                                    </div>
+                                </>
+                            )
+
+                            const className = cn(
+                                "flex items-center gap-3 p-2.5 rounded-xl border transition-all hover:shadow-md active:scale-[0.98] w-full",
                                 action.bgColor,
                                 action.borderColor
-                            )}
-                        >
-                            <div className={cn("p-2 rounded-full bg-white shadow-sm", action.color)}>
-                                <action.icon className="w-4 h-4" />
-                            </div>
-                            <div>
-                                <h4 className={cn("font-semibold text-sm", action.color)}>{action.title}</h4>
-                                <p className="text-[10px] text-earth-soil/70">{action.description}</p>
-                            </div>
-                        </Link>
-                    ))}
-                </div>
-            </PopoverContent>
-        </Popover>
+                            )
+
+                            if (action.href) {
+                                return (
+                                    <Link
+                                        key={action.title}
+                                        href={action.href}
+                                        onClick={() => onOpenChange(false)}
+                                        className={className}
+                                    >
+                                        {content}
+                                    </Link>
+                                )
+                            }
+
+                            return (
+                                <button
+                                    key={action.title}
+                                    onClick={action.onClick}
+                                    className={className}
+                                >
+                                    {content}
+                                </button>
+                            )
+                        })}
+                    </div>
+                </PopoverContent>
+            </Popover>
+
+            <CreateCheckInModal
+                open={showCheckIn}
+                onOpenChange={setShowCheckIn}
+                tenantSlug={tenantSlug}
+                tenantId={tenantId}
+            />
+
+            <CreateExchangeListingModal
+                open={showListing}
+                onOpenChange={setShowListing}
+                tenantSlug={tenantSlug}
+                tenantId={tenantId}
+                categories={categories}
+                neighborhoods={neighborhoods}
+            />
+        </>
     )
 }

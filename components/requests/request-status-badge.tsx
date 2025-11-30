@@ -11,22 +11,26 @@ export function RequestStatusBadge({ status, compact = false }: RequestStatusBad
   const statusConfig = {
     pending: {
       label: "Pending",
-      variant: "outline" as const,
+      variant: "secondary" as const,
+      className: "bg-honey/10 text-honey-dark hover:bg-honey/20 border-honey/20",
       icon: <Clock className="h-3 w-3" />,
     },
     in_progress: {
       label: "In Progress",
-      variant: "default" as const,
+      variant: "secondary" as const,
+      className: "bg-blue-100 text-blue-700 hover:bg-blue-200 border-blue-200",
       icon: <Play className="h-3 w-3" />,
     },
     resolved: {
       label: "Resolved",
-      variant: "secondary" as const,
+      variant: "default" as const,
+      className: "bg-fresh-growth text-white hover:bg-fresh-growth/90 border-transparent",
       icon: <CheckCircle className="h-3 w-3" />,
     },
     rejected: {
       label: "Rejected",
       variant: "destructive" as const,
+      className: "bg-clay text-white hover:bg-clay/90 border-transparent",
       icon: <XCircle className="h-3 w-3" />,
     },
   }

@@ -166,39 +166,18 @@ export function PhotoManager({
         </div>
       </div>
 
-      {/* Upload Button */}
-      <div>
-        <Input
-          id={`photo-upload-${entityType}`}
-          type="file"
-          accept="image/jpeg,image/jpg,image/png,image/webp"
-          multiple
-          onChange={handlePhotoUpload}
-          disabled={uploading || photos.length >= maxPhotos}
-          className="hidden"
-        />
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => document.getElementById(`photo-upload-${entityType}`)?.click()}
-          disabled={uploading || photos.length >= maxPhotos}
-          className="w-full"
-        >
-          {uploading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Uploading...
-            </>
-          ) : (
-            <>
-              <Upload className="mr-2 h-4 w-4" />
-              Upload Photos {photos.length >= maxPhotos && "(Limit reached)"}
-            </>
-          )}
-        </Button>
-      </div>
+      {/* Hidden file input */}
+      <Input
+        id={`photo-upload-${entityType}`}
+        type="file"
+        accept="image/jpeg,image/jpg,image/png,image/webp"
+        multiple
+        onChange={handlePhotoUpload}
+        disabled={uploading || photos.length >= maxPhotos}
+        className="hidden"
+      />
 
-      {/* Photo Grid */}
+      {/* Photo Grid or Clickable Empty State */}
       {photos.length > 0 ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {photos.map((url) => {
@@ -254,13 +233,40 @@ export function PhotoManager({
               </Card>
             )
           })}
+
+          {/* Add More Button */}
+          {photos.length < maxPhotos && (
+            <Card
+              className="aspect-square border-2 border-dashed cursor-pointer hover:border-primary hover:bg-accent/50 transition-colors flex flex-col items-center justify-center text-muted-foreground"
+              onClick={() => document.getElementById(`photo-upload-${entityType}`)?.click()}
+            >
+              {uploading ? (
+                <Loader2 className="h-8 w-8 mb-2 opacity-50 animate-spin" />
+              ) : (
+                <Upload className="h-8 w-8 mb-2 opacity-50" />
+              )}
+              <span className="text-xs font-medium">Add Photo</span>
+            </Card>
+          )}
         </div>
       ) : (
-        <Card className="border-2 border-dashed">
-          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-            <Upload className="h-12 w-12 mb-3 opacity-50" />
-            <p className="text-sm font-medium">No photos uploaded</p>
-            <p className="text-xs mt-1">Click Upload Photos to get started</p>
+        <Card
+          className="border-2 border-dashed cursor-pointer hover:border-primary hover:bg-accent/50 transition-colors"
+          onClick={() => document.getElementById(`photo-upload-${entityType}`)?.click()}
+        >
+          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+            {uploading ? (
+              <>
+                <Loader2 className="h-10 w-10 mb-3 opacity-50 animate-spin" />
+                <p className="text-sm font-medium">Uploading...</p>
+              </>
+            ) : (
+              <>
+                <Upload className="h-10 w-10 mb-3 opacity-50" />
+                <p className="text-sm font-medium">No photos uploaded</p>
+                <p className="text-xs mt-1">Click to upload photos</p>
+              </>
+            )}
           </div>
         </Card>
       )}

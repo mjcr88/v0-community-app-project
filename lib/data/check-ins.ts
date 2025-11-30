@@ -39,6 +39,10 @@ export interface CheckInWithRelations extends CheckIn {
     } | null
     user_rsvp_status?: "yes" | "maybe" | "no" | null
     attending_count?: number
+    invites?: {
+        invitee_id: string | null
+        family_unit_id: string | null
+    }[]
 }
 
 export interface GetCheckInsOptions {
@@ -53,6 +57,7 @@ export interface GetCheckInsOptions {
     enrichWithCreator?: boolean
     enrichWithLocation?: boolean
     enrichWithRsvp?: boolean // Requires current user context if we want user_rsvp_status
+    enrichWithInvites?: boolean
 }
 
 export const getCheckIns = cache(async (
@@ -68,6 +73,7 @@ export const getCheckIns = cache(async (
         enrichWithCreator = false,
         enrichWithLocation = false,
         enrichWithRsvp = false,
+        enrichWithInvites = false,
     } = options
 
     const supabase = await createServerClient()
@@ -102,6 +108,12 @@ export const getCheckIns = cache(async (
     if (enrichWithLocation) {
         selectQuery += `,
       location:locations!location_id(id, name, coordinates, boundary_coordinates, path_coordinates, photos)
+    `
+    }
+
+    if (enrichWithInvites) {
+        selectQuery += `,
+      invites:check_in_invites(invitee_id, family_unit_id)
     `
     }
 
@@ -210,6 +222,10 @@ export const getCheckIns = cache(async (
 
         if (enrichWithLocation && checkIn.location) {
             base.location = checkIn.location
+        }
+
+        if (enrichWithInvites && checkIn.invites) {
+            base.invites = checkIn.invites
         }
 
         if (enrichWithRsvp) {

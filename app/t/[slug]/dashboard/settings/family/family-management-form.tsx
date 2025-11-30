@@ -9,10 +9,12 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Loader2, Plus, Trash2, Users, PawPrint, Home } from "lucide-react"
+import { Loader2, Plus, Trash2, Users, PawPrint, Home, Upload, AlertCircle } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import { PhotoManager } from "@/components/photo-manager"
+import { EditableProfileBanner } from "@/components/profile/editable-profile-banner"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface FamilyManagementFormProps {
   resident: any
@@ -64,6 +66,7 @@ export function FamilyManagementForm({
     description: familyUnit?.description || "",
     photos: familyUnit?.photos || [],
     heroPhoto: familyUnit?.hero_photo || familyUnit?.profile_picture_url || null,
+    bannerImage: familyUnit?.banner_image_url || null,
   })
 
   useEffect(() => {
@@ -77,8 +80,52 @@ export function FamilyManagementForm({
       description: familyUnit?.description || "",
       photos: familyUnit?.photos || [],
       heroPhoto: familyUnit?.hero_photo || familyUnit?.profile_picture_url || null,
+      bannerImage: familyUnit?.banner_image_url || null,
     })
   }, [initialFamilyMembers, initialRelationships, initialPets, familyUnit])
+
+  const handleBannerChange = async (url: string | null) => {
+    setFamilyProfile(prev => ({ ...prev, bannerImage: url }))
+    const supabase = createClient()
+    const { error } = await supabase
+      .from("family_units")
+      .update({ banner_image_url: url })
+      .eq("id", familyUnit.id)
+
+    if (error) {
+      console.error("Error updating banner:", error)
+      toast({
+        title: "Error",
+        description: "Failed to update banner image",
+        variant: "destructive",
+      })
+    } else {
+      router.refresh()
+    }
+  }
+
+  const handleProfilePhotoChange = async (url: string | null) => {
+    setFamilyProfile(prev => ({ ...prev, heroPhoto: url }))
+    const supabase = createClient()
+    const { error } = await supabase
+      .from("family_units")
+      .update({
+        hero_photo: url,
+        profile_picture_url: url
+      })
+      .eq("id", familyUnit.id)
+
+    if (error) {
+      console.error("Error updating profile photo:", error)
+      toast({
+        title: "Error",
+        description: "Failed to update profile photo",
+        variant: "destructive",
+      })
+    } else {
+      router.refresh()
+    }
+  }
 
   const handleRelationshipChange = async (relatedUserId: string, relationshipType: string) => {
     setRelationships({ ...relationships, [relatedUserId]: relationshipType })
@@ -255,9 +302,9 @@ export function FamilyManagementForm({
       pets.map((p) =>
         p.id === petId
           ? {
-              ...p,
-              photos,
-            }
+            ...p,
+            photos,
+          }
           : p,
       ),
     )
@@ -278,11 +325,11 @@ export function FamilyManagementForm({
           pets.map((p) =>
             p.id === petId
               ? {
-                  ...p,
-                  photos,
-                  hero_photo: photos[0] || null,
-                  profile_picture_url: photos[0] || null,
-                }
+                ...p,
+                photos,
+                hero_photo: photos[0] || null,
+                profile_picture_url: photos[0] || null,
+              }
               : p,
           ),
         )
@@ -310,9 +357,9 @@ export function FamilyManagementForm({
         pets.map((p) =>
           p.id === petId
             ? {
-                ...p,
-                photos: pet?.photos || [],
-              }
+              ...p,
+              photos: pet?.photos || [],
+            }
             : p,
         ),
       )
@@ -327,10 +374,10 @@ export function FamilyManagementForm({
       pets.map((p) =>
         p.id === petId
           ? {
-              ...p,
-              hero_photo: heroPhoto,
-              profile_picture_url: heroPhoto,
-            }
+            ...p,
+            hero_photo: heroPhoto,
+            profile_picture_url: heroPhoto,
+          }
           : p,
       ),
     )
@@ -364,10 +411,10 @@ export function FamilyManagementForm({
         pets.map((p) =>
           p.id === petId
             ? {
-                ...p,
-                hero_photo: pet?.hero_photo,
-                profile_picture_url: pet?.profile_picture_url,
-              }
+              ...p,
+              hero_photo: pet?.hero_photo,
+              profile_picture_url: pet?.profile_picture_url,
+            }
             : p,
         ),
       )
@@ -409,300 +456,310 @@ export function FamilyManagementForm({
     }
   }
 
+  if (!familyUnit) {
+    return (
+      <Alert>
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
+          No family unit assigned yet. Contact your administrator to set up your family.
+        </AlertDescription>
+      </Alert>
+    )
+  }
+
   return (
     <div className="space-y-6">
-      {familyUnit && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Home className="h-5 w-5" />
-              Family Profile
-            </CardTitle>
-            <CardDescription>Manage your family's public profile</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex flex-col items-center gap-4">
-              <Avatar className="h-24 w-24">
-                <AvatarImage src={familyProfile.heroPhoto || "/placeholder.svg"} alt={familyInitials} />
-                <AvatarFallback className="text-2xl">{familyInitials}</AvatarFallback>
-              </Avatar>
-            </div>
+      <EditableProfileBanner
+        bannerUrl={familyProfile.bannerImage}
+        profileUrl={familyProfile.heroPhoto}
+        initials={familyInitials}
+        onBannerChange={handleBannerChange}
+        onProfilePhotoChange={handleProfilePhotoChange}
+      />
 
-            <PhotoManager
-              photos={familyProfile.photos}
-              heroPhoto={familyProfile.heroPhoto}
-              onPhotosChange={handleFamilyPhotosChange}
-              onHeroPhotoChange={handleFamilyHeroPhotoChange}
-              maxPhotos={10}
-              entityType="family"
-            />
-
-            <div className="space-y-2">
-              <Label htmlFor="family-name">Family Name</Label>
-              <Input id="family-name" value={familyProfile.name} disabled className="bg-muted" />
-              <p className="text-xs text-muted-foreground">Contact your administrator to change the family name</p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="family-description">Family Description</Label>
-              <Textarea
-                id="family-description"
-                placeholder="Tell your neighbours about your family..."
-                value={familyProfile.description}
-                onChange={(e) => setFamilyProfile({ ...familyProfile, description: e.target.value })}
-                rows={4}
-              />
-              <Button
-                type="button"
-                onClick={handleUpdateFamilyDescription}
-                disabled={isLoading}
-                size="sm"
-                className="mt-2"
-              >
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Description
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* LEFT COLUMN: Family Profile */}
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Family Members
+                <Home className="h-5 w-5" />
+                Family Profile
               </CardTitle>
-              <CardDescription>
-                {familyUnit
-                  ? `Manage your family relationships in ${familyUnit.name}`
-                  : "No family unit assigned yet. Contact your administrator to set up your family."}
-              </CardDescription>
-            </div>
-            {familyUnit && availableLotResidents.length > 0 && !showAddFamily && (
-              <Button variant="default" size="sm" onClick={() => setShowAddFamily(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Family Member
-              </Button>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent>
-          {showAddFamily && (
-            <div className="mb-4 space-y-3 rounded-lg border p-4">
+              <CardDescription>Manage your family's public profile</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="resident-select">Select Resident</Label>
-                <Select value={selectedResident} onValueChange={setSelectedResident}>
-                  <SelectTrigger id="resident-select">
-                    <SelectValue placeholder="Choose a resident from your lot" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableLotResidents.map((r) => (
-                      <SelectItem key={r.id} value={r.id}>
-                        {r.first_name} {r.last_name} ({r.email})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="family-name">Family Name</Label>
+                <Input id="family-name" value={familyProfile.name} disabled className="bg-muted" />
+                <p className="text-xs text-muted-foreground">Contact your administrator to change the family name</p>
               </div>
-              <div className="flex gap-2">
-                <Button onClick={handleAddFamilyMember} disabled={isLoading || !selectedResident}>
-                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Add to Family
-                </Button>
-                <Button variant="outline" onClick={() => setShowAddFamily(false)}>
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          )}
 
-          {familyMembers.length === 0 ? (
-            <div className="rounded-lg border border-dashed p-8 text-center">
-              <Users className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-semibold">No family members yet</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {availableLotResidents.length > 0
-                  ? "Add family members from your household to define relationships"
-                  : "No other residents found in your lot"}
-              </p>
-              {familyUnit && availableLotResidents.length > 0 && (
-                <Button variant="default" size="sm" className="mt-4" onClick={() => setShowAddFamily(true)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Family Member
+              <div className="space-y-2">
+                <Label htmlFor="family-description">Family Description</Label>
+                <Textarea
+                  id="family-description"
+                  placeholder="Tell your neighbours about your family..."
+                  value={familyProfile.description}
+                  onChange={(e) => setFamilyProfile({ ...familyProfile, description: e.target.value })}
+                  rows={4}
+                />
+                <Button
+                  type="button"
+                  onClick={handleUpdateFamilyDescription}
+                  disabled={isLoading}
+                  size="sm"
+                  className="mt-2"
+                >
+                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Save Description
                 </Button>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {familyMembers.map((member) => (
-                <div key={member.id} className="flex items-center justify-between gap-4 rounded-lg border p-4">
-                  <div className="flex-1">
-                    <p className="font-medium">
-                      {member.first_name} {member.last_name}
-                    </p>
-                    <p className="text-sm text-muted-foreground">{member.email}</p>
-                  </div>
-                  <div className="w-48">
-                    <Select
-                      value={relationships[member.id] || ""}
-                      onValueChange={(value) => handleRelationshipChange(member.id, value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select relationship" />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Family Photos</Label>
+                <PhotoManager
+                  photos={familyProfile.photos}
+                  heroPhoto={familyProfile.heroPhoto}
+                  onPhotosChange={handleFamilyPhotosChange}
+                  onHeroPhotoChange={(url) => handleProfilePhotoChange(url)}
+                  maxPhotos={10}
+                  entityType="family"
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* RIGHT COLUMN: Members & Pets */}
+        <div className="space-y-6">
+          {/* Family Members */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    Family Members
+                  </CardTitle>
+                  <CardDescription>
+                    Manage relationships
+                  </CardDescription>
+                </div>
+                {availableLotResidents.length > 0 && !showAddFamily && (
+                  <Button variant="outline" size="sm" onClick={() => setShowAddFamily(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Member
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {showAddFamily && (
+                <div className="mb-4 space-y-3 rounded-lg border p-4 bg-muted/50">
+                  <div className="space-y-2">
+                    <Label htmlFor="resident-select">Select Resident</Label>
+                    <Select value={selectedResident} onValueChange={setSelectedResident}>
+                      <SelectTrigger id="resident-select">
+                        <SelectValue placeholder="Choose a resident" />
                       </SelectTrigger>
                       <SelectContent>
-                        {RELATIONSHIP_TYPES.map((type) => (
-                          <SelectItem key={type.value} value={type.value}>
-                            {type.label}
+                        {availableLotResidents.map((r) => (
+                          <SelectItem key={r.id} value={r.id}>
+                            {r.first_name} {r.last_name}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
+                  <div className="flex gap-2">
+                    <Button onClick={handleAddFamilyMember} disabled={isLoading || !selectedResident} size="sm">
+                      {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Add
+                    </Button>
+                    <Button variant="ghost" onClick={() => setShowAddFamily(false)} size="sm">
+                      Cancel
+                    </Button>
+                  </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              )}
 
-      {petsEnabled && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <PawPrint className="h-5 w-5" />
-                  Pets
-                </CardTitle>
-                <CardDescription>Manage your family pets</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {pets.length === 0 && !showAddPet ? (
-              <div className="rounded-lg border border-dashed p-8 text-center">
-                <PawPrint className="mx-auto h-12 w-12 text-muted-foreground" />
-                <h3 className="mt-4 text-lg font-semibold">No pets yet</h3>
-                <p className="mt-2 text-sm text-muted-foreground">Add your family pets to your profile</p>
-                <Button variant="outline" size="sm" className="mt-4 bg-transparent" onClick={() => setShowAddPet(true)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Pet
-                </Button>
-              </div>
-            ) : (
-              <>
-                <div className="grid gap-4">
-                  {pets.map((pet) => {
-                    const petInitials = pet.name
-                      .split(" ")
-                      .map((word: string) => word[0])
-                      .join("")
-                      .toUpperCase()
-                      .slice(0, 2)
-
-                    const petPhotos = Array.isArray(pet.photos) ? pet.photos : []
-                    const petHeroPhoto = pet.hero_photo || pet.profile_picture_url || null
-
-                    return (
-                      <Card key={pet.id} className="border-2">
-                        <CardContent className="pt-6 space-y-4">
-                          <div className="flex items-center gap-4">
-                            <Avatar className="h-16 w-16">
-                              <AvatarImage src={petHeroPhoto || "/placeholder.svg"} alt={pet.name} />
-                              <AvatarFallback>{petInitials}</AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1">
-                              <p className="font-semibold">{pet.name}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {pet.species}
-                                {pet.breed && ` • ${pet.breed}`}
-                              </p>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeletePet(pet.id)}
-                              disabled={isLoading}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-
-                          <div className="rounded-lg bg-muted/30 p-4 space-y-2">
-                            <Label className="text-sm font-semibold">{pet.name}'s Photos</Label>
-                            <PhotoManager
-                              photos={petPhotos}
-                              heroPhoto={petHeroPhoto}
-                              onPhotosChange={(photos) => handlePetPhotosChange(pet.id, photos)}
-                              onHeroPhotoChange={(heroPhoto) => handlePetHeroPhotoChange(pet.id, heroPhoto)}
-                              maxPhotos={10}
-                              entityType="pet"
-                            />
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )
-                  })}
+              {familyMembers.length === 0 ? (
+                <div className="text-center py-6 text-muted-foreground">
+                  <p>No other family members added.</p>
                 </div>
+              ) : (
+                <div className="space-y-4">
+                  {familyMembers.map((member) => (
+                    <div key={member.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-lg border p-3">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage src={member.profile_picture_url} />
+                          <AvatarFallback>{member.first_name[0]}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-medium text-sm">
+                            {member.first_name} {member.last_name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">{member.email}</p>
+                        </div>
+                      </div>
+                      <div className="w-full sm:w-40">
+                        <Select
+                          value={relationships[member.id] || ""}
+                          onValueChange={(value) => handleRelationshipChange(member.id, value)}
+                        >
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue placeholder="Relationship" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {RELATIONSHIP_TYPES.map((type) => (
+                              <SelectItem key={type.value} value={type.value}>
+                                {type.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-                {!showAddPet && (
-                  <Button variant="outline" size="sm" onClick={() => setShowAddPet(true)} className="w-full">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Another Pet
-                  </Button>
-                )}
-
+          {/* Pets */}
+          {petsEnabled && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <PawPrint className="h-5 w-5" />
+                      Pets
+                    </CardTitle>
+                    <CardDescription>Manage family pets</CardDescription>
+                  </div>
+                  {!showAddPet && (
+                    <Button variant="outline" size="sm" onClick={() => setShowAddPet(true)}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Pet
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 {showAddPet && (
-                  <Card className="border-2 border-dashed">
-                    <CardContent className="pt-6 space-y-4">
+                  <div className="mb-4 space-y-4 rounded-lg border p-4 bg-muted/50">
+                    <div className="grid gap-4 sm:grid-cols-2">
                       <div className="space-y-2">
-                        <Label htmlFor="pet-name">Pet Name *</Label>
+                        <Label htmlFor="pet-name">Name</Label>
                         <Input
                           id="pet-name"
                           value={newPet.name}
                           onChange={(e) => setNewPet({ ...newPet, name: e.target.value })}
-                          placeholder="e.g., Max, Luna"
+                          placeholder="Pet's name"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="pet-species">Species *</Label>
-                        <Input
-                          id="pet-species"
+                        <Label htmlFor="pet-species">Species</Label>
+                        <Select
                           value={newPet.species}
-                          onChange={(e) => setNewPet({ ...newPet, species: e.target.value })}
-                          placeholder="e.g., Dog, Cat"
-                        />
+                          onValueChange={(value) => setNewPet({ ...newPet, species: value })}
+                        >
+                          <SelectTrigger id="pet-species">
+                            <SelectValue placeholder="Select species" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Dog">Dog</SelectItem>
+                            <SelectItem value="Cat">Cat</SelectItem>
+                            <SelectItem value="Bird">Bird</SelectItem>
+                            <SelectItem value="Other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
-                      <div className="space-y-2">
+                      <div className="space-y-2 sm:col-span-2">
                         <Label htmlFor="pet-breed">Breed (Optional)</Label>
                         <Input
                           id="pet-breed"
                           value={newPet.breed}
                           onChange={(e) => setNewPet({ ...newPet, breed: e.target.value })}
-                          placeholder="e.g., Golden Retriever"
+                          placeholder="e.g. Golden Retriever"
                         />
                       </div>
-                      <div className="flex gap-2">
-                        <Button onClick={handleAddPet} disabled={isLoading || !newPet.name || !newPet.species}>
-                          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                          Add Pet
-                        </Button>
-                        <Button variant="outline" onClick={() => setShowAddPet(false)}>
-                          Cancel
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button onClick={handleAddPet} disabled={isLoading || !newPet.name || !newPet.species} size="sm">
+                        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Add Pet
+                      </Button>
+                      <Button variant="ghost" onClick={() => setShowAddPet(false)} size="sm">
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
                 )}
-              </>
-            )}
-          </CardContent>
-        </Card>
-      )}
+
+                {pets.length === 0 && !showAddPet ? (
+                  <div className="text-center py-6 text-muted-foreground">
+                    <p>No pets added yet.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {pets.map((pet) => {
+                      const petInitials = pet.name.slice(0, 2).toUpperCase()
+                      const petHeroPhoto = pet.hero_photo || pet.profile_picture_url || null
+                      const petPhotos = Array.isArray(pet.photos) ? pet.photos : []
+
+                      return (
+                        <Card key={pet.id} className="overflow-hidden">
+                          <CardContent className="p-0">
+                            <div className="flex items-center justify-between p-4 bg-muted/30">
+                              <div className="flex items-center gap-3">
+                                <Avatar className="h-12 w-12 border-2 border-background">
+                                  <AvatarImage src={petHeroPhoto || "/placeholder.svg"} />
+                                  <AvatarFallback>{petInitials}</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <p className="font-semibold">{pet.name}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {pet.species} {pet.breed && `• ${pet.breed}`}
+                                  </p>
+                                </div>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeletePet(pet.id)}
+                                className="text-muted-foreground hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            <div className="p-4 pt-0">
+                              <div className="mt-4">
+                                <Label className="text-xs mb-2 block text-muted-foreground">Photos</Label>
+                                <PhotoManager
+                                  photos={petPhotos}
+                                  heroPhoto={petHeroPhoto}
+                                  onPhotosChange={(photos) => handlePetPhotosChange(pet.id, photos)}
+                                  onHeroPhotoChange={(heroPhoto) => handlePetHeroPhotoChange(pet.id, heroPhoto)}
+                                  maxPhotos={5}
+                                  entityType="pet"
+                                />
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

@@ -134,7 +134,7 @@ export async function createExchangeListing(
       return { success: false, error: "Only verified residents can create listings" }
     }
 
-    if (!data.title.trim()) {
+    if (!data.title || !data.title.trim()) {
       return { success: false, error: "Listing title is required" }
     }
 
@@ -1178,35 +1178,67 @@ export async function flagExchangeListing(listingId: string, reason: string, ten
     }
 
     // Check if user already flagged
-    const { data: alreadyFlagged } = await supabase.rpc("has_user_flagged_exchange_listing", {
+    const { data: alreadyFlagged, error: rpcError } = await supabase.rpc("has_user_flagged_exchange_listing", {
       p_listing_id: listingId,
       p_user_id: user.id,
       p_tenant_id: tenant.id,
     })
 
-    if (alreadyFlagged) {
+    console.log("[v0] Flag check RPC result:", { alreadyFlagged, rpcError })
+
+    if (rpcError) {
+      console.error("[v0] RPC error checking if already flagged:", rpcError)
+      // Don't fail - continue with insert attempt (unique constraint will catch duplicates)
+    }
+
+    if (alreadyFlagged === true) {
+      console.log("[v0] User already flagged this listing")
       return { success: false, error: "You have already flagged this listing" }
     }
 
     // Insert flag
-    const { error: insertError } = await supabase.from("exchange_flags").insert({
+    console.log("[v0] Attempting to insert flag:", {
+      listing_id: listingId,
+      flagged_by: user.id,
+      tenant_id: tenant.id,
+      reason_length: trimmedReason.length,
+    })
+
+    const { data: insertData, error: insertError } = await supabase.from("exchange_flags").insert({
       listing_id: listingId,
       flagged_by: user.id,
       tenant_id: tenant.id,
       reason: trimmedReason,
-    })
+    }).select()
+
+    console.log("[v0] Insert result:", { insertData, insertError })
 
     if (insertError) {
+      console.error("[v0] Insert error details:", {
+        code: insertError.code,
+        message: insertError.message,
+        details: insertError.details,
+        hint: insertError.hint,
+      })
+
       // Handle duplicate key constraint violation
       if (insertError.code === "23505") {
         return { success: false, error: "You have already flagged this listing" }
       }
 
+      // Check for RLS policy violation
+      if (insertError.code === "42501" || insertError.message?.includes("policy")) {
+        console.error("[v0] RLS POLICY VIOLATION - User cannot insert into exchange_flags")
+        return { success: false, error: "Permission denied. Please contact support." }
+      }
+
       return { success: false, error: insertError.message }
     }
 
+    console.log("[v0] Flag successfully inserted!")
+
     // Update listing to mark as flagged
-    await supabase
+    const { error: updateError } = await supabase
       .from("exchange_listings")
       .update({
         is_flagged: true,
@@ -1214,11 +1246,17 @@ export async function flagExchangeListing(listingId: string, reason: string, ten
       })
       .eq("id", listingId)
 
+    if (updateError) {
+      console.error("[v0] Error updating listing:", updateError)
+    }
+
     // Get updated flag count
     const { data: updatedCount } = await supabase.rpc("get_exchange_listing_flag_count", {
       p_listing_id: listingId,
       p_tenant_id: tenant.id,
     })
+
+    console.log("[v0] Updated flag count:", updatedCount)
 
     revalidatePath(`/t/${tenantSlug}/dashboard/exchange`)
 

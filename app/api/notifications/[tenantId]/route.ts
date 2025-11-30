@@ -21,20 +21,40 @@ export async function GET(request: Request, context: { params: Promise<{ tenantI
       .from("notifications")
       .select(`
         *,
-        actor:actor_id(id, first_name, last_name, profile_picture_url),
-        exchange_listing:exchange_listing_id(
+        actor:users!actor_id(id, first_name, last_name, profile_picture_url),
+        exchange_listing:exchange_listings!exchange_listing_id(
           id, 
           title, 
           hero_photo,
-          category:category_id(id, name)
+          category:exchange_categories(id, name)
         ),
-        exchange_transaction:exchange_transaction_id(
+        exchange_transaction:exchange_transactions!exchange_transaction_id(
           id,
           quantity,
           proposed_pickup_date,
           proposed_return_date,
           borrower_message,
           lender_message
+        ),
+        event:events!event_id(
+          id,
+          title,
+          start_date,
+          start_time,
+          end_date,
+          end_time,
+          is_all_day,
+          location_id,
+          custom_location_name
+        ),
+        check_in:check_ins!check_in_id(
+          id,
+          title,
+          activity_type,
+          start_time,
+          duration_minutes,
+          location_id,
+          custom_location_name
         )
       `)
       .eq("tenant_id", tenantId)

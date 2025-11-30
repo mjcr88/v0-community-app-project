@@ -164,8 +164,20 @@ export async function createEvent(
         if (inviteError) {
           console.error("[v0] Error adding invites:", inviteError)
           // Don't fail the whole operation, just log it
+        } else {
+          // Send invitations to private event invitees
+          await sendEventInviteNotifications(event.id, tenantId, tenantSlug, user.id, invites)
         }
       }
+    }
+
+    // Send notifications for official community/neighborhood events
+    if (
+      data.event_type === "official" &&
+      data.status === "published" &&
+      (data.visibility_scope === "community" || data.visibility_scope === "neighborhood")
+    ) {
+      await sendEventPublishedNotifications(event.id, tenantId, tenantSlug, user.id, data.visibility_scope, data.neighborhood_ids)
     }
 
     revalidatePath(`/t/${tenantSlug}/dashboard`)
@@ -1049,6 +1061,158 @@ export async function getEventImages(eventId: string) {
       error: "An unexpected error occurred. Please try again.",
       data: [],
     }
+  }
+}
+
+// ============================================
+// NOTIFICATION HELPER FUNCTIONS
+// ============================================
+
+/**
+ * Send event_invite notifications to private event invitees
+ */
+async function sendEventInviteNotifications(
+  eventId: string,
+  tenantId: string,
+  tenantSlug: string,
+  creatorId: string,
+  invites: Array<{ event_id: string; invitee_id: string | null; family_unit_id: string | null }>
+) {
+  try {
+    const supabase = await createServerClient()
+
+    // Get event details
+    const { data: event } = await supabase
+      .from("events")
+      .select("title, start_date, start_time")
+      .eq("id", eventId)
+      .single()
+
+    if (!event) return
+
+    // Collect recipient IDs
+    const recipientIds: string[] = []
+
+    // Add individual invitees
+    invites.forEach((invite) => {
+      if (invite.invitee_id) {
+        recipientIds.push(invite.invitee_id)
+      }
+    })
+
+    // Get family members for family invites
+    if (invites.some((i) => i.family_unit_id)) {
+      const familyIds = invites.filter((i) => i.family_unit_id).map((i) => i.family_unit_id!)
+      const { data: familyMembers } = await supabase
+        .from("users")
+        .select("id")
+        .in("family_unit_id", familyIds)
+
+      if (familyMembers) {
+        familyMembers.forEach((member) => recipientIds.push(member.id))
+      }
+    }
+
+    // Remove duplicates and creator
+    const uniqueRecipients = [...new Set(recipientIds)].filter((id) => id !== creatorId)
+
+    // Create notifications
+    const notifications = uniqueRecipients.map((recipientId) => ({
+      tenant_id: tenantId,
+      recipient_id: recipientId,
+      type: "event_invite",
+      title: `You're invited to ${event.title}`,
+      message: `Join us for this event!`,
+      event_id: eventId,
+      actor_id: creatorId,
+      action_url: `/t/${tenantSlug}/dashboard/events/${eventId}`,
+      action_required: true,
+    }))
+
+    if (notifications.length > 0) {
+      await supabase.from("notifications").insert(notifications)
+    }
+  } catch (error) {
+    console.error("[v0] Error sending event invite notifications:", error)
+  }
+}
+
+/**
+ * Send event_published notifications for official events
+ */
+async function sendEventPublishedNotifications(
+  eventId: string,
+  tenantId: string,
+  tenantSlug: string,
+  creatorId: string,
+  visibilityScope: string,
+  neighborhoodIds?: string[]
+) {
+  try {
+    const supabase = await createServerClient()
+
+    // Get event details
+    const { data: event } = await supabase
+      .from("events")
+      .select("title, start_date, start_time")
+      .eq("id", eventId)
+      .single()
+
+    if (!event) return
+
+    let recipients: { id: string }[] = []
+
+    if (visibilityScope === "community") {
+      // Notify all residents
+      const { data: allUsers } = await supabase
+        .from("users")
+        .select("id")
+        .eq("tenant_id", tenantId)
+        .eq("role", "resident")
+
+      recipients = allUsers || []
+    } else if (visibilityScope === "neighborhood" && neighborhoodIds && neighborhoodIds.length > 0) {
+      // Notify residents in specific neighborhoods
+      const { data: lots } = await supabase
+        .from("lots")
+        .select("id")
+        .eq("tenant_id", tenantId)
+        .in("neighborhood_id", neighborhoodIds)
+
+      const lotIds = lots?.map((l) => l.id) || []
+
+      if (lotIds.length > 0) {
+        const { data: neighborhoodUsers } = await supabase
+          .from("users")
+          .select("id")
+          .eq("tenant_id", tenantId)
+          .eq("role", "resident")
+          .in("lot_id", lotIds)
+
+        recipients = neighborhoodUsers || []
+      }
+    }
+
+    // Remove creator from recipients
+    const uniqueRecipients = recipients.filter((r) => r.id !== creatorId)
+
+    // Create notifications
+    const notifications = uniqueRecipients.map((recipient) => ({
+      tenant_id: tenantId,
+      recipient_id: recipient.id,
+      type: "event_published",
+      title: `New event: ${event.title}`,
+      message: `Check out this new official event!`,
+      event_id: eventId,
+      actor_id: creatorId,
+      action_url: `/t/${tenantSlug}/dashboard/events/${eventId}`,
+    }))
+
+    if (notifications.length > 0) {
+      await supabase.from("notifications").insert(notifications)
+    }
+  } catch (error) {
+    console.error("[v0] Error sending event published notifications:", error)
   }
 }
 

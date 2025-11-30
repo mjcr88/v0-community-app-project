@@ -1,10 +1,10 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
-import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
 import Link from "next/link"
 import { EventsPageClient } from "./events-page-client"
 import { applyVisibilityFilter } from "@/lib/visibility-filter"
+import { Button } from "@/components/ui/button"
 
 export default async function EventsPage({
   params,
@@ -129,13 +129,17 @@ export default async function EventsPage({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Events</h2>
-          <p className="text-muted-foreground">Discover and join community events</p>
+          <h2 className="text-3xl font-bold tracking-tight text-foreground animate-in fade-in slide-in-from-bottom-2 duration-700">
+            Events
+          </h2>
+          <p className="text-muted-foreground animate-in fade-in slide-in-from-bottom-3 duration-700 delay-100">
+            Discover and join community events
+          </p>
         </div>
-        <Button asChild>
+        <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground">
           <Link href={`/t/${slug}/dashboard/events/create`}>
             <Plus className="h-4 w-4 mr-2" />
-            Create Event
+            <span>Create Event</span>
           </Link>
         </Button>
       </div>

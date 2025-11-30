@@ -1,9 +1,13 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
-import { SettingsTabs } from "@/components/settings-tabs"
 import { ProfileEditForm } from "./profile-edit-form"
+import { SettingsLayout } from "@/components/settings/settings-layout"
 
-export default async function ProfileSettingsPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function ProfileSettingsPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>
+}) {
   const { slug } = await params
   const supabase = await createClient()
 
@@ -15,54 +19,38 @@ export default async function ProfileSettingsPage({ params }: { params: Promise<
     redirect(`/t/${slug}/login`)
   }
 
-  const { data: resident, error: residentError } = await supabase
+  const { data: resident } = await supabase
     .from("users")
     .select(
       `
       *,
       user_interests (
-        interest_id,
-        interests (
-          id,
-          name
-        )
+        interest_id
       ),
       user_skills (
         skill_id,
-        open_to_requests,
         skills (
-          id,
+          name
+        ),
+        open_to_requests
+      ),
+      lots (
+        lot_number,
+        neighborhoods (
           name
         )
       )
     `,
     )
     .eq("id", user.id)
-    .eq("role", "resident")
-    .maybeSingle()
+    .single()
 
   if (!resident) {
-    // Check if user is a super admin
-    const { data: superAdmin } = await supabase
-      .from("users")
-      .select("id")
-      .eq("id", user.id)
-      .eq("role", "super_admin")
-      .maybeSingle()
-
-    if (superAdmin) {
-      // Super admin without resident profile - redirect to admin dashboard
-      redirect(`/t/${slug}/admin/dashboard`)
-    } else {
-      // Regular user without resident profile - redirect to login
-      redirect(`/t/${slug}/login`)
-    }
+    redirect(`/t/${slug}/login`)
   }
 
-  // Get tenant to check features
   const { data: tenant } = await supabase.from("tenants").select("*").eq("id", resident.tenant_id).single()
 
-  // Get available interests for this tenant
   const { data: availableInterests } = await supabase
     .from("interests")
     .select(`
@@ -81,16 +69,22 @@ export default async function ProfileSettingsPage({ params }: { params: Promise<
     .eq("tenant_id", resident.tenant_id)
     .order("name")
 
+  const { data: locations } = await supabase
+    .from("locations")
+    .select("id, name")
+    .eq("tenant_id", resident.tenant_id)
+    .order("name")
+
   return (
-    <>
-      <SettingsTabs tenantSlug={slug} />
+    <SettingsLayout tenantSlug={slug} title="Profile Settings" description="Manage your personal information and public profile">
       <ProfileEditForm
         resident={resident}
         tenant={tenant}
         availableInterests={availableInterests || []}
         availableSkills={availableSkills || []}
         tenantSlug={slug}
+        locations={locations || []}
       />
-    </>
+    </SettingsLayout>
   )
 }

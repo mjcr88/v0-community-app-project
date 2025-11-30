@@ -59,10 +59,10 @@ export function UpcomingEventsWidget({ slug, userId, tenantId }: UpcomingEventsW
     `/api/events/upcoming/${tenantId}?limit=5`,
     fetcher,
     {
-      refreshInterval: 60000, // Refresh every minute
+      refreshInterval: 60000,
       revalidateOnFocus: false,
-      shouldRetryOnError: false, // Don't retry on errors to prevent cascade
-      errorRetryCount: 0, // No retries on error
+      shouldRetryOnError: false,
+      errorRetryCount: 0,
       onError: (err) => {
         console.log("[v0] Events widget fetch error (non-critical):", err.message)
       },
@@ -105,204 +105,173 @@ export function UpcomingEventsWidget({ slug, userId, tenantId }: UpcomingEventsW
 
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Upcoming Events</CardTitle>
-          <CardDescription>Loading your events...</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
     )
   }
 
   if (error) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Upcoming Events</CardTitle>
-          <CardDescription>Error loading events</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center text-muted-foreground py-8">
-            Failed to load events. Please refresh the page.
-          </div>
-        </CardContent>
-      </Card>
+      <div className="text-center text-muted-foreground py-8">
+        Failed to load events. Please refresh the page.
+      </div>
     )
   }
 
   if (!events || events.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Upcoming Events</CardTitle>
-          <CardDescription>No upcoming events</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-6">
-            <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-sm text-muted-foreground mb-4">
-              No upcoming events. RSVP or save events to see them here!
-            </p>
-            <div className="flex items-center justify-center gap-2">
-              <Button asChild variant="outline">
-                <Link href={`/t/${slug}/dashboard/events`}>Browse Events</Link>
-              </Button>
-              <Button asChild>
-                <Link href={`/t/${slug}/dashboard/events/create`}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Event
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="text-center py-8">
+        <Calendar className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
+        <p className="text-sm text-muted-foreground mb-4">No upcoming events</p>
+        <div className="flex items-center justify-center gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/t/${slug}/dashboard/events`}>Browse</Link>
+          </Button>
+          <Button asChild size="sm">
+            <Link href={`/t/${slug}/dashboard/events/create`}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create
+            </Link>
+          </Button>
+        </div>
+      </div>
     )
   }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0">
-        <div>
-          <CardTitle>Upcoming Events</CardTitle>
-          <CardDescription>
-            Your next {events.length} event{events.length === 1 ? "" : "s"}
-          </CardDescription>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <h3 className="text-lg font-semibold">Upcoming Events</h3>
+          <Badge variant="secondary" className="bg-orange-100 text-orange-700 hover:bg-orange-100 border-none">
+            {events.length} Next
+          </Badge>
         </div>
         <div className="flex gap-2">
-          <Button asChild variant="ghost" size="sm">
+          <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
             <Link href={`/t/${slug}/dashboard/events`}>View All</Link>
           </Button>
           <Button asChild size="sm">
             <Link href={`/t/${slug}/dashboard/events/create`}>
               <Plus className="h-4 w-4 mr-2" />
-              Create Event
+              Create
             </Link>
           </Button>
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {events.map((event) => {
-            const startDate = parseISO(event.start_date)
-            const startTime = event.start_time ? format(parseISO(`2000-01-01T${event.start_time}`), "h:mm a") : null
-            const isSaved = event.is_saved || false
-            const userRsvpStatus = event.user_rsvp_status as "yes" | "maybe" | "no" | null
-            const isCancelled = event.status === "cancelled"
+      </div>
 
-            return (
-              <Link key={event.id} href={`/t/${slug}/dashboard/events/${event.id}`}>
-                <div
-                  className={`flex gap-4 p-4 rounded-lg border hover:bg-accent transition-colors cursor-pointer ${isCancelled ? "opacity-60" : ""}`}
-                >
-                  {/* Date box on left */}
-                  <div className="flex flex-col items-center justify-center bg-primary/10 rounded-md px-3 py-2 min-w-[4rem] flex-shrink-0">
-                    <div className="text-xs font-medium text-primary uppercase">{format(startDate, "MMM")}</div>
-                    <div className="text-2xl font-bold text-primary leading-none">{format(startDate, "d")}</div>
-                  </div>
+      <div className="grid gap-3">
+        {events.map((event) => {
+          const startDate = parseISO(event.start_date)
+          const startTime = event.start_time ? format(parseISO(`2000-01-01T${event.start_time}`), "h:mm a") : null
+          const isSaved = event.is_saved || false
+          const userRsvpStatus = event.user_rsvp_status as "yes" | "maybe" | "no" | null
+          const isCancelled = event.status === "cancelled"
 
-                  {/* Main content area - multi-column layout */}
-                  <div className="flex-1 min-w-0 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3">
-                    {/* Left column: Event details */}
-                    <div className="space-y-1">
-                      <h4 className="font-semibold text-base leading-tight">{event.title}</h4>
-                      <p className="text-sm text-muted-foreground">
-                        {event.is_all_day ? "All day" : startTime || "Time TBD"}
-                      </p>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-xs text-muted-foreground">{event.event_categories?.name || "Event"}</p>
-                        {isCancelled && (
-                          <Badge variant="destructive" className="text-xs">
-                            Cancelled
-                          </Badge>
-                        )}
-                        {event.flag_count !== undefined && event.flag_count > 0 && (
-                          <Badge variant="destructive" className="text-xs gap-1">
-                            <Flag className="h-3 w-3" />
-                            {event.flag_count}
-                          </Badge>
-                        )}
-                        <LocationBadge
-                          locationType={event.location_type || null}
-                          locationName={event.location?.name}
-                          customLocationName={event.custom_location_name}
-                          compact
-                        />
-                      </div>
-                      {event.description && (
-                        <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{event.description}</p>
-                      )}
+          return (
+            <Link key={event.id} href={`/t/${slug}/dashboard/events/${event.id}`}>
+              <div
+                className={`group flex gap-4 p-4 rounded-xl border bg-card hover:shadow-md hover:border-primary/20 transition-all duration-200 ${isCancelled ? "opacity-60" : ""}`}
+              >
+                {/* Date box */}
+                <div className="flex flex-col items-center justify-center bg-primary/5 rounded-lg px-4 py-2 min-w-[4.5rem] flex-shrink-0 group-hover:bg-primary/10 transition-colors">
+                  <div className="text-xs font-semibold text-primary/80 uppercase tracking-wide">{format(startDate, "MMM")}</div>
+                  <div className="text-2xl font-bold text-primary leading-none mt-0.5">{format(startDate, "d")}</div>
+                </div>
 
-                      {/* RSVP quick actions for RSVP events */}
-                      {userId && tenantId && event.requires_rsvp && !isCancelled && (
-                        <div className="flex items-center gap-1 pt-2" onClick={(e) => e.preventDefault()}>
-                          <Button
-                            size="sm"
-                            variant={userRsvpStatus === "yes" ? "default" : "outline"}
-                            className="h-7 px-2"
-                            onClick={(e) => handleRsvp(event.id, "yes", e)}
-                            disabled={loadingStates[event.id]}
-                          >
-                            <Check className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant={userRsvpStatus === "maybe" ? "default" : "outline"}
-                            className="h-7 px-2"
-                            onClick={(e) => handleRsvp(event.id, "maybe", e)}
-                            disabled={loadingStates[event.id]}
-                          >
-                            <HelpCircle className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant={userRsvpStatus === "no" ? "default" : "outline"}
-                            className="h-7 px-2"
-                            onClick={(e) => handleRsvp(event.id, "no", e)}
-                            disabled={loadingStates[event.id]}
-                          >
-                            <X className="h-3.5 w-3.5" />
-                          </Button>
-                          {event.max_attendees && (
-                            <span className="text-xs text-muted-foreground ml-2">
-                              {event.attending_count}/{event.max_attendees} spots
-                            </span>
-                          )}
-                        </div>
-                      )}
+                {/* Main content */}
+                <div className="flex-1 min-w-0 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3">
+                  <div className="space-y-1">
+                    <h4 className="font-semibold text-base leading-tight group-hover:text-primary transition-colors">{event.title}</h4>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <span>{event.is_all_day ? "All day" : startTime || "Time TBD"}</span>
+                      <span>•</span>
+                      <span>{event.event_categories?.name || "Event"}</span>
                     </div>
 
-                    {/* Right column: Icon and save button */}
-                    <div className="flex flex-col items-center justify-start gap-2 flex-shrink-0">
-                      {event.event_categories?.icon && (
-                        <span className="text-3xl" aria-label={event.event_categories.name}>
-                          {event.event_categories.icon}
-                        </span>
+                    <div className="flex items-center gap-2 flex-wrap mt-1">
+                      {isCancelled && (
+                        <Badge variant="destructive" className="text-xs">Cancelled</Badge>
                       )}
-                      {userId && tenantId && (
+                      {event.flag_count !== undefined && event.flag_count > 0 && (
+                        <Badge variant="destructive" className="text-xs gap-1">
+                          <Flag className="h-3 w-3" />
+                          {event.flag_count}
+                        </Badge>
+                      )}
+                      <LocationBadge
+                        locationType={event.location_type || null}
+                        locationName={event.location?.name}
+                        customLocationName={event.custom_location_name}
+                        compact
+                      />
+                    </div>
+
+                    {/* RSVP Actions */}
+                    {userId && tenantId && event.requires_rsvp && !isCancelled && (
+                      <div className="flex items-center gap-1 pt-2" onClick={(e) => e.preventDefault()}>
                         <Button
                           size="sm"
-                          variant={isSaved ? "default" : "ghost"}
-                          className="h-8 w-8 p-0"
-                          onClick={(e) => handleSave(event.id, isSaved, e)}
-                          disabled={loadingStates[`save-${event.id}`]}
+                          variant={userRsvpStatus === "yes" ? "default" : "outline"}
+                          className="h-7 px-3 text-xs"
+                          onClick={(e) => handleRsvp(event.id, "yes", e)}
+                          disabled={loadingStates[event.id]}
                         >
-                          <Heart className={`h-4 w-4 ${isSaved ? "fill-current" : ""}`} />
+                          Going
                         </Button>
-                      )}
-                    </div>
+                        <Button
+                          size="sm"
+                          variant={userRsvpStatus === "maybe" ? "default" : "outline"}
+                          className="h-7 px-3 text-xs"
+                          onClick={(e) => handleRsvp(event.id, "maybe", e)}
+                          disabled={loadingStates[event.id]}
+                        >
+                          Maybe
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={userRsvpStatus === "no" ? "default" : "outline"}
+                          className="h-7 px-3 text-xs"
+                          onClick={(e) => handleRsvp(event.id, "no", e)}
+                          disabled={loadingStates[event.id]}
+                        >
+                          No
+                        </Button>
+                        {event.max_attendees && (
+                          <span className="text-xs text-muted-foreground ml-2">
+                            {event.attending_count}/{event.max_attendees} spots
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Icon & Save */}
+                  <div className="flex flex-col items-end justify-between gap-2">
+                    {event.event_categories?.icon && (
+                      <span className="text-2xl opacity-80" aria-label={event.event_categories.name}>
+                        {event.event_categories.icon}
+                      </span>
+                    )}
+                    {userId && tenantId && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className={`h-8 w-8 p-0 hover:bg-transparent ${isSaved ? "text-red-500 hover:text-red-600" : "text-muted-foreground hover:text-red-500"}`}
+                        onClick={(e) => handleSave(event.id, isSaved, e)}
+                        disabled={loadingStates[`save-${event.id}`]}
+                      >
+                        <Heart className={`h-5 w-5 ${isSaved ? "fill-current" : ""}`} />
+                      </Button>
+                    )}
                   </div>
                 </div>
-              </Link>
-            )
-          })}
-        </div>
-      </CardContent>
-    </Card>
+              </div>
+            </Link>
+          )
+        })}
+      </div>
+    </div>
   )
 }

@@ -236,43 +236,46 @@ export function MyListingsAndTransactionsWidget({
     return (
       <div
         key={listing.id}
-        className="flex gap-4 p-4 rounded-lg border hover:bg-accent transition-colors cursor-pointer"
+        className="group flex gap-4 p-4 rounded-xl border bg-card hover:shadow-md hover:border-primary/20 transition-all duration-200 cursor-pointer"
         onClick={(e) => handleView(listing.id, e)}
       >
         {listing.hero_photo ? (
-          <div className="relative w-20 h-20 flex-shrink-0 rounded-md overflow-hidden bg-muted">
-            <Image src={listing.hero_photo || "/placeholder.svg"} alt={listing.title} fill className="object-cover" />
+          <div className="relative w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden bg-muted">
+            <Image src={listing.hero_photo || "/placeholder.svg"} alt={listing.title} fill className="object-cover group-hover:scale-105 transition-transform duration-300" />
           </div>
         ) : (
-          <div className="w-20 h-20 flex-shrink-0 rounded-md bg-muted flex items-center justify-center">
-            <Package className="h-8 w-8 text-muted-foreground" />
+          <div className="w-24 h-24 flex-shrink-0 rounded-lg bg-muted flex items-center justify-center group-hover:bg-muted/80 transition-colors">
+            <Package className="h-8 w-8 text-muted-foreground/50" />
           </div>
         )}
 
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2">
-            <h4 className="font-semibold text-base leading-tight truncate">{listing.title}</h4>
-            <div className="flex gap-1 flex-shrink-0">
-              {isDraft && <Badge variant="secondary">Draft</Badge>}
-              {isPaused && <Badge variant="outline">Paused</Badge>}
-              {listing.status === "cancelled" && <Badge variant="destructive">Cancelled</Badge>}
+        <div className="flex-1 min-w-0 flex flex-col justify-between">
+          <div>
+            <div className="flex items-start justify-between gap-2">
+              <h4 className="font-semibold text-base leading-tight truncate group-hover:text-primary transition-colors">{listing.title}</h4>
+              <div className="flex gap-1 flex-shrink-0">
+                {isDraft && <Badge variant="secondary" className="text-xs">Draft</Badge>}
+                {isPaused && <Badge variant="outline" className="text-xs">Paused</Badge>}
+                {listing.status === "cancelled" && <Badge variant="destructive" className="text-xs">Cancelled</Badge>}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">
+                {listing.pricing_type === "free"
+                  ? "Free"
+                  : listing.pricing_type === "fixed_price"
+                    ? `${listing.price}`
+                    : "Negotiable"}
+              </span>
+              <span>•</span>
+              <span>{listing.category?.name || "Uncategorized"}</span>
+              <span>•</span>
+              <span>Qty: {listing.available_quantity}</span>
             </div>
           </div>
 
-          <p className="text-sm text-muted-foreground mt-1">
-            {listing.pricing_type === "free"
-              ? "Free"
-              : listing.pricing_type === "fixed_price"
-                ? `${listing.price}`
-                : "Negotiable"}
-          </p>
-
-          <div className="flex items-center gap-2 mt-1">
-            {listing.category && <p className="text-xs text-muted-foreground">{listing.category.name}</p>}
-            <p className="text-xs text-muted-foreground">Qty: {listing.available_quantity}</p>
-          </div>
-
-          <div className="flex items-center gap-1 mt-3" onClick={(e) => e.preventDefault()}>
+          <div className="flex items-center gap-1 mt-3 pt-2 border-t border-border/50 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.preventDefault()}>
             <Button
               size="sm"
               variant="outline"
@@ -320,17 +323,7 @@ export function MyListingsAndTransactionsWidget({
             <Button
               size="sm"
               variant="ghost"
-              className="h-7 text-xs"
-              onClick={(e) => handleView(listing.id, e)}
-            >
-              <Eye className="h-3 w-3 mr-1" />
-              View
-            </Button>
-
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 text-xs"
+              className="h-7 text-xs ml-auto"
               onClick={(e) => handleViewHistory(listing.id, e)}
               disabled={isLoading}
             >
@@ -341,18 +334,7 @@ export function MyListingsAndTransactionsWidget({
             <Button
               size="sm"
               variant="ghost"
-              className="h-7 text-xs"
-              onClick={(e) => handleArchive(listing.id, e)}
-              disabled={isLoading}
-            >
-              <Archive className="h-3 w-3 mr-1" />
-              Archive
-            </Button>
-
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 text-xs text-destructive hover:text-destructive"
+              className="h-7 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
               onClick={(e) => handleDelete(listing.id, e)}
               disabled={isLoading}
             >
@@ -367,8 +349,8 @@ export function MyListingsAndTransactionsWidget({
 
   function renderEmptyState(message: string) {
     return (
-      <div className="text-center py-8">
-        <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+      <div className="text-center py-12 border-2 border-dashed rounded-xl">
+        <Package className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
         <p className="text-sm text-muted-foreground">{message}</p>
       </div>
     )
@@ -376,38 +358,32 @@ export function MyListingsAndTransactionsWidget({
 
   if (listings.length === 0 && transactions.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>My Listings & Transactions</CardTitle>
-          <CardDescription>Manage your exchange listings and track active exchanges</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-6">
-            <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-sm text-muted-foreground mb-4">
-              You haven't created any listings yet. Start sharing items with your community!
-            </p>
-            <CreateExchangeListingButton
-              tenantSlug={tenantSlug}
-              tenantId={tenantId}
-              categories={categories}
-              neighborhoods={neighborhoods}
-            />
-          </div>
-        </CardContent>
-      </Card>
+      <div className="text-center py-12 border rounded-xl bg-card">
+        <Package className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+        <h3 className="text-lg font-semibold mb-2">No Listings Yet</h3>
+        <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
+          You haven't created any listings yet. Start sharing items with your community!
+        </p>
+        <CreateExchangeListingButton
+          tenantSlug={tenantSlug}
+          tenantId={tenantId}
+          categories={categories}
+          neighborhoods={neighborhoods}
+          variant="default"
+        />
+      </div>
     )
   }
 
   return (
     <>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
           <div>
-            <CardTitle>My Listings & Transactions</CardTitle>
-            <CardDescription>
+            <h3 className="text-lg font-semibold">My Listings & Transactions</h3>
+            <p className="text-sm text-muted-foreground">
               {counts.total} listing{counts.total !== 1 ? 's' : ''} · {transactions.length} transaction{transactions.length !== 1 ? 's' : ''}
-            </CardDescription>
+            </p>
           </div>
           <CreateExchangeListingButton
             tenantSlug={tenantSlug}
@@ -416,98 +392,93 @@ export function MyListingsAndTransactionsWidget({
             neighborhoods={neighborhoods}
             variant="default"
           />
-        </CardHeader>
-        <CardContent>
-          <Tabs value={topLevelTab} onValueChange={(v) => setTopLevelTab(v as "listings" | "transactions" | "archive")} className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-4">
-              <TabsTrigger value="listings">
-                Listings ({counts.total})
-              </TabsTrigger>
-              <TabsTrigger value="transactions">
-                Transactions ({activeTransactionsCount})
-              </TabsTrigger>
-              <TabsTrigger value="archive">
-                Archive ({archiveCount})
-              </TabsTrigger>
-            </TabsList>
+        </div>
 
-            <TabsContent value="listings" className="mt-0">
-              <Tabs defaultValue="all" className="w-full">
-                <TabsList className="grid w-full grid-cols-4">
-                  <TabsTrigger value="all">All ({counts.total})</TabsTrigger>
-                  <TabsTrigger value="drafts">Drafts ({counts.drafts})</TabsTrigger>
-                  <TabsTrigger value="published">Published ({counts.published})</TabsTrigger>
-                  <TabsTrigger value="paused">Paused ({counts.paused})</TabsTrigger>
+        <Tabs value={topLevelTab} onValueChange={(v) => setTopLevelTab(v as "listings" | "transactions" | "archive")} className="w-full">
+          <TabsList className="grid w-full grid-cols-3 mb-6">
+            <TabsTrigger value="listings">Listings ({counts.total})</TabsTrigger>
+            <TabsTrigger value="transactions">Transactions ({activeTransactionsCount})</TabsTrigger>
+            <TabsTrigger value="archive">Archive ({archiveCount})</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="listings" className="mt-0">
+            <Tabs defaultValue="all" className="w-full">
+              <div className="flex items-center justify-between mb-4">
+                <TabsList className="bg-transparent p-0 h-auto gap-2">
+                  <TabsTrigger value="all" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-full px-4 py-1 h-auto border border-transparent data-[state=active]:border-primary/20">All</TabsTrigger>
+                  <TabsTrigger value="published" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-full px-4 py-1 h-auto border border-transparent data-[state=active]:border-primary/20">Published</TabsTrigger>
+                  <TabsTrigger value="drafts" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-full px-4 py-1 h-auto border border-transparent data-[state=active]:border-primary/20">Drafts</TabsTrigger>
+                  <TabsTrigger value="paused" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-full px-4 py-1 h-auto border border-transparent data-[state=active]:border-primary/20">Paused</TabsTrigger>
                 </TabsList>
+              </div>
 
-                <TabsContent value="all" className="space-y-4 mt-4">
-                  {activeListings.length > 0 ? (
-                    <div className="space-y-3">
-                      {activeListings.map((listing) => renderListingCard(listing))}
-                    </div>
-                  ) : (
-                    renderEmptyState("No listings yet")
-                  )}
-                </TabsContent>
+              <TabsContent value="all" className="space-y-4 mt-0">
+                {activeListings.length > 0 ? (
+                  <div className="grid gap-3">
+                    {activeListings.map((listing) => renderListingCard(listing))}
+                  </div>
+                ) : (
+                  renderEmptyState("No listings yet")
+                )}
+              </TabsContent>
 
-                <TabsContent value="drafts" className="space-y-4 mt-4">
-                  {counts.drafts > 0 ? (
-                    <div className="space-y-3">
-                      {activeListings
-                        .filter((l) => l.status === "draft")
-                        .map((listing) => renderListingCard(listing))}
-                    </div>
-                  ) : (
-                    renderEmptyState("No draft listings")
-                  )}
-                </TabsContent>
+              <TabsContent value="drafts" className="space-y-4 mt-0">
+                {counts.drafts > 0 ? (
+                  <div className="grid gap-3">
+                    {activeListings
+                      .filter((l) => l.status === "draft")
+                      .map((listing) => renderListingCard(listing))}
+                  </div>
+                ) : (
+                  renderEmptyState("No draft listings")
+                )}
+              </TabsContent>
 
-                <TabsContent value="published" className="space-y-4 mt-4">
-                  {counts.published > 0 ? (
-                    <div className="space-y-3">
-                      {activeListings
-                        .filter((l) => l.status === "published")
-                        .map((listing) => renderListingCard(listing))}
-                    </div>
-                  ) : (
-                    renderEmptyState("No published listings")
-                  )}
-                </TabsContent>
+              <TabsContent value="published" className="space-y-4 mt-0">
+                {counts.published > 0 ? (
+                  <div className="grid gap-3">
+                    {activeListings
+                      .filter((l) => l.status === "published")
+                      .map((listing) => renderListingCard(listing))}
+                  </div>
+                ) : (
+                  renderEmptyState("No published listings")
+                )}
+              </TabsContent>
 
-                <TabsContent value="paused" className="space-y-4 mt-4">
-                  {counts.paused > 0 ? (
-                    <div className="space-y-3">
-                      {activeListings
-                        .filter((l) => !l.is_available && l.status === "published")
-                        .map((listing) => renderListingCard(listing))}
-                    </div>
-                  ) : (
-                    renderEmptyState("No paused listings")
-                  )}
-                </TabsContent>
-              </Tabs>
-            </TabsContent>
+              <TabsContent value="paused" className="space-y-4 mt-0">
+                {counts.paused > 0 ? (
+                  <div className="grid gap-3">
+                    {activeListings
+                      .filter((l) => !l.is_available && l.status === "published")
+                      .map((listing) => renderListingCard(listing))}
+                  </div>
+                ) : (
+                  renderEmptyState("No paused listings")
+                )}
+              </TabsContent>
+            </Tabs>
+          </TabsContent>
 
-            <TabsContent value="transactions" className="mt-0">
-              <TransactionsView
-                transactions={transactions}
-                userId={userId}
-                tenantSlug={tenantSlug}
-                tenantId={tenantId}
-                highlightTransactionId={highlightTransactionId}
-              />
-            </TabsContent>
+          <TabsContent value="transactions" className="mt-0">
+            <TransactionsView
+              transactions={transactions}
+              userId={userId}
+              tenantSlug={tenantSlug}
+              tenantId={tenantId}
+              highlightTransactionId={highlightTransactionId}
+            />
+          </TabsContent>
 
-            <TabsContent value="archive" className="mt-0">
-              <ArchiveView
-                userId={userId}
-                tenantId={tenantId}
-                tenantSlug={tenantSlug}
-              />
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+          <TabsContent value="archive" className="mt-0">
+            <ArchiveView
+              userId={userId}
+              tenantId={tenantId}
+              tenantSlug={tenantSlug}
+            />
+          </TabsContent>
+        </Tabs>
+      </div>
 
       {selectedListingId && (
         <ExchangeListingDetailModal

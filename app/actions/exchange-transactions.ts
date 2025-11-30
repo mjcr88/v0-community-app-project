@@ -247,8 +247,8 @@ export async function markItemPickedUp(
     }
 
     // Create completion notification for both parties
-    const otherPartyId = transaction.borrower_id === userId 
-      ? transaction.lender_id 
+    const otherPartyId = transaction.borrower_id === userId
+      ? transaction.lender_id
       : transaction.borrower_id
     const actorName = transaction.borrower_id === userId
       ? `${transaction.borrower?.first_name} ${transaction.borrower?.last_name}`
@@ -280,8 +280,8 @@ export async function markItemPickedUp(
     }
 
     // Create notification for other party
-    const otherPartyId = transaction.borrower_id === userId 
-      ? transaction.lender_id 
+    const otherPartyId = transaction.borrower_id === userId
+      ? transaction.lender_id
       : transaction.borrower_id
     const actorName = transaction.borrower_id === userId
       ? `${transaction.borrower?.first_name} ${transaction.borrower?.last_name}`
@@ -629,8 +629,8 @@ export async function cancelTransaction(
       .eq("id", transaction.listing_id)
   }
 
-  const otherPartyId = transaction.borrower_id === userId 
-    ? transaction.lender_id 
+  const otherPartyId = transaction.borrower_id === userId
+    ? transaction.lender_id
     : transaction.borrower_id
   const actorName = transaction.borrower_id === userId
     ? `${transaction.borrower?.first_name} ${transaction.borrower?.last_name}`
@@ -652,4 +652,27 @@ export async function cancelTransaction(
   revalidatePath(`/t/${tenantSlug}/exchange`)
 
   return { success: true }
+}
+
+/**
+ * Get pending request for a user on a specific listing
+ */
+export async function getUserPendingRequest(userId: string, listingId: string, tenantId: string) {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from("exchange_transactions")
+    .select("id, quantity, proposed_pickup_date, proposed_return_date")
+    .eq("borrower_id", userId)
+    .eq("listing_id", listingId)
+    .eq("tenant_id", tenantId)
+    .eq("status", "requested")
+    .maybeSingle()
+
+  if (error) {
+    console.error("[v0] Error fetching pending request:", error)
+    return null
+  }
+
+  return data
 }

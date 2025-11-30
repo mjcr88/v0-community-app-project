@@ -78,10 +78,15 @@ export function CommunityMap({
     if (map.current.getSource("lots")) map.current.removeSource("lots")
     if (map.current.getSource("paths")) map.current.removeSource("paths")
 
+
+
     // Separate locations by type
     const lots = locations.filter((loc) => loc.type === "lot" && loc.boundary_coordinates)
     const paths = locations.filter((loc) => loc.type === "walking_path" && loc.path_coordinates)
-    const facilities = locations.filter((loc) => loc.type === "facility" && loc.coordinates)
+    // Only show markers for Point facilities (no path_coordinates)
+    const facilities = locations.filter((loc) => loc.type === "facility" && loc.coordinates && (!loc.path_coordinates || loc.path_coordinates.length === 0))
+    // Polygon facilities
+    const facilityPolygons = locations.filter((loc) => loc.type === "facility" && loc.path_coordinates && loc.path_coordinates.length > 0)
 
     // Add lot boundaries
     if (lots.length > 0) {
@@ -122,6 +127,50 @@ export function CommunityMap({
         source: "lots",
         paint: {
           "line-color": "#10b981",
+          "line-width": 2,
+        },
+      })
+    }
+
+    // Add facility polygons
+    if (facilityPolygons.length > 0) {
+      const facilitiesGeoJSON: GeoJSON.FeatureCollection = {
+        type: "FeatureCollection",
+        features: facilityPolygons.map((fac) => ({
+          type: "Feature",
+          properties: {
+            id: fac.id,
+            name: fac.name,
+            description: fac.description,
+          },
+          geometry: {
+            type: "Polygon",
+            coordinates: [fac.path_coordinates!.map((coord) => [coord.lng, coord.lat])],
+          },
+        })),
+      }
+
+      map.current.addSource("facility-polygons", {
+        type: "geojson",
+        data: facilitiesGeoJSON,
+      })
+
+      map.current.addLayer({
+        id: "facility-polygons-fill",
+        type: "fill",
+        source: "facility-polygons",
+        paint: {
+          "fill-color": "#3b82f6",
+          "fill-opacity": 0.2,
+        },
+      })
+
+      map.current.addLayer({
+        id: "facility-polygons-outline",
+        type: "line",
+        source: "facility-polygons",
+        paint: {
+          "line-color": "#3b82f6",
           "line-width": 2,
         },
       })

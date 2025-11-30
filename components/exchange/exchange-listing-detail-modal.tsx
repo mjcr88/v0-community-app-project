@@ -22,7 +22,8 @@ import { ExchangePriceBadge } from "./exchange-price-badge"
 import { MapPin, Calendar, Package, Pencil, Trash2, Pause, Play, Archive, ArchiveRestore, History, Flag } from 'lucide-react'
 import { getExchangeListingById, pauseExchangeListing, deleteExchangeListing, getExchangeListingFlagCount, getListingFlagDetails } from "@/app/actions/exchange-listings"
 import { archiveListing, unarchiveListing } from "@/app/actions/exchange-history"
-import { GoogleMapViewer } from "@/components/map/google-map-viewer"
+import { getUserPendingRequest } from "@/app/actions/exchange-transactions"
+import { MapboxFullViewer } from "@/components/map/MapboxViewer"
 import { toast } from "sonner"
 import { useRouter } from 'next/navigation'
 import { FlagListingDialog } from "./flag-listing-dialog"
@@ -124,11 +125,11 @@ export function ExchangeListingDetailModal({
     if (open && listingId) {
       loadListing()
       loadFlagStatus()
-      if (userId && userId !== listing?.created_by) {
+      if (userId) {
         loadPendingRequest()
       }
     }
-  }, [open, listingId])
+  }, [open, listingId, userId])
 
   async function loadListing() {
     setIsLoading(true)
@@ -255,6 +256,9 @@ export function ExchangeListingDetailModal({
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="sr-only">Loading Listing</DialogTitle>
+          </DialogHeader>
           <div className="flex items-center justify-center py-12">
             <div className="text-center space-y-2">
               <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto" />
@@ -401,9 +405,76 @@ export function ExchangeListingDetailModal({
                     </Badge>
                   )}
                 </div>
-                <DialogTitle className="text-2xl text-balance">{listing.title}</DialogTitle>
+                <DialogTitle className="text-3xl font-bold leading-tight">{listing.title}</DialogTitle>
               </div>
             </div>
+
+            {/* Action buttons for creators - moved to top */}
+            {isCreator && !listing.archived_at && (
+              <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
+                <Button variant="outline" size="sm" onClick={() => setIsEditModalOpen(true)}>
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Edit
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleTogglePause}
+                  disabled={isPausing}
+                >
+                  {listing.is_available ? (
+                    <>
+                      <Pause className="h-4 w-4 mr-2" />
+                      Pause
+                    </>
+                  ) : (
+                    <>
+                      <Play className="h-4 w-4 mr-2" />
+                      Resume
+                    </>
+                  )}
+                </Button>
+                <Button variant="destructive" size="sm" onClick={() => setShowDeleteDialog(true)}>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </Button>
+              </div>
+            )}
+
+            {/* Request/Flag buttons for viewers - prominent at top */}
+            {!isCreator && !listing.archived_at && (
+              <div className="flex gap-2 mt-4 pt-4 border-t">
+                {showBorrowButton && !hasPendingRequest && (
+                  <Button
+                    onClick={() => setIsRequestDialogOpen(true)}
+                    className="flex-1"
+                    size="lg"
+                  >
+                    <Package className="h-4 w-4 mr-2" />
+                    {getActionButtonText(listing.category?.name || "")}
+                  </Button>
+                )}
+                {hasPendingRequest && (
+                  <Button
+                    variant="secondary"
+                    className="flex-1 cursor-default opacity-100"
+                    size="lg"
+                    disabled
+                  >
+                    Request Pending
+                  </Button>
+                )}
+                <FlagListingDialog
+                  listingId={listingId}
+                  tenantSlug={tenantSlug}
+                  triggerVariant="outline"
+                  triggerSize="lg"
+                  initialFlagCount={flagCount}
+                  initialHasUserFlagged={hasUserFlagged}
+                  onFlagSuccess={handleFlagSuccess}
+                />
+              </div>
+            )}
           </DialogHeader>
 
           <div className="space-y-6">
@@ -445,8 +516,9 @@ export function ExchangeListingDetailModal({
               </div>
             )}
 
-            <Card>
-              <CardContent className="pt-6">
+            {/* Price Card with enhanced styling */}
+            <Card className="border-2 bg-gradient-to-br from-primary/5 to-primary/10">
+              <CardContent className="py-3">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">Price</p>
@@ -474,6 +546,27 @@ export function ExchangeListingDetailModal({
               </div>
             )}
 
+            {/* Creator Profile Card */}
+            <Card className="border-2 bg-gradient-to-br from-muted/30 to-background">
+              <CardContent className="py-3">
+                <div className="flex items-start gap-4">
+                  <Avatar className="h-14 w-14 ring-2 ring-border">
+                    <AvatarImage src={listing.creator?.profile_picture_url || undefined} />
+                    <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                      {creatorInitials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 space-y-1">
+                    <h4 className="font-semibold">{isCreator ? "Listed by You" : `Listed by ${creatorName}`}</h4>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Calendar className="h-3.5 w-3.5" />
+                      Posted {new Date(listing.created_at).toLocaleDateString()}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             {locationName && (
               <div className="space-y-3">
                 <h3 className="font-semibold text-lg">Location</h3>
@@ -482,14 +575,22 @@ export function ExchangeListingDetailModal({
                   <span>{locationName}</span>
                 </div>
                 {hasMapLocation && (
-                  <div className="h-[250px] rounded-lg overflow-hidden border">
-                    <GoogleMapViewer
+                  <div className="h-[300px] rounded-lg overflow-hidden border">
+                    <MapboxFullViewer
                       locations={mapLocations}
+                      tenantId={tenantId}
+                      tenantSlug={tenantSlug}
+                      checkIns={[]}
                       mapCenter={listingLocationForMap!.coordinates}
-                      mapZoom={15}
-                      minimal={true}
-                      showInfoCard={false}
+                      mapZoom={16}
                       highlightLocationId={listingLocationForMap!.id}
+                      showControls={false}
+                      enableSelection={false}
+                      customMarker={listing.location_type === 'custom' && listing.custom_location_coordinates ? {
+                        lat: (listing.custom_location_coordinates as any).lat,
+                        lng: (listing.custom_location_coordinates as any).lng,
+                        label: listing.custom_location_name || "Custom Location"
+                      } : null}
                     />
                   </div>
                 )}
@@ -499,127 +600,6 @@ export function ExchangeListingDetailModal({
                   </p>
                 )}
               </div>
-            )}
-
-            {!isCreator && !listing.archived_at && (
-              <div className="flex justify-end">
-                <FlagListingDialog
-                  listingId={listingId}
-                  tenantSlug={tenantSlug}
-                  triggerVariant="outline"
-                  triggerSize="sm"
-                  initialFlagCount={flagCount}
-                  initialHasUserFlagged={hasUserFlagged}
-                  onFlagSuccess={handleFlagSuccess}
-                />
-              </div>
-            )}
-
-            {isCreator && (
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="space-y-4">
-                    <h3 className="font-semibold text-sm text-muted-foreground">Manage Listing</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {listing.archived_at ? (
-                        <>
-                          <Button
-                            variant="default"
-                            size="sm"
-                            onClick={handleArchive}
-                            disabled={isArchiving}
-                          >
-                            <ArchiveRestore className="h-4 w-4 mr-2" />
-                            {isArchiving ? "Restoring..." : "Restore Listing"}
-                          </Button>
-                        </>
-                      ) : (
-                        <>
-                          <Button variant="outline" size="sm" onClick={() => setIsEditModalOpen(true)}>
-                            <Pencil className="h-4 w-4 mr-2" />
-                            Edit Listing
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleTogglePause}
-                            disabled={isPausing}
-                          >
-                            {listing.is_available ? (
-                              <>
-                                <Pause className="h-4 w-4 mr-2" />
-                                Pause Listing
-                              </>
-                            ) : (
-                              <>
-                                <Play className="h-4 w-4 mr-2" />
-                                Resume Listing
-                              </>
-                            )}
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleArchive}
-                            disabled={isArchiving}
-                          >
-                            <Archive className="h-4 w-4 mr-2" />
-                            {isArchiving ? "Archiving..." : "Archive Listing"}
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => setShowDeleteDialog(true)}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete Listing
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {showBorrowButton && (
-              <>
-                {hasPendingRequest ? (
-                  <div className="p-4 bg-accent rounded-lg border border-border">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary">Pending Request</Badge>
-                        <span className="text-sm text-muted-foreground">
-                          You have a pending request for this item
-                        </span>
-                      </div>
-                      <div className="text-sm space-y-1">
-                        <p>
-                          <strong>Quantity:</strong> {pendingRequest.quantity}
-                        </p>
-                        <p>
-                          <strong>Pickup:</strong>{" "}
-                          {new Date(pendingRequest.proposed_pickup_date).toLocaleDateString()}
-                        </p>
-                        {pendingRequest.proposed_return_date && (
-                          <p>
-                            <strong>Return:</strong>{" "}
-                            {new Date(pendingRequest.proposed_return_date).toLocaleDateString()}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <Button
-                    className="w-full"
-                    size="lg"
-                    onClick={() => setIsRequestDialogOpen(true)}
-                  >
-                    {getActionButtonText(listing.category?.name || "")}
-                  </Button>
-                )}
-              </>
             )}
 
             <div className="space-y-3 text-sm">
@@ -722,10 +702,4 @@ export function ExchangeListingDetailModal({
       )}
     </>
   )
-}
-
-async function getUserPendingRequest(userId: string, listingId: string, tenantId: string) {
-  // Placeholder function for fetching user pending request
-  // Implement actual logic here
-  return null
 }

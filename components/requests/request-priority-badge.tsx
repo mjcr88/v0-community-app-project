@@ -6,24 +6,28 @@ interface RequestPriorityBadgeProps {
   priority: RequestPriority
 }
 
+const priorityConfig = {
+  normal: {
+    label: "Normal",
+    variant: "outline",
+    className: "text-muted-foreground border-border",
+    icon: null, // No icon for normal priority
+  },
+  urgent: {
+    label: "Urgent",
+    variant: "secondary",
+    className: "bg-clay/10 text-clay border-clay/20",
+    icon: <AlertCircle className="h-3 w-3" />,
+  },
+  emergency: {
+    label: "Emergency",
+    variant: "destructive",
+    className: "bg-sunrise text-white hover:bg-sunrise/90 border-transparent shadow-sm",
+    icon: <AlertTriangle className="h-3 w-3" />,
+  },
+}
+
 export function RequestPriorityBadge({ priority }: RequestPriorityBadgeProps) {
-  if (priority === 'normal') {
-    return null // Don't show badge for normal priority
-  }
-
-  const priorityConfig = {
-    urgent: {
-      label: "Urgent",
-      className: "bg-orange-100 text-orange-700 border-orange-300",
-      icon: <AlertCircle className="h-3 w-3" />,
-    },
-    emergency: {
-      label: "Emergency",
-      className: "bg-red-100 text-red-700 border-red-300",
-      icon: <AlertTriangle className="h-3 w-3" />,
-    },
-  }
-
   const config = priorityConfig[priority]
 
   return (

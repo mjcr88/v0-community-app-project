@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { getLocations } from "@/lib/data/locations"
-import { GoogleMapViewer } from "@/components/map/google-map-viewer"
+import { ResidentMapClient } from "@/components/map/resident-map-client"
 
 export default async function ResidentMapPage({
   params,
@@ -107,14 +107,12 @@ export default async function ResidentMapPage({
 
   return (
     <div className="h-[calc(100vh-8rem)]">
-      <GoogleMapViewer
+      <ResidentMapClient
         locations={locations}
         tenantId={tenant.id}
+        tenantSlug={slug}
         mapCenter={calculatedCenter}
         mapZoom={calculatedZoom}
-        isAdmin={false}
-        highlightLocationId={highlightLocation ?? boundaryLocation?.id}
-        minimal={false}
       />
     </div>
   )

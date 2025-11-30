@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Search, Filter, X, ChevronDown } from "lucide-react"
 import { EventsList } from "./events-list"
 import { EventsCalendar } from "./events-calendar"
+import { cn } from "@/lib/utils"
 
 interface Event {
   id: string
@@ -280,9 +281,49 @@ export function EventsPageClient({
       </div>
 
       <Tabs value={view} onValueChange={setView} className="w-full">
-        <TabsList className="grid w-full max-w-[400px] grid-cols-2">
-          <TabsTrigger value="list">List</TabsTrigger>
-          <TabsTrigger value="calendar">Calendar</TabsTrigger>
+        <TabsList className="bg-muted/30 p-1 rounded-full h-auto inline-flex">
+          <TabsTrigger
+            value="list"
+            className="rounded-full px-6 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all"
+          >
+            <span className="flex items-center gap-2">
+              List
+              {filteredEvents.length > 0 && (
+                <Badge
+                  variant="secondary"
+                  className={cn(
+                    "px-1.5 py-0.5 text-[10px] h-auto min-w-[1.25rem] justify-center",
+                    view === "list"
+                      ? "bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/30"
+                      : "bg-muted text-muted-foreground"
+                  )}
+                >
+                  {filteredEvents.length}
+                </Badge>
+              )}
+            </span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="calendar"
+            className="rounded-full px-6 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all"
+          >
+            <span className="flex items-center gap-2">
+              Calendar
+              {filteredEvents.length > 0 && (
+                <Badge
+                  variant="secondary"
+                  className={cn(
+                    "px-1.5 py-0.5 text-[10px] h-auto min-w-[1.25rem] justify-center",
+                    view === "calendar"
+                      ? "bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/30"
+                      : "bg-muted text-muted-foreground"
+                  )}
+                >
+                  {filteredEvents.length}
+                </Badge>
+              )}
+            </span>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="list" className="mt-6">

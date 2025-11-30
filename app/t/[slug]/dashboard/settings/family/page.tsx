@@ -1,9 +1,14 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
-import { SettingsTabs } from "@/components/settings-tabs"
 import { FamilyManagementForm } from "./family-management-form"
+import { SettingsLayout } from "@/components/settings/settings-layout"
+import { SettingsTabs } from "@/components/settings-tabs"
 
-export default async function FamilySettingsPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function FamilySettingsPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>
+}) {
   const { slug } = await params
   const supabase = await createClient()
 
@@ -15,23 +20,19 @@ export default async function FamilySettingsPage({ params }: { params: Promise<{
     redirect(`/t/${slug}/login`)
   }
 
+  // Get current resident
   const { data: resident } = await supabase
     .from("users")
-    .select("*")
+    .select("id, tenant_id, family_unit_id, role, lot_id")
     .eq("id", user.id)
-    .eq("role", "resident")
-    .maybeSingle()
+    .single()
 
   if (!resident) {
     redirect(`/t/${slug}/login`)
   }
 
-  // Get tenant to check if pets feature is enabled
-  const { data: tenant } = await supabase.from("tenants").select("*").eq("id", resident.tenant_id).single()
-
-  const validFamilyUnitId = resident.family_unit_id && resident.family_unit_id !== "" ? resident.family_unit_id : null
-
   // Get family unit if exists
+  const validFamilyUnitId = resident.family_unit_id && resident.family_unit_id !== "" ? resident.family_unit_id : null
   let familyUnit = null
   let familyMembers: any[] = []
   let relationships: any[] = []
@@ -43,41 +44,49 @@ export default async function FamilySettingsPage({ params }: { params: Promise<{
       .from("family_units")
       .select("*")
       .eq("id", validFamilyUnitId)
-      .maybeSingle()
+      .single()
 
     familyUnit = familyUnitData
-    isPrimaryContact = familyUnit?.primary_contact_id === resident.id
 
-    const { data: familyMembersData } = await supabase
-      .from("users")
-      .select(`
-        *,
-        user_privacy_settings (*)
-      `)
-      .eq("family_unit_id", validFamilyUnitId)
-      .neq("id", resident.id)
-      .order("first_name")
+    if (familyUnit) {
+      isPrimaryContact = familyUnit.primary_contact_id === resident.id
 
-    familyMembers = familyMembersData || []
+      const { data: membersData } = await supabase
+        .from("users")
+        .select(`
+          *,
+          user_privacy_settings (*)
+        `)
+        .eq("family_unit_id", validFamilyUnitId)
+        .eq("role", "resident")
+        .neq("id", resident.id)
+        .order("first_name")
 
-    // Get existing relationships
-    const { data: relationshipsData } = await supabase
-      .from("family_relationships")
-      .select("*")
-      .eq("user_id", resident.id)
+      familyMembers = membersData || []
 
-    relationships = relationshipsData || []
+      const { data: relationshipsData } = await supabase
+        .from("family_relationships")
+        .select("*")
+        .eq("user_id", resident.id)
 
-    // Get pets if feature is enabled
-    if (tenant?.features?.pets) {
+      relationships = relationshipsData || []
+
       const { data: petsData } = await supabase
         .from("pets")
         .select("*")
         .eq("family_unit_id", validFamilyUnitId)
         .order("name")
+
       pets = petsData || []
     }
   }
+
+  // Get tenant for features
+  const { data: tenant } = await supabase
+    .from("tenants")
+    .select("features")
+    .eq("id", resident.tenant_id)
+    .single()
 
   const validLotId = resident.lot_id && resident.lot_id !== "" ? resident.lot_id : null
   let lotResidents: any[] = []
@@ -98,8 +107,7 @@ export default async function FamilySettingsPage({ params }: { params: Promise<{
   }
 
   return (
-    <>
-      <SettingsTabs tenantSlug={slug} />
+    <SettingsLayout tenantSlug={slug} title="Family Settings" description="Manage your family unit and members">
       <FamilyManagementForm
         resident={resident}
         familyUnit={familyUnit}
@@ -111,6 +119,6 @@ export default async function FamilySettingsPage({ params }: { params: Promise<{
         tenantSlug={slug}
         isPrimaryContact={isPrimaryContact}
       />
-    </>
+    </SettingsLayout>
   )
 }

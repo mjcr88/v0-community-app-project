@@ -32,6 +32,7 @@ export type NotificationType =
   | 'exchange_listing_unflagged'
   // Event-related (future)
   | 'event_invite'
+  | 'event_published'
   | 'event_rsvp'
   | 'event_cancelled'
   | 'event_updated'

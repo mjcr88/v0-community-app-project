@@ -6,10 +6,7 @@ export interface Resident {
     first_name: string
     last_name: string
     email: string | null
-    phone_number: string | null
     profile_picture_url: string | null
-    bio: string | null
-    status: 'active' | 'inactive' | 'pending'
     role: 'resident' | 'tenant_admin' | 'super_admin'
     tenant_id: string
     family_unit_id: string | null
@@ -32,7 +29,6 @@ export interface ResidentWithRelations extends Resident {
 
 export interface GetResidentsOptions {
     // Filter options
-    status?: ('active' | 'inactive' | 'pending')[]
     role?: ('resident' | 'tenant_admin' | 'super_admin')[]
     familyUnitId?: string
     lotId?: string
@@ -68,10 +64,7 @@ export const getResidents = cache(async (
     first_name,
     last_name,
     email,
-    phone_number,
     profile_picture_url,
-    bio,
-    status,
     role,
     tenant_id,
     family_unit_id,
@@ -121,7 +114,13 @@ export const getResidents = cache(async (
     const { data: residents, error } = await query.order("last_name", { ascending: true })
 
     if (error) {
-        console.error("[get-residents] Error fetching residents:", error)
+        console.error("[get-residents] Error fetching residents:", {
+            error,
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code,
+        })
         return []
     }
 
@@ -136,9 +135,7 @@ export const getResidents = cache(async (
             first_name: resident.first_name,
             last_name: resident.last_name,
             email: resident.email,
-            phone_number: resident.phone_number,
             profile_picture_url: resident.profile_picture_url,
-            bio: resident.bio,
             status: resident.status,
             role: resident.role,
             tenant_id: resident.tenant_id,
@@ -160,23 +157,38 @@ export const getResidents = cache(async (
     })
 })
 
-export async function getResidentById(
-    residentId: string,
-    options: GetResidentsOptions = {},
-): Promise<ResidentWithRelations | null> {
+export const getResidentById = cache(async (
+    userId: string,
+    options: { enrichWithFamily?: boolean; enrichWithLot?: boolean } = {},
+): Promise<ResidentWithRelations | null> => {
+    console.log('[DEBUG] getResidentById called:', { userId, options })
+
     const supabase = await createServerClient()
 
-    const { data: resident } = await supabase.from("users").select("tenant_id").eq("id", residentId).single()
+    // First get the user's tenant_id
+    const { data: userData, error: userError } = await supabase
+        .from("users")
+        .select("tenant_id")
+        .eq("id", userId)
+        .single()
 
-    if (!resident) {
+    console.log('[DEBUG] User tenant lookup:', { userId, userData, userError })
+
+    if (!userData?.tenant_id) {
+        console.log('[DEBUG] No tenant_id found for user, returning null')
         return null
     }
 
-    const residents = await getResidents(resident.tenant_id, {
-        ...options,
-        // Override filters to ensure we find the specific user regardless of other filters
-        role: undefined
+    const results = await getResidents(userData.tenant_id, { ...options })
+    const residents = results.filter(r => r.id === userId)
+
+    console.log('[DEBUG] getResidentById results:', {
+        userId,
+        tenantId: userData.tenant_id,
+        foundCount: residents.length,
+        resident: residents[0] ? { id: residents[0].id, name: `${residents[0].first_name} ${residents[0].last_name}` } : null
     })
 
-    return residents.find((r) => r.id === residentId) || null
-}
+
+    return residents.length > 0 ? residents[0] : null
+})

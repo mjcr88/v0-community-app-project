@@ -18,6 +18,9 @@ interface DashboardLayoutClientProps {
         pendingRequests?: number
         unreadEvents?: number
     }
+    tenantId: string
+    categories: Array<{ id: string; name: string }>
+    neighborhoods: Array<{ id: string; name: string }>
 }
 
 export function DashboardLayoutClient({
@@ -26,6 +29,9 @@ export function DashboardLayoutClient({
     tenantName,
     tenantLogoUrl,
     user,
+    tenantId,
+    categories,
+    neighborhoods,
 }: DashboardLayoutClientProps) {
     const [isCollapsed, setIsCollapsed] = useState(false)
 
@@ -49,6 +55,9 @@ export function DashboardLayoutClient({
             <MobileNav
                 tenantSlug={slug}
                 user={user}
+                tenantId={tenantId}
+                categories={categories}
+                neighborhoods={neighborhoods}
             />
 
             {/* Desktop Navigation (>= 768px) */}
@@ -74,7 +83,12 @@ export function DashboardLayoutClient({
             </main>
 
             {/* Desktop FAB */}
-            <CreateFab tenantSlug={slug} />
+            <CreateFab
+                tenantSlug={slug}
+                tenantId={tenantId}
+                categories={categories}
+                neighborhoods={neighborhoods}
+            />
         </div>
     )
 }

@@ -11,9 +11,12 @@ import { cn } from "@/lib/utils"
 interface MobileDockProps {
     tenantSlug: string
     unreadEvents?: number
+    tenantId: string
+    categories: Array<{ id: string; name: string }>
+    neighborhoods: Array<{ id: string; name: string }>
 }
 
-export function MobileDock({ tenantSlug, unreadEvents }: MobileDockProps) {
+export function MobileDock({ tenantSlug, unreadEvents, tenantId, categories, neighborhoods }: MobileDockProps) {
     const pathname = usePathname()
     const [openCreate, setOpenCreate] = useState(false)
 
@@ -65,6 +68,9 @@ export function MobileDock({ tenantSlug, unreadEvents }: MobileDockProps) {
                                 open={openCreate}
                                 onOpenChange={setOpenCreate}
                                 tenantSlug={tenantSlug}
+                                tenantId={tenantId}
+                                categories={categories}
+                                neighborhoods={neighborhoods}
                                 side="top"
                                 align="center"
                             >

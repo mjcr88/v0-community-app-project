@@ -1,29 +1,17 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Building2, MapPin, XCircle, Loader2, Search, X, ExternalLink } from 'lucide-react'
-import { GoogleMapViewer } from "@/components/map/google-map-viewer"
-import { GooglePlacesAutocomplete } from "@/components/map/google-places-autocomplete"
+import { Building2, MapPin, XCircle, Search, Check, X, Globe } from 'lucide-react'
+import { MapboxFullViewer } from "@/components/map/MapboxViewer"
+import { LocationWithRelations } from "@/lib/data/locations"
 
 export type LocationType = "community" | "custom" | "none"
-
-interface Location {
-  id: string
-  name: string
-  type: string
-  coordinates?: { lat: number; lng: number } | null
-  boundary_coordinates?: Array<[number, number]> | null
-  path_coordinates?: Array<[number, number]> | null
-  icon?: string | null
-  facility_type?: string | null
-}
 
 interface LocationSelectorProps {
   tenantId: string
@@ -71,6 +59,17 @@ const locationTypeColors: Record<string, string> = {
   recreational_zone: "bg-cyan-100 text-cyan-700 border-cyan-300",
 }
 
+interface MapboxFeature {
+  id: string
+  place_name: string
+  center: [number, number]
+  text: string
+  properties: {
+    category?: string
+    address?: string
+  }
+}
+
 export function LocationSelector({
   tenantId,
   locationType,
@@ -84,432 +83,446 @@ export function LocationSelector({
   onCustomLocationNameChange,
   onCustomLocationChange,
 }: LocationSelectorProps) {
-  const [locations, setLocations] = useState<Location[]>([])
+  const [locations, setLocations] = useState<LocationWithRelations[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
-  const [highlightedLocationId, setHighlightedLocationId] = useState<string | undefined>(undefined)
+  const [mapboxResults, setMapboxResults] = useState<MapboxFeature[]>([])
+  const [isSearching, setIsSearching] = useState(false)
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null)
   const [mapZoom, setMapZoom] = useState<number>(14)
   const [tenantSlug, setTenantSlug] = useState<string>("")
-  const [mapCenterLoading, setMapCenterLoading] = useState(true)
-  const [customDrawingMode, setCustomDrawingMode] = useState<"marker" | "polygon" | null>(
-    locationType === "custom" ? "marker" : null,
-  )
+  const [dynamicMapCenter, setDynamicMapCenter] = useState<{ lat: number; lng: number } | null>(null)
 
-  const handleCustomLocationDrawing = useCallback(
-    (data: {
-      coordinates?: { lat: number; lng: number } | null
-      type?: "marker" | "polygon" | null
-      path?: Array<{ lat: number; lng: number }> | null
-    }) => {
-      console.log("[v0] Custom location drawn - FULL DATA:", {
-        hasCoordinates: !!data.coordinates,
-        coordinates: data.coordinates,
-        type: data.type,
-        hasPath: !!data.path,
-        pathLength: data.path?.length || 0,
-      })
-      onCustomLocationChange(data)
-    },
-    [onCustomLocationChange],
-  )
-
-  const handlePlaceAutocompleteSelect = useCallback(
-    (place: { name: string; lat: number; lng: number; address?: string }) => {
-      console.log("[v0] Place selected from autocomplete - DETAILS:", {
-        placeName: place.name,
-        coordinates: { lat: place.lat, lng: place.lng },
-        hasAddress: !!place.address,
-      })
-
-      // Update location name
-      onCustomLocationNameChange(place.name)
-
-      // Update coordinates and type
-      handleCustomLocationDrawing({
-        coordinates: { lat: place.lat, lng: place.lng },
-        type: "marker",
-        path: null,
-      })
-    },
-    [onCustomLocationNameChange, handleCustomLocationDrawing],
-  )
+  const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
 
   useEffect(() => {
-    const fetchLocations = async () => {
+    const fetchData = async () => {
       try {
-        console.log("[v0] Fetching locations for tenant:", tenantId)
-        const response = await fetch(`/api/locations?tenantId=${tenantId}`)
-        const data = await response.json()
+        const [locationsRes, mapCenterRes, tenantRes] = await Promise.all([
+          fetch(`/api/locations?tenantId=${tenantId}`),
+          fetch(`/api/tenant-map-center?tenantId=${tenantId}`),
+          fetch(`/api/tenant?tenantId=${tenantId}`)
+        ])
 
-        console.log("[v0] Locations API response:", data)
+        const locationsData = await locationsRes.json()
+        if (locationsData.success && locationsData.locations) {
+          setLocations(locationsData.locations)
+        }
 
-        if (data.success && data.locations) {
-          console.log("[v0] Total locations received:", data.locations.length)
-          setLocations(data.locations)
+        const mapCenterData = await mapCenterRes.json()
+        if (mapCenterData.success) {
+          setMapCenter(mapCenterData.center)
+          setMapZoom(mapCenterData.zoom)
+          setDynamicMapCenter(mapCenterData.center)
+        }
+
+        const tenantData = await tenantRes.json()
+        if (tenantData.success && tenantData.tenant) {
+          setTenantSlug(tenantData.tenant.slug)
         }
       } catch (error) {
-        console.error("[v0] Error fetching locations:", error)
+        console.error("[LocationSelector] Error fetching data:", error)
       } finally {
         setLoading(false)
       }
     }
 
-    const fetchMapCenter = async () => {
-      try {
-        console.log("[v0] Fetching map center for tenant:", tenantId)
-        const response = await fetch(`/api/tenant-map-center?tenantId=${tenantId}`)
-        const data = await response.json()
-
-        console.log("[v0] Map center API response:", data)
-
-        if (data.success) {
-          setMapCenter(data.center)
-          setMapZoom(data.zoom)
-        }
-      } catch (error) {
-        console.error("[v0] Error fetching map center:", error)
-      } finally {
-        setMapCenterLoading(false)
-      }
-    }
-
-    const fetchTenantSlug = async () => {
-      try {
-        const response = await fetch(`/api/tenant?tenantId=${tenantId}`)
-        const data = await response.json()
-        if (data.success && data.tenant) {
-          setTenantSlug(data.tenant.slug)
-        }
-      } catch (error) {
-        console.error("[v0] Error fetching tenant slug:", error)
-      }
-    }
-
-    fetchLocations()
-    fetchMapCenter()
-    fetchTenantSlug()
+    fetchData()
   }, [tenantId])
 
+  // Search Mapbox Places
   useEffect(() => {
-    if (locationType === "custom" && !customDrawingMode) {
-      setCustomDrawingMode("marker")
-    } else if (locationType !== "custom") {
-      setCustomDrawingMode(null)
-    }
-  }, [locationType, customDrawingMode])
-
-  useEffect(() => {
-    const handlePlaceSelected = (event: Event) => {
-      const customEvent = event as CustomEvent
-      console.log("[v0] Place selected event received from map - EVENT DETAIL:", {
-        hasDetail: !!customEvent.detail,
-        detail: customEvent.detail,
-      })
-      const { name, lat, lng } = customEvent.detail
-
-      onCustomLocationNameChange(name)
-      handleCustomLocationDrawing({
-        coordinates: { lat, lng },
-        type: "marker",
-        path: null,
-      })
+    if (!searchQuery.trim() || !mapboxToken) {
+      setMapboxResults([])
+      return
     }
 
-    window.addEventListener("placeSelected", handlePlaceSelected)
+    const timer = setTimeout(async () => {
+      setIsSearching(true)
+      try {
+        // Bias results to current map center
+        const centerToUse = dynamicMapCenter || mapCenter
+        const proximity = centerToUse ? `&proximity=${centerToUse.lng},${centerToUse.lat}` : ''
+        const response = await fetch(
+          `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(searchQuery)}.json?access_token=${mapboxToken}${proximity}&types=poi,address,place&limit=5`
+        )
+        const data = await response.json()
+        if (data.features) {
+          setMapboxResults(data.features)
+        }
+      } catch (error) {
+        console.error('Error searching Mapbox:', error)
+      } finally {
+        setIsSearching(false)
+      }
+    }, 300)
 
-    return () => {
-      window.removeEventListener("placeSelected", handlePlaceSelected)
-    }
-  }, [onCustomLocationNameChange, handleCustomLocationDrawing])
+    return () => clearTimeout(timer)
+  }, [searchQuery, mapboxToken, dynamicMapCenter, mapCenter])
 
-  useEffect(() => {
-    if (locationType === "custom" && customLocationCoordinates) {
-      console.log("[v0] Loading saved custom location - COORDINATES:", {
-        coordinates: customLocationCoordinates,
-        type: customLocationType,
-        hasPath: !!customLocationPath,
-      })
-    }
-  }, [locationType, customLocationCoordinates, customLocationType, customLocationPath])
+  const filteredCommunityLocations = useMemo(() => {
+    if (!searchQuery.trim()) return locations
+    const query = searchQuery.toLowerCase()
+    return locations.filter(loc =>
+      loc.name.toLowerCase().includes(query) ||
+      loc.type.toLowerCase().includes(query)
+    )
+  }, [locations, searchQuery])
+
+  const selectedLocation = locations.find(loc => loc.id === communityLocationId)
 
   const handleMapLocationClick = (locationId: string) => {
-    console.log("[v0] Map location clicked, setting highlight:", locationId)
-    setHighlightedLocationId(locationId)
+    console.log('[LocationSelector] handleMapLocationClick', locationId)
+    const location = locations.find(l => l.id === locationId)
+    if (location) {
+      console.log('[LocationSelector] Found location, setting type to community')
+      onLocationTypeChange('community')
+      onCommunityLocationChange(locationId)
+      onCustomLocationNameChange('')
+      onCustomLocationChange({ coordinates: null, type: null, path: null })
+      setSearchQuery('')
+    } else {
+      console.warn('[LocationSelector] Location not found for ID:', locationId)
+    }
   }
 
-  const handleLocationSelect = (location: Location) => {
-    console.log("[v0] Location selected:", location.id)
-    onCommunityLocationChange(location.id)
-    setHighlightedLocationId(undefined)
+  const handleMapboxSelect = (feature: MapboxFeature) => {
+    console.log('[LocationSelector] handleMapboxSelect', feature)
+    onLocationTypeChange('custom')
+    onCommunityLocationChange('')
+    onCustomLocationNameChange(feature.text)
+    onCustomLocationChange({
+      coordinates: { lat: feature.center[1], lng: feature.center[0] },
+      type: 'marker',
+      path: null
+    })
+    setSearchQuery('')
+  }
+
+  const handleMapClick = (coords: { lat: number; lng: number }) => {
+    if (locationType === 'community') {
+      // In community mode, clicking empty space should clear selection
+      onCommunityLocationChange('')
+      return
+    }
+
+    onLocationTypeChange('custom')
+    onCommunityLocationChange('')
+    onCustomLocationChange({
+      coordinates: coords,
+      type: 'marker',
+      path: null
+    })
+  }
+
+  const handlePoiClick = (poi: { name: string; address?: string; lat: number; lng: number }) => {
+    // When clicking a POI, we want to select it as a "Custom Location" but without a pin marker (maybe?)
+    // The user said: "simply highlight that location icon in orange"
+    // We can achieve this by setting it as a custom location but maybe with a flag or just standard custom location
+    // For now, let's treat it as a custom location but we might need to pass a "isPoi" flag if we want different styling
+    // But MapboxViewer customMarker is just a marker.
+    // To "highlight icon in orange" without a pin, we might need to use the highlightLocationId if it was a community location,
+    // but this is a public POI.
+    // MapboxViewer doesn't support highlighting arbitrary POIs yet.
+    // For now, let's just set it as a custom location (which drops a pin) as a fallback, 
+    // OR we can try to implement the highlight logic.
+    // User said: "if selecting a public place on the map, we don't need to show an extra pin but simply highlight that location icon in orange."
+
+    onLocationTypeChange('custom')
+    onCommunityLocationChange('')
+    onCustomLocationNameChange(poi.name)
+    onCustomLocationChange({
+      coordinates: { lat: poi.lat, lng: poi.lng },
+      type: 'marker', // We still use marker type for data, but maybe we can suppress the visual pin if we had a way
+      path: null
+    })
+    setSearchQuery('')
   }
 
   const handleClearSelection = () => {
-    onCommunityLocationChange("")
-    setHighlightedLocationId(undefined)
+    onCommunityLocationChange('')
+    onCustomLocationNameChange('')
+    onCustomLocationChange({ coordinates: null, type: null, path: null })
+    if (locationType === 'custom') {
+      onLocationTypeChange('community')
+    }
   }
 
-  const selectedLocation = locations.find((loc) => loc.id === communityLocationId)
-
-  const filteredLocations = (() => {
-    if (searchQuery) {
-      let filtered = locations.filter((location) => location.name.toLowerCase().includes(searchQuery.toLowerCase()))
-
-      if (communityLocationId) {
-        const selected = locations.find((loc) => loc.id === communityLocationId)
-        if (selected && !filtered.find((loc) => loc.id === communityLocationId)) {
-          filtered = [selected, ...filtered]
-        }
-      }
-
-      return filtered
-    }
-
-    if (highlightedLocationId) {
-      const highlighted = locations.find((loc) => loc.id === highlightedLocationId)
-      return highlighted ? [highlighted] : []
-    }
-
-    return []
-  })()
+  const mapCenterToPass = customLocationCoordinates || mapCenter
 
   return (
-    <div className="space-y-4">
-      
-      <RadioGroup value={locationType} onValueChange={(value) => onLocationTypeChange(value as LocationType)}>
-        <div className="space-y-3">
-          <div className="flex items-start space-x-3 rounded-md border p-4">
-            <RadioGroupItem value="community" id="location-community" className="mt-1" />
+    <div className="space-y-6">
+      {/* Unified Search */}
+      <div className="space-y-2">
+        <Label htmlFor="location-search" className="text-sm">
+          Search Locations
+        </Label>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
+          <Input
+            id="location-search"
+            placeholder="Search community or public places..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onFocus={() => {
+              // Auto-switch to community mode on focus if no location type is selected
+              // This shows the map immediately when the user starts searching
+              if (!locationType || locationType === 'none') {
+                onLocationTypeChange('community')
+              }
+            }}
+            className="pl-10"
+          />
+          {/* Search Results Dropdown */}
+          {searchQuery && (filteredCommunityLocations.length > 0 || mapboxResults.length > 0) && (
+            <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-popover border rounded-lg shadow-lg max-h-80 overflow-y-auto z-20">
+              {/* Community Results */}
+              {filteredCommunityLocations.length > 0 && (
+                <>
+                  <div className="px-3 py-2 text-xs font-semibold text-muted-foreground bg-muted sticky top-0">
+                    Community Locations
+                  </div>
+                  {filteredCommunityLocations.slice(0, 10).map((location) => (
+                    <button
+                      key={location.id}
+                      onClick={() => handleMapLocationClick(location.id)}
+                      className="w-full flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors text-left border-b last:border-b-0"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm truncate">{location.name}</div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="outline" className={`${locationTypeColors[location.type]} text-xs`}>
+                            {locationTypeLabels[location.type] || location.type}
+                          </Badge>
+                          {location.neighborhood && (
+                            <span className="text-xs text-muted-foreground truncate">
+                              {location.neighborhood.name}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </>
+              )}
+
+              {/* Mapbox Results */}
+              {mapboxResults.length > 0 && (
+                <>
+                  <div className="px-3 py-2 text-xs font-semibold text-muted-foreground bg-muted sticky top-0 border-t">
+                    Public Places
+                  </div>
+                  {mapboxResults.map((feature) => (
+                    <button
+                      key={feature.id}
+                      onClick={() => handleMapboxSelect(feature)}
+                      className="w-full flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors text-left border-b last:border-b-0"
+                    >
+                      <Globe className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm truncate">{feature.text}</div>
+                        <div className="text-xs text-muted-foreground truncate">
+                          {feature.place_name}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </>
+              )}
+            </div>
+          )}
+        </div>
+        {searchQuery && !isSearching && filteredCommunityLocations.length === 0 && mapboxResults.length === 0 && (
+          <p className="text-xs text-muted-foreground">
+            No locations found
+          </p>
+        )}
+      </div>
+
+      <div className="space-y-3">
+        <Label className="text-sm font-medium block">Location Type</Label>
+        <div className="space-y-2">
+          {/* Community Location */}
+          <div
+            onClick={() => {
+              console.log('[LocationSelector] Clicked Community Toggle')
+              onLocationTypeChange('community')
+              setSearchQuery('')
+            }}
+            className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${locationType === 'community'
+              ? 'border-primary bg-background shadow-sm'
+              : 'border-border bg-background hover:border-primary/50'
+              }`}
+          >
+            <div className={`h-4 w-4 rounded-full border border-primary flex items-center justify-center ${locationType === 'community' ? 'bg-primary text-primary-foreground' : 'bg-transparent'}`}>
+              {locationType === 'community' && <div className="h-2 w-2 rounded-full bg-current" />}
+            </div>
+            <Building2 className="h-4 w-4 text-muted-foreground" />
             <div className="flex-1">
-              <Label htmlFor="location-community" className="font-medium cursor-pointer flex items-center gap-2">
-                <Building2 className="h-4 w-4" />
-                Community Location
-              </Label>
-              <p className="text-sm text-muted-foreground mt-1">Select an existing facility or location</p>
+              <div className="font-medium text-sm">Community Location</div>
+              <div className="text-xs text-muted-foreground">Lots, facilities, etc.</div>
             </div>
           </div>
 
-          <div className="flex items-start space-x-3 rounded-md border p-4">
-            <RadioGroupItem value="custom" id="location-custom" className="mt-1" />
+          {/* Custom Location */}
+          <div
+            onClick={() => {
+              console.log('[LocationSelector] Clicked Custom Toggle')
+              onLocationTypeChange('custom')
+              setSearchQuery('')
+            }}
+            className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${locationType === 'custom'
+              ? 'border-primary bg-background shadow-sm'
+              : 'border-border bg-background hover:border-primary/50'
+              }`}
+          >
+            <div className={`h-4 w-4 rounded-full border border-primary flex items-center justify-center ${locationType === 'custom' ? 'bg-primary text-primary-foreground' : 'bg-transparent'}`}>
+              {locationType === 'custom' && <div className="h-2 w-2 rounded-full bg-current" />}
+            </div>
+            <MapPin className="h-4 w-4 text-muted-foreground" />
             <div className="flex-1">
-              <Label htmlFor="location-custom" className="font-medium cursor-pointer flex items-center gap-2">
-                <MapPin className="h-4 w-4" />
-                Custom Location
-              </Label>
-              <p className="text-sm text-muted-foreground mt-1">Draw a custom pin or area on the map</p>
+              <div className="font-medium text-sm">Custom Location</div>
+              <div className="text-xs text-muted-foreground">Drop a pin anywhere</div>
             </div>
           </div>
 
-          <div className="flex items-start space-x-3 rounded-md border p-4">
-            <RadioGroupItem value="none" id="location-none" className="mt-1" />
+          {/* No Location */}
+          <div
+            onClick={() => {
+              console.log('[LocationSelector] Clicked No Location Toggle')
+              onLocationTypeChange('none')
+              onCommunityLocationChange('')
+              onCustomLocationNameChange('')
+              onCustomLocationChange({ coordinates: null, type: null, path: null })
+              setSearchQuery('')
+            }}
+            className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${locationType === 'none'
+              ? 'border-primary bg-background shadow-sm'
+              : 'border-border bg-background hover:border-primary/50'
+              }`}
+          >
+            <div className={`h-4 w-4 rounded-full border border-primary flex items-center justify-center ${locationType === 'none' ? 'bg-primary text-primary-foreground' : 'bg-transparent'}`}>
+              {locationType === 'none' && <div className="h-2 w-2 rounded-full bg-current" />}
+            </div>
+            <XCircle className="h-4 w-4 text-muted-foreground" />
             <div className="flex-1">
-              <Label htmlFor="location-none" className="font-medium cursor-pointer flex items-center gap-2">
-                <XCircle className="h-4 w-4" />
-                No location
-              </Label>
-              <p className="text-sm text-muted-foreground mt-1">Location not applicable</p>
+              <div className="font-medium text-sm">No Location</div>
+              <div className="text-xs text-muted-foreground">Not applicable</div>
             </div>
           </div>
         </div>
-      </RadioGroup>
+      </div>
 
-      {locationType === "community" && (
-        <div className="pl-6 border-l-2 space-y-4">
-          {selectedLocation && (
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-muted-foreground" />
-                      <p className="font-medium">{selectedLocation.name}</p>
+      {/* Map and Selected Location */}
+      {(locationType === 'community' || locationType === 'custom') && (
+        <div className="space-y-6 animate-in fade-in slide-in-from-top-4 duration-300">
+          {/* Selected Location Preview */}
+          <div>
+            <Label className="text-sm font-medium mb-2 block">Selected Location</Label>
+            {selectedLocation ? (
+              <Card className="border-2 border-primary">
+                <CardContent className="p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                        <span className="font-medium text-sm truncate">{selectedLocation.name}</span>
+                      </div>
+                      <Badge variant="outline" className={`${locationTypeColors[selectedLocation.type]} text-xs`}>
+                        {locationTypeLabels[selectedLocation.type] || selectedLocation.type}
+                      </Badge>
                     </div>
-                    <Badge variant="outline" className={locationTypeColors[selectedLocation.type]}>
-                      {locationTypeLabels[selectedLocation.type] || selectedLocation.type}
-                    </Badge>
-                    {selectedLocation.facility_type && (
-                      <p className="text-sm text-muted-foreground">{selectedLocation.facility_type}</p>
-                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                      onClick={handleClearSelection}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={handleClearSelection}>
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                </CardContent>
+              </Card>
+            ) : customLocationCoordinates ? (
+              <Card className="border-2 border-primary">
+                <CardContent className="p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                        <span className="font-medium text-sm truncate">{customLocationName || 'Custom Location'}</span>
+                      </div>
+                      <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300 text-xs">
+                        Public
+                      </Badge>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                      onClick={handleClearSelection}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="border-dashed">
+                <CardContent className="p-4 text-center">
+                  <MapPin className="h-8 w-8 mx-auto text-muted-foreground/30 mb-2" />
+                  <p className="text-sm text-muted-foreground">
+                    {locationType === 'community' ? 'Click on the map to select' : 'Drop a pin on the map'}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
 
-          {loading ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Loading locations...
+          {/* Custom Location Name Input */}
+          {locationType === 'custom' && (
+            <div className="space-y-2">
+              <Label htmlFor="custom-name" className="text-sm">
+                Location Name <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="custom-name"
+                placeholder="e.g., La Fortuna Waterfall"
+                value={customLocationName || ''}
+                onChange={(e) => onCustomLocationNameChange(e.target.value)}
+              />
             </div>
-          ) : locations.length > 0 ? (
-            <>
-              <div className="h-96 rounded-lg overflow-hidden border">
-                {!mapCenterLoading && mapCenter ? (
-                  <GoogleMapViewer
-                    locations={locations}
-                    tenantId={tenantId}
-                    highlightLocationId={highlightedLocationId}
-                    selectedLocationId={communityLocationId || undefined}
-                    minimal={true}
-                    mapCenter={mapCenter}
-                    mapZoom={mapZoom}
-                    onLocationClick={handleMapLocationClick}
-                    showInfoCard={false}
-                  />
-                ) : (
-                  <div className="flex items-center justify-center h-full bg-muted">
-                    <div className="flex flex-col items-center gap-2">
-                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                      <p className="text-sm text-muted-foreground">Loading map...</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-3">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search locations..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-
-                <div className="border rounded-lg max-h-96 overflow-y-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredLocations.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
-                            <div className="space-y-2">
-                              <MapPin className="h-8 w-8 mx-auto opacity-30" />
-                              <p>Click a location on the map or search above</p>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        filteredLocations.map((location) => (
-                          <TableRow
-                            key={location.id}
-                            className={`cursor-pointer ${communityLocationId === location.id ? "bg-muted" : ""}`}
-                            onClick={() => setHighlightedLocationId(location.id)}
-                          >
-                            <TableCell className="font-medium">{location.name}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className={locationTypeColors[location.type]}>
-                                {locationTypeLabels[location.type] || location.type}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex items-center justify-end gap-2">
-                                {tenantSlug && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      window.open(
-                                        `/t/${tenantSlug}/dashboard/locations/${location.id}`,
-                                        "_blank",
-                                        "noopener,noreferrer",
-                                      )
-                                    }}
-                                    title="View location details"
-                                  >
-                                    <ExternalLink className="h-4 w-4" />
-                                  </Button>
-                                )}
-                                {communityLocationId === location.id ? (
-                                  <Badge>Selected</Badge>
-                                ) : (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      handleLocationSelect(location)
-                                    }}
-                                  >
-                                    Select
-                                  </Button>
-                                )}
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
-            </>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              No community locations available. Contact your admin to add locations.
-            </p>
           )}
-        </div>
-      )}
 
-      {locationType === "custom" && (
-        <div className="pl-6 border-l-2 space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="custom-location-name">
-              Location Name <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="custom-location-name"
-              placeholder="e.g., Back Patio, La Fortuna Waterfall, Arenal Restaurant"
-              value={customLocationName || ""}
-              onChange={(e) => onCustomLocationNameChange(e.target.value)}
-            />
-            <p className="text-sm text-muted-foreground">Enter manually or use the search box and map below</p>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Search for a Place</Label>
-            <GooglePlacesAutocomplete
-              onPlaceSelected={handlePlaceAutocompleteSelect}
-              placeholder="Search restaurants, attractions, landmarks..."
-              defaultValue={customLocationName || ""}
-            />
-            <p className="text-sm text-muted-foreground">Or drop a pin directly on the map</p>
-          </div>
-
-          <div className="h-96 rounded-lg overflow-hidden border">
-            {!mapCenterLoading && mapCenter ? (
-              <GoogleMapViewer
+          {/* Map */}
+          <div className="h-[400px] rounded-lg border overflow-hidden shadow-sm">
+            {mapCenter ? (
+              <MapboxFullViewer
                 locations={locations}
                 tenantId={tenantId}
-                mapCenter={mapCenter}
-                mapZoom={mapZoom}
-                minimal={true}
-                showInfoCard={false}
-                drawingMode={customDrawingMode}
-                onDrawingModeChange={setCustomDrawingMode}
-                onDrawingComplete={handleCustomLocationDrawing}
-                drawnCoordinates={customLocationCoordinates}
-                drawnPath={customLocationPath}
-                drawnType={customLocationType}
+                tenantSlug={tenantSlug}
+                checkIns={[]}
+                mapCenter={mapCenterToPass}
+                mapZoom={customLocationCoordinates ? 16 : mapZoom}
+                showControls={false}
+                enableSelection={false}
+                highlightLocationId={communityLocationId || undefined}
+                customMarker={customLocationCoordinates ? {
+                  lat: customLocationCoordinates.lat,
+                  lng: customLocationCoordinates.lng,
+                  label: customLocationName || "Custom Location"
+                } : null}
+                onLocationClick={(locationId, location) => {
+                  // Handle location click from map
+                  // MapboxViewer calls this with (locationId, location)
+                  handleMapLocationClick(locationId)
+                }}
+                onMapClick={handleMapClick}
+                onPoiClick={handlePoiClick}
               />
             ) : (
               <div className="flex items-center justify-center h-full bg-muted">
-                <div className="flex flex-col items-center gap-2">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">Loading map...</p>
-                </div>
+                <p className="text-sm text-muted-foreground">Loading map...</p>
               </div>
             )}
           </div>

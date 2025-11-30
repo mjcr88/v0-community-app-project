@@ -33,8 +33,8 @@ export function AnnouncementsWidget({ slug, tenantId, userId }: AnnouncementsWid
     `/api/announcements/unread/${tenantId}`,
     fetcher,
     {
-      refreshInterval: 300000, // Refresh every 5 minutes
-      revalidateOnFocus: true, // Revalidate when user returns to tab
+      refreshInterval: 300000,
+      revalidateOnFocus: true,
     }
   )
 
@@ -43,98 +43,78 @@ export function AnnouncementsWidget({ slug, tenantId, userId }: AnnouncementsWid
 
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Community Announcements</CardTitle>
-          <CardDescription>Loading announcements...</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-pulse text-muted-foreground">Loading...</div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-pulse text-muted-foreground">Loading announcements...</div>
+      </div>
     )
   }
 
   if (recentAnnouncements.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Community Announcements</CardTitle>
-          <CardDescription>Stay updated with official community news</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-6">
-            <Megaphone className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-sm text-muted-foreground mb-4">
-              No new announcements at the moment
-            </p>
-            <Button asChild variant="outline">
-              <Link href={`/t/${slug}/dashboard/announcements`}>View All Announcements</Link>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="text-center py-8">
+        <Megaphone className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
+        <p className="text-sm text-muted-foreground mb-4">No new announcements</p>
+        <Button asChild variant="outline" size="sm">
+          <Link href={`/t/${slug}/dashboard/announcements`}>View Archive</Link>
+        </Button>
+      </div>
     )
   }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0">
-        <div>
-          <CardTitle className="flex items-center gap-2">
-            Community Announcements
-            {unreadCount > 0 && (
-              <Badge variant="default" className="ml-2">
-                {unreadCount} New
-              </Badge>
-            )}
-          </CardTitle>
-          <CardDescription>
-            Latest updates from community management
-          </CardDescription>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <h3 className="text-lg font-semibold">Latest Updates</h3>
+          {unreadCount > 0 && (
+            <Badge variant="secondary" className="bg-orange-100 text-orange-700 hover:bg-orange-100 border-none">
+              {unreadCount} New
+            </Badge>
+          )}
         </div>
-        <Button asChild variant="ghost" size="sm">
+        <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
           <Link href={`/t/${slug}/dashboard/announcements`}>View All</Link>
         </Button>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          {recentAnnouncements.map((announcement) => (
-            <Link key={announcement.id} href={`/t/${slug}/dashboard/announcements/${announcement.id}`}>
-              <div className="flex gap-3 p-4 rounded-lg border hover:bg-accent transition-colors cursor-pointer">
-                {/* Type icon */}
-                <div className="flex-shrink-0 mt-0.5">
+      </div>
+
+      <div className="grid gap-3">
+        {recentAnnouncements.map((announcement) => (
+          <Link key={announcement.id} href={`/t/${slug}/dashboard/announcements/${announcement.id}`}>
+            <div className="group flex gap-4 p-4 rounded-xl border bg-card hover:shadow-md hover:border-primary/20 transition-all duration-200">
+              <div className="flex-shrink-0 mt-1">
+                <div className="p-2 rounded-lg bg-muted group-hover:bg-primary/10 group-hover:text-primary transition-colors">
                   <AnnouncementTypeIcon type={announcement.announcement_type} className="h-5 w-5" />
                 </div>
+              </div>
 
-                {/* Content */}
-                <div className="flex-1 min-w-0 space-y-1.5">
-                  <div className="flex items-start justify-between gap-2">
-                    <h4 className="font-semibold text-sm leading-tight line-clamp-1">{announcement.title}</h4>
-                    <AnnouncementPriorityBadge priority={announcement.priority} />
-                  </div>
-                  
-                  <p className="text-xs text-muted-foreground line-clamp-2">
-                    {announcement.description}
-                  </p>
-                  
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span>{format(new Date(announcement.published_at), "MMM d, yyyy")}</span>
-                    {announcement.priority === "urgent" && (
-                      <Badge variant="destructive" className="h-5 text-xs">
-                        <AlertCircle className="h-3 w-3 mr-1" />
-                        Urgent
-                      </Badge>
-                    )}
-                  </div>
+              <div className="flex-1 min-w-0 space-y-1">
+                <div className="flex items-start justify-between gap-2">
+                  <h4 className="font-semibold text-base leading-tight group-hover:text-primary transition-colors">
+                    {announcement.title}
+                  </h4>
+                  <AnnouncementPriorityBadge priority={announcement.priority} />
+                </div>
+
+                <p className="text-sm text-muted-foreground line-clamp-2">
+                  {announcement.description}
+                </p>
+
+                <div className="flex items-center gap-3 pt-2 mt-1">
+                  <span className="text-xs text-muted-foreground">
+                    {format(new Date(announcement.published_at), "MMM d, yyyy")}
+                  </span>
+                  {announcement.priority === "urgent" && (
+                    <span className="text-xs font-medium text-red-600 flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" />
+                      Urgent Action Required
+                    </span>
+                  )}
                 </div>
               </div>
-            </Link>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </div>
   )
 }

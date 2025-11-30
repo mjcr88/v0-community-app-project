@@ -209,6 +209,7 @@ export default async function TenantAdminLayout({
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 )}
+
                 {features.neighborhoods && (
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>

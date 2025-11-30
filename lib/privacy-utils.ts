@@ -15,6 +15,7 @@ export interface PrivacySettings {
   show_interests?: boolean
   show_skills?: boolean
   show_open_to_requests?: boolean
+  show_about?: boolean
 }
 
 export interface UserWithPrivacy {
@@ -142,6 +143,7 @@ export function filterPrivateData(
       show_interests: true,
       show_skills: true,
       show_open_to_requests: true,
+      show_about: true,
     }
   }
 
@@ -165,6 +167,7 @@ export function filterPrivateData(
       show_interests: true,
       show_skills: true,
       show_open_to_requests: true,
+      show_about: true,
     }
   }
 
@@ -208,6 +211,9 @@ export function filterPrivateData(
   if (privacySettings.show_skills === false) {
     filteredUser.user_skills = []
   }
+  if (privacySettings.show_about === false) {
+    filteredUser.about = null
+  }
 
   return {
     ...filteredUser,
@@ -227,6 +233,7 @@ export function filterPrivateData(
     show_interests: privacySettings.show_interests !== false,
     show_skills: privacySettings.show_skills !== false,
     show_open_to_requests: privacySettings.show_open_to_requests !== false,
+    show_about: privacySettings.show_about !== false,
   }
 }
 

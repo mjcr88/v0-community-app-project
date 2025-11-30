@@ -11,6 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Search, Filter, X, ChevronDown, Package, ArrowUpDown } from 'lucide-react'
 import { ExchangeListingCard } from "@/components/exchange/exchange-listing-card"
 import { ExchangeListingDetailModal } from "@/components/exchange/exchange-listing-detail-modal"
+import { RioEmptyState } from "@/components/exchange/rio-empty-state"
+import { getCategoryEmoji } from "@/lib/exchange-category-emojis"
 import type { ExchangePricingType, ExchangeCondition } from "@/types/exchange"
 
 interface Listing {
@@ -225,6 +227,9 @@ export function ExchangePageClient({
 
   return (
     <div className="space-y-6">
+
+
+      {/* Search and Filters */}
       <div className="space-y-4">
         <div className="relative w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -232,19 +237,19 @@ export function ExchangePageClient({
             placeholder="Search listings..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
+            className="pl-9 h-11 bg-card border-border shadow-sm focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3">
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="justify-between bg-transparent">
+              <Button variant="outline" className="justify-between bg-card border-border shadow-sm hover:bg-accent hover:text-accent-foreground">
                 <span className="flex items-center gap-2">
                   <Filter className="h-4 w-4" />
                   Categories
                   {selectedCategories.length > 0 && (
-                    <Badge variant="secondary" className="ml-1">
+                    <Badge variant="secondary" className="ml-1 badge-enter">
                       {selectedCategories.length}
                     </Badge>
                   )}
@@ -252,7 +257,7 @@ export function ExchangePageClient({
                 <ChevronDown className="h-4 w-4 ml-2" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-64" align="start">
+            <PopoverContent className="w-64 shadow-lg border-border" align="start">
               <div className="space-y-2">
                 <h4 className="font-medium text-sm">Select Categories</h4>
                 {categories.map((category) => (
@@ -266,6 +271,7 @@ export function ExchangePageClient({
                       htmlFor={`category-${category.id}`}
                       className="flex items-center gap-2 cursor-pointer text-sm font-normal"
                     >
+                      <span className="text-base leading-none">{getCategoryEmoji(category.name)}</span>
                       {category.name}
                     </Label>
                   </div>
@@ -276,19 +282,17 @@ export function ExchangePageClient({
 
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="justify-between bg-transparent">
+              <Button variant="outline" className="justify-between bg-card border-border shadow-sm hover:bg-accent hover:text-accent-foreground">
                 <span className="flex items-center gap-2">
-                  Price Type
+                  Price
                   {pricingType !== "all" && (
-                    <Badge variant="secondary" className="ml-1 capitalize">
-                      {pricingType.replace("_", " ")}
-                    </Badge>
+                    <Badge variant="secondary" className="ml-1 badge-enter">1</Badge>
                   )}
                 </span>
                 <ChevronDown className="h-4 w-4 ml-2" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-48" align="start">
+            <PopoverContent className="w-64 shadow-lg border-border" align="start">
               <div className="space-y-2">
                 <h4 className="font-medium text-sm">Pricing Type</h4>
                 {[
@@ -314,11 +318,11 @@ export function ExchangePageClient({
 
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="justify-between bg-transparent">
+              <Button variant="outline" className="justify-between bg-card border-border shadow-sm hover:bg-accent hover:text-accent-foreground">
                 <span className="flex items-center gap-2">
                   Condition
                   {selectedConditions.length > 0 && (
-                    <Badge variant="secondary" className="ml-1">
+                    <Badge variant="secondary" className="ml-1 badge-enter">
                       {selectedConditions.length}
                     </Badge>
                   )}
@@ -326,7 +330,7 @@ export function ExchangePageClient({
                 <ChevronDown className="h-4 w-4 ml-2" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-64" align="start">
+            <PopoverContent className="w-64 shadow-lg border-border" align="start">
               <div className="space-y-2">
                 <h4 className="font-medium text-sm">Item Condition</h4>
                 {conditionOptions.map((option) => (
@@ -350,7 +354,7 @@ export function ExchangePageClient({
 
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="justify-between bg-transparent">
+              <Button variant="outline" className="justify-between bg-card border-border shadow-sm hover:bg-accent hover:text-accent-foreground">
                 <span className="flex items-center gap-2">
                   <ArrowUpDown className="h-4 w-4" />
                   Sort
@@ -358,7 +362,7 @@ export function ExchangePageClient({
                 <ChevronDown className="h-4 w-4 ml-2" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-56" align="end">
+            <PopoverContent className="w-56 shadow-lg border-border" align="start">
               <div className="space-y-2">
                 <h4 className="font-medium text-sm">Sort By</h4>
                 {sortOptions.map((option) => (
@@ -376,17 +380,34 @@ export function ExchangePageClient({
               </div>
             </PopoverContent>
           </Popover>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <Checkbox
-            id="show-unavailable"
-            checked={showUnavailable}
-            onCheckedChange={(checked) => setShowUnavailable(checked as boolean)}
-          />
-          <Label htmlFor="show-unavailable" className="cursor-pointer text-sm font-normal">
-            Show unavailable items
-          </Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="justify-between bg-card border-border shadow-sm hover:bg-accent hover:text-accent-foreground">
+                <span className="flex items-center gap-2">
+                  Availability
+                  {showUnavailable && (
+                    <Badge variant="secondary" className="ml-1 badge-enter">1</Badge>
+                  )}
+                </span>
+                <ChevronDown className="h-4 w-4 ml-2" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 shadow-lg border-border" align="start">
+              <div className="space-y-2">
+                <h4 className="font-medium text-sm">Listing Availability</h4>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="show-unavailable"
+                    checked={showUnavailable}
+                    onCheckedChange={(checked) => setShowUnavailable(checked as boolean)}
+                  />
+                  <Label htmlFor="show-unavailable" className="cursor-pointer text-sm font-normal flex-1">
+                    Include unavailable listings
+                  </Label>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
 
         {hasActiveFilters && (
@@ -428,7 +449,12 @@ export function ExchangePageClient({
                 <X className="h-3 w-3 cursor-pointer" onClick={() => setShowUnavailable(false)} />
               </Badge>
             )}
-            <Button variant="ghost" size="sm" onClick={clearFilters} className="h-7">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearFilters}
+              className="h-7 text-primary hover:text-primary hover:bg-primary/10"
+            >
               Clear all
             </Button>
           </div>
@@ -440,30 +466,22 @@ export function ExchangePageClient({
       </div>
 
       {filteredAndSortedListings.length === 0 ? (
-        <Card className="border-dashed">
-          <CardHeader className="text-center pb-4">
-            <div className="flex justify-center mb-4">
-              <div className="rounded-full bg-primary/10 p-4">
-                <Package className="h-12 w-12 text-primary" />
-              </div>
-            </div>
-            <CardTitle className="text-2xl">
-              {hasActiveFilters ? "No listings match your filters" : "No listings yet"}
-            </CardTitle>
-            <CardDescription className="text-base">
-              {hasActiveFilters
-                ? "Try adjusting your search or filters to see more results."
-                : "Be the first to share something with your community!"}
-            </CardDescription>
-          </CardHeader>
-          {hasActiveFilters && (
-            <CardContent className="flex justify-center pb-8">
+        <RioEmptyState
+          variant={hasActiveFilters ? "no-matches" : "no-listings"}
+          title={hasActiveFilters ? "No listings match your filters" : "No listings yet"}
+          description={
+            hasActiveFilters
+              ? "Try adjusting your search or filters to see more results."
+              : "Be the first to share something with your community!"
+          }
+          action={
+            hasActiveFilters ? (
               <Button variant="outline" onClick={clearFilters}>
                 Clear all filters
               </Button>
-            </CardContent>
-          )}
-        </Card>
+            ) : undefined
+          }
+        />
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {filteredAndSortedListings.map((listing) => (

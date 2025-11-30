@@ -147,6 +147,7 @@ export async function createCheckIn(
       const neighborhoodInserts = data.neighborhood_ids.map((neighborhoodId) => ({
         check_in_id: checkIn.id,
         neighborhood_id: neighborhoodId,
+        created_by: user.id,
       }))
 
       const { error: neighborhoodError } = await supabase.from("check_in_neighborhoods").insert(neighborhoodInserts)
@@ -159,7 +160,12 @@ export async function createCheckIn(
 
     // Handle private visibility invites
     if (data.visibility_scope === "private") {
-      const invites: any[] = []
+      const invites: Array<{
+        check_in_id: string
+        invitee_id: string | null
+        family_unit_id: string | null
+        created_by: string
+      }> = []
 
       // Add individual invitees
       if (data.invitee_ids && data.invitee_ids.length > 0) {
@@ -168,6 +174,7 @@ export async function createCheckIn(
             check_in_id: checkIn.id,
             invitee_id: inviteeId,
             family_unit_id: null,
+            created_by: user.id,
           })
         })
       }
@@ -179,6 +186,7 @@ export async function createCheckIn(
             check_in_id: checkIn.id,
             invitee_id: null,
             family_unit_id: familyId,
+            created_by: user.id,
           })
         })
       }
@@ -189,6 +197,9 @@ export async function createCheckIn(
         if (inviteError) {
           console.error("[v0] Error adding invites to check-in:", inviteError)
           // Don't fail the whole operation
+        } else {
+          // Send invitations to private check-in invitees
+          await sendCheckinInviteNotifications(checkIn.id, tenantId, tenantSlug, user.id, invites)
         }
       }
     }
@@ -264,6 +275,7 @@ export const getActiveCheckIns = cache(async (tenantId: string) => {
       enrichWithCreator: true,
       enrichWithLocation: true,
       enrichWithRsvp: true,
+      enrichWithInvites: true,
     })
 
     if (!checkIns || checkIns.length === 0) {
@@ -273,13 +285,35 @@ export const getActiveCheckIns = cache(async (tenantId: string) => {
 
     // Filter by visibility (application-level)
     const visibleCheckIns = checkIns.filter((checkIn) => {
+      // 1. Community check-ins are visible to everyone
       if (checkIn.visibility_scope === "community") {
         return true
       }
+
+      // 2. Creator can always see their own check-ins
       if (checkIn.created_by === user.id) {
         return true
       }
-      // TODO: Add neighborhood and private filtering
+
+      // 3. Private check-ins: visible if invited
+      if (checkIn.visibility_scope === "private") {
+        if (checkIn.invites && checkIn.invites.length > 0) {
+          // Check if user is directly invited
+          const isDirectlyInvited = checkIn.invites.some((invite) => invite.invitee_id === user.id)
+          if (isDirectlyInvited) return true
+
+          // Check if user's family is invited
+          if (userData && userData.family_unit_id) {
+            const isFamilyInvited = checkIn.invites.some((invite) => invite.family_unit_id === userData!.family_unit_id)
+            if (isFamilyInvited) return true
+          }
+        }
+        return false
+      }
+
+      // 4. Neighborhood check-ins: visible if in same neighborhood
+      // TODO: Add neighborhood filtering (requires fetching check_in_neighborhoods)
+      // For now, only creator sees them (covered by rule 2)
       return false
     })
 
@@ -287,16 +321,6 @@ export const getActiveCheckIns = cache(async (tenantId: string) => {
       initialCount: checkIns.length,
       visibleCount: visibleCheckIns.length,
     })
-
-    // Transform to match expected output format if needed
-    // The lib returns CheckInWithRelations which is compatible with the UI components
-    // but we might need to ensure field names match exactly what the UI expects.
-    // The UI expects `creator` and `location` objects.
-    // My lib returns `creator` and `location`.
-    // `user_rsvp_status` and `attending_count` are also returned by lib.
-
-    // However, the original action did some explicit mapping.
-    // Let's map it to be safe and ensure `created_by_user` is present if needed (it was in the original).
 
     const checkInsWithUserData = visibleCheckIns.map((checkIn) => {
       return {
@@ -912,5 +936,89 @@ export async function getCheckInsByLocation(locationId: string, tenantId: string
   } catch (error) {
     console.error("[v0] Unexpected error fetching location check-ins:", error)
     return []
+  }
+}
+
+// ============================================
+// NOTIFICATION HELPER FUNCTIONS
+// ============================================
+
+/**
+ * Send checkin_invite notifications to private check-in invitees
+ */
+async function sendCheckinInviteNotifications(
+  checkInId: string,
+  tenantId: string,
+  tenantSlug: string,
+  creatorId: string,
+  invites: Array<{ check_in_id: string; invitee_id: string | null; family_unit_id: string | null; created_by: string }>
+) {
+  try {
+    const supabase = await createServerClient()
+
+    // Get check-in details
+    const { data: checkIn } = await supabase
+      .from("check_ins")
+      .select("title, activity_type, start_time")
+      .eq("id", checkInId)
+      .single()
+
+    if (!checkIn) return
+
+    // Collect recipient IDs
+    const recipientIds: string[] = []
+
+    // Add individual invitees
+    invites.forEach((invite) => {
+      if (invite.invitee_id) {
+        recipientIds.push(invite.invitee_id)
+      }
+    })
+
+    // Get family members for family invites
+    if (invites.some((i) => i.family_unit_id)) {
+      const familyIds = invites.filter((i) => i.family_unit_id).map((i) => i.family_unit_id!)
+      const { data: familyMembers } = await supabase
+        .from("users")
+        .select("id")
+        .in("family_unit_id", familyIds)
+
+      if (familyMembers) {
+        familyMembers.forEach((member) => recipientIds.push(member.id))
+      }
+    }
+
+    // Remove duplicates and creator
+    const uniqueRecipients = [...new Set(recipientIds)].filter((id) => id !== creatorId)
+
+    console.log("[Check-in Notifications] Recipients:", uniqueRecipients)
+    console.log("[Check-in Notifications] Check-in details:", checkIn)
+
+    // Create notifications
+    const notifications = uniqueRecipients.map((recipientId) => ({
+      tenant_id: tenantId,
+      recipient_id: recipientId,
+      type: "checkin_invite",
+      title: `You're invited to join: ${checkIn.title}`,
+      message: `Join this ${checkIn.activity_type} check-in!`,
+      check_in_id: checkInId,
+      actor_id: creatorId,
+      action_url: `/t/${tenantSlug}/dashboard/events`,
+      action_required: true,
+    }))
+
+    if (notifications.length > 0) {
+      console.log("[Check-in Notifications] Creating", notifications.length, "notifications")
+      const { error: notifError } = await supabase.from("notifications").insert(notifications)
+      if (notifError) {
+        console.error("[Check-in Notifications] Error inserting notifications:", notifError)
+      } else {
+        console.log("[Check-in Notifications] Successfully created notifications")
+      }
+    } else {
+      console.log("[Check-in Notifications] No notifications to create (no recipients)")
+    }
+  } catch (error) {
+    console.error("[v0] Error sending check-in invite notifications:", error)
   }
 }

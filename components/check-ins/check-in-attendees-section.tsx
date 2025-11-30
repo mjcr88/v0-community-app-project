@@ -1,8 +1,11 @@
+"use client"
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Check, HelpCircle } from "lucide-react"
+import { Check, HelpCircle, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { getCheckInRsvps } from "@/app/actions/check-ins"
+import { useEffect, useState } from "react"
 
 interface CheckInAttendeesSectionProps {
   checkInId: string
@@ -38,14 +41,39 @@ function AttendeeCard({ attendee, tenantSlug }: { attendee: any; tenantSlug: str
   )
 }
 
-export async function CheckInAttendeesSection({ checkInId, tenantId, tenantSlug }: CheckInAttendeesSectionProps) {
-  const result = await getCheckInRsvps(checkInId, tenantId)
+export function CheckInAttendeesSection({ checkInId, tenantId, tenantSlug }: CheckInAttendeesSectionProps) {
+  const [attendees, setAttendees] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
-  if (!result.success || !result.data) {
+  useEffect(() => {
+    async function loadAttendees() {
+      try {
+        const result = await getCheckInRsvps(checkInId, tenantId)
+        if (result.success && result.data) {
+          setAttendees(result.data)
+        }
+      } catch (error) {
+        console.error("Failed to load attendees:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadAttendees()
+  }, [checkInId, tenantId])
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-4">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  if (!attendees) {
     return null
   }
 
-  const attendees = result.data
   const totalAttendees = attendees.yes.length + attendees.maybe.length + attendees.no.length
 
   if (totalAttendees === 0) {

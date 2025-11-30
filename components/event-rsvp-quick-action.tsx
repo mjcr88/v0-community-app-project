@@ -6,6 +6,7 @@ import { rsvpToEvent, saveEvent, unsaveEvent } from "@/app/actions/events"
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "@/hooks/use-toast"
+import { NumberTicker } from "@/components/library/number-ticker"
 
 interface EventRsvpQuickActionProps {
   eventId: string
@@ -94,17 +95,17 @@ export function EventRsvpQuickAction({
   }
 
   return (
-    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+    <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
       {/* Save Button */}
       <Button
         variant="ghost"
         size="sm"
         onClick={handleSave}
         disabled={isPending}
-        className="h-8 w-8 p-0"
+        className="h-8 w-8 p-0 flex-shrink-0"
         title={localIsSaved ? "Unsave event" : "Save event"}
       >
-        <Heart className={`h-4 w-4 ${localIsSaved ? "fill-current text-red-500" : ""}`} />
+        <Heart className={`h-4 w-4 ${localIsSaved ? "fill-current text-red-500 heart-bounce" : ""}`} />
       </Button>
 
       {/* RSVP Buttons - only show if RSVP is enabled */}
@@ -115,7 +116,7 @@ export function EventRsvpQuickAction({
             size="sm"
             onClick={() => handleRsvp("yes")}
             disabled={isPending || isEventFull || isDeadlinePassed}
-            className="h-8 w-8 p-0"
+            className="h-8 w-8 p-0 flex-shrink-0"
             title="Attending"
           >
             <Check className="h-4 w-4" />
@@ -125,7 +126,7 @@ export function EventRsvpQuickAction({
             size="sm"
             onClick={() => handleRsvp("maybe")}
             disabled={isPending || isDeadlinePassed}
-            className="h-8 w-8 p-0"
+            className="h-8 w-8 p-0 flex-shrink-0"
             title="Maybe"
           >
             <HelpCircle className="h-4 w-4" />
@@ -135,11 +136,20 @@ export function EventRsvpQuickAction({
             size="sm"
             onClick={() => handleRsvp("no")}
             disabled={isPending || isDeadlinePassed}
-            className="h-8 w-8 p-0"
+            className="h-8 w-8 p-0 flex-shrink-0"
             title="Not Attending"
           >
             <X className="h-4 w-4" />
           </Button>
+
+          {/* Attendance Count */}
+          <div className="flex items-center gap-0.5 text-xs text-muted-foreground whitespace-nowrap">
+            <NumberTicker value={currentAttendeeCount} className="text-xs" />
+            {maxAttendees && (
+              <span className="text-xs">/{maxAttendees}</span>
+            )}
+            <span className="text-xs ml-1">going</span>
+          </div>
         </>
       )}
     </div>

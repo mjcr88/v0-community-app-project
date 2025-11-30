@@ -13,9 +13,12 @@ interface MobileNavProps {
         pendingRequests?: number
         unreadEvents?: number
     }
+    tenantId: string
+    categories: Array<{ id: string; name: string }>
+    neighborhoods: Array<{ id: string; name: string }>
 }
 
-export function MobileNav({ tenantSlug, user }: MobileNavProps) {
+export function MobileNav({ tenantSlug, user, tenantId, categories, neighborhoods }: MobileNavProps) {
     return (
         <div className="md:hidden">
             <MobileTopBar tenantSlug={tenantSlug} user={user} />
@@ -23,6 +26,9 @@ export function MobileNav({ tenantSlug, user }: MobileNavProps) {
             <MobileDock
                 tenantSlug={tenantSlug}
                 unreadEvents={user.unreadEvents}
+                tenantId={tenantId}
+                categories={categories}
+                neighborhoods={neighborhoods}
             />
         </div>
     )

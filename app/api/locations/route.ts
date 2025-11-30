@@ -31,16 +31,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      locations: locations.map((loc) => ({
-        id: loc.id,
-        name: loc.name,
-        type: loc.type,
-        coordinates: loc.coordinates,
-        boundary_coordinates: loc.boundary_coordinates,
-        path_coordinates: loc.path_coordinates,
-        icon: loc.icon,
-        facility_type: loc.facility_type,
-      })),
+      locations: locations,
     })
   } catch (error) {
     console.error("[v0] Error in locations API:", error)

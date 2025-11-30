@@ -1,5 +1,9 @@
 import { createServerClient } from "@/lib/supabase/server"
-import { GoogleMapEditor } from "@/components/map/google-map-editor"
+import { getLocations } from "@/lib/data/locations"
+import { getCheckIns } from "@/lib/data/check-ins"
+import dynamic from 'next/dynamic'
+
+import { AdminMapWrapper } from './admin-map-wrapper'
 
 export default async function MapViewerPage({
   params,
@@ -9,7 +13,7 @@ export default async function MapViewerPage({
   searchParams: Promise<{ locationId?: string; preview?: string }>
 }) {
   const { slug } = await params
-  const { locationId, preview } = await searchParams
+  const { locationId } = await searchParams
   const supabase = await createServerClient()
 
   const { data: tenant } = await supabase.from("tenants").select("*").eq("slug", slug).single()
@@ -18,27 +22,27 @@ export default async function MapViewerPage({
     return <div>Tenant not found</div>
   }
 
-  const { data: locations } = await supabase
-    .from("locations")
-    .select("*")
-    .eq("tenant_id", tenant.id)
-    .order("created_at", { ascending: false })
+  // Fetch locations with relations
+  const locations = await getLocations(tenant.id)
 
-  const communityBoundary = tenant.map_boundary_coordinates || null
-
-  const mode = "view"
+  // Fetch active check-ins
+  const checkIns = await getCheckIns(tenant.id, {
+    activeOnly: true,
+    enrichWithCreator: true,
+    enrichWithLocation: true,
+    enrichWithRsvp: true
+  })
 
   return (
-    <div className="h-[100vh] w-full">
-      <GoogleMapEditor
-        tenantSlug={slug}
+    <div className="h-[calc(100vh-64px)] w-full">
+      <AdminMapWrapper
+        locations={locations}
         tenantId={tenant.id}
-        mode={mode}
-        initialLocations={locations || []}
-        mapCenter={tenant.map_center_coordinates as { lat: number; lng: number } | null}
+        tenantSlug={slug}
+        checkIns={checkIns}
+        mapCenter={tenant.map_center_coordinates as { lat: number; lng: number } | undefined}
         mapZoom={tenant.map_default_zoom || 15}
-        communityBoundary={communityBoundary}
-        initialHighlightLocationId={locationId}
+        highlightLocationId={locationId}
       />
     </div>
   )

@@ -1,23 +1,20 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { APIProvider, Map, Marker } from "@vis.gl/react-google-maps"
+import { useState, useEffect, useMemo } from "react"
+import Map, { Source, Layer, Marker, NavigationControl } from "react-map-gl"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Loader2, Locate, AlertCircle } from "lucide-react"
-import { Polygon } from "./polygon"
-import { Polyline } from "./polyline"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { geolocate } from "@/lib/geolocate"
 import { createLocation, updateTenantBoundary } from "@/lib/location-utils"
 import { Switch } from "@/components/ui/switch"
-
-type LatLng = { lat: number; lng: number }
+import "mapbox-gl/dist/mapbox-gl.css"
 
 interface GeoJSONPreviewMapProps {
   tenantSlug: string
@@ -31,8 +28,11 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
   const [previewFeatures, setPreviewFeatures] = useState<any[]>([])
   const [originalFeatures, setOriginalFeatures] = useState<any[]>([])
   const [combineFeatures, setCombineFeatures] = useState(false)
-  const [mapCenter, setMapCenter] = useState<LatLng>({ lat: 9.9567, lng: -84.5333 })
-  const [mapZoom, setMapZoom] = useState(15)
+  const [viewState, setViewState] = useState({
+    latitude: 9.9567,
+    longitude: -84.5333,
+    zoom: 15
+  })
   const [locationType, setLocationType] = useState<
     | "facility"
     | "lot"
@@ -50,9 +50,7 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
   const [loading, setLoading] = useState(true)
   const [boundaryExists, setBoundaryExists] = useState(false)
 
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""
-  const DEMO_MAP_ID = "DEMO_MAP_ID"
-  const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAP_ID || DEMO_MAP_ID
+  const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
 
   useEffect(() => {
     const loadData = async () => {
@@ -130,7 +128,6 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
 
           const centerLat = (minLat + maxLat) / 2
           const centerLng = (minLng + maxLng) / 2
-          setMapCenter({ lat: centerLat, lng: centerLng })
 
           const latDiff = maxLat - minLat
           const lngDiff = maxLng - minLng
@@ -142,7 +139,11 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
           if (maxDiff > 1) zoom = 9
           if (maxDiff > 5) zoom = 7
 
-          setMapZoom(zoom)
+          setViewState({
+            latitude: centerLat,
+            longitude: centerLng,
+            zoom
+          })
         }
 
         setLoading(false)
@@ -163,8 +164,12 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
   const locateUser = async () => {
     try {
       const { lat, lng } = await geolocate()
-      setMapCenter({ lat, lng })
-      setMapZoom(15)
+      setViewState(prev => ({
+        ...prev,
+        latitude: lat,
+        longitude: lng,
+        zoom: 15
+      }))
     } catch (error) {
       toast({
         title: "Error",
@@ -364,12 +369,20 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
 
   const locationCount = combineFeatures ? previewFeatures.length : originalFeatures.length
 
-  if (!apiKey) {
+  // Prepare GeoJSON data for Mapbox
+  const geojsonData = useMemo(() => {
+    return {
+      type: "FeatureCollection" as const,
+      features: previewFeatures
+    }
+  }, [previewFeatures])
+
+  if (!mapboxToken) {
     return (
       <Alert variant="destructive">
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>Configuration Error</AlertTitle>
-        <AlertDescription>Google Maps API key is missing.</AlertDescription>
+        <AlertDescription>Mapbox token is missing.</AlertDescription>
       </Alert>
     )
   }
@@ -387,110 +400,56 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
       <Card className="min-h-[600px]">
         <CardContent className="p-1.5 h-full">
           <div className="relative h-full w-full overflow-hidden rounded-lg">
-            <APIProvider apiKey={apiKey}>
-              <Map
-                center={mapCenter}
-                zoom={mapZoom}
-                mapTypeId="satellite"
-                gestureHandling="greedy"
-                disableDefaultUI={true}
-                clickableIcons={false}
-                onCenterChanged={(e) => setMapCenter(e.detail.center)}
-                onZoomChanged={(e) => setMapZoom(e.detail.zoom)}
-                {...(mapId ? { mapId } : {})}
-              >
-                {previewFeatures.map((feature, index) => {
-                  if (feature.geometry.type === "Point") {
-                    return (
-                      <Marker
-                        key={`preview-${index}`}
-                        position={{
-                          lat: feature.geometry.coordinates[1],
-                          lng: feature.geometry.coordinates[0],
-                        }}
-                      />
-                    )
-                  } else if (feature.geometry.type === "LineString") {
-                    const path = feature.geometry.coordinates.map((coord: number[]) => ({
-                      lat: coord[1],
-                      lng: coord[0],
-                    }))
-                    return (
-                      <Polyline
-                        key={`preview-${index}`}
-                        path={path}
-                        strokeColor="#a855f7"
-                        strokeOpacity={0.9}
-                        strokeWeight={1.5}
-                        clickable={false}
-                      />
-                    )
-                  } else if (feature.geometry.type === "Polygon") {
-                    const paths = feature.geometry.coordinates[0].map((coord: number[]) => ({
-                      lat: coord[1],
-                      lng: coord[0],
-                    }))
+            <Map
+              {...viewState}
+              onMove={evt => setViewState(evt.viewState)}
+              style={{ width: "100%", height: "600px" }}
+              mapStyle="mapbox://styles/mapbox/satellite-streets-v12"
+              mapboxAccessToken={mapboxToken}
+            >
+              <NavigationControl position="bottom-right" />
 
-                    const isBoundary = locationType === "boundary"
+              {/* Render GeoJSON Features */}
+              <Source id="preview-data" type="geojson" data={geojsonData}>
+                {/* Polygons Fill */}
+                <Layer
+                  id="preview-fill"
+                  type="fill"
+                  filter={["==", "$type", "Polygon"]}
+                  paint={{
+                    "fill-color": locationType === "boundary" ? "#ffffff" : "#a855f7",
+                    "fill-opacity": locationType === "boundary" ? 0.15 : 0.2
+                  }}
+                />
 
-                    return (
-                      <Polygon
-                        key={`preview-${index}`}
-                        paths={paths}
-                        strokeColor={isBoundary ? "#ffffff" : "#a855f7"}
-                        strokeOpacity={isBoundary ? 0.8 : 0.9}
-                        strokeWeight={isBoundary ? 2 : 1}
-                        fillColor={isBoundary ? "#ffffff" : "#a855f7"}
-                        fillOpacity={isBoundary ? 0.15 : 0.2}
-                        clickable={false}
-                      />
-                    )
-                  } else if (feature.geometry.type === "MultiPolygon") {
-                    const paths = feature.geometry.coordinates[0][0].map((coord: number[]) => ({
-                      lat: coord[1],
-                      lng: coord[0],
-                    }))
+                {/* Polygons/Lines Stroke */}
+                <Layer
+                  id="preview-line"
+                  type="line"
+                  filter={["any", ["==", "$type", "Polygon"], ["==", "$type", "LineString"]]}
+                  paint={{
+                    "line-color": locationType === "boundary" ? "#ffffff" : "#a855f7",
+                    "line-width": locationType === "boundary" ? 2 : 3,
+                    "line-opacity": 0.9
+                  }}
+                />
 
-                    const isBoundary = locationType === "boundary"
+                {/* Points */}
+                <Layer
+                  id="preview-point"
+                  type="circle"
+                  filter={["==", "$type", "Point"]}
+                  paint={{
+                    "circle-radius": 6,
+                    "circle-color": "#a855f7",
+                    "circle-stroke-width": 2,
+                    "circle-stroke-color": "#ffffff"
+                  }}
+                />
+              </Source>
+            </Map>
 
-                    return (
-                      <Polygon
-                        key={`preview-${index}`}
-                        paths={paths}
-                        strokeColor={isBoundary ? "#ffffff" : "#a855f7"}
-                        strokeOpacity={isBoundary ? 0.8 : 0.9}
-                        strokeWeight={isBoundary ? 2 : 1}
-                        fillColor={isBoundary ? "#ffffff" : "#a855f7"}
-                        fillOpacity={isBoundary ? 0.15 : 0.2}
-                        clickable={false}
-                      />
-                    )
-                  }
-                  return null
-                })}
-              </Map>
-            </APIProvider>
-
-            <div className="absolute left-3 top-3 flex flex-col gap-2">
-              <Button
-                variant="secondary"
-                size="icon"
-                onClick={() => setMapZoom(mapZoom + 1)}
-                className="h-10 w-10 shadow-lg"
-              >
-                +
-              </Button>
-              <Button
-                variant="secondary"
-                size="icon"
-                onClick={() => setMapZoom(mapZoom - 1)}
-                className="h-10 w-10 shadow-lg"
-              >
-                −
-              </Button>
-            </div>
-
-            <div className="absolute bottom-3 right-3">
+            <div className="absolute bottom-32 right-3">
               <Button variant="secondary" size="icon" onClick={locateUser} className="h-10 w-10 shadow-lg">
                 <Locate className="h-5 w-5" />
               </Button>

@@ -47,6 +47,27 @@ export async function getNotifications(tenantId: string, filters?: NotificationF
           actual_return_date,
           return_condition,
           return_notes
+        ),
+        event:events!event_id(
+          id,
+          title,
+          start_date,
+          start_time,
+          end_date,
+          end_time,
+          is_all_day,
+          location_id,
+          custom_location_name,
+          category:event_categories(id, name, icon)
+        ),
+        check_in:check_ins!check_in_id(
+          id,
+          title,
+          activity_type,
+          start_time,
+          duration_minutes,
+          location_id,
+          custom_location_name
         )
       `,
       )

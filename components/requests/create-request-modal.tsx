@@ -1,22 +1,24 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Card, CardContent } from "@/components/ui/card"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Loader2 } from 'lucide-react'
+import { Loader2, ArrowLeft, ArrowRight, Check, Wrench, HelpCircle, AlertTriangle, Shield, MoreHorizontal, MapPin, Image as ImageIcon } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { createResidentRequest } from "@/app/actions/resident-requests"
 import { LocationSelector } from "@/components/event-forms/location-selector"
 import { PhotoManager } from "@/components/photo-manager"
 import { RequestTypeIcon } from "./request-type-icon"
 import { ResidentPetSelector } from "./resident-pet-selector"
+import { StepProgress } from "@/components/exchange/create-listing-steps/step-progress"
+import { cn } from "@/lib/utils"
 import type { RequestType, RequestPriority } from "@/types/requests"
 
 interface CreateRequestModalProps {
@@ -24,165 +26,92 @@ interface CreateRequestModalProps {
   onOpenChange: (open: boolean) => void
   tenantSlug: string
   tenantId: string
-  requestType: RequestType
+  defaultType?: RequestType
 }
 
-const requestTypeLabels: Record<RequestType, { title: string; description: string; titlePlaceholder: string; descriptionPlaceholder: string }> = {
-  maintenance: {
-    title: "Maintenance Request",
-    description: "Report something that needs fixing or repair",
-    titlePlaceholder: "Brief description of what needs fixing",
-    descriptionPlaceholder: "Please provide details about the maintenance issue...",
-  },
-  question: {
-    title: "Question",
-    description: "Ask about processes, policies, or community information",
-    titlePlaceholder: "Brief description of your question",
-    descriptionPlaceholder: "Please provide details about your question...",
-  },
-  complaint: {
-    title: "Complaint",
-    description: "Report an issue or concern about the community or neighbors",
-    titlePlaceholder: "Brief description of your complaint",
-    descriptionPlaceholder: "Please provide details about your complaint...",
-  },
-  safety: {
-    title: "Safety Issue",
-    description: "Report urgent safety concerns that need immediate attention",
-    titlePlaceholder: "Brief description of the safety issue",
-    descriptionPlaceholder: "Please provide details about the safety concern...",
-  },
-  other: {
-    title: "Other Request",
-    description: "Submit a request that doesn't fit other categories",
-    titlePlaceholder: "Brief description of your request",
-    descriptionPlaceholder: "Please provide details about your request...",
-  },
-}
+const requestTypes: { value: RequestType; title: string; description: string; icon: any; emoji: string }[] = [
+  { value: 'maintenance', title: 'Maintenance', description: 'Fixing or repair needed', icon: Wrench, emoji: '🔧' },
+  { value: 'question', title: 'Question', description: 'Policies or info', icon: HelpCircle, emoji: '❓' },
+  { value: 'complaint', title: 'Complaint', description: 'Issues or concerns', icon: AlertTriangle, emoji: '📢' },
+  { value: 'safety', title: 'Safety Issue', description: 'Urgent safety concerns', icon: Shield, emoji: '🛡️' },
+  { value: 'other', title: 'Other', description: 'Anything else', icon: MoreHorizontal, emoji: '📝' },
+]
 
-const getPriorityDescriptions = (requestType: RequestType) => {
-  switch (requestType) {
-    case 'maintenance':
-      return {
-        normal: "Standard request, no rush",
-        urgent: "Needs quick attention (broken AC, water leak, appliance failure)",
-        emergency: "Safety concern requiring immediate response (gas leak, electrical hazard)",
-      }
-    case 'question':
-      return {
-        normal: "General inquiry, no rush",
-        urgent: "Need answer soon for planning purposes",
-        emergency: "Time-sensitive question requiring immediate answer",
-      }
-    case 'complaint':
-      return {
-        normal: "General concern to be addressed",
-        urgent: "Ongoing disturbance or recurring issue",
-        emergency: "Severe disturbance or immediate threat to well-being",
-      }
-    case 'safety':
-      return {
-        normal: "Safety concern to be reviewed",
-        urgent: "Hazard that should be addressed soon",
-        emergency: "Immediate danger requiring urgent response",
-      }
-    case 'other':
-      return {
-        normal: "Standard request, no rush",
-        urgent: "Needs attention within a few days",
-        emergency: "Requires immediate attention",
-      }
-  }
-}
+const steps = [
+  { id: 'category', title: 'Category' },
+  { id: 'details', title: 'Details' },
+  { id: 'context', title: 'Location & Photos' },
+  { id: 'review', title: 'Review' },
+]
 
 export function CreateRequestModal({
   open,
   onOpenChange,
   tenantSlug,
   tenantId,
-  requestType,
+  defaultType,
 }: CreateRequestModalProps) {
   const router = useRouter()
   const { toast } = useToast()
+  const [step, setStep] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [communityLocationName, setCommunityLocationName] = useState<string>("")
 
   const [formData, setFormData] = useState({
+    request_type: defaultType || null as RequestType | null,
     title: "",
     description: "",
     priority: "normal" as RequestPriority,
-    location_type: null as "community" | "custom" | null,
+    location_type: "none" as "community" | "custom" | "none",
     location_id: null as string | null,
     custom_location_name: "",
     custom_location_lat: null as number | null,
     custom_location_lng: null as number | null,
+    community_location_name: "" as string, // Store name directly
     is_anonymous: false,
     images: [] as string[],
     tagged_resident_ids: [] as string[],
     tagged_pet_ids: [] as string[],
   })
 
-  const handleLocationTypeChange = useCallback((type: "community" | "custom" | "none") => {
-    setFormData(prev => ({
-      ...prev,
-      location_type: type === "none" ? null : type,
-      location_id: null,
-      custom_location_name: "",
-      custom_location_lat: null,
-      custom_location_lng: null,
-    }))
-  }, [])
+  // Reset state when opening
+  const handleOpenChange = (newOpen: boolean) => {
+    if (newOpen) {
+      setStep(defaultType ? 1 : 0)
+      setFormData(prev => ({ ...prev, request_type: defaultType || null }))
+    }
+    onOpenChange(newOpen)
+  }
 
-  const handleCommunityLocationChange = useCallback((locationId: string) => {
-    setFormData(prev => ({ ...prev, location_id: locationId }))
-  }, [])
+  const handleNext = () => {
+    if (step === 0 && !formData.request_type) return
+    if (step === 1) {
+      if (!formData.title.trim() || !formData.description.trim()) {
+        toast({ title: "Please fill in all required fields", variant: "destructive" })
+        return
+      }
+    }
+    if (step === 2) {
+      // Location step validation if needed
+    }
+    setStep(prev => prev + 1)
+  }
 
-  const handleCustomLocationNameChange = useCallback((name: string) => {
-    setFormData(prev => ({ ...prev, custom_location_name: name }))
-  }, [])
+  const handleBack = () => {
+    setStep(prev => prev - 1)
+  }
 
-  const handleCustomLocationChange = useCallback((data: {
-    coordinates?: { lat: number; lng: number } | null
-    type?: "marker" | "polygon" | null
-    path?: Array<{ lat: number; lng: number }> | null
-  }) => {
-    setFormData(prev => ({
-      ...prev,
-      custom_location_lat: data.coordinates?.lat || null,
-      custom_location_lng: data.coordinates?.lng || null,
-    }))
-  }, [])
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = async () => {
+    if (!formData.request_type) return
     setIsSubmitting(true)
 
     try {
-      if (!formData.title.trim()) {
-        toast({
-          title: "Title required",
-          description: "Please enter a title for your request",
-          variant: "destructive",
-        })
-        setIsSubmitting(false)
-        return
-      }
-
-      if (!formData.description.trim()) {
-        toast({
-          title: "Description required",
-          description: "Please describe your request",
-          variant: "destructive",
-        })
-        setIsSubmitting(false)
-        return
-      }
-
       const requestData = {
         title: formData.title.trim(),
-        request_type: requestType,
+        request_type: formData.request_type,
         description: formData.description.trim(),
         priority: formData.priority,
-        location_type: formData.location_type,
+        location_type: formData.location_type === "none" ? null : formData.location_type,
         location_id: formData.location_type === "community" ? formData.location_id : null,
         custom_location_name: formData.location_type === "custom" ? formData.custom_location_name : null,
         custom_location_lat: formData.location_type === "custom" ? formData.custom_location_lat : null,
@@ -197,11 +126,29 @@ export function CreateRequestModal({
 
       if (result.success) {
         toast({
-          title: "Request submitted!",
+          title: "Request submitted! 🎉",
           description: "Your request has been sent to the community administration.",
         })
         onOpenChange(false)
         router.refresh()
+        // Reset form
+        setStep(0)
+        setFormData({
+          request_type: null,
+          title: "",
+          description: "",
+          priority: "normal",
+          location_type: "none",
+          location_id: null,
+          custom_location_name: "",
+          custom_location_lat: null,
+          custom_location_lng: null,
+          community_location_name: "",
+          is_anonymous: false,
+          images: [],
+          tagged_resident_ids: [],
+          tagged_pet_ids: [],
+        })
       } else {
         toast({
           title: "Error",
@@ -221,185 +168,290 @@ export function CreateRequestModal({
     }
   }
 
-  const typeInfo = requestTypeLabels[requestType]
-  const priorityDescriptions = getPriorityDescriptions(requestType)
+  // Effect to ensure location name is fetched for review step
+  useEffect(() => {
+    if (step === 3 && formData.location_type === 'community' && formData.location_id && !formData.community_location_name) {
+      fetch(`/api/locations/${formData.location_id}?tenantId=${tenantId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.location) {
+            setFormData(prev => ({ ...prev, community_location_name: data.location.name }))
+          }
+        })
+        .catch(err => console.error("Error fetching location name:", err))
+    }
+  }, [step, formData.location_type, formData.location_id, formData.community_location_name, tenantId])
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <RequestTypeIcon type={requestType} />
-            {typeInfo.title}
-          </DialogTitle>
-          <DialogDescription>{typeInfo.description}</DialogDescription>
-        </DialogHeader>
+  const renderStepContent = () => {
+    switch (step) {
+      case 0: // Category
+        return (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
+            {requestTypes.map((type) => (
+              <button
+                key={type.value}
+                onClick={() => {
+                  setFormData(prev => ({ ...prev, request_type: type.value }))
+                  setStep(1)
+                }}
+                className={cn(
+                  "flex flex-col items-center justify-center p-6 rounded-xl border-2 transition-all hover:border-primary hover:bg-primary/5",
+                  formData.request_type === type.value ? "border-primary bg-primary/5" : "border-muted bg-card"
+                )}
+              >
+                <div className="text-4xl mb-3">
+                  {type.emoji}
+                </div>
+                <span className="font-semibold text-lg">{type.title}</span>
+                <span className="text-sm text-muted-foreground text-center mt-1">{type.description}</span>
+              </button>
+            ))}
+          </div>
+        )
 
-        <form onSubmit={handleSubmit}>
-          <Card>
-            <CardContent className="space-y-6 pt-6">
-              <div className="space-y-2">
-                <Label htmlFor="title">
-                  Title <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="title"
-                  placeholder={typeInfo.titlePlaceholder}
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  required
-                />
-              </div>
+      case 1: // Details
+        return (
+          <div className="space-y-6 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="title">Title <span className="text-destructive">*</span></Label>
+              <Input
+                id="title"
+                placeholder="Brief summary of your request"
+                value={formData.title}
+                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                autoFocus
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Description <span className="text-destructive">*</span></Label>
+              <Textarea
+                id="description"
+                placeholder="Please provide details..."
+                value={formData.description}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                rows={5}
+              />
+            </div>
+            <div className="space-y-3">
+              <Label>Priority</Label>
+              <RadioGroup
+                value={formData.priority}
+                onValueChange={(val) => setFormData(prev => ({ ...prev, priority: val as RequestPriority }))}
+                className="grid grid-cols-3 gap-4"
+              >
+                {['normal', 'urgent', 'emergency'].map((p) => (
+                  <div key={p}>
+                    <RadioGroupItem value={p} id={p} className="peer sr-only" />
+                    <Label
+                      htmlFor={p}
+                      className={cn(
+                        "flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer capitalize",
+                        p === 'emergency' && "peer-data-[state=checked]:border-destructive peer-data-[state=checked]:text-destructive"
+                      )}
+                    >
+                      <span className="text-2xl mb-2">
+                        {p === 'normal' ? '🟢' : p === 'urgent' ? '🟠' : '🔴'}
+                      </span>
+                      {p}
+                    </Label>
+                  </div>
+                ))}
+              </RadioGroup>
+              <p className="text-sm text-muted-foreground">
+                {formData.priority === 'normal' && "Standard request, no rush."}
+                {formData.priority === 'urgent' && "Needs attention within a few days."}
+                {formData.priority === 'emergency' && "Immediate danger or safety threat."}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>Photos (Optional)</Label>
+              <PhotoManager
+                photos={formData.images}
+                heroPhoto={null}
+                onPhotosChange={(photos) => setFormData(prev => ({ ...prev, images: photos }))}
+                onHeroPhotoChange={() => { }}
+                maxPhotos={5}
+                entityType={"request" as any}
+              />
+            </div>
+          </div>
+        )
 
-              <div className="space-y-2">
-                <Label htmlFor="description">
-                  Description <span className="text-destructive">*</span>
-                </Label>
-                <Textarea
-                  id="description"
-                  placeholder={typeInfo.descriptionPlaceholder}
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  rows={6}
-                  required
-                />
-              </div>
+      case 2: // Context
+        return (
+          <div className="space-y-6 py-4">
+            <div className="space-y-2 pt-4 border-t">
+              <Label>Location (Optional)</Label>
+              <LocationSelector
+                tenantId={tenantId}
+                locationType={formData.location_type}
+                communityLocationId={formData.location_id}
+                customLocationName={formData.custom_location_name}
+                customLocationCoordinates={
+                  formData.custom_location_lat && formData.custom_location_lng
+                    ? { lat: formData.custom_location_lat, lng: formData.custom_location_lng }
+                    : null
+                }
+                customLocationType="marker"
+                customLocationPath={null}
+                onLocationTypeChange={(type) => setFormData(prev => ({ ...prev, location_type: type === 'none' ? 'none' : type }))}
+                onCommunityLocationChange={(id) => {
+                  // We need to find the location name from the selector, but the selector doesn't expose it directly in the callback easily without state.
+                  // Instead, we'll fetch it or rely on the review step to fetch it if we can't get it here.
+                  // Actually, let's fetch it right here to be safe and store it.
+                  setFormData(prev => ({ ...prev, location_id: id }))
+                  if (id) {
+                    fetch(`/api/locations/${id}?tenantId=${tenantId}`)
+                      .then(res => res.json())
+                      .then(data => {
+                        if (data.location) {
+                          setFormData(prev => ({ ...prev, community_location_name: data.location.name }))
+                        }
+                      })
+                  }
+                }}
+                onCustomLocationNameChange={(name) => setFormData(prev => ({ ...prev, custom_location_name: name }))}
+                onCustomLocationChange={(data) => setFormData(prev => ({
+                  ...prev,
+                  custom_location_lat: data.coordinates?.lat || null,
+                  custom_location_lng: data.coordinates?.lng || null
+                }))}
+              />
+            </div>
 
+            {formData.request_type === 'complaint' && (
               <div className="space-y-4 pt-4 border-t">
                 <div className="space-y-2">
-                  <Label className="text-base font-semibold">Priority</Label>
-                  <p className="text-sm text-muted-foreground">How urgent is this request?</p>
-                </div>
-
-                <RadioGroup
-                  value={formData.priority}
-                  onValueChange={(value) => setFormData({ ...formData, priority: value as RequestPriority })}
-                >
-                  <div className="space-y-3">
-                    <div className="flex items-start space-x-3 rounded-md border p-4">
-                      <RadioGroupItem value="normal" id="normal" className="mt-1" />
-                      <div className="flex-1">
-                        <Label htmlFor="normal" className="font-medium cursor-pointer">
-                          Normal
-                        </Label>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {priorityDescriptions.normal}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start space-x-3 rounded-md border p-4 border-orange-200 bg-orange-50/50">
-                      <RadioGroupItem value="urgent" id="urgent" className="mt-1" />
-                      <div className="flex-1">
-                        <Label htmlFor="urgent" className="font-medium cursor-pointer">
-                          Urgent
-                        </Label>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {priorityDescriptions.urgent}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start space-x-3 rounded-md border p-4 border-red-200 bg-red-50/50">
-                      <RadioGroupItem value="emergency" id="emergency" className="mt-1" />
-                      <div className="flex-1">
-                        <Label htmlFor="emergency" className="font-medium cursor-pointer">
-                          Emergency
-                        </Label>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {priorityDescriptions.emergency}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </RadioGroup>
-              </div>
-
-              <div className="space-y-2 pt-4 border-t">
-                <Label>Photos (Optional)</Label>
-                <PhotoManager
-                  photos={formData.images}
-                  heroPhoto={null}
-                  onPhotosChange={(photos) => setFormData(prev => ({ ...prev, images: photos }))}
-                  onHeroPhotoChange={() => { }}
-                  maxPhotos={5}
-                  entityType={"request" as any}
-                />
-                <p className="text-sm text-muted-foreground">
-                  Add photos to help us understand the issue better
-                </p>
-              </div>
-
-              {requestType === 'complaint' && (
-                <div className="space-y-2 pt-4 border-t">
-                  <Label className="text-base font-semibold">Tag Residents or Pets (Optional)</Label>
-                  <p className="text-sm text-muted-foreground">
-                    If your complaint involves specific residents or pets, you can tag them here
-                  </p>
+                  <Label>Tag Residents/Pets (Optional)</Label>
                   <ResidentPetSelector
                     tenantId={tenantId}
                     selectedResidentIds={formData.tagged_resident_ids}
                     selectedPetIds={formData.tagged_pet_ids}
-                    onResidentsChange={(ids) => setFormData({ ...formData, tagged_resident_ids: ids })}
-                    onPetsChange={(ids) => setFormData({ ...formData, tagged_pet_ids: ids })}
+                    onResidentsChange={(ids) => setFormData(prev => ({ ...prev, tagged_resident_ids: ids }))}
+                    onPetsChange={(ids) => setFormData(prev => ({ ...prev, tagged_pet_ids: ids }))}
                   />
                 </div>
-              )}
-
-              <div className="space-y-2 pt-4 border-t">
-                <Label className="text-base font-semibold">Location (Optional)</Label>
-                <p className="text-sm text-muted-foreground">
-                  Where is this request related to?
-                </p>
-                <LocationSelector
-                  tenantId={tenantId}
-                  locationType={formData.location_type || "none"}
-                  communityLocationId={formData.location_id}
-                  customLocationName={formData.custom_location_name}
-                  customLocationCoordinates={
-                    formData.custom_location_lat && formData.custom_location_lng
-                      ? { lat: formData.custom_location_lat, lng: formData.custom_location_lng }
-                      : null
-                  }
-                  customLocationType="marker"
-                  customLocationPath={null}
-                  onLocationTypeChange={handleLocationTypeChange}
-                  onCommunityLocationChange={handleCommunityLocationChange}
-                  onCustomLocationNameChange={handleCustomLocationNameChange}
-                  onCustomLocationChange={handleCustomLocationChange}
-                />
-              </div>
-
-              {requestType === 'complaint' && (
-                <div className="flex items-center space-x-2 pt-4 border-t">
+                <div className="flex items-center space-x-2">
                   <Checkbox
                     id="anonymous"
                     checked={formData.is_anonymous}
-                    onCheckedChange={(checked) => setFormData({ ...formData, is_anonymous: checked as boolean })}
+                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_anonymous: checked as boolean }))}
                   />
-                  <Label htmlFor="anonymous" className="cursor-pointer text-sm font-normal">
-                    Submit anonymously (your identity will be hidden from other residents, but visible to admins)
-                  </Label>
+                  <Label htmlFor="anonymous" className="cursor-pointer">Submit anonymously</Label>
                 </div>
-              )}
-
-              <div className="flex gap-3 pt-4">
-                <Button type="submit" disabled={isSubmitting} className="flex-1 sm:flex-none">
-                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {isSubmitting ? "Submitting..." : "Submit Request"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => onOpenChange(false)}
-                  disabled={isSubmitting}
-                >
-                  Cancel
-                </Button>
               </div>
-            </CardContent>
-          </Card>
-        </form>
+            )}
+          </div>
+        )
+
+      case 3: // Review
+        return (
+          <div className="space-y-6 py-4">
+            <Card>
+              <CardContent className="pt-6 space-y-4">
+                <div className="flex items-center gap-3 pb-4 border-b">
+                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <RequestTypeIcon type={formData.request_type!} className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-lg">{formData.title}</h3>
+                    <p className="text-sm text-muted-foreground capitalize">{formData.request_type} • {formData.priority} Priority</p>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider">Description</Label>
+                  <p className="text-sm whitespace-pre-wrap">{formData.description}</p>
+                </div>
+
+                {(formData.location_type !== 'none' || formData.images.length > 0) && (
+                  <div className="grid grid-cols-2 gap-4 pt-2">
+                    {formData.location_type !== 'none' && (
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                          <MapPin className="h-3 w-3" /> Location
+                        </Label>
+                        <p className="text-sm font-medium">
+                          {formData.location_type === 'community'
+                            ? (formData.community_location_name || 'Loading location...')
+                            : (formData.custom_location_name || 'Custom Location')}
+                        </p>
+                      </div>
+                    )}
+                    {formData.images.length > 0 && (
+                      <div className="space-y-2 col-span-2">
+                        <Label className="text-xs text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                          <ImageIcon className="h-3 w-3" /> Photos ({formData.images.length})
+                        </Label>
+                        <div className="flex gap-2 overflow-x-auto pb-2">
+                          {formData.images.map((img, i) => (
+                            <div key={i} className="relative h-16 w-16 rounded-md overflow-hidden border flex-shrink-0">
+                              <img src={img} alt={`Attached ${i}`} className="h-full w-full object-cover" />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {formData.is_anonymous && (
+                  <div className="bg-muted/50 p-3 rounded-md text-sm text-muted-foreground flex items-center gap-2">
+                    <Shield className="h-4 w-4" />
+                    Submitting anonymously
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="px-6 py-4 border-b">
+          <DialogTitle>New Request</DialogTitle>
+          <DialogDescription>
+            Submit a request to the community
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="px-6 pt-6">
+          <StepProgress
+            currentStep={step + 1}
+            steps={steps.map((s, i) => ({ number: i + 1, title: s.title }))}
+          />
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-6">
+          {renderStepContent()}
+        </div>
+
+        <DialogFooter className="px-6 py-4 border-t mt-auto">
+          <div className="flex w-full justify-between gap-2">
+            {step > 0 && (
+              <Button variant="outline" onClick={handleBack} disabled={isSubmitting}>
+                <ArrowLeft className="mr-2 h-4 w-4" /> Back
+              </Button>
+            )}
+            {step === 0 && (
+              <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+            )}
+
+            {step < steps.length - 1 ? (
+              <Button onClick={handleNext} disabled={step === 0 && !formData.request_type}>
+                Next <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            ) : (
+              <Button onClick={handleSubmit} disabled={isSubmitting} className="bg-primary hover:bg-primary/90 text-primary-foreground w-full sm:w-auto">
+                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Submit Request
+              </Button>
+            )}
+          </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )

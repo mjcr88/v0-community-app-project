@@ -1,23 +1,19 @@
 import { createClient } from "@/lib/supabase/server"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Users, MapPin, Globe, Languages, PawPrint, Home, MapIcon } from 'lucide-react'
-import Link from "next/link"
 import { UpcomingEventsWidget } from "@/components/dashboard/upcoming-events-widget"
-import { CreateCheckInButton } from "@/components/check-ins/create-check-in-button"
-import { CheckInsCountWidget } from "@/components/dashboard/checkins-count-widget"
 import { LiveCheckInsWidget } from "@/components/dashboard/live-checkins-widget"
-import { MyExchangeListingsWidget } from "@/components/exchange/my-exchange-listings-widget"
 import { getUserListings } from "@/app/actions/exchange-listings"
 import { cache } from 'react'
 import { MapSectionLazy } from "@/components/dashboard/map-section-lazy"
-import { DashboardSectionCollapsible } from "@/components/dashboard/dashboard-section-collapsible"
 import { MyListingsAndTransactionsWidget } from "@/components/exchange/my-listings-and-transactions-widget"
 import { getMyTransactions } from "@/app/actions/exchange-transactions"
-import { CreateExchangeListingButton } from "@/components/exchange/create-exchange-listing-button"
 import { getMyRequests } from "@/app/actions/resident-requests"
 import { MyRequestsWidget } from "@/components/requests/my-requests-widget"
 import { AnnouncementsWidget } from "@/components/dashboard/announcements-widget"
+import { PriorityFeed } from "@/components/ecovilla/dashboard/PriorityFeed"
+import { StatsGrid } from "@/components/dashboard/StatsGrid"
+import { RioWelcomeCard } from "@/components/ecovilla/dashboard/RioWelcomeCard"
+import { ShineBorder } from "@/components/library/shine-border"
+import { DashboardSections } from "@/components/ecovilla/dashboard/DashboardSections"
 
 const getCachedUser = cache(async () => {
   const supabase = await createClient()
@@ -107,7 +103,6 @@ export default async function ResidentDashboardPage({ params }: { params: Promis
 
   const tenant = await getCachedTenant(resident.tenant_id)
 
-  const petsEnabled = tenant?.features?.pets === true
   const checkinsEnabled = tenant?.checkins_enabled === true
   const exchangeEnabled = tenant?.exchange_enabled === true
   const requestsEnabled = tenant?.requests_enabled ?? true
@@ -129,82 +124,6 @@ export default async function ResidentDashboardPage({ params }: { params: Promis
     lotLocationId = lotLocation?.id
   }
 
-  // Get total residents count in neighborhood (or tenant if no neighborhood)
-  const neighborhoodId = resident.lots?.neighborhoods?.id
-  let totalResidents = 0
-
-  if (neighborhoodId) {
-    const { data: residentsInNeighborhood } = await supabase
-      .from("users")
-      .select("id, lot_id, lots!inner(neighborhood_id)")
-      .eq("tenant_id", resident.tenant_id)
-      .eq("role", "resident")
-      .eq("lots.neighborhood_id", neighborhoodId)
-
-    totalResidents = residentsInNeighborhood?.length || 0
-  } else {
-    const { count } = await supabase
-      .from("users")
-      .select("*", { count: "exact", head: true })
-      .eq("tenant_id", resident.tenant_id)
-      .eq("role", "resident")
-
-    totalResidents = count || 0
-  }
-
-  // Get unique languages count in neighborhood
-  const { data: languagesData } = await supabase
-    .from("users")
-    .select("languages")
-    .eq("tenant_id", resident.tenant_id)
-    .eq("role", "resident")
-    .not("languages", "is", null)
-
-  const allLanguages = new Set<string>()
-  languagesData?.forEach((user) => {
-    user.languages?.forEach((lang: string) => allLanguages.add(lang))
-  })
-
-  // Get unique origin countries count in neighborhood
-  const { data: countriesData } = await supabase
-    .from("users")
-    .select("birth_country")
-    .eq("tenant_id", resident.tenant_id)
-    .eq("role", "resident")
-    .not("birth_country", "is", null)
-
-  const uniqueCountries = new Set(countriesData?.map((u) => u.birth_country).filter(Boolean))
-
-  // Get pets count if enabled
-  let petsCount = 0
-  if (petsEnabled && neighborhoodId) {
-    const { count } = await supabase
-      .from("pets")
-      .select("*, lot_id!inner(neighborhoods!inner(id))", { count: "only", head: true })
-      .eq("lot_id.neighborhoods.id", neighborhoodId)
-
-    petsCount = count || 0
-  }
-
-  const familyUnitId = resident.family_unit_id && resident.family_unit_id !== "" ? resident.family_unit_id : null
-
-  let familyMembersCount = 0
-  let familyName = "Family"
-
-  if (familyUnitId) {
-    const { count } = await supabase
-      .from("users")
-      .select("*", { count: "exact", head: true })
-      .eq("family_unit_id", familyUnitId)
-      .eq("role", "resident")
-
-    familyMembersCount = count || 0
-
-    if (resident.family_units?.name) {
-      familyName = resident.family_units.name
-    }
-  }
-
   const mapCenter = tenant?.map_center_coordinates
     ? { lat: tenant.map_center_coordinates.lat, lng: tenant.map_center_coordinates.lng }
     : null
@@ -214,7 +133,6 @@ export default async function ResidentDashboardPage({ params }: { params: Promis
   let exchangeNeighborhoods: any[] = []
   let userTransactions: any[] = []
   let myRequests: any[] = []
-  let activeRequests: any[] = []
 
   if (exchangeEnabled) {
     userListings = await getCachedUserListings(user.id, resident.tenant_id)
@@ -225,218 +143,113 @@ export default async function ResidentDashboardPage({ params }: { params: Promis
 
   if (requestsEnabled && resident.tenant_id) {
     myRequests = await getMyRequests(resident.tenant_id)
-    activeRequests = myRequests.filter(
-      (r) => r.status === "pending" || r.status === "in_progress"
-    )
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-2">
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Welcome back, {resident.first_name || "Resident"}!</h2>
         <p className="text-muted-foreground">Here's what's happening in your community</p>
       </div>
 
-      <DashboardSectionCollapsible title="Quick Actions" description="Get started with your community dashboard">
-        <div className="flex flex-wrap gap-2">
-          {!resident.onboarding_completed && (
-            <Button asChild>
-              <Link href={`/t/${slug}/onboarding/welcome`}>Complete Onboarding</Link>
-            </Button>
-          )}
-          <Button asChild variant="outline">
-            <Link href={`/t/${slug}/dashboard/events/create`}>Create Event</Link>
-          </Button>
-          {checkinsEnabled && <CreateCheckInButton tenantSlug={slug} tenantId={resident.tenant_id} />}
-          <Button asChild variant="outline">
-            <Link href={`/t/${slug}/dashboard/settings/profile`}>Edit Profile</Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link href={`/t/${slug}/dashboard/neighbours`}>Browse Neighbours</Link>
-          </Button>
-          {mapEnabled && (
-            <Button asChild variant="outline">
-              <Link href={`/t/${slug}/dashboard/map`}>
-                <MapIcon className="h-4 w-4 mr-2" />
-                View Community Map
-              </Link>
-            </Button>
-          )}
-          {exchangeEnabled && (
-            <CreateExchangeListingButton
-              tenantSlug={slug}
-              tenantId={resident.tenant_id}
-              categories={exchangeCategories}
-              neighborhoods={exchangeNeighborhoods}
-              variant="outline"
-            />
-          )}
+      {/* Two-Column Layout: Stats + What's Next */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+        {/* Left Column: What's Next */}
+        <div className="flex flex-col relative">
+          <h3 className="text-lg font-semibold mb-3">What's Next</h3>
+          <div className="relative rounded-xl overflow-hidden border bg-background">
+            <ShineBorder className="absolute inset-0 pointer-events-none z-10" shineColor={["#D97742", "#6B9B47"]} />
+            <div className="relative z-0 h-full">
+              <PriorityFeed slug={slug} userId={user.id} tenantId={resident.tenant_id} />
+            </div>
+          </div>
         </div>
-      </DashboardSectionCollapsible>
 
-      <DashboardSectionCollapsible
-        title="Community Announcements"
-        description="Latest updates from management"
-        defaultOpen={true}
-      >
-        <AnnouncementsWidget
-          slug={slug}
-          userId={user.id}
-          tenantId={resident.tenant_id}
+        {/* Right Column: Rio & Stats */}
+        <div className="flex flex-col space-y-6">
+          {/* Top Right: Rio Welcome */}
+          <div>
+            {/* Spacer to align with "What's Next" title on large screens */}
+            <h3 className="text-lg font-semibold mb-3 invisible hidden lg:block" aria-hidden="true">Spacer</h3>
+            <RioWelcomeCard />
+          </div>
+
+          {/* Bottom Right: Stats */}
+          <div className="flex flex-col">
+            <h3 className="text-lg font-semibold mb-3">Quick Stats</h3>
+            <StatsGrid />
+          </div>
+        </div>
+      </div>
+
+      {/* Dashboard Sections (Interactive) */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">Explore & catch-up</h3>
+        <DashboardSections
+          announcements={
+            <AnnouncementsWidget
+              slug={slug}
+              userId={user.id}
+              tenantId={resident.tenant_id}
+            />
+          }
+          events={
+            <UpcomingEventsWidget
+              slug={slug}
+              userId={user.id}
+              tenantId={resident.tenant_id}
+            />
+          }
+          checkins={
+            checkinsEnabled ? (
+              <LiveCheckInsWidget
+                tenantSlug={slug}
+                tenantId={resident.tenant_id}
+                userId={user.id}
+              />
+            ) : (
+              <div className="p-4 text-center text-muted-foreground">Check-ins are disabled for this community.</div>
+            )
+          }
+          listings={
+            exchangeEnabled ? (
+              <MyListingsAndTransactionsWidget
+                listings={userListings}
+                transactions={userTransactions}
+                tenantSlug={slug}
+                tenantId={resident.tenant_id}
+                userId={user.id}
+                categories={exchangeCategories}
+                neighborhoods={exchangeNeighborhoods}
+                locations={[]}
+              />
+            ) : (
+              <div className="p-4 text-center text-muted-foreground">Exchange is disabled for this community.</div>
+            )
+          }
+          requests={
+            requestsEnabled ? (
+              <MyRequestsWidget requests={myRequests} tenantSlug={slug} />
+            ) : (
+              <div className="p-4 text-center text-muted-foreground">Requests are disabled for this community.</div>
+            )
+          }
+          map={
+            mapEnabled && resident.lot_id ? (
+              <MapSectionLazy
+                tenantSlug={slug}
+                tenantId={resident.tenant_id}
+                lotLocationId={lotLocationId}
+                mapCenter={mapCenter}
+                checkIns={[]}
+                neighborhoodName={resident.lots?.neighborhoods?.name}
+                lotNumber={resident.lots?.lot_number}
+              />
+            ) : (
+              <div className="p-4 text-center text-muted-foreground">Map is not available.</div>
+            )
+          }
         />
-      </DashboardSectionCollapsible>
-
-      <DashboardSectionCollapsible
-        title="Upcoming Events"
-        description="Your next events"
-        defaultOpen={false}
-      >
-        <UpcomingEventsWidget
-          slug={slug}
-          userId={user.id}
-          tenantId={resident.tenant_id}
-        />
-      </DashboardSectionCollapsible>
-
-      {checkinsEnabled && (
-        <DashboardSectionCollapsible
-          title="Live Check-ins"
-          description="Active residents now"
-          defaultOpen={false}
-        >
-          <LiveCheckInsWidget
-            tenantSlug={slug}
-            tenantId={resident.tenant_id}
-            userId={user.id}
-          />
-        </DashboardSectionCollapsible>
-      )}
-
-      {exchangeEnabled && (userListings.length > 0 || userTransactions.length > 0) && (
-        <DashboardSectionCollapsible
-          title="My Listings & Transactions"
-          description="Manage your exchange listings and track active exchanges"
-          defaultOpen={true}
-        >
-          <MyListingsAndTransactionsWidget
-            listings={userListings}
-            transactions={userTransactions}
-            tenantSlug={slug}
-            tenantId={resident.tenant_id}
-            userId={user.id}
-            categories={exchangeCategories}
-            neighborhoods={exchangeNeighborhoods}
-            locations={[]} // Will be fetched by modal on demand
-          />
-        </DashboardSectionCollapsible>
-      )}
-
-      {requestsEnabled && activeRequests.length > 0 && (
-        <DashboardSectionCollapsible
-          title="My Active Requests"
-          description="Track your submitted requests"
-          defaultOpen={true}
-        >
-          <MyRequestsWidget requests={myRequests} tenantSlug={slug} />
-        </DashboardSectionCollapsible>
-      )}
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {mapEnabled && resident.lot_id ? (
-          <MapSectionLazy
-            tenantSlug={slug}
-            tenantId={resident.tenant_id}
-            lotLocationId={lotLocationId}
-            mapCenter={mapCenter}
-            checkIns={[]} // Will be fetched by widget on demand
-            neighborhoodName={resident.lots?.neighborhoods?.name}
-            lotNumber={resident.lots?.lot_number}
-          />
-        ) : (
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Your Neighborhood</CardTitle>
-              <MapPin className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{resident.lots?.neighborhoods?.name || "Not assigned"}</div>
-              <p className="text-xs text-muted-foreground">Lot #{resident.lots?.lot_number || "N/A"}</p>
-            </CardContent>
-          </Card>
-        )}
-
-        <Card className="lg:col-span-1">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Community Members</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalResidents}</div>
-            <p className="text-xs text-muted-foreground">
-              {neighborhoodId ? "In your neighborhood" : "Total residents"}
-            </p>
-          </CardContent>
-        </Card>
-
-        {checkinsEnabled && <CheckInsCountWidget initialCount={0} />}
-
-        {familyUnitId && (
-          <Card className="lg:col-span-1">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{familyName}</CardTitle>
-              <Home className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{familyMembersCount}</div>
-              <p className="text-xs text-muted-foreground">Family members</p>
-            </CardContent>
-          </Card>
-        )}
-
-        <Card className="lg:col-span-1">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Languages Spoken</CardTitle>
-            <Languages className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{allLanguages.size}</div>
-            <p className="text-xs text-muted-foreground">Different languages</p>
-          </CardContent>
-        </Card>
-
-        <Card className="lg:col-span-1">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Origin Countries</CardTitle>
-            <Globe className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{uniqueCountries.size}</div>
-            <p className="text-xs text-muted-foreground">Countries represented</p>
-          </CardContent>
-        </Card>
-
-        {petsEnabled && (
-          <Card className="lg:col-span-1">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Community Pets</CardTitle>
-              <PawPrint className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{petsCount}</div>
-              <p className="text-xs text-muted-foreground">Furry friends</p>
-            </CardContent>
-          </Card>
-        )}
-
-        <Card className="lg:col-span-1">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Journey Stage</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold capitalize">{resident.journey_stage || "Not set"}</div>
-            <p className="text-xs text-muted-foreground">Current stage</p>
-          </CardContent>
-        </Card>
       </div>
     </div>
   )

@@ -337,14 +337,22 @@ export function PriorityFeed({ slug, userId, tenantId }: { slug: string; userId:
 
     if (items.length === 0) {
         return (
-            <div className="h-full flex flex-col bg-card/30 rounded-2xl border border-border/50 overflow-hidden p-8 text-center text-muted-foreground justify-center max-h-[450px]">
-                <p>All caught up! 🎉</p>
+            <div className="h-full flex flex-col bg-card/30 rounded-2xl border border-border/50 overflow-hidden p-8 text-center text-muted-foreground justify-center items-center">
+                <div className="relative w-64 h-64 mb-4">
+                    <img
+                        src="/rio/rio_sleeping.png"
+                        alt="All caught up"
+                        className="object-contain w-full h-full"
+                    />
+                </div>
+                <p className="font-medium text-foreground">All caught up!</p>
+                <p className="text-sm mt-1">Check back later for more updates.</p>
             </div>
         )
     }
 
     return (
-        <div className="h-full flex flex-col bg-card/30 rounded-2xl border border-border/50 overflow-hidden max-h-[450px]">
+        <div className="h-full flex flex-col bg-card/30 rounded-2xl border border-border/50 overflow-hidden">
             <div className="space-y-2 overflow-y-auto flex-1 px-4 pb-4 pt-4">
                 {items.map((item: ApiPriorityItem) => (
                     <div

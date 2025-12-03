@@ -273,7 +273,7 @@ export function RequestsPageClient({ requests, tenantSlug }: RequestsPageClientP
             {/* Results Grid */}
             {filteredRequests.length === 0 ? (
                 <RioEmptyState
-                    variant={hasActiveFilters ? "no-matches" : "no-listings"}
+                    variant={hasActiveFilters ? "no-matches" : "no-requests"}
                     title={hasActiveFilters ? "No requests match your filters" : "No requests yet"}
                     description={
                         hasActiveFilters

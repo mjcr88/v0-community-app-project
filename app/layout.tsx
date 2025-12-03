@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 
 import { Analytics } from "@vercel/analytics/next"
 import { Toaster } from "@/components/ui/toaster"
+import { RioFeedbackProvider } from "@/components/feedback/rio-feedback-provider"
 import "./globals.css"
 
 import { Geist, Geist_Mono, Source_Serif_4, Geist as V0_Font_Geist, Geist_Mono as V0_Font_Geist_Mono, Source_Serif_4 as V0_Font_Source_Serif_4 } from 'next/font/google'
@@ -44,9 +45,11 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${geist.variable} ${geistMono.variable} ${sourceSerif.variable} font-sans antialiased`}>
-        {children}
-        <Analytics />
-        <Toaster />
+        <RioFeedbackProvider>
+          {children}
+          <Analytics />
+          <Toaster />
+        </RioFeedbackProvider>
       </body>
     </html>
   )

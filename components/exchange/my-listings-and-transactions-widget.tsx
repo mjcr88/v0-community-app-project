@@ -23,6 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { RioConfirmationModal } from "@/components/feedback/rio-confirmation-modal"
 import Image from "next/image"
 import type { Location } from "@/types/locations"
 import { TransactionsView } from "@/components/transactions/transactions-view"
@@ -379,19 +380,23 @@ export function MyListingsAndTransactionsWidget({
     <>
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <div>
+          <div className="flex items-center gap-2">
             <h3 className="text-lg font-semibold">My Listings & Transactions</h3>
-            <p className="text-sm text-muted-foreground">
-              {counts.total} listing{counts.total !== 1 ? 's' : ''} · {transactions.length} transaction{transactions.length !== 1 ? 's' : ''}
-            </p>
+            <Badge variant="secondary" className="bg-orange-100 text-orange-700 hover:bg-orange-100 border-none">
+              {counts.total} {counts.total === 1 ? 'Listing' : 'Listings'}
+            </Badge>
           </div>
-          <CreateExchangeListingButton
-            tenantSlug={tenantSlug}
-            tenantId={tenantId}
-            categories={categories}
-            neighborhoods={neighborhoods}
-            variant="default"
-          />
+          <div className="flex gap-2">
+            <Button asChild variant="ghost" size="sm">
+              <Link href={`/t/${tenantSlug}/dashboard/exchange`}>View All</Link>
+            </Button>
+            <Button asChild size="sm">
+              <Link href={`/t/${tenantSlug}/dashboard/exchange/create`}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Listing
+              </Link>
+            </Button>
+          </div>
         </div>
 
         <Tabs value={topLevelTab} onValueChange={(v) => setTopLevelTab(v as "listings" | "transactions" | "archive")} className="w-full">
@@ -539,25 +544,17 @@ export function MyListingsAndTransactionsWidget({
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Listing?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete your listing. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete Listing
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <RioConfirmationModal
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        title="Delete Listing?"
+        description="This will permanently delete your listing. This action cannot be undone."
+        image="/rio/rio_delete_warning.png"
+        confirmText="Delete Listing"
+        onConfirm={confirmDelete}
+        isDestructive={true}
+        isLoading={loadingStates[deleteListingId || ""]}
+      />
     </>
   )
 }

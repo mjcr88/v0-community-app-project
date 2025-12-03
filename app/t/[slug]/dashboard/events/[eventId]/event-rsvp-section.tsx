@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Check, HelpCircle, X, Users, Clock, AlertCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { rsvpToEvent, getUserRsvpStatus, getEventRsvpCounts } from "@/app/actions/events"
-import { toast } from "sonner"
+import { useRioFeedback } from "@/components/feedback/rio-feedback-provider"
 
 interface EventRsvpSectionProps {
   eventId: string
@@ -28,6 +28,7 @@ export function EventRsvpSection({
   eventStatus,
 }: EventRsvpSectionProps) {
   const router = useRouter()
+  const { showFeedback } = useRioFeedback()
   const [currentStatus, setCurrentStatus] = useState<string | null>(null)
   const [counts, setCounts] = useState({ yes: 0, maybe: 0, no: 0 })
   const [isLoading, setIsLoading] = useState(false)
@@ -68,7 +69,12 @@ export function EventRsvpSection({
 
   async function handleRsvp(status: "yes" | "maybe" | "no") {
     if (!userId) {
-      toast.error("Please sign in to RSVP")
+      showFeedback({
+        title: "Sign in required",
+        description: "Please sign in to RSVP to this event.",
+        variant: "error",
+        image: "/rio/rio_no_results_confused.png"
+      })
       return
     }
 
@@ -78,7 +84,15 @@ export function EventRsvpSection({
     if (result.success) {
       setCurrentStatus(status)
       const statusLabel = status === "yes" ? "Attending" : status === "maybe" ? "Maybe" : "Not Attending"
-      toast.success(`RSVP updated: ${statusLabel}`)
+
+      showFeedback({
+        title: status === "yes" ? "You're going!" : "RSVP Updated",
+        description: status === "yes"
+          ? "Your RSVP has been confirmed. We've added this to your calendar."
+          : `You've marked your status as ${statusLabel}.`,
+        variant: "success",
+        image: "/rio/rio_rsvp_celebration.png"
+      })
 
       // Reload counts
       const countsResult = await getEventRsvpCounts(eventId)
@@ -88,7 +102,13 @@ export function EventRsvpSection({
 
       router.refresh()
     } else {
-      toast.error(result.error || "Failed to update RSVP")
+
+      showFeedback({
+        title: "Couldn't update RSVP",
+        description: result.error || "Something went wrong. Please try again.",
+        variant: "error",
+        image: "/rio/rio_no_results_confused.png"
+      })
     }
 
     setIsLoading(false)

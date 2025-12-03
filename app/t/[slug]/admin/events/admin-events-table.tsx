@@ -34,6 +34,7 @@ import { Label } from "@/components/ui/label"
 import { adminDeleteEvents, adminCancelEvent, adminUnflagEvent } from "@/app/actions/events"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import { useRioFeedback } from "@/components/feedback/rio-feedback-provider"
 
 type AdminEvent = {
   id: string
@@ -87,6 +88,7 @@ export function AdminEventsTable({
   categories: Category[]
 }) {
   const router = useRouter()
+  const { showFeedback } = useRioFeedback()
   const [searchQuery, setSearchQuery] = useState("")
   const [sortedEvents, setSortedEvents] = useState<AdminEvent[]>(events)
   const [sortField, setSortField] = useState<string>("start_date")
@@ -274,13 +276,23 @@ export function AdminEventsTable({
     try {
       const result = await adminDeleteEvents(selectedEvents, tenantId, slug)
       if (result.success) {
-        toast.success(`${selectedEvents.length} event(s) deleted successfully`)
+        showFeedback({
+          title: "Events Deleted",
+          description: `${selectedEvents.length} event(s) have been permanently removed.`,
+          variant: "success",
+          image: "/rio/rio_delete_warning.png"
+        })
         setSelectedEvents([])
         setShowDeleteDialog(false)
         // Force hard refresh
         window.location.reload()
       } else {
-        toast.error(result.error || "Failed to delete events")
+        showFeedback({
+          title: "Couldn't delete events",
+          description: result.error || "Something went wrong. Please try again.",
+          variant: "error",
+          image: "/rio/rio_no_results_confused.png"
+        })
       }
     } catch (error) {
       toast.error("An unexpected error occurred")
@@ -311,10 +323,20 @@ export function AdminEventsTable({
       }
 
       if (successCount > 0) {
-        toast.success(`${successCount} event(s) cancelled successfully`)
+        showFeedback({
+          title: "Events Cancelled",
+          description: `${successCount} event(s) have been cancelled.`,
+          variant: "success",
+          image: "/rio/rio_delete_warning.png"
+        })
       }
       if (failCount > 0) {
-        toast.error(`Failed to cancel ${failCount} event(s)`)
+        showFeedback({
+          title: "Some cancellations failed",
+          description: `Failed to cancel ${failCount} event(s).`,
+          variant: "error",
+          image: "/rio/rio_no_results_confused.png"
+        })
       }
 
       setSelectedEvents([])
@@ -322,7 +344,12 @@ export function AdminEventsTable({
       setShowCancelDialog(false)
       router.refresh()
     } catch (error) {
-      toast.error("An unexpected error occurred")
+      showFeedback({
+        title: "Something went wrong",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "error",
+        image: "/rio/rio_no_results_confused.png"
+      })
     } finally {
       setIsProcessing(false)
     }
@@ -355,16 +382,31 @@ export function AdminEventsTable({
       }
 
       if (successCount > 0) {
-        toast.success(`${successCount} event(s) unflagged successfully`)
+        showFeedback({
+          title: "Events Unflagged",
+          description: `${successCount} event(s) have been unflagged.`,
+          variant: "success",
+          image: "/rio/rio_clapping.png"
+        })
       }
       if (failCount > 0) {
-        toast.error(`Failed to unflag ${failCount} event(s)`)
+        showFeedback({
+          title: "Some unflags failed",
+          description: `Failed to unflag ${failCount} event(s).`,
+          variant: "error",
+          image: "/rio/rio_no_results_confused.png"
+        })
       }
 
       setSelectedEvents([])
       router.refresh()
     } catch (error) {
-      toast.error("An unexpected error occurred")
+      showFeedback({
+        title: "Something went wrong",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "error",
+        image: "/rio/rio_no_results_confused.png"
+      })
     } finally {
       setIsProcessing(false)
     }
@@ -375,13 +417,28 @@ export function AdminEventsTable({
     try {
       const result = await adminUnflagEvent(eventId, tenantId, slug)
       if (result.success) {
-        toast.success("Event unflagged successfully")
+        showFeedback({
+          title: "Event Unflagged",
+          description: "The event is no longer flagged.",
+          variant: "success",
+          image: "/rio/rio_clapping.png"
+        })
         router.refresh()
       } else {
-        toast.error(result.error || "Failed to unflag event")
+        showFeedback({
+          title: "Couldn't unflag event",
+          description: result.error || "Something went wrong. Please try again.",
+          variant: "error",
+          image: "/rio/rio_no_results_confused.png"
+        })
       }
     } catch (error) {
-      toast.error("An unexpected error occurred")
+      showFeedback({
+        title: "Something went wrong",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "error",
+        image: "/rio/rio_no_results_confused.png"
+      })
     } finally {
       setIsProcessing(false)
     }

@@ -275,13 +275,13 @@ export function NotificationPageClient({
                         {selectedTypes.map((type) => (
                             <Badge key={type} variant="secondary" className="gap-1 capitalize">
                                 {type}
-                                <X className="h-3 w-3 cursor-pointer hover:text-foreground" onClick={() => handleTypeToggle(type)} />
+                                <X className="h-3 w-3 cursor-pointer hover:text-foreground pointer-events-auto" onClick={() => handleTypeToggle(type)} />
                             </Badge>
                         ))}
                         {selectedStatuses.map((status) => (
                             <Badge key={status} variant="secondary" className="gap-1 capitalize">
                                 {status.replace('_', ' ')}
-                                <X className="h-3 w-3 cursor-pointer hover:text-foreground" onClick={() => handleStatusToggle(status)} />
+                                <X className="h-3 w-3 cursor-pointer hover:text-foreground pointer-events-auto" onClick={() => handleStatusToggle(status)} />
                             </Badge>
                         ))}
                         <Button
@@ -360,6 +360,22 @@ export function NotificationPageClient({
                                 ? "Try adjusting your filters to see more results."
                                 : "You've seen everything new. Río is taking a siesta too. ☀️"
                         }
+                        imageSrc={(() => {
+                            // Default view (Unread + Action Required)
+                            if (selectedStatuses.length === 2 && selectedStatuses.includes("unread") && selectedStatuses.includes("action_required") && selectedTypes.length === 0 && !searchQuery) {
+                                return "/rio/rio_sleeping.png"
+                            }
+
+                            // Specific single status filters
+                            if (selectedStatuses.length === 1 && selectedTypes.length === 0 && !searchQuery) {
+                                if (selectedStatuses[0] === "archived") return "/rio/rio_archived_notifications.png"
+                                if (selectedStatuses[0] === "unread") return "/rio/rio_sleeping.png"
+                                if (selectedStatuses[0] === "read") return "/rio/rio_searching_confused.png"
+                            }
+
+                            // Fallback for searches or other combinations
+                            return hasActiveFilters ? "/rio/rio_no_results_confused.png" : "/rio/rio_sleeping.png"
+                        })()}
                         action={
                             hasActiveFilters ? (
                                 <Button variant="outline" onClick={clearFilters}>

@@ -11,6 +11,7 @@ import { useState } from "react"
 import { EventRsvpQuickAction } from "@/components/event-rsvp-quick-action"
 import { LocationBadge } from "@/components/events/location-badge"
 import { RioImage } from "@/components/library/rio-image"
+import Image from "next/image"
 
 interface Event {
   id: string
@@ -44,18 +45,24 @@ interface Event {
   status?: "draft" | "published" | "cancelled"
 }
 
+import { RioEmptyState } from "@/components/exchange/rio-empty-state"
+
+// ... (keep existing imports)
+
 export function EventsCalendar({
   events,
   slug,
   hasActiveFilters,
   userId,
   tenantId,
+  emptyStateVariant = "no-upcoming",
 }: {
   events: Event[]
   slug: string
   hasActiveFilters: boolean
   userId: string
   tenantId: string
+  emptyStateVariant?: "no-matches" | "no-upcoming" | "no-past" | "no-rsvp" | "no-listings"
 }) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
 
@@ -79,33 +86,33 @@ export function EventsCalendar({
 
   if (!hasEvents) {
     return (
-      <Card className="border-dashed">
-        <CardHeader className="text-center pb-4">
-          <div className="flex justify-center mb-4">
-            <div className="rounded-full bg-primary/10 p-4">
-              <CalendarClock className="h-12 w-12 text-primary" />
-            </div>
-          </div>
-          <CardTitle className="text-2xl">
-            {hasActiveFilters ? "No events match your filters" : "No events yet"}
-          </CardTitle>
-          <CardDescription className="text-base">
-            {hasActiveFilters
-              ? "Try adjusting your filters to see more events"
-              : "Be the first to create an event and bring your community together!"}
-          </CardDescription>
-        </CardHeader>
-        {!hasActiveFilters && (
-          <CardContent className="flex justify-center pb-8">
-            <Button asChild size="lg">
-              <Link href={`/t/${slug}/dashboard/events/create`}>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Your First Event
-              </Link>
-            </Button>
-          </CardContent>
-        )}
-      </Card>
+      <RioEmptyState
+        variant={emptyStateVariant}
+        title={
+          emptyStateVariant === "no-matches"
+            ? "No events match your filters"
+            : emptyStateVariant === "no-past"
+              ? "No past events"
+              : "No upcoming events"
+        }
+        description={
+          emptyStateVariant === "no-matches"
+            ? "Try adjusting your filters to see more events."
+            : emptyStateVariant === "no-past"
+              ? "You haven't attended any events yet."
+              : "Be the first to create an event and bring your community together!"
+        }
+        action={
+          emptyStateVariant !== "no-past" ? (
+            <Link href={`/t/${slug}/dashboard/events/create`}>
+              <Button size="lg" className="gap-2">
+                <Plus className="h-4 w-4" />
+                Create Event
+              </Button>
+            </Link>
+          ) : undefined
+        }
+      />
     )
   }
 
@@ -230,15 +237,35 @@ export function EventsCalendar({
               })}
             </div>
           ) : selectedDate ? (
-            <div className="flex flex-col items-center justify-center py-8 space-y-4">
-              <RioImage pose="waiting" size="md" />
-              <p className="text-sm text-muted-foreground text-center">No events scheduled for this date</p>
-            </div>
+            <RioEmptyState
+              variant="no-upcoming"
+              title="No events scheduled"
+              description="There are no events scheduled for this date. Why not create one?"
+              action={
+                <Link href={`/t/${slug}/dashboard/events/create`}>
+                  <Button size="sm" className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    Create Event
+                  </Button>
+                </Link>
+              }
+            />
           ) : (
-            <p className="text-sm text-muted-foreground text-center py-8">Select a date to view events</p>
+            <div className="flex flex-col items-center justify-center py-8 space-y-4 text-center">
+              <div className="relative w-64 h-64">
+                <Image
+                  src="/rio/rio_pointing_calendar.png"
+                  alt="Rio pointing to calendar"
+                  fill
+                  className="object-contain"
+                  priority
+                />
+              </div>
+              <p className="text-muted-foreground font-medium">Select a date on the calendar to view events</p>
+            </div>
           )}
         </CardContent>
       </Card>
-    </div>
+    </div >
   )
 }

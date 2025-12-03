@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -51,7 +51,8 @@ export function DashboardSections({
     requests: React.ReactNode
     map: React.ReactNode
 }) {
-    const [activeSection, setActiveSection] = useState<string | null>("announcements")
+    const [activeSection, setActiveSection] = useState<string | null>(null)
+    const contentRef = useRef<HTMLDivElement>(null)
 
     const sections = [
         { id: "announcements", label: "Community Announcements", icon: Megaphone },
@@ -61,6 +62,19 @@ export function DashboardSections({
         { id: "requests", label: "My Active Requests", icon: AlertCircle },
         { id: "map", label: "Our Neighborhood", icon: Map },
     ]
+
+    // Auto-scroll to content when section becomes active
+    useEffect(() => {
+        if (activeSection && contentRef.current) {
+            // Small delay to allow animation to start
+            setTimeout(() => {
+                contentRef.current?.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'nearest'
+                })
+            }, 100)
+        }
+    }, [activeSection])
 
     const renderContent = () => {
         switch (activeSection) {
@@ -90,13 +104,14 @@ export function DashboardSections({
             </div>
 
             {activeSection === "map" ? (
-                <div className="flex-1 min-h-[600px]">
+                <div ref={contentRef} className="flex-1 min-h-[600px]">
                     {renderContent()}
                 </div>
             ) : (
                 <AnimatePresence mode="wait">
                     {activeSection && (
                         <motion.div
+                            ref={contentRef}
                             key={activeSection}
                             initial={{ opacity: 0, y: -10 }}
                             animate={{ opacity: 1, y: 0 }}

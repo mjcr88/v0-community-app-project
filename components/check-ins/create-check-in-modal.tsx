@@ -15,6 +15,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { createCheckIn } from "@/app/actions/check-ins"
 import { Loader2, Plus, Minus } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
+import { useRioFeedback } from "@/components/feedback/rio-feedback-provider"
 import { NeighborhoodMultiSelect } from "@/components/event-forms/neighborhood-multi-select"
 import { ResidentInviteSelector } from "@/components/event-forms/resident-invite-selector"
 import { LocationSelector } from "@/components/event-forms/location-selector"
@@ -41,6 +42,7 @@ export function CreateCheckInModal({
 }: CreateCheckInModalProps) {
   const router = useRouter()
   const { toast } = useToast()
+  const { showFeedback } = useRioFeedback()
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const [formData, setFormData] = useState({
@@ -243,9 +245,11 @@ export function CreateCheckInModal({
       const result = await createCheckIn(tenantSlug, tenantId, checkInData)
 
       if (result.success) {
-        toast({
-          title: "Check-in created!",
-          description: "Your check-in is now live for the community.",
+        showFeedback({
+          title: "Checked In!",
+          description: "Your check-in is now live for the community. Have fun!",
+          variant: "success",
+          image: "/rio/rio_check_in_created.png"
         })
         onOpenChange(false)
         router.refresh()
@@ -254,18 +258,20 @@ export function CreateCheckInModal({
           error: result.error,
           sentData: checkInData,
         })
-        toast({
-          title: "Error",
-          description: result.error || "Failed to create check-in",
-          variant: "destructive",
+        showFeedback({
+          title: "Couldn't check in",
+          description: result.error || "Something went wrong. Please try again.",
+          variant: "error",
+          image: "/rio/rio_no_results_confused.png"
         })
       }
     } catch (error) {
       console.error("[v0] CHECK-IN CREATION EXCEPTION:", error)
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred",
-        variant: "destructive",
+      showFeedback({
+        title: "Something went wrong",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "error",
+        image: "/rio/rio_no_results_confused.png"
       })
     } finally {
       setIsSubmitting(false)

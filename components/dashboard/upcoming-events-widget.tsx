@@ -13,6 +13,7 @@ import { useRouter } from 'next/navigation'
 import { LocationBadge } from "@/components/events/location-badge"
 import { Badge } from "@/components/ui/badge"
 import useSWR from "swr"
+import { EventRsvpQuickAction } from "@/components/event-rsvp-quick-action"
 
 interface Event {
   id: string
@@ -131,7 +132,7 @@ export function UpcomingEventsWidget({ slug, userId, tenantId }: UpcomingEventsW
           <Button asChild size="sm">
             <Link href={`/t/${slug}/dashboard/events/create`}>
               <Plus className="h-4 w-4 mr-2" />
-              Create
+              Create Event
             </Link>
           </Button>
         </div>
@@ -155,7 +156,7 @@ export function UpcomingEventsWidget({ slug, userId, tenantId }: UpcomingEventsW
           <Button asChild size="sm">
             <Link href={`/t/${slug}/dashboard/events/create`}>
               <Plus className="h-4 w-4 mr-2" />
-              Create
+              Create Event
             </Link>
           </Button>
         </div>
@@ -209,42 +210,19 @@ export function UpcomingEventsWidget({ slug, userId, tenantId }: UpcomingEventsW
                     </div>
 
                     {/* RSVP Actions */}
-                    {userId && tenantId && event.requires_rsvp && !isCancelled && (
-                      <div className="flex items-center gap-1 pt-2" onClick={(e) => e.preventDefault()}>
-                        <Button
-                          size="sm"
-                          variant={userRsvpStatus === "yes" ? "default" : "outline"}
-                          className="h-7 px-3 text-xs"
-                          onClick={(e) => handleRsvp(event.id, "yes", e)}
-                          disabled={loadingStates[event.id]}
-                        >
-                          Going
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant={userRsvpStatus === "maybe" ? "default" : "outline"}
-                          className="h-7 px-3 text-xs"
-                          onClick={(e) => handleRsvp(event.id, "maybe", e)}
-                          disabled={loadingStates[event.id]}
-                        >
-                          Maybe
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant={userRsvpStatus === "no" ? "default" : "outline"}
-                          className="h-7 px-3 text-xs"
-                          onClick={(e) => handleRsvp(event.id, "no", e)}
-                          disabled={loadingStates[event.id]}
-                        >
-                          No
-                        </Button>
-                        {event.max_attendees && (
-                          <span className="text-xs text-muted-foreground ml-2">
-                            {event.attending_count}/{event.max_attendees} spots
-                          </span>
-                        )}
-                      </div>
-                    )}
+                    <div className="pt-2">
+                      <EventRsvpQuickAction
+                        eventId={event.id}
+                        tenantId={tenantId}
+                        userId={userId}
+                        currentRsvpStatus={userRsvpStatus}
+                        isSaved={isSaved}
+                        requiresRsvp={event.requires_rsvp}
+                        maxAttendees={event.max_attendees}
+                        currentAttendeeCount={event.attending_count}
+                        rsvpDeadline={event.rsvp_deadline}
+                      />
+                    </div>
                   </div>
 
                   {/* Icon & Save */}
@@ -253,17 +231,6 @@ export function UpcomingEventsWidget({ slug, userId, tenantId }: UpcomingEventsW
                       <span className="text-2xl opacity-80" aria-label={event.event_categories.name}>
                         {event.event_categories.icon}
                       </span>
-                    )}
-                    {userId && tenantId && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className={`h-8 w-8 p-0 hover:bg-transparent ${isSaved ? "text-red-500 hover:text-red-600" : "text-muted-foreground hover:text-red-500"}`}
-                        onClick={(e) => handleSave(event.id, isSaved, e)}
-                        disabled={loadingStates[`save-${event.id}`]}
-                      >
-                        <Heart className={`h-5 w-5 ${isSaved ? "fill-current" : ""}`} />
-                      </Button>
                     )}
                   </div>
                 </div>

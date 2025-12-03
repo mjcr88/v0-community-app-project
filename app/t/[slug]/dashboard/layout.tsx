@@ -2,6 +2,8 @@ import type React from "react"
 import { redirect } from 'next/navigation'
 import { createClient } from "@/lib/supabase/server"
 import { DashboardLayoutClient } from "@/components/ecovilla/navigation/dashboard-layout-client"
+import { getUnreadAnnouncementsCount } from "@/app/actions/announcements"
+import { getUnreadCount } from "@/app/actions/notifications"
 
 export default async function ResidentDashboardLayout({
   children,
@@ -55,13 +57,17 @@ export default async function ResidentDashboardLayout({
     redirect(`/t/${slug}/login`)
   }
 
-  // Mock data for badges (replace with real data fetching later)
+  // Fetch real badge counts
+  const [unreadAnnouncements, unreadNotifications] = await Promise.all([
+    getUnreadAnnouncementsCount(tenant.id, user.id),
+    getUnreadCount(tenant.id),
+  ])
+
   const userNavData = {
     name: resident?.first_name ? `${resident.first_name} ${resident.last_name}` : user.email || "User",
     avatarUrl: resident?.profile_picture_url,
-    unreadAnnouncements: 2, // Example
-    pendingRequests: 1, // Example
-    unreadEvents: 0,
+    unreadAnnouncements,
+    unreadNotifications,
   }
 
   const { data: categories } = await supabase

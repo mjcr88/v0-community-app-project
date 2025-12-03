@@ -15,7 +15,7 @@ export function CreateFab({ tenantSlug, tenantId, categories, neighborhoods }: C
     const [open, setOpen] = useState(false)
 
     return (
-        <div className="hidden md:block fixed top-[88px] right-8 z-40">
+        <div className="hidden md:block fixed top-[64px] right-8 z-40">
             <CreatePopover
                 open={open}
                 onOpenChange={setOpen}

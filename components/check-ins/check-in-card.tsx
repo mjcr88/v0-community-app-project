@@ -8,6 +8,7 @@ import { CheckInActivityBadge } from "./check-in-activity-badge"
 import { CheckInTimeBadge } from "./check-in-time-badge"
 import { CheckInLocationDisplay } from "./check-in-location-display"
 import { cn } from "@/lib/utils"
+import { CheckInRsvpQuickAction } from "./check-in-rsvp-quick-action"
 
 interface CheckInCardProps {
   checkIn: {
@@ -90,12 +91,24 @@ export function CheckInCard({ checkIn, tenantSlug, tenantId, userId, onClick, cl
             tenantSlug={tenantSlug}
             compact
           />
-          {attendingCount > 0 && (
-            <Badge variant="secondary" className="gap-1 flex-shrink-0">
-              <Users className="h-3 w-3" />
-              {attendingCount}
-            </Badge>
-          )}
+
+          <div className="flex items-center gap-2">
+            {userId && (
+              <CheckInRsvpQuickAction
+                checkInId={checkIn.id}
+                tenantId={tenantId}
+                tenantSlug={tenantSlug}
+                userId={userId}
+                currentRsvpStatus={checkIn.user_rsvp_status as "yes" | "maybe" | "no" | null}
+              />
+            )}
+            {attendingCount > 0 && (
+              <Badge variant="secondary" className="gap-1 flex-shrink-0">
+                <Users className="h-3 w-3" />
+                {attendingCount}
+              </Badge>
+            )}
+          </div>
         </div>
       </div>
     </Card>

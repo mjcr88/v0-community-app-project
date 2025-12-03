@@ -152,32 +152,32 @@ export default async function ResidentDashboardPage({ params }: { params: Promis
         <p className="text-muted-foreground">Here's what's happening in your community</p>
       </div>
 
-      {/* Two-Column Layout: Stats + What's Next */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-        {/* Left Column: What's Next */}
+      {/* Two-Column Layout: Rio/Stats + What's Next */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Left Column: Rio & Stats */}
+        <div className="flex flex-col space-y-6">
+          {/* Top Left: Rio Welcome */}
+          <div>
+            {/* Spacer to align with "What's Next" title on large screens */}
+            <h3 className="text-lg font-semibold mb-3 invisible hidden lg:block" aria-hidden="true">Spacer</h3>
+            <RioWelcomeCard slug={slug} />
+          </div>
+
+          {/* Bottom Left: Stats */}
+          <div className="flex flex-col">
+            <h3 className="text-lg font-semibold mb-3">Quick Stats</h3>
+            <StatsGrid />
+          </div>
+        </div>
+
+        {/* Right Column: What's Next */}
         <div className="flex flex-col relative">
           <h3 className="text-lg font-semibold mb-3">What's Next</h3>
-          <div className="relative rounded-xl overflow-hidden border bg-background">
+          <div className="relative rounded-xl overflow-hidden border bg-background flex-1">
             <ShineBorder className="absolute inset-0 pointer-events-none z-10" shineColor={["#D97742", "#6B9B47"]} />
             <div className="relative z-0 h-full">
               <PriorityFeed slug={slug} userId={user.id} tenantId={resident.tenant_id} />
             </div>
-          </div>
-        </div>
-
-        {/* Right Column: Rio & Stats */}
-        <div className="flex flex-col space-y-6">
-          {/* Top Right: Rio Welcome */}
-          <div>
-            {/* Spacer to align with "What's Next" title on large screens */}
-            <h3 className="text-lg font-semibold mb-3 invisible hidden lg:block" aria-hidden="true">Spacer</h3>
-            <RioWelcomeCard />
-          </div>
-
-          {/* Bottom Right: Stats */}
-          <div className="flex flex-col">
-            <h3 className="text-lg font-semibold mb-3">Quick Stats</h3>
-            <StatsGrid />
           </div>
         </div>
       </div>

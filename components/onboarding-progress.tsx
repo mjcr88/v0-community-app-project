@@ -2,15 +2,17 @@
 
 import { cn } from "@/lib/utils"
 import { useRouter, usePathname } from "next/navigation"
+import { Check } from "lucide-react"
 
 interface OnboardingProgressProps {
   currentStep: number
   totalSteps: number
   steps: Array<{ path: string; title: string }>
   tenantSlug: string
+  showStepNumbers?: boolean
 }
 
-export function OnboardingProgress({ currentStep, totalSteps, steps, tenantSlug }: OnboardingProgressProps) {
+export function OnboardingProgress({ currentStep, totalSteps, steps, tenantSlug, showStepNumbers = true }: OnboardingProgressProps) {
   const router = useRouter()
   const pathname = usePathname()
 
@@ -39,7 +41,7 @@ export function OnboardingProgress({ currentStep, totalSteps, steps, tenantSlug 
             )}
             title={step < currentStep ? `Go back to ${steps[step - 1].title}` : steps[step - 1].title}
           >
-            {step}
+            {showStepNumbers ? step : (step < currentStep ? <Check className="h-4 w-4" /> : null)}
           </button>
           {step < totalSteps && (
             <div className={cn("h-0.5 w-8 transition-colors", step < currentStep ? "bg-primary/20" : "bg-muted")} />

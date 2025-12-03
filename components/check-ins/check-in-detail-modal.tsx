@@ -15,17 +15,10 @@ import { EditCheckInModal } from "./edit-check-in-modal"
 import { getCheckInById, deleteCheckIn, extendCheckIn, endCheckInEarly } from "@/app/actions/check-ins"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+import { useRioFeedback } from "@/components/feedback/rio-feedback-provider"
+
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { RioConfirmationModal } from "@/components/feedback/rio-confirmation-modal"
 
 interface CheckInDetailModalProps {
   checkInId: string
@@ -51,6 +44,7 @@ export function CheckInDetailModal({
   onOpenChange,
 }: CheckInDetailModalProps) {
   const router = useRouter()
+  const { showFeedback } = useRioFeedback()
   const [checkIn, setCheckIn] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isEditOpen, setIsEditOpen] = useState(false)
@@ -85,11 +79,21 @@ export function CheckInDetailModal({
     const result = await extendCheckIn(checkInId, tenantId, tenantSlug, additionalMinutes)
 
     if (result.success) {
-      toast.success(`Extended by ${additionalMinutes} minutes`)
+      showFeedback({
+        title: "Check-in Extended",
+        description: `You've added ${additionalMinutes} minutes to your check-in.`,
+        variant: "success",
+        image: "/rio/rio_clapping.png"
+      })
       await loadCheckIn()
       router.refresh()
     } else {
-      toast.error(result.error || "Failed to extend check-in")
+      showFeedback({
+        title: "Couldn't extend check-in",
+        description: result.error || "Something went wrong. Please try again.",
+        variant: "error",
+        image: "/rio/rio_no_results_confused.png"
+      })
     }
 
     setIsExtending(false)
@@ -100,11 +104,21 @@ export function CheckInDetailModal({
     const result = await endCheckInEarly(checkInId, tenantId, tenantSlug)
 
     if (result.success) {
-      toast.success("Check-in ended")
+      showFeedback({
+        title: "Check-in Ended",
+        description: "Your check-in has been ended early.",
+        variant: "success",
+        image: "/rio/rio_clapping.png"
+      })
       onOpenChange(false)
       router.refresh()
     } else {
-      toast.error(result.error || "Failed to end check-in")
+      showFeedback({
+        title: "Couldn't end check-in",
+        description: result.error || "Something went wrong. Please try again.",
+        variant: "error",
+        image: "/rio/rio_no_results_confused.png"
+      })
     }
 
     setIsEnding(false)
@@ -116,11 +130,15 @@ export function CheckInDetailModal({
     const result = await deleteCheckIn(checkInId, tenantId, tenantSlug)
 
     if (result.success) {
-      toast.success("Check-in deleted")
       onOpenChange(false)
       router.refresh()
     } else {
-      toast.error(result.error || "Failed to delete check-in")
+      showFeedback({
+        title: "Couldn't delete check-in",
+        description: result.error || "Something went wrong. Please try again.",
+        variant: "error",
+        image: "/rio/rio_no_results_confused.png"
+      })
     }
 
     setIsDeleting(false)
@@ -280,44 +298,35 @@ export function CheckInDetailModal({
       />
 
       {/* End Early Confirmation */}
-      <AlertDialog open={isEndOpen} onOpenChange={setIsEndOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>End check-in early?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will end your check-in before the scheduled time. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleEndEarly} disabled={isEnding}>
-              {isEnding ? "Ending..." : "End Check-in"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* End Early Confirmation */}
+      <RioConfirmationModal
+        open={isEndOpen}
+        onOpenChange={setIsEndOpen}
+        title="End check-in early?"
+        description="This will end your check-in before the scheduled time. This action cannot be undone."
+        image="/rio/rio_delete_warning.png"
+        confirmText="End Check-in"
+        onConfirm={handleEndEarly}
+        isDestructive={true}
+        isLoading={isEnding}
+      />
 
       {/* Delete Confirmation */}
-      <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete check-in?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete "{checkIn.title}" and all associated RSVPs. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={isDeleting}
-              className="bg-destructive hover:bg-destructive/90"
-            >
-              {isDeleting ? "Deleting..." : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <RioConfirmationModal
+        open={isDeleteOpen}
+        onOpenChange={setIsDeleteOpen}
+        title="Delete check-in?"
+        description={
+          <span>
+            This will permanently delete "{checkIn.title}" and all associated RSVPs. This action cannot be undone.
+          </span>
+        }
+        image="/rio/rio_delete_warning.png"
+        confirmText="Delete"
+        onConfirm={handleDelete}
+        isDestructive={true}
+        isLoading={isDeleting}
+      />
     </>
   )
 }

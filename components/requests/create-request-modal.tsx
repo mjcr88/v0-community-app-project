@@ -12,6 +12,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Loader2, ArrowLeft, ArrowRight, Check, Wrench, HelpCircle, AlertTriangle, Shield, MoreHorizontal, MapPin, Image as ImageIcon } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
+import { useRioFeedback } from "@/components/feedback/rio-feedback-provider"
 import { createResidentRequest } from "@/app/actions/resident-requests"
 import { LocationSelector } from "@/components/event-forms/location-selector"
 import { PhotoManager } from "@/components/photo-manager"
@@ -53,6 +54,7 @@ export function CreateRequestModal({
 }: CreateRequestModalProps) {
   const router = useRouter()
   const { toast } = useToast()
+  const { showFeedback } = useRioFeedback()
   const [step, setStep] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [communityLocationName, setCommunityLocationName] = useState<string>("")
@@ -125,9 +127,11 @@ export function CreateRequestModal({
       const result = await createResidentRequest(tenantId, tenantSlug, requestData)
 
       if (result.success) {
-        toast({
-          title: "Request submitted! 🎉",
-          description: "Your request has been sent to the community administration.",
+        showFeedback({
+          title: "Request Submitted",
+          description: "Your request has been sent to the community administration. We'll get back to you soon.",
+          variant: "success",
+          image: "/rio/rio_taking_request.png"
         })
         onOpenChange(false)
         router.refresh()
@@ -150,18 +154,20 @@ export function CreateRequestModal({
           tagged_pet_ids: [],
         })
       } else {
-        toast({
-          title: "Error",
-          description: result.error || "Failed to submit request",
-          variant: "destructive",
+        showFeedback({
+          title: "Couldn't submit request",
+          description: result.error || "Something went wrong. Please try again.",
+          variant: "error",
+          image: "/rio/rio_no_results_confused.png"
         })
       }
     } catch (error) {
       console.error("[v0] Request submission error:", error)
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred",
-        variant: "destructive",
+      showFeedback({
+        title: "Something went wrong",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "error",
+        image: "/rio/rio_no_results_confused.png"
       })
     } finally {
       setIsSubmitting(false)

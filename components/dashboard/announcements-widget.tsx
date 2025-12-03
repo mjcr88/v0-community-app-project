@@ -72,7 +72,7 @@ export function AnnouncementsWidget({ slug, tenantId, userId }: AnnouncementsWid
             </Badge>
           )}
         </div>
-        <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+        <Button asChild variant="ghost" size="sm">
           <Link href={`/t/${slug}/dashboard/announcements`}>View All</Link>
         </Button>
       </div>

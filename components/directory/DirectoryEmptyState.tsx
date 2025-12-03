@@ -53,7 +53,7 @@ export function DirectoryEmptyState({
         >
             <div className="relative w-48 h-48 mb-6">
                 <Image
-                    src="/images/rio-general.png"
+                    src={hasActiveFilters ? "/rio/rio_searching_confused.png" : "/images/rio-general.png"}
                     alt="Río the Macaw"
                     fill
                     className="object-contain"

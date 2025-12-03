@@ -2,16 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle
-} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -24,13 +14,14 @@ import { getExchangeListingById, pauseExchangeListing, deleteExchangeListing, ge
 import { archiveListing, unarchiveListing } from "@/app/actions/exchange-history"
 import { getUserPendingRequest } from "@/app/actions/exchange-transactions"
 import { MapboxFullViewer } from "@/components/map/MapboxViewer"
-import { toast } from "sonner"
 import { useRouter } from 'next/navigation'
 import { FlagListingDialog } from "./flag-listing-dialog"
+import { useRioFeedback } from "@/components/feedback/rio-feedback-provider"
 import { EditExchangeListingModal } from "./edit-exchange-listing-modal"
 import { ListingHistoryModal } from "./listing-history-modal"
 import { RequestBorrowDialog } from "./request-borrow-dialog"
 import { ListingFlagDetails } from "./listing-flag-details"
+import { RioConfirmationModal } from "@/components/feedback/rio-confirmation-modal"
 
 interface ExchangeListingDetailModalProps {
   listingId: string
@@ -120,6 +111,7 @@ export function ExchangeListingDetailModal({
   const [hasUserFlagged, setHasUserFlagged] = useState(false)
   const [flagDetails, setFlagDetails] = useState<any[]>([])
   const router = useRouter()
+  const { showFeedback } = useRioFeedback()
 
   useEffect(() => {
     if (open && listingId) {
@@ -157,7 +149,12 @@ export function ExchangeListingDetailModal({
         customLocationName: result.data.custom_location_name,
       })
     } else {
-      toast.error(result.error || "Failed to load listing")
+      showFeedback({
+        title: "Couldn't load listing",
+        description: result.error || "Failed to load listing",
+        variant: "error",
+        image: "/rio/rio_no_results_confused.png"
+      })
       onOpenChange(false)
     }
 
@@ -193,10 +190,20 @@ export function ExchangeListingDetailModal({
     const result = await pauseExchangeListing(listingId, tenantSlug, tenantId)
 
     if (result.success) {
-      toast.success(result.is_available ? "Listing resumed" : "Listing paused")
+      showFeedback({
+        title: result.is_available ? "Listing Resumed" : "Listing Paused",
+        description: result.is_available ? "Your listing is now visible to others." : "Your listing is now hidden from others.",
+        variant: "success",
+        image: "/rio/rio_clapping.png"
+      })
       await loadListing()
     } else {
-      toast.error(result.error || "Failed to update listing")
+      showFeedback({
+        title: "Update failed",
+        description: result.error || "Failed to update listing",
+        variant: "error",
+        image: "/rio/rio_no_results_confused.png"
+      })
     }
     setIsPausing(false)
   }
@@ -206,11 +213,16 @@ export function ExchangeListingDetailModal({
     const result = await deleteExchangeListing(listingId, tenantSlug, tenantId)
 
     if (result.success) {
-      toast.success("Listing deleted")
       onOpenChange(false)
+      setShowDeleteDialog(false)
       router.push(`/t/${tenantSlug}/dashboard/exchange`)
     } else {
-      toast.error(result.error || "Failed to delete listing")
+      showFeedback({
+        title: "Couldn't delete listing",
+        description: result.error || "Failed to delete listing",
+        variant: "error",
+        image: "/rio/rio_no_results_confused.png"
+      })
       setShowDeleteDialog(false)
     }
     setIsDeleting(false)
@@ -226,14 +238,29 @@ export function ExchangeListingDetailModal({
 
     if (result.success) {
       if (listing.archived_at) {
-        toast.success((result as any).warning || "Listing restored successfully")
+        showFeedback({
+          title: "Listing Restored",
+          description: (result as any).warning || "Listing restored successfully",
+          variant: "success",
+          image: "/rio/rio_clapping.png"
+        })
       } else {
-        toast.success("Listing archived successfully")
+        showFeedback({
+          title: "Listing Archived",
+          description: "Listing archived successfully",
+          variant: "success",
+          image: "/rio/rio_clapping.png"
+        })
       }
       onOpenChange(false)
       router.refresh()
     } else {
-      toast.error(result.error || "Failed to update listing")
+      showFeedback({
+        title: "Update failed",
+        description: result.error || "Failed to update listing",
+        variant: "error",
+        image: "/rio/rio_no_results_confused.png"
+      })
     }
     setIsArchiving(false)
   }
@@ -663,27 +690,22 @@ export function ExchangeListingDetailModal({
         />
       )}
 
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete listing?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete your listing and remove it from the community exchange.
-              {listing?.status === "published" && " Make sure there are no active transactions before deleting."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={isDeleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isDeleting ? "Deleting..." : "Delete Listing"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <RioConfirmationModal
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        title="Delete listing?"
+        description={
+          <span>
+            This action cannot be undone. This will permanently delete your listing and remove it from the community exchange.
+            {listing?.status === "published" && " Make sure there are no active transactions before deleting."}
+          </span>
+        }
+        image="/rio/rio_delete_warning.png"
+        confirmText="Delete Listing"
+        onConfirm={handleDelete}
+        isDestructive={true}
+        isLoading={isDeleting}
+      />
 
       {showBorrowButton && !hasPendingRequest && (
         <RequestBorrowDialog

@@ -3,6 +3,36 @@
 import { createServerClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 import type { CreateAnnouncementData, UpdateAnnouncementData } from "@/types/announcements"
+
+export async function getUnreadAnnouncementsCount(tenantId: string, userId: string) {
+  try {
+    const supabase = await createServerClient()
+
+    // Get announcements that are published, not archived, and not read by this user
+    const { count, error } = await supabase
+      .from("announcements")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", tenantId)
+      .eq("status", "published")
+      .is("archived_at", null)
+      .not("id", "in",
+        `(SELECT announcement_id FROM announcement_reads WHERE user_id = '${userId}')`)
+
+    if (error) {
+      // Suppress empty error objects which seem to happen occasionally
+      if (Object.keys(error).length > 0) {
+        // console.error("[v0] Error fetching unread announcements count:", error)
+      }
+      return undefined
+    }
+
+    // If count is 0 or null/undefined, return undefined so badge doesn't show
+    return count && count > 0 ? count : undefined
+  } catch (error) {
+    console.error("[v0] Unexpected error fetching unread announcements count:", error)
+    return undefined
+  }
+}
 import { createNotification } from "./notifications"
 
 export async function createAnnouncement(

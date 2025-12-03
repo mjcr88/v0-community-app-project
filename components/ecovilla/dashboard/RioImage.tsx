@@ -18,8 +18,8 @@ export function RioImage({ pose = "general", className, size = "md" }: RioImageP
 
     const { width, height } = dimensions[size]
 
-    // For now we only have the general pose generated
-    const imagePath = "/images/rio-general.png"
+    // Use the new parrot image
+    const imagePath = "/rio/parrot.png"
 
     return (
         <div className={cn("relative flex items-center justify-center", className)}>

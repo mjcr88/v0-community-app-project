@@ -928,8 +928,8 @@ export function MapboxFullViewer({
                                     type="line"
                                     paint={{
                                         "line-color": highlightedCategories.has("public_street") ? "#F97316" : "#F59E0B",
-                                        "line-width": 4,
-                                        "line-opacity": 0.8,
+                                        "line-width": 2,
+                                        "line-opacity": 0.6,
                                     }}
                                 />
                             </Source>

@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { createExchangeListing } from "@/app/actions/exchange-listings"
 import { useToast } from "@/hooks/use-toast"
+import { useRioFeedback } from "@/components/feedback/rio-feedback-provider"
 import { useRouter } from 'next/navigation'
 import type { ExchangePricingType, ExchangeCondition } from "@/types/exchange"
 import { StepProgress } from "./create-listing-steps/step-progress"
@@ -47,6 +48,7 @@ export function CreateExchangeListingModal({
   initialLocation,
 }: CreateExchangeListingModalProps) {
   const { toast } = useToast()
+  const { showFeedback } = useRioFeedback()
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -232,28 +234,32 @@ export function CreateExchangeListingModal({
       const result = await createExchangeListing(tenantSlug, tenantId, listingData)
 
       if (result.success) {
-        toast({
-          title: publishNow ? "Listing published!" : "Draft saved!",
+        showFeedback({
+          title: publishNow ? "Listing Published!" : "Draft Saved",
           description: publishNow
-            ? "Your listing is now visible to the community"
-            : "You can publish it later from your listings",
+            ? "Your listing is now visible to the community. Thank you!"
+            : "You can publish it later from your listings.",
+          variant: "success",
+          image: "/rio/rio_clapping.png"
         })
         resetForm()
         onOpenChange(false)
         router.refresh()
       } else {
-        toast({
-          title: "Error",
-          description: result.error || "Failed to create listing",
-          variant: "destructive",
+        showFeedback({
+          title: "Couldn't create listing",
+          description: result.error || "Something went wrong. Please try again.",
+          variant: "error",
+          image: "/rio/rio_no_results_confused.png"
         })
       }
     } catch (error) {
       console.error("Error creating listing:", error)
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred",
-        variant: "destructive",
+      showFeedback({
+        title: "Something went wrong",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "error",
+        image: "/rio/rio_no_results_confused.png"
       })
     } finally {
       setIsSubmitting(false)

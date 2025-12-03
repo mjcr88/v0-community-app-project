@@ -7,15 +7,9 @@ import { Button } from "@/components/ui/button"
 import { X } from "lucide-react"
 
 const ONBOARDING_STEPS = [
-  { path: "family", title: "Your Family", description: "Connect with your family members in the community" },
+  { path: "welcome", title: "Welcome", description: "Get started with your community" },
+  { path: "profile", title: "Profile Setup", description: "Tell us about yourself" },
   { path: "journey", title: "Your Journey", description: "Share your timeline and goals" },
-  { path: "profile", title: "Your Details", description: "Tell us a bit about yourself" },
-  {
-    path: "interests",
-    title: "Your Interests",
-    description: "Share your interests to connect with like-minded neighbors",
-  },
-  { path: "skills", title: "Your Skills", description: "Share your skills and let neighbors know how you can help" },
   { path: "complete", title: "All Set!", description: "Welcome to the community" },
 ]
 
@@ -80,6 +74,7 @@ export function OnboardingStepHeader({
               totalSteps={ONBOARDING_STEPS.length}
               steps={ONBOARDING_STEPS}
               tenantSlug={tenantSlug}
+              showStepNumbers={false}
             />
           </div>
           <div className="flex items-center gap-2">

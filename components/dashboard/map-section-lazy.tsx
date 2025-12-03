@@ -1,6 +1,8 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import Link from "next/link"
 import { MapPin } from 'lucide-react'
 import { MapboxFullViewer } from "@/components/map/MapboxViewer"
 import useSWR from "swr"
@@ -39,16 +41,10 @@ export function MapSectionLazy({
   return (
     <div className="md:col-span-2 lg:col-span-2 lg:row-span-6 h-full flex flex-col overflow-hidden rounded-xl border bg-card text-card-foreground shadow">
       <div className="flex flex-row items-center justify-between p-6 pb-2 shrink-0">
-        <div className="flex items-center gap-2">
-          <MapPin className="h-4 w-4 text-muted-foreground" />
-          <h3 className="font-semibold leading-none tracking-tight">Community Map</h3>
-        </div>
-        <a
-          href={`/t/${tenantSlug}/dashboard/community-map`}
-          className="text-sm text-primary hover:underline font-medium"
-        >
-          View full map
-        </a>
+        <h3 className="text-lg font-semibold">Community Map</h3>
+        <Button asChild variant="ghost" size="sm">
+          <Link href={`/t/${tenantSlug}/dashboard/community-map`}>View All</Link>
+        </Button>
       </div>
       <div className="p-0 flex-1 relative min-h-[400px]" style={{ touchAction: 'none' }}>
         {isLoading && (
@@ -69,7 +65,6 @@ export function MapSectionLazy({
             tenantId={tenantId}
             locations={locations}
             mapCenter={mapCenter}
-            highlightLocationId={lotLocationId}
             checkIns={checkIns}
             showControls={false}
             className="h-full w-full"

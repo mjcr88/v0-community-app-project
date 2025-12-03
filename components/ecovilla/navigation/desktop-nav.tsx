@@ -43,7 +43,7 @@ interface DesktopNavProps {
         name: string
         avatarUrl?: string | null
         unreadAnnouncements?: number
-        pendingRequests?: number
+        unreadNotifications?: number
     }
     isCollapsed: boolean
     onToggleCollapse: () => void
@@ -109,7 +109,6 @@ export function DesktopNav({
                     icon: ClipboardList,
                     label: "Requests",
                     href: `/t/${tenantSlug}/dashboard/requests`,
-                    badge: user.pendingRequests,
                 },
             ],
         },
@@ -181,7 +180,9 @@ export function DesktopNav({
                                 <Button variant="ghost" size="icon" className="h-9 w-9 text-mist-gray hover:text-forest-canopy hover:bg-earth-cloud/50">
                                     <div className="relative">
                                         <Bell className="h-5 w-5" />
-                                        {/* We can use a dot if there are unread notifications, but for now just the icon */}
+                                        {(user.unreadNotifications ?? 0) > 0 && (
+                                            <span className="absolute top-0 right-0 w-2 h-2 bg-secondary rounded-full ring-1 ring-background" />
+                                        )}
                                     </div>
                                 </Button>
                             </Link>
@@ -241,7 +242,7 @@ export function DesktopNav({
                                                 {item.label}
                                             </span>
                                             {item.badge && item.badge > 0 && (
-                                                <span className="bg-secondary text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                                                <span className="bg-secondary text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
                                                     {item.badge}
                                                 </span>
                                             )}

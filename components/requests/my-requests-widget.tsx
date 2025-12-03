@@ -61,7 +61,7 @@ export function MyRequestsWidget({ requests, tenantSlug }: MyRequestsWidgetProps
           <Button asChild size="sm">
             <Link href={`/t/${tenantSlug}/dashboard/requests/create`}>
               <Plus className="h-4 w-4 mr-2" />
-              New
+              Create Request
             </Link>
           </Button>
         </div>

@@ -116,6 +116,19 @@ export function EventsPageClient({
   const activeFilterCount =
     (searchQuery ? 1 : 0) + selectedCategories.length + (eventType !== "all" ? 1 : 0) + (timeFilter !== "all" ? 1 : 0)
 
+  const isSearchingOrFiltering = searchQuery || selectedCategories.length > 0 || eventType !== "all"
+
+  let emptyStateVariant: "no-matches" | "no-upcoming" | "no-past" | "no-rsvp" | "no-listings" = "no-upcoming"
+
+  if (isSearchingOrFiltering) {
+    emptyStateVariant = "no-matches"
+  } else if (timeFilter === "past") {
+    emptyStateVariant = "no-past"
+  } else {
+    // Default to upcoming for "upcoming" or "all" time filters when no other filters are active
+    emptyStateVariant = "no-upcoming"
+  }
+
   return (
     <div className="space-y-6">
       <div className="space-y-4">
@@ -333,6 +346,7 @@ export function EventsPageClient({
             hasActiveFilters={hasActiveFilters}
             userId={userId}
             tenantId={tenantId}
+            emptyStateVariant={emptyStateVariant}
           />
         </TabsContent>
 
@@ -343,6 +357,7 @@ export function EventsPageClient({
             hasActiveFilters={hasActiveFilters}
             userId={userId}
             tenantId={tenantId}
+            emptyStateVariant={emptyStateVariant}
           />
         </TabsContent>
       </Tabs>

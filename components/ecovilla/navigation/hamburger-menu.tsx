@@ -83,7 +83,6 @@ export function HamburgerMenu({
                     icon: ClipboardList,
                     label: "Requests",
                     href: `/t/${tenantSlug}/dashboard/requests`,
-                    badge: pendingRequests,
                 },
             ],
         },

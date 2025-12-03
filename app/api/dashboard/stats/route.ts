@@ -29,6 +29,8 @@ const DEFAULT_STATS = [
 
 async function calculateStat(supabase: any, statId: string, userId: string, tenantId: string) {
     const now = new Date().toISOString()
+    // Get start of today for date comparisons to include events happening today
+    const today = new Date().toISOString().split('T')[0]
 
     switch (statId) {
         // 1. # Neighborhoods
@@ -39,7 +41,8 @@ async function calculateStat(supabase: any, statId: string, userId: string, tena
                 .eq("tenant_id", tenantId)
             return { value: neighborhoods || 0 }
 
-        // 2. # Neighbors (Users with role=resident)
+        // Neighbors: Count residents in the tenant
+        // Note: public.users table does not have deleted_at/banned_until columns
         case "neighbors_count":
             const { count: neighbors } = await supabase
                 .from("users")
@@ -54,8 +57,10 @@ async function calculateStat(supabase: any, statId: string, userId: string, tena
                 .from("events")
                 .select("id", { count: "exact", head: true })
                 .eq("tenant_id", tenantId)
-                // Combine date and time for comparison
-                .filter("end_date + end_time", "gte", now)
+                .eq("status", "published")
+                .is("cancelled_at", null)
+                // Filter events that end in the future (or today)
+                .gte("end_date", today)
             return { value: events || 0 }
 
         // 4. # Current Announcements (published)
@@ -67,14 +72,32 @@ async function calculateStat(supabase: any, statId: string, userId: string, tena
                 .eq("status", "published")
             return { value: announcements || 0 }
 
-        // 5. # Active Check-ins (active)
+        // Active Check-ins: Must be status='active' AND (ended_at is null OR ended_at > now) AND (start_time + duration > now)
         case "active_checkins_count":
-            const { count: checkins } = await supabase
+            // We need to filter by duration for check-ins that haven't been manually ended
+            // Since we can't easily do date arithmetic with columns in the JS client without raw SQL or RPC,
+            // we'll fetch active check-ins and filter in memory for now (assuming volume is low per tenant)
+            // or use a raw query if needed. For now, let's try a more robust query.
+
+            // Actually, we can use the `gt` filter on a calculated column if we had one, but we don't.
+            // Let's fetch the potential active check-ins and filter in JS. 
+            // This is safer than trying to construct complex raw SQL filters via the JS client if not supported directly.
+
+            const { data: potentialActive } = await supabase
                 .from("check_ins")
-                .select("id", { count: "exact", head: true })
+                .select("start_time, duration_minutes, ended_at")
                 .eq("tenant_id", tenantId)
                 .eq("status", "active")
-            return { value: checkins || 0 }
+                .is("ended_at", null)
+
+            const activeCount = (potentialActive || []).filter((ci: any) => {
+                const start = new Date(ci.start_time).getTime()
+                const durationMs = ci.duration_minutes * 60 * 1000
+                const end = start + durationMs
+                return end > new Date().getTime()
+            }).length
+
+            return { value: activeCount }
 
         // 6. # Active Requests (Community - pending/in_progress)
         case "active_requests_count":
@@ -85,17 +108,20 @@ async function calculateStat(supabase: any, statId: string, userId: string, tena
                 .in("status", ["pending", "in_progress"])
             return { value: requests || 0 }
 
-        // 7. # Available Listings (available)
+        // Available Listings: Must be status='published'
         case "available_listings_count":
             const { count: listings } = await supabase
                 .from("exchange_listings")
                 .select("id", { count: "exact", head: true })
                 .eq("tenant_id", tenantId)
-                .eq("status", "available")
+                .eq("status", "published")
             return { value: listings || 0 }
 
         // 8. # My RSVPs (going/maybe)
         case "my_rsvps_count":
+            // We should probably only count RSVPs for future events, but for now let's stick to the basic count
+            // or better, join with events to ensure event is not cancelled/past?
+            // Keeping simple for now as per original intent, but could be refined.
             const { count: rsvps } = await supabase
                 .from("event_rsvps")
                 .select("event_id", { count: "exact", head: true })
@@ -105,10 +131,14 @@ async function calculateStat(supabase: any, statId: string, userId: string, tena
 
         // 9. # My Saved Events
         case "my_saved_events_count":
+            // Join with events to ensure we only count active, upcoming events
             const { count: saved } = await supabase
                 .from("saved_events")
-                .select("event_id", { count: "exact", head: true })
+                .select("event_id, events!inner(id)", { count: "exact", head: true })
                 .eq("user_id", userId)
+                .eq("events.status", "published")
+                .is("events.cancelled_at", null)
+                .gte("events.end_date", today)
             return { value: saved || 0 }
 
         // 10. # My Active Listings (available)

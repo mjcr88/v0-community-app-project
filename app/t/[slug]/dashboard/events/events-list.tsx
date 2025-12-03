@@ -54,48 +54,56 @@ interface Event {
   status?: "draft" | "published" | "cancelled"
 }
 
+import { RioEmptyState } from "@/components/exchange/rio-empty-state"
+
+// ... (keep existing imports)
+
 export function EventsList({
   events,
   slug,
   hasActiveFilters,
   userId,
   tenantId,
+  emptyStateVariant = "no-upcoming",
 }: {
   events: Event[]
   slug: string
   hasActiveFilters: boolean
   userId: string
   tenantId: string
+  emptyStateVariant?: "no-matches" | "no-upcoming" | "no-past" | "no-rsvp" | "no-listings"
 }) {
   const hasEvents = events.length > 0
 
   if (!hasEvents) {
     return (
-      <Card className="border-dashed">
-        <CardHeader className="text-center pb-4">
-          <div className="flex justify-center mb-4">
-            <RioImage pose="encouraging" size="lg" />
-          </div>
-          <CardTitle className="text-2xl">
-            {hasActiveFilters ? "No events match your filters" : "No events yet"}
-          </CardTitle>
-          <CardDescription className="text-base">
-            {hasActiveFilters
-              ? "Try adjusting your filters to see more events"
-              : "Be the first to create an event and bring your community together!"}
-          </CardDescription>
-        </CardHeader>
-        {!hasActiveFilters && (
-          <CardContent className="flex justify-center pb-8">
+      <RioEmptyState
+        variant={emptyStateVariant}
+        title={
+          emptyStateVariant === "no-matches"
+            ? "No events match your filters"
+            : emptyStateVariant === "no-past"
+              ? "No past events"
+              : "No upcoming events"
+        }
+        description={
+          emptyStateVariant === "no-matches"
+            ? "Try adjusting your filters to see more events."
+            : emptyStateVariant === "no-past"
+              ? "You haven't attended any events yet."
+              : "Be the first to create an event and bring your community together!"
+        }
+        action={
+          emptyStateVariant !== "no-past" ? (
             <Link href={`/t/${slug}/dashboard/events/create`}>
-              <PulsatingButton className="gap-2">
+              <Button size="lg" className="gap-2">
                 <Plus className="h-4 w-4" />
-                Create Your First Event
-              </PulsatingButton>
+                Create Event
+              </Button>
             </Link>
-          </CardContent>
-        )}
-      </Card>
+          ) : undefined
+        }
+      />
     )
   }
 

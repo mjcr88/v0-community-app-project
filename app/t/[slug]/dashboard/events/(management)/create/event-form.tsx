@@ -17,6 +17,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { createEvent, saveEventImages } from "@/app/actions/events"
 import { Calendar, Loader2, MapPin, Users, ChevronLeft, ChevronRight } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { useRioFeedback } from "@/components/feedback/rio-feedback-provider"
 import { NeighborhoodMultiSelect } from "@/components/event-forms/neighborhood-multi-select"
 import { ResidentInviteSelector } from "@/components/event-forms/resident-invite-selector"
 import { LocationSelector } from "@/components/event-forms/location-selector"
@@ -45,6 +46,7 @@ type EventFormProps = {
 export function EventForm({ tenantSlug, tenantId, categories, initialLocation }: EventFormProps) {
   const router = useRouter()
   const { toast } = useToast()
+  const { showFeedback } = useRioFeedback()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [photos, setPhotos] = useState<string[]>([])
   const [heroPhoto, setHeroPhoto] = useState<string | null>(null)
@@ -59,7 +61,7 @@ export function EventForm({ tenantSlug, tenantId, categories, initialLocation }:
     end_date: "",
     end_time: "",
     is_all_day: false,
-    location_type: null as "community_location" | "custom_location" | null,
+    location_type: (initialLocation ? "community" : "none") as "community" | "custom" | "none",
     location_id: null as string | null,
     custom_location_name: "",
     custom_location_coordinates: null as { lat: number; lng: number } | null,
@@ -144,6 +146,16 @@ export function EventForm({ tenantSlug, tenantId, categories, initialLocation }:
         return
       }
 
+      if (!formData.description.trim()) {
+        toast({
+          title: "Description required",
+          description: "Please provide a description for your event",
+          variant: "destructive",
+        })
+        setIsSubmitting(false)
+        return
+      }
+
       const result = await createEvent(tenantSlug, tenantId, {
         title: formData.title,
         description: formData.description || null,
@@ -166,7 +178,7 @@ export function EventForm({ tenantSlug, tenantId, categories, initialLocation }:
         location_id: formData.location_type === "community" ? formData.location_id : null,
         custom_location_name: formData.location_type === "custom" ? formData.custom_location_name : null,
         custom_location_coordinates: formData.location_type === "custom" ? formData.custom_location_coordinates : null,
-        custom_location_type: formData.location_type === "custom" ? formData.custom_location_type : null,
+        custom_location_type: formData.location_type === "custom" ? (formData.custom_location_type === "marker" ? "pin" : formData.custom_location_type) : null,
       })
 
       if (result.success) {
@@ -175,31 +187,36 @@ export function EventForm({ tenantSlug, tenantId, categories, initialLocation }:
 
           if (!imageResult.success) {
             console.error("[v0] Failed to save event images:", imageResult.error)
-            toast({
-              title: "Warning",
-              description: "Event created but some images failed to upload",
-              variant: "destructive",
+            showFeedback({
+              title: "Images not saved",
+              description: "Your event was created, but we couldn't save the images. You can try adding them again later.",
+              variant: "warning",
+              image: "/rio/rio_missing_details.png"
             })
           }
         }
 
-        toast({
-          title: "Event created!",
-          description: "Your event has been published to the community.",
+        showFeedback({
+          title: "Event Created!",
+          description: "Your event has been published to the community. Enjoy your time together",
+          variant: "success",
+          image: "/rio/rio_event_created.png"
         })
         router.push(`/t/${tenantSlug}/dashboard/events`)
       } else {
-        toast({
-          title: "Error",
-          description: result.error || "Failed to create event",
-          variant: "destructive",
+        showFeedback({
+          title: "Couldn't create event",
+          description: result.error || "Something went wrong. Please try again.",
+          variant: "error",
+          image: "/rio/rio_no_results_confused.png"
         })
       }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred",
-        variant: "destructive",
+      showFeedback({
+        title: "Something went wrong",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "error",
+        image: "/rio/rio_no_results_confused.png"
       })
     } finally {
       setIsSubmitting(false)
@@ -240,15 +257,17 @@ export function EventForm({ tenantSlug, tenantId, categories, initialLocation }:
 
             {/* Description */}
             <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description">
+                Description <span className="text-destructive">*</span>
+              </Label>
               <Textarea
                 id="description"
                 placeholder="Tell your neighbors about this event..."
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 rows={4}
+                required
               />
-              <p className="text-xs text-muted-foreground">Optional: Add more details about what to expect</p>
             </div>
 
             {/* Category */}
@@ -471,7 +490,7 @@ export function EventForm({ tenantSlug, tenantId, categories, initialLocation }:
           <CardContent>
             <LocationSelector
               tenantId={tenantId}
-              locationType={formData.location_type as "community_location" | "custom_location" | null}
+              locationType={formData.location_type}
               communityLocationId={formData.location_id}
               customLocationName={formData.custom_location_name}
               customLocationCoordinates={formData.custom_location_coordinates}
@@ -480,7 +499,7 @@ export function EventForm({ tenantSlug, tenantId, categories, initialLocation }:
               onLocationTypeChange={(type) =>
                 setFormData({
                   ...formData,
-                  location_type: type as "community_location" | "custom_location" | null,
+                  location_type: type as "community" | "custom" | "none",
                   location_id: null,
                   custom_location_name: "",
                   custom_location_coordinates: null,

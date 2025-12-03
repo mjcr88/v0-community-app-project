@@ -15,21 +15,25 @@ export function AnnouncementEmptyState({ type, onClearSearch }: AnnouncementEmpt
         new: {
             title: "All caught up!",
             description: "You've seen everything new. Río is taking a siesta too.",
+            image: "/rio/rio_empty_inbox.png",
             action: null,
         },
         read: {
             title: "No read announcements",
             description: "Announcements you've read will appear here.",
+            image: "/rio/rio_sleeping.png",
             action: null,
         },
         archived: {
             title: "No archived announcements",
             description: "Old announcements will be stored here for safekeeping.",
+            image: "/rio/rio_archive_archeologist.png",
             action: null,
         },
         search: {
             title: "No results found",
             description: "Try adjusting your search? Río is still looking!",
+            image: "/rio/rio_searching_confused.png",
             action: (
                 <Button variant="outline" onClick={onClearSearch} className="mt-4">
                     Clear Search
@@ -38,7 +42,7 @@ export function AnnouncementEmptyState({ type, onClearSearch }: AnnouncementEmpt
         },
     }
 
-    const { title, description, action } = content[type]
+    const { title, description, image, action } = content[type]
 
     return (
         <motion.div
@@ -47,9 +51,9 @@ export function AnnouncementEmptyState({ type, onClearSearch }: AnnouncementEmpt
             transition={{ duration: 0.4, ease: "easeOut" }}
             className="flex flex-col items-center justify-center py-12 text-center px-4"
         >
-            <div className="relative w-48 h-48 mb-6">
+            <div className="relative w-56 h-56 mb-6">
                 <Image
-                    src="/images/rio-general.png"
+                    src={image}
                     alt="Río the Macaw"
                     fill
                     className="object-contain"

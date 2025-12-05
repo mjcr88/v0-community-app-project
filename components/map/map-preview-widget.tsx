@@ -15,6 +15,8 @@ interface MapPreviewWidgetProps {
   mapZoom?: number
   checkIns?: any[]
   hideHeader?: boolean
+  hideSidebar?: boolean
+  disableAutoScroll?: boolean
 }
 
 export function MapPreviewWidget({
@@ -26,9 +28,11 @@ export function MapPreviewWidget({
   mapZoom = 12,
   checkIns = [],
   hideHeader = false,
+  hideSidebar = false,
+  disableAutoScroll = false,
 }: MapPreviewWidgetProps) {
   const content = (
-    <div className="h-[300px] rounded-lg overflow-hidden border bg-muted">
+    <div className="h-[400px] rounded-lg overflow-hidden border bg-muted">
       <MapboxFullViewer
         locations={locations}
         tenantId={tenantId}
@@ -38,6 +42,8 @@ export function MapPreviewWidget({
         mapZoom={mapZoom}
         highlightLocationId={highlightLocationId}
         showControls={false}
+        disableAutoScroll={true}
+        hideSidebar={true}
       />
     </div>
   )
@@ -56,7 +62,7 @@ export function MapPreviewWidget({
         <Button asChild size="sm" className="shadow-lg">
           <Link href={`/t/${tenantSlug}/dashboard/map`}>
             <ExternalLink className="h-4 w-4 mr-2" />
-            View Full Map
+            Map
           </Link>
         </Button>
       </CardHeader>

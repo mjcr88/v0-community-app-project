@@ -13,6 +13,7 @@ import { MapPreviewWidget } from "@/components/map/map-preview-widget"
 import { FamilyMemberCard } from "@/components/directory/FamilyMemberCard"
 import { PhotoGallerySection } from "@/components/directory/PhotoGallerySection"
 import { AboutSection } from "@/components/directory/AboutSection"
+import { CollapsibleSection } from "@/components/directory/CollapsibleSection"
 
 export default async function FamilyProfilePage({ params }: { params: Promise<{ slug: string; id: string }> }) {
   const { slug, id } = await params
@@ -101,7 +102,7 @@ export default async function FamilyProfilePage({ params }: { params: Promise<{ 
   })
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
       {/* Back Button */}
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
@@ -125,100 +126,97 @@ export default async function FamilyProfilePage({ params }: { params: Promise<{ 
         initials={initials}
       />
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="flex flex-col gap-6 lg:grid lg:grid-cols-2">
         {/* LEFT COLUMN */}
         <div className="space-y-4">
           {/* About Section */}
           {familyUnit.description && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">About This Family</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <AboutSection content={familyUnit.description} />
-              </CardContent>
-            </Card>
+            <CollapsibleSection title="About This Family" iconName="Users" defaultOpen={true}>
+              <AboutSection content={familyUnit.description} />
+            </CollapsibleSection>
           )}
 
           {/* Family Members */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Users className="h-5 w-5" />
-                Family Members ({familyMembers.length})
-              </CardTitle>
-              <CardDescription>Click on a member to view their profile</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-3">
-                {enrichedMembers.map((member: any) => {
-                  const privacySettings = Array.isArray(member.user_privacy_settings)
-                    ? member.user_privacy_settings[0]
-                    : member.user_privacy_settings
+          <CollapsibleSection
+            title="Family Members"
+            iconName="Users"
+            description={`${familyMembers.length} member${familyMembers.length === 1 ? '' : 's'}`}
+            defaultOpen={true}
+          >
+            <div className="grid gap-3">
+              {enrichedMembers.map((member: any) => {
+                const privacySettings = Array.isArray(member.user_privacy_settings)
+                  ? member.user_privacy_settings[0]
+                  : member.user_privacy_settings
 
-                  const filteredMember = filterPrivateData(member, privacySettings, isFamily)
+                const filteredMember = filterPrivateData(member, privacySettings, isFamily)
 
-                  return (
-                    <FamilyMemberCard
-                      key={member.id}
-                      member={filteredMember}
-                      currentUserFamilyId={currentResident.family_unit_id || ""}
-                      tenantSlug={slug}
-                      currentUserId={user.id}
-                      isPrimaryContact={member.id === familyUnit.primary_contact_id}
-                    />
-                  )
-                })}
-              </div>
-            </CardContent>
-          </Card>
+                return (
+                  <FamilyMemberCard
+                    key={member.id}
+                    member={filteredMember}
+                    currentUserFamilyId={currentResident.family_unit_id || ""}
+                    tenantSlug={slug}
+                    currentUserId={user.id}
+                    isPrimaryContact={member.id === familyUnit.primary_contact_id}
+                  />
+                )
+              })}
+            </div>
+          </CollapsibleSection>
 
           {/* Pets */}
           {familyUnit.pets && familyUnit.pets.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <PawPrint className="h-5 w-5" />
-                  Family Pets ({familyUnit.pets.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {familyUnit.pets.map((pet: any) => (
-                    <div key={pet.id} className="flex items-center gap-3 rounded-lg border p-3">
-                      <Avatar className="h-12 w-12">
-                        <AvatarImage src={pet.profile_picture_url} alt={pet.name} />
-                        <AvatarFallback>{pet.name[0]}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{pet.name}</p>
-                        <p className="text-sm text-muted-foreground truncate">
-                          {pet.breed || pet.species}
-                        </p>
-                      </div>
+            <CollapsibleSection
+              title="Family Pets"
+              iconName="PawPrint"
+              description={`${familyUnit.pets.length} pet${familyUnit.pets.length === 1 ? '' : 's'}`}
+              defaultOpen={true}
+            >
+              <div className="flex flex-col gap-3 sm:grid sm:grid-cols-2">
+                {familyUnit.pets.map((pet: any) => (
+                  <div key={pet.id} className="flex items-center gap-3 rounded-lg border p-3">
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={pet.profile_picture_url} alt={pet.name} />
+                      <AvatarFallback>{pet.name[0]}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{pet.name}</p>
+                      <p className="text-sm text-muted-foreground truncate">
+                        {pet.breed || pet.species}
+                      </p>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                  </div>
+                ))}
+              </div>
+            </CollapsibleSection>
           )}
         </div>
 
         {/* RIGHT COLUMN */}
         <div className="space-y-4">
+          {/* Photo Gallery */}
+          <CollapsibleSection title="Photos" iconName="Image" defaultOpen={true}>
+            <PhotoGallerySection photos={familyPhotos} residentName={familyUnit.name} />
+          </CollapsibleSection>
+
           {/* Location Map */}
           {lotLocation && locations && (
-            <MapPreviewWidget
-              tenantSlug={slug}
-              tenantId={currentResident.tenant_id}
-              locations={locations}
-              mapCenter={mapCenter}
-              highlightLocationId={lotLocation.id}
-            />
+            <CollapsibleSection title="Community Map" iconName="MapPin" defaultOpen={true}>
+              <div className="rounded-lg overflow-hidden -mx-6 -mb-6">
+                <MapPreviewWidget
+                  tenantSlug={slug}
+                  tenantId={currentResident.tenant_id}
+                  locations={locations}
+                  mapCenter={mapCenter}
+                  highlightLocationId={lotLocation.id}
+                  hideSidebar={true}
+                  disableAutoScroll={true}
+                  hideHeader={true}
+                />
+              </div>
+            </CollapsibleSection>
           )}
-
-          {/* Photo Gallery */}
-          <PhotoGallerySection photos={familyPhotos} residentName={familyUnit.name} />
         </div>
       </div>
     </div>

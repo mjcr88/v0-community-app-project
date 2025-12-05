@@ -14,6 +14,7 @@ import { StatsGrid } from "@/components/dashboard/StatsGrid"
 import { RioWelcomeCard } from "@/components/ecovilla/dashboard/RioWelcomeCard"
 import { ShineBorder } from "@/components/library/shine-border"
 import { DashboardSections } from "@/components/ecovilla/dashboard/DashboardSections"
+import { CollapsibleMobileSection } from "@/components/ecovilla/dashboard/CollapsibleMobileSection"
 
 const getCachedUser = cache(async () => {
   const supabase = await createClient()
@@ -146,32 +147,23 @@ export default async function ResidentDashboardPage({ params }: { params: Promis
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-4 md:space-y-2">
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Welcome back, {resident.first_name || "Resident"}!</h2>
         <p className="text-muted-foreground">Here's what's happening in your community</p>
       </div>
 
-      {/* Two-Column Layout: Rio/Stats + What's Next */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Left Column: Rio & Stats */}
-        <div className="flex flex-col space-y-6">
-          {/* Top Left: Rio Welcome */}
-          <div>
-            {/* Spacer to align with "What's Next" title on large screens */}
-            <h3 className="text-lg font-semibold mb-3 invisible hidden lg:block" aria-hidden="true">Spacer</h3>
-            <RioWelcomeCard slug={slug} />
-          </div>
-
-          {/* Bottom Left: Stats */}
-          <div className="flex flex-col">
-            <h3 className="text-lg font-semibold mb-3">Quick Stats</h3>
-            <StatsGrid />
-          </div>
+      {/* Two-Column Layout on Desktop, Ordered Stack on Mobile */}
+      <div className="flex flex-col lg:grid lg:grid-cols-2 gap-4">
+        {/* Mobile Order: 1 (Rio) | Desktop: Left Column, Top */}
+        <div className="lg:order-1">
+          {/* Spacer to align with "What's Next" title on large screens */}
+          <h3 className="text-lg font-semibold mb-3 invisible hidden lg:block" aria-hidden="true">Spacer</h3>
+          <RioWelcomeCard slug={slug} />
         </div>
 
-        {/* Right Column: What's Next */}
-        <div className="flex flex-col relative">
+        {/* Mobile Order: 2 (What's Next) | Desktop: Right Column */}
+        <div className="flex flex-col relative lg:order-2 lg:row-span-2 lg:max-h-[calc(100vh-16rem)]">
           <h3 className="text-lg font-semibold mb-3">What's Next</h3>
           <div className="relative rounded-xl overflow-hidden border bg-background flex-1">
             <ShineBorder className="absolute inset-0 pointer-events-none z-10" shineColor={["#D97742", "#6B9B47"]} />
@@ -180,11 +172,20 @@ export default async function ResidentDashboardPage({ params }: { params: Promis
             </div>
           </div>
         </div>
+
+        {/* Mobile Order: 3 (Stats) | Desktop: Left Column, Bottom */}
+        <div className="flex flex-col lg:order-3">
+          <CollapsibleMobileSection title="Quick Stats" defaultOpen={false}>
+            <StatsGrid />
+          </CollapsibleMobileSection>
+        </div>
       </div>
 
+      {/* Section Divider - Mobile Only */}
+      <div className="border-t border-border/50 md:hidden" />
+
       {/* Dashboard Sections (Interactive) */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Explore & catch-up</h3>
+      <CollapsibleMobileSection title="Explore & catch-up" defaultOpen={true}>
         <DashboardSections
           announcements={
             <AnnouncementsWidget
@@ -250,7 +251,7 @@ export default async function ResidentDashboardPage({ params }: { params: Promis
             )
           }
         />
-      </div>
+      </CollapsibleMobileSection>
     </div>
   )
 }

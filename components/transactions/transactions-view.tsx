@@ -90,7 +90,11 @@ export function TransactionsView({
   function renderEmptyState(message: string) {
     return (
       <div className="text-center py-12">
-        <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+        <img
+          src="/rio/rio_no_results_confused.png"
+          alt="No transactions"
+          className="h-24 w-24 mx-auto mb-4 object-contain"
+        />
         <p className="text-sm text-muted-foreground">{message}</p>
       </div>
     )

@@ -49,9 +49,9 @@ export default async function TenantLoginPage({
     }
   }
 
-  return <div className="grid min-h-screen lg:grid-cols-2">
+  return <div className="flex min-h-[100dvh] flex-col lg:grid lg:grid-cols-2">
     {/* Left Panel: Login Form */}
-    <div className="flex items-center justify-center p-8 bg-earth-cloud/30">
+    <div className="flex flex-1 flex-col items-center justify-center p-8 bg-earth-cloud/30 w-full">
       <TenantLoginForm tenant={tenant as any} />
     </div>
 

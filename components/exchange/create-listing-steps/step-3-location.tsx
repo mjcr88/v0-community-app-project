@@ -21,13 +21,8 @@ export function Step3Location({
     onUpdate,
 }: Step3LocationProps) {
     return (
-        <div className="space-y-6">
+        <div className="space-y-3">
             <div className="space-y-3">
-                <Label>Location (Optional)</Label>
-                <p className="text-sm text-muted-foreground">
-                    Where can people find this item or service?
-                </p>
-
                 <LocationSelector
                     tenantId={tenantId}
                     locationType={formData.location_type}

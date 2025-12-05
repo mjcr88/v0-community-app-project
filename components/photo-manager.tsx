@@ -204,7 +204,7 @@ export function PhotoManager({
                 )}
 
                 {/* Action Buttons */}
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition-all duration-200 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                <div className="absolute inset-0 bg-black/0 sm:group-hover:bg-black/60 transition-all duration-200 flex items-start justify-end p-2 sm:items-center sm:justify-center sm:p-0 gap-2 sm:opacity-0 sm:group-hover:opacity-100">
                   {!isHero && (
                     <Button
                       type="button"

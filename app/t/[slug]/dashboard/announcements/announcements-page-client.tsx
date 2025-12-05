@@ -96,7 +96,7 @@ export function AnnouncementsPageClient({
   ]
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-12">
+    <div className="space-y-6 max-w-5xl mx-auto px-4 sm:px-6 pb-12">
       {/* Header Section */}
       <div className="space-y-2">
         <h1 className="text-3xl font-bold text-foreground tracking-tight">
@@ -121,13 +121,13 @@ export function AnnouncementsPageClient({
         </div>
 
         {/* Custom Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="bg-muted/30 p-1 rounded-full h-auto inline-flex">
             {tabs.map((tab) => (
               <TabsTrigger
                 key={tab.value}
                 value={tab.value}
-                className="rounded-full px-6 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all"
+                className="rounded-full px-4 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all whitespace-nowrap"
               >
                 <span className="flex items-center gap-2">
                   <tab.icon className="h-4 w-4" />
@@ -138,8 +138,8 @@ export function AnnouncementsPageClient({
                       className={cn(
                         "px-1.5 py-0.5 text-[10px] h-auto min-w-[1.25rem] justify-center",
                         activeTab === tab.value
-                          ? "bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/30"
-                          : "bg-muted text-muted-foreground"
+                          ? "bg-primary-foreground text-primary hover:bg-primary-foreground/90"
+                          : "bg-primary text-primary-foreground hover:bg-primary/90"
                       )}
                     >
                       {tab.count}

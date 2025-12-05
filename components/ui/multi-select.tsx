@@ -15,6 +15,7 @@ interface MultiSelectProps {
     placeholder?: string
     searchPlaceholder?: string
     emptyMessage?: string
+    showSearch?: boolean
 }
 
 export function MultiSelect({
@@ -24,6 +25,7 @@ export function MultiSelect({
     placeholder = "Select...",
     searchPlaceholder = "Search...",
     emptyMessage = "No results found.",
+    showSearch = true,
 }: MultiSelectProps) {
     const [open, setOpen] = React.useState(false)
 
@@ -77,7 +79,7 @@ export function MultiSelect({
             </PopoverTrigger>
             <PopoverContent className="w-[400px] p-0" align="start">
                 <Command>
-                    <CommandInput placeholder={searchPlaceholder} />
+                    {showSearch && <CommandInput placeholder={searchPlaceholder} />}
                     <CommandEmpty>{emptyMessage}</CommandEmpty>
                     <CommandGroup className="max-h-64 overflow-auto">
                         {options.map((option) => (

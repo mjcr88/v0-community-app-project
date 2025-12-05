@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+
 import { Badge } from "@/components/ui/badge"
 import { Pencil, MapPin, Users, Package, DollarSign } from "lucide-react"
 import type { ExchangePricingType, ExchangeCondition } from "@/types/exchange"
@@ -55,15 +55,11 @@ export function Step4Review({
     }
 
     return (
-        <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-                Review your listing details before publishing
-            </p>
-
+        <div className="space-y-3">
             {/* Basic Information */}
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                    <CardTitle className="text-base">Basic Information</CardTitle>
+            <div className="rounded-lg border-2 bg-card text-card-foreground shadow-none">
+                <div className="flex flex-row items-center justify-between space-y-0 p-3 pb-0">
+                    <div className="font-semibold leading-none tracking-tight text-base">Basic Information</div>
                     <Button
                         variant="ghost"
                         size="sm"
@@ -71,8 +67,8 @@ export function Step4Review({
                     >
                         <Pencil className="h-4 w-4" />
                     </Button>
-                </CardHeader>
-                <CardContent className="space-y-3">
+                </div>
+                <div className="p-3 pt-2 space-y-3">
                     {formData.photos.length > 0 && (
                         <div className="flex gap-2 overflow-x-auto pb-2">
                             {formData.photos.map((photo, index) => (
@@ -98,13 +94,13 @@ export function Step4Review({
                             {formData.description}
                         </p>
                     )}
-                </CardContent>
-            </Card>
+                </div>
+            </div>
 
             {/* Pricing & Visibility */}
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                    <CardTitle className="text-base">Pricing & Visibility</CardTitle>
+            <div className="rounded-lg border-2 bg-card text-card-foreground shadow-none">
+                <div className="flex flex-row items-center justify-between space-y-0 p-3 pb-0">
+                    <div className="font-semibold leading-none tracking-tight text-base">Pricing & Visibility</div>
                     <Button
                         variant="ghost"
                         size="sm"
@@ -112,8 +108,8 @@ export function Step4Review({
                     >
                         <Pencil className="h-4 w-4" />
                     </Button>
-                </CardHeader>
-                <CardContent className="space-y-2">
+                </div>
+                <div className="p-3 pt-2 space-y-2">
                     <div className="flex items-center gap-2">
                         <DollarSign className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm font-medium">{getPricingDisplay()}</span>
@@ -147,13 +143,13 @@ export function Step4Review({
                             ))}
                         </div>
                     )}
-                </CardContent>
-            </Card>
+                </div>
+            </div>
 
             {/* Location */}
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                    <CardTitle className="text-base">Location</CardTitle>
+            <div className="rounded-lg border-2 bg-card text-card-foreground shadow-none">
+                <div className="flex flex-row items-center justify-between space-y-0 p-3 pb-0">
+                    <div className="font-semibold leading-none tracking-tight text-base">Location</div>
                     <Button
                         variant="ghost"
                         size="sm"
@@ -161,8 +157,8 @@ export function Step4Review({
                     >
                         <Pencil className="h-4 w-4" />
                     </Button>
-                </CardHeader>
-                <CardContent className="space-y-2">
+                </div>
+                <div className="p-3 pt-2 space-y-2">
                     <div className="flex items-center gap-2">
                         <MapPin className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm">
@@ -172,8 +168,8 @@ export function Step4Review({
                                 (formData.custom_location_name || "Custom location")}
                         </span>
                     </div>
-                </CardContent>
-            </Card>
+                </div>
+            </div>
         </div>
     )
 }

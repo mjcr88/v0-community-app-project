@@ -4,15 +4,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { MapPin, Users, ArrowLeft, Home, MapIcon, Calendar, Star } from 'lucide-react'
+import { MapPin, Users, ArrowLeft, Home, MapIcon, Calendar, Star, PawPrint } from 'lucide-react'
 import Link from "next/link"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { Suspense } from "react"
 import { LocationEventsSection } from "./location-events-section"
 import { LocationCheckinsSection } from "./location-checkins-section"
-import { LocationPhotoGallery } from "@/components/locations/location-photo-gallery"
 import { LocationExchangeSection } from "./location-exchange-section"
+import { FacilityDetailsSection } from "./facility-details-section"
+import { PhotoGallerySection } from "./photo-gallery-section"
 import { getEventsByLocation } from "@/app/actions/events"
 import { getCheckInsByLocation } from "@/app/actions/check-ins"
 import { getExchangeListingsByLocation, getExchangeCategories } from "@/app/actions/exchange-listings"
@@ -213,24 +214,29 @@ export default async function LocationDetailsPage({ params }: { params: Promise<
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-12">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild>
-            <Link href={`/t/${slug}/dashboard/community-map`}>
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-              {location.icon && <span className="text-3xl">{location.icon}</span>}
+      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+        <div className="w-full">
+          {/* Title Row */}
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" asChild className="-ml-2 shrink-0">
+              <Link href={`/t/${slug}/dashboard/community-map`}>
+                <ArrowLeft className="h-4 w-4" />
+              </Link>
+            </Button>
+            <h1 className="text-xl md:text-3xl font-bold tracking-tight flex items-center gap-3">
+              {location.icon && <span className="text-2xl md:text-3xl">{location.icon}</span>}
               {location.name}
             </h1>
-            <div className="flex items-center gap-2 mt-2 flex-wrap">
+          </div>
+
+          {/* Badges + Mobile Actions Row */}
+          <div className="flex items-center justify-between md:justify-start gap-2 mt-2 md:ml-12">
+            <div className="flex items-center gap-2 flex-wrap">
               <Badge variant="outline" className={getTypeColor(location.type)}>
                 {getTypeLabel(location.type)}
               </Badge>
               {location.facility_type && (
-                <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200">
+                <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200 hidden md:inline-flex">
                   {location.facility_type}
                 </Badge>
               )}
@@ -246,10 +252,21 @@ export default async function LocationDetailsPage({ params }: { params: Promise<
                 </Badge>
               )}
             </div>
+
+            {/* Mobile Map Button */}
+            <div className="md:hidden shrink-0">
+              <Button variant="outline" size="sm" asChild>
+                <Link href={`/t/${slug}/dashboard/map?highlightLocation=${location.id}`}>
+                  <MapIcon className="h-4 w-4 mr-2" />
+                  Map
+                </Link>
+              </Button>
+            </div>
           </div>
         </div>
 
-        <div className="flex gap-2">
+        {/* Desktop Actions */}
+        <div className="hidden md:flex gap-2 shrink-0">
           {isAdmin && (
             <Button variant="outline" asChild>
               <Link href={`/t/${slug}/admin/map/locations/create?editLocationId=${location.id}`}>Edit</Link>
@@ -266,7 +283,7 @@ export default async function LocationDetailsPage({ params }: { params: Promise<
 
       {/* Hero Image - Display hero photo */}
       {mainPhoto && (
-        <div className="relative w-full rounded-xl overflow-hidden border bg-muted aspect-[2/1]">
+        <div className="relative w-full rounded-xl overflow-hidden border bg-muted h-[200px] md:h-[300px]">
           <Image
             src={mainPhoto || "/placeholder.svg"}
             alt={location.name}
@@ -303,86 +320,7 @@ export default async function LocationDetailsPage({ params }: { params: Promise<
           location.amenities?.length ||
           location.parking_spaces !== null ||
           location.accessibility_features ||
-          location.rules) && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Facility Details</CardTitle>
-              <CardDescription>Information about this facility</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {(location.capacity || location.max_occupancy) && (
-                <div>
-                  <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    Capacity & Occupancy
-                  </h4>
-                  <div className="text-sm text-muted-foreground space-y-1">
-                    {location.capacity && <div>Capacity: {location.capacity} people</div>}
-                    {location.max_occupancy && <div>Max Occupancy: {location.max_occupancy} people</div>}
-                  </div>
-                </div>
-              )}
-
-              {location.hours && (
-                <div>
-                  <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    Operating Hours
-                  </h4>
-                  <div className="text-sm text-muted-foreground whitespace-pre-line">{location.hours}</div>
-                </div>
-              )}
-
-              {location.amenities && location.amenities.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-semibold mb-3">Amenities ({location.amenities.length})</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {location.amenities.map((amenity) => (
-                      <Badge key={amenity} variant="secondary">
-                        {amenity}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {location.parking_spaces !== null && location.parking_spaces !== undefined && (
-                <div>
-                  <h4 className="text-sm font-semibold mb-2">Parking</h4>
-                  <div className="text-sm text-muted-foreground">
-                    {location.parking_spaces > 0
-                      ? `${location.parking_spaces} parking spaces available`
-                      : "No parking available"}
-                  </div>
-                </div>
-              )}
-
-              {location.accessibility_features && (
-                <div>
-                  <h4 className="text-sm font-semibold mb-2">Accessibility Features</h4>
-                  <div className="text-sm text-muted-foreground">
-                    {location.accessibility_features.split(" | ").map((feature, idx) => (
-                      <div key={idx} className="flex items-start gap-2">
-                        <span className="text-primary mt-1">•</span>
-                        <span>{feature}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {location.rules && (
-                <div>
-                  <h4 className="text-sm font-semibold mb-3">Rules & Guidelines</h4>
-                  <div
-                    className="prose prose-sm max-w-none text-sm text-muted-foreground"
-                    dangerouslySetInnerHTML={{ __html: location.rules }}
-                  />
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
+          location.rules) && <FacilityDetailsSection location={location} />}
 
       {/* Walking Path Details */}
       {location.type === "walking_path" &&
@@ -426,29 +364,34 @@ export default async function LocationDetailsPage({ params }: { params: Promise<
           </Card>
         )}
 
-      {/* Location Information */}
+      {/* Neighborhood */}
       {(neighborhood || lot) && (
-        <Card>
+        <Card className="hidden md:block">
           <CardHeader>
-            <CardTitle>Location Information</CardTitle>
+            <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <MapPin className="h-5 w-5" />
+              Neighborhood
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {neighborhood && (
-              <div className="flex items-center gap-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
-                <MapPin className="h-5 w-5 text-purple-600" />
-                <div>
-                  <p className="text-sm text-purple-700 font-medium">Neighborhood</p>
-                  <p className="text-base text-purple-900 font-semibold">{neighborhood.name}</p>
+              <div className="flex items-center gap-3 p-3 rounded-xl border bg-card text-card-foreground shadow-sm">
+                <div className="p-2 rounded-full bg-purple-500/10 text-purple-500">
+                  <MapPin className="h-4 w-4" />
+                </div>
+                <div className="text-left">
+                  <h4 className="font-semibold text-sm text-purple-600 dark:text-purple-400">{neighborhood.name}</h4>
                 </div>
               </div>
             )}
 
             {lot && (
-              <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <Home className="h-5 w-5 text-blue-600" />
-                <div>
-                  <p className="text-sm text-blue-700 font-medium">Lot</p>
-                  <p className="text-base text-blue-900 font-semibold">Lot #{lot.lot_number}</p>
+              <div className="flex items-center gap-3 p-3 rounded-xl border bg-card text-card-foreground shadow-sm">
+                <div className="p-2 rounded-full bg-blue-500/10 text-blue-500">
+                  <Home className="h-4 w-4" />
+                </div>
+                <div className="text-left">
+                  <h4 className="font-semibold text-sm text-blue-600 dark:text-blue-400">Lot #{lot.lot_number}</h4>
                 </div>
               </div>
             )}
@@ -460,11 +403,10 @@ export default async function LocationDetailsPage({ params }: { params: Promise<
       {residents.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-lg font-semibold">
               <Users className="h-5 w-5" />
               Residents ({residents.length})
             </CardTitle>
-            {familyUnit && <CardDescription>{familyUnit.name}</CardDescription>}
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -526,8 +468,10 @@ export default async function LocationDetailsPage({ params }: { params: Promise<
       {pets.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Family Pets ({pets.length})</CardTitle>
-            <CardDescription>Beloved members of the family</CardDescription>
+            <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+              <PawPrint className="h-5 w-5" />
+              Family Pets ({pets.length})
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -609,19 +553,11 @@ export default async function LocationDetailsPage({ params }: { params: Promise<
 
       {/* Photo Gallery */}
       {galleryPhotos.length > 1 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Photo Gallery</CardTitle>
-            <CardDescription>{galleryPhotos.length} photos</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <LocationPhotoGallery
-              photos={galleryPhotos}
-              heroPhoto={location.hero_photo}
-              locationName={location.name}
-            />
-          </CardContent>
-        </Card>
+        <PhotoGallerySection
+          photos={galleryPhotos}
+          heroPhoto={location.hero_photo}
+          locationName={location.name}
+        />
       )}
     </div>
   )

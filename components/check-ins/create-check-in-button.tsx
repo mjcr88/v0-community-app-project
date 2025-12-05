@@ -19,7 +19,7 @@ interface CreateCheckInButtonProps {
 export function CreateCheckInButton({
   tenantSlug,
   tenantId,
-  variant = "outline",
+  variant = "default",
   className,
   initialLocation,
 }: CreateCheckInButtonProps) {

@@ -22,7 +22,7 @@ interface LocationSelectorProps {
   customLocationType?: "marker" | "polygon" | null
   customLocationPath?: Array<{ lat: number; lng: number }> | null
   onLocationTypeChange: (type: LocationType) => void
-  onCommunityLocationChange: (locationId: string) => void
+  onCommunityLocationChange: (locationId: string, locationName?: string) => void
   onCustomLocationNameChange: (name: string) => void
   onCustomLocationChange: (data: {
     coordinates?: { lat: number; lng: number } | null
@@ -177,7 +177,7 @@ export function LocationSelector({
     if (location) {
       console.log('[LocationSelector] Found location, setting type to community')
       onLocationTypeChange('community')
-      onCommunityLocationChange(locationId)
+      onCommunityLocationChange(locationId, location.name)
       onCustomLocationNameChange('')
       onCustomLocationChange({ coordinates: null, type: null, path: null })
       setSearchQuery('')

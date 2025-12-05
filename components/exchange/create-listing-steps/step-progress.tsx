@@ -7,25 +7,21 @@ interface StepProgressProps {
         number: number
         title: string
     }>
+    onStepClick?: (step: number) => void
 }
 
-export function StepProgress({ currentStep, steps }: StepProgressProps) {
+export function StepProgress({ currentStep, steps, onStepClick }: StepProgressProps) {
     return (
         <div className="mb-6">
-            {/* Step counter */}
-            <div className="text-center mb-4">
-                <p className="text-sm text-muted-foreground">
-                    Step {currentStep} of {steps.length}
-                </p>
-            </div>
-
             {/* Progress dots */}
             <div className="flex items-center justify-center gap-2">
                 {steps.map((step, index) => (
                     <div key={step.number} className="flex items-center">
-                        <div
+                        <button
+                            type="button"
+                            onClick={() => onStepClick?.(step.number)}
                             className={cn(
-                                "relative flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-colors",
+                                "relative flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
                                 step.number === currentStep &&
                                 "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2",
                                 step.number < currentStep &&
@@ -33,13 +29,14 @@ export function StepProgress({ currentStep, steps }: StepProgressProps) {
                                 step.number > currentStep &&
                                 "bg-muted text-muted-foreground border border-border"
                             )}
+                            disabled={!onStepClick}
                         >
                             {step.number < currentStep ? (
                                 <Check className="h-4 w-4" />
                             ) : (
                                 step.number
                             )}
-                        </div>
+                        </button>
 
                         {/* Connector line */}
                         {index < steps.length - 1 && (

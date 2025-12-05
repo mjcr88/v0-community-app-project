@@ -1,46 +1,26 @@
 import { Badge } from "@/components/ui/badge"
-import { Clock, Play, CheckCircle, XCircle } from 'lucide-react'
+import { cn } from "@/lib/utils"
 import type { RequestStatus } from "@/types/requests"
 
 interface RequestStatusBadgeProps {
   status: RequestStatus
   compact?: boolean
+  className?: string
 }
 
-export function RequestStatusBadge({ status, compact = false }: RequestStatusBadgeProps) {
-  const statusConfig = {
-    pending: {
-      label: "Pending",
-      variant: "secondary" as const,
-      className: "bg-honey/10 text-honey-dark hover:bg-honey/20 border-honey/20",
-      icon: <Clock className="h-3 w-3" />,
-    },
-    in_progress: {
-      label: "In Progress",
-      variant: "secondary" as const,
-      className: "bg-blue-100 text-blue-700 hover:bg-blue-200 border-blue-200",
-      icon: <Play className="h-3 w-3" />,
-    },
-    resolved: {
-      label: "Resolved",
-      variant: "default" as const,
-      className: "bg-fresh-growth text-white hover:bg-fresh-growth/90 border-transparent",
-      icon: <CheckCircle className="h-3 w-3" />,
-    },
-    rejected: {
-      label: "Rejected",
-      variant: "destructive" as const,
-      className: "bg-clay text-white hover:bg-clay/90 border-transparent",
-      icon: <XCircle className="h-3 w-3" />,
-    },
+export function RequestStatusBadge({ status, compact, className }: RequestStatusBadgeProps) {
+  const config = {
+    pending: { label: "Pending", color: "bg-yellow-100 text-yellow-800 border-yellow-200" },
+    in_progress: { label: "In Progress", color: "bg-blue-100 text-blue-800 border-blue-200" },
+    resolved: { label: "Resolved", color: "bg-green-100 text-green-800 border-green-200" },
+    rejected: { label: "Rejected", color: "bg-red-100 text-red-800 border-red-200" },
   }
 
-  const config = statusConfig[status]
+  const { label, color } = config[status]
 
   return (
-    <Badge variant={config.variant} className={compact ? "text-xs gap-1" : "gap-1"}>
-      {config.icon}
-      {config.label}
+    <Badge variant="outline" className={cn("font-normal", color, className)}>
+      {label}
     </Badge>
   )
 }

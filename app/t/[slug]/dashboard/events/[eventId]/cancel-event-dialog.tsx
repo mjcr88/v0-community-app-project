@@ -25,9 +25,10 @@ interface CancelEventDialogProps {
   tenantSlug: string
   eventTitle: string
   triggerSize?: "default" | "sm" | "lg" | "icon"
+  customTrigger?: React.ReactNode
 }
 
-export function CancelEventDialog({ eventId, tenantSlug, eventTitle, triggerSize = "sm" }: CancelEventDialogProps) {
+export function CancelEventDialog({ eventId, tenantSlug, eventTitle, triggerSize = "sm", customTrigger }: CancelEventDialogProps) {
   const [open, setOpen] = useState(false)
   const [reason, setReason] = useState("")
   const [isPending, startTransition] = useTransition()
@@ -74,10 +75,14 @@ export function CancelEventDialog({ eventId, tenantSlug, eventTitle, triggerSize
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="destructive" size={triggerSize} className="gap-2">
-          <Ban className="h-4 w-4" />
-          Cancel Event
-        </Button>
+        {customTrigger ? (
+          customTrigger
+        ) : (
+          <Button variant="destructive" size={triggerSize} className="gap-2">
+            <Ban className="h-4 w-4" />
+            Cancel Event
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <form onSubmit={handleSubmit}>

@@ -84,6 +84,7 @@ export default async function ProfileSettingsPage({
         availableSkills={availableSkills || []}
         tenantSlug={slug}
         locations={locations || []}
+        userEmail={user.email || ""}
       />
     </SettingsLayout>
   )

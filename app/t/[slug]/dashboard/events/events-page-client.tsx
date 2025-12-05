@@ -5,13 +5,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Card, CardContent } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
-import { Search, Filter, X, ChevronDown } from "lucide-react"
+import { Search, Filter, X, ChevronDown, Calendar, Clock, Tag } from "lucide-react"
 import { EventsList } from "./events-list"
 import { EventsCalendar } from "./events-calendar"
 import { cn } from "@/lib/utils"
+import { motion, AnimatePresence } from "framer-motion"
 
 interface Event {
   id: string
@@ -34,7 +35,28 @@ interface Event {
     last_name: string
     profile_picture_url: string | null
   } | null
+  tenant_id: string
+  requires_rsvp: boolean | null
+  max_attendees: number | null
+  attending_count: number | null
+  rsvp_deadline: string | null
+  user_rsvp_status?: string | null
+  is_saved?: boolean
+  visibility_scope?: string | null
+  event_neighborhoods?: {
+    id: string
+    neighborhoods: {
+      name: string
+    } | null
+  }[]
+  location_type?: "community_location" | "custom_temporary" | null
+  location?: {
+    id: string
+    name: string
+  } | null
+  custom_location_name?: string | null
   flag_count?: number
+  status?: "draft" | "published" | "cancelled"
 }
 
 interface Category {
@@ -42,6 +64,8 @@ interface Category {
   name: string
   icon: string
 }
+
+type FilterSection = "categories" | "type" | "time" | null
 
 export function EventsPageClient({
   events,
@@ -62,6 +86,7 @@ export function EventsPageClient({
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [eventType, setEventType] = useState("all")
   const [timeFilter, setTimeFilter] = useState("upcoming") // Default to upcoming events
+  const [activeFilter, setActiveFilter] = useState<FilterSection>(null)
 
   const filteredEvents = useMemo(() => {
     return events.filter((event) => {
@@ -109,6 +134,7 @@ export function EventsPageClient({
     setSelectedCategories([])
     setEventType("all")
     setTimeFilter("all")
+    setActiveFilter(null)
   }
 
   const hasActiveFilters = searchQuery || selectedCategories.length > 0 || eventType !== "all" || timeFilter !== "all"
@@ -129,175 +155,31 @@ export function EventsPageClient({
     emptyStateVariant = "no-upcoming"
   }
 
+  const filterSections = [
+    { id: "categories" as const, label: "Categories", icon: Tag },
+    { id: "type" as const, label: "Type", icon: Filter },
+    { id: "time" as const, label: "Time", icon: Clock },
+  ]
+
   return (
-    <div className="space-y-6">
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search events..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="justify-between bg-transparent">
-                <span className="flex items-center gap-2">
-                  <Filter className="h-4 w-4" />
-                  Categories
-                  {selectedCategories.length > 0 && (
-                    <Badge variant="secondary" className="ml-1">
-                      {selectedCategories.length}
-                    </Badge>
-                  )}
-                </span>
-                <ChevronDown className="h-4 w-4 ml-2" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-64" align="start">
-              <div className="space-y-2">
-                <h4 className="font-medium text-sm">Select Categories</h4>
-                {categories.map((category) => (
-                  <div key={category.id} className="flex items-center gap-2">
-                    <Checkbox
-                      id={`category-${category.id}`}
-                      checked={selectedCategories.includes(category.id)}
-                      onCheckedChange={() => handleCategoryToggle(category.id)}
-                    />
-                    <Label
-                      htmlFor={`category-${category.id}`}
-                      className="flex items-center gap-2 cursor-pointer text-sm font-normal"
-                    >
-                      {category.icon && <span>{category.icon}</span>}
-                      {category.name}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
-
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="justify-between bg-transparent">
-                <span className="flex items-center gap-2">
-                  Type
-                  {eventType !== "all" && (
-                    <Badge variant="secondary" className="ml-1 capitalize">
-                      {eventType}
-                    </Badge>
-                  )}
-                </span>
-                <ChevronDown className="h-4 w-4 ml-2" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-48" align="start">
-              <div className="space-y-2">
-                <h4 className="font-medium text-sm">Event Type</h4>
-                {[
-                  { value: "all", label: "All Events" },
-                  { value: "resident", label: "Resident Created" },
-                  { value: "official", label: "Official" },
-                ].map((option) => (
-                  <div key={option.value} className="flex items-center gap-2">
-                    <Checkbox
-                      id={`type-${option.value}`}
-                      checked={eventType === option.value}
-                      onCheckedChange={() => setEventType(option.value)}
-                    />
-                    <Label htmlFor={`type-${option.value}`} className="cursor-pointer text-sm font-normal flex-1">
-                      {option.label}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
-
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="justify-between bg-transparent">
-                <span className="flex items-center gap-2">
-                  Time
-                  {timeFilter !== "all" && (
-                    <Badge variant="secondary" className="ml-1 capitalize">
-                      {timeFilter}
-                    </Badge>
-                  )}
-                </span>
-                <ChevronDown className="h-4 w-4 ml-2" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-48" align="start">
-              <div className="space-y-2">
-                <h4 className="font-medium text-sm">Time Period</h4>
-                {[
-                  { value: "all", label: "All Events" },
-                  { value: "upcoming", label: "Upcoming" },
-                  { value: "past", label: "Past" },
-                ].map((option) => (
-                  <div key={option.value} className="flex items-center gap-2">
-                    <Checkbox
-                      id={`time-${option.value}`}
-                      checked={timeFilter === option.value}
-                      onCheckedChange={() => setTimeFilter(option.value)}
-                    />
-                    <Label htmlFor={`time-${option.value}`} className="cursor-pointer text-sm font-normal flex-1">
-                      {option.label}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
-        </div>
-
-        {hasActiveFilters && (
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm text-muted-foreground">Active filters:</span>
-            {searchQuery && (
-              <Badge variant="secondary" className="gap-1">
-                Search: {searchQuery}
-                <X className="h-3 w-3 cursor-pointer" onClick={() => setSearchQuery("")} />
-              </Badge>
-            )}
-            {selectedCategories.map((catId) => {
-              const category = categories.find((c) => c.id === catId)
-              return (
-                <Badge key={catId} variant="secondary" className="gap-1">
-                  {category?.icon} {category?.name}
-                  <X className="h-3 w-3 cursor-pointer" onClick={() => handleCategoryToggle(catId)} />
-                </Badge>
-              )
-            })}
-            {eventType !== "all" && (
-              <Badge variant="secondary" className="gap-1 capitalize">
-                {eventType}
-                <X className="h-3 w-3 cursor-pointer" onClick={() => setEventType("all")} />
-              </Badge>
-            )}
-            {timeFilter !== "all" && (
-              <Badge variant="secondary" className="gap-1 capitalize">
-                {timeFilter}
-                <X className="h-3 w-3 cursor-pointer" onClick={() => setTimeFilter("all")} />
-              </Badge>
-            )}
-            <Button variant="ghost" size="sm" onClick={clearFilters} className="h-7">
-              Clear all
-            </Button>
-          </div>
-        )}
+    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+      {/* Search Bar */}
+      <div className="relative w-full max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search events..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9 bg-background/50 border-border/50 focus:bg-background transition-colors"
+        />
       </div>
 
+      {/* Tabs */}
       <Tabs value={view} onValueChange={setView} className="w-full">
         <TabsList className="bg-muted/30 p-1 rounded-full h-auto inline-flex">
           <TabsTrigger
             value="list"
-            className="rounded-full px-6 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all"
+            className="rounded-full px-6 py-2 border border-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all"
           >
             <span className="flex items-center gap-2">
               List
@@ -307,8 +189,8 @@ export function EventsPageClient({
                   className={cn(
                     "px-1.5 py-0.5 text-[10px] h-auto min-w-[1.25rem] justify-center",
                     view === "list"
-                      ? "bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/30"
-                      : "bg-muted text-muted-foreground"
+                      ? "bg-primary-foreground text-primary hover:bg-primary-foreground/90"
+                      : "bg-primary text-primary-foreground hover:bg-primary/90"
                   )}
                 >
                   {filteredEvents.length}
@@ -318,7 +200,7 @@ export function EventsPageClient({
           </TabsTrigger>
           <TabsTrigger
             value="calendar"
-            className="rounded-full px-6 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all"
+            className="rounded-full px-6 py-2 border border-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all"
           >
             <span className="flex items-center gap-2">
               Calendar
@@ -328,8 +210,8 @@ export function EventsPageClient({
                   className={cn(
                     "px-1.5 py-0.5 text-[10px] h-auto min-w-[1.25rem] justify-center",
                     view === "calendar"
-                      ? "bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/30"
-                      : "bg-muted text-muted-foreground"
+                      ? "bg-primary-foreground text-primary hover:bg-primary-foreground/90"
+                      : "bg-primary text-primary-foreground hover:bg-primary/90"
                   )}
                 >
                   {filteredEvents.length}
@@ -339,22 +221,170 @@ export function EventsPageClient({
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="list" className="mt-6">
+        {/* Filter Cards */}
+        <div className="mt-6 space-y-4">
+          <div className="grid grid-cols-3 gap-3">
+            {filterSections.map((section) => (
+              <button
+                key={section.id}
+                onClick={() => setActiveFilter(activeFilter === section.id ? null : section.id)}
+                className={cn(
+                  "flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-200 h-20 w-full hover:shadow-md",
+                  activeFilter === section.id
+                    ? "bg-primary/10 border-primary text-primary ring-1 ring-primary shadow-sm"
+                    : "bg-card border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                )}
+              >
+                <section.icon className={cn("w-5 h-5 mb-1.5", activeFilter === section.id ? "text-primary" : "text-muted-foreground")} />
+                <span className="text-xs font-medium text-center leading-tight">{section.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Active Filter Chips */}
+          {hasActiveFilters && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm text-muted-foreground">Active filters:</span>
+              {selectedCategories.map((catId) => {
+                const category = categories.find((c) => c.id === catId)
+                return (
+                  <Badge
+                    key={catId}
+                    variant="secondary"
+                    className="gap-1 cursor-pointer hover:bg-destructive/10 hover:text-destructive"
+                    onClick={() => handleCategoryToggle(catId)}
+                  >
+                    {category?.icon} {category?.name}
+                    <span className="ml-1">×</span>
+                  </Badge>
+                )
+              })}
+              {eventType !== "all" && (
+                <Badge
+                  variant="secondary"
+                  className="gap-1 capitalize cursor-pointer hover:bg-destructive/10 hover:text-destructive"
+                  onClick={() => setEventType("all")}
+                >
+                  {eventType}
+                  <span className="ml-1">×</span>
+                </Badge>
+              )}
+              {timeFilter !== "all" && (
+                <Badge
+                  variant="secondary"
+                  className="gap-1 capitalize cursor-pointer hover:bg-destructive/10 hover:text-destructive"
+                  onClick={() => setTimeFilter("all")}
+                >
+                  {timeFilter}
+                  <span className="ml-1">×</span>
+                </Badge>
+              )}
+              <Button variant="ghost" size="sm" onClick={clearFilters} className="h-6 px-2 text-xs">
+                Clear all
+              </Button>
+            </div>
+          )}
+
+          {/* Collapsible Filter Panel */}
+          <AnimatePresence mode="wait">
+            {activeFilter && (
+              <motion.div
+                key={activeFilter}
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <Card className="border-2 border-muted/50">
+                  <CardContent className="p-4">
+                    {activeFilter === "categories" && (
+                      <div className="space-y-4">
+                        <h4 className="font-medium text-sm">Select Categories</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {categories.map((category) => (
+                            <div key={category.id} className="flex items-center gap-2">
+                              <Checkbox
+                                id={`category-${category.id}`}
+                                checked={selectedCategories.includes(category.id)}
+                                onCheckedChange={() => handleCategoryToggle(category.id)}
+                              />
+                              <Label
+                                htmlFor={`category-${category.id}`}
+                                className="flex items-center gap-2 cursor-pointer text-sm font-normal"
+                              >
+                                <span className="text-base leading-none">{category.icon}</span>
+                                {category.name}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {activeFilter === "type" && (
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap gap-2">
+                          {[
+                            { value: "all", label: "All Events" },
+                            { value: "resident", label: "Resident Created" },
+                            { value: "official", label: "Official" },
+                          ].map((option) => (
+                            <Badge
+                              key={option.value}
+                              variant={eventType === option.value ? "default" : "outline"}
+                              className="cursor-pointer px-3 py-1.5"
+                              onClick={() => setEventType(option.value)}
+                            >
+                              {option.label}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {activeFilter === "time" && (
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap gap-2">
+                          {[
+                            { value: "all", label: "All Events" },
+                            { value: "upcoming", label: "Upcoming" },
+                            { value: "past", label: "Past" },
+                          ].map((option) => (
+                            <Badge
+                              key={option.value}
+                              variant={timeFilter === option.value ? "default" : "outline"}
+                              className="cursor-pointer px-3 py-1.5"
+                              onClick={() => setTimeFilter(option.value)}
+                            >
+                              {option.label}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        <TabsContent value="list" className="mt-4 md:mt-6">
           <EventsList
             events={filteredEvents}
             slug={slug}
-            hasActiveFilters={hasActiveFilters}
+            hasActiveFilters={!!hasActiveFilters}
             userId={userId}
             tenantId={tenantId}
             emptyStateVariant={emptyStateVariant}
           />
         </TabsContent>
 
-        <TabsContent value="calendar" className="mt-6">
+        <TabsContent value="calendar" className="mt-4 md:mt-6">
           <EventsCalendar
             events={filteredEvents}
             slug={slug}
-            hasActiveFilters={hasActiveFilters}
+            hasActiveFilters={!!hasActiveFilters}
             userId={userId}
             tenantId={tenantId}
             emptyStateVariant={emptyStateVariant}

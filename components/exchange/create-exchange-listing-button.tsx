@@ -33,12 +33,13 @@ export function CreateExchangeListingButton({
     <>
       <Button variant={variant} onClick={() => setOpen(true)} className={className}>
         <Plus className="h-4 w-4 mr-2" />
-        Create Listing
+        <span className="md:hidden">Create</span>
+        <span className="hidden md:inline">Create Listing</span>
       </Button>
-      <CreateExchangeListingModal 
-        open={open} 
-        onOpenChange={setOpen} 
-        tenantSlug={tenantSlug} 
+      <CreateExchangeListingModal
+        open={open}
+        onOpenChange={setOpen}
+        tenantSlug={tenantSlug}
         tenantId={tenantId}
         categories={categories}
         neighborhoods={neighborhoods}

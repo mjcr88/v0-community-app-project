@@ -103,7 +103,8 @@ export function LiveCheckInsWidget({ tenantSlug, tenantId, userId }: LiveCheckIn
   return (
     <>
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        {/* Mobile: Stack title/badge and button | Desktop: Single row */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-2">
             <h3 className="text-lg font-semibold">Live Check-ins</h3>
             <Badge variant="secondary" className="bg-orange-100 text-orange-700 hover:bg-orange-100 border-none">

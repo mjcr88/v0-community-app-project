@@ -62,48 +62,54 @@ export function EditStatModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
-                <DialogHeader>
+            <DialogContent className="sm:max-w-[600px] max-w-[95vw] h-[85vh] sm:max-h-[80vh] flex flex-col">
+                <DialogHeader className="flex-shrink-0">
                     <DialogTitle>Customize Your Stats</DialogTitle>
                     <DialogDescription>
                         Choose exactly 4 stats to display on your dashboard. Selected: {selected.length}/4
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="grid gap-2 py-4">
-                    {sortedStats.map((stat) => {
-                        const isSelected = selected.includes(stat.id)
-                        return (
-                            <button
-                                key={stat.id}
-                                onClick={() => handleToggle(stat.id)}
-                                disabled={!isSelected && selected.length >= 4}
-                                className={cn(
-                                    "flex items-center justify-between p-3 rounded-lg border-2 transition-all text-left",
-                                    isSelected
-                                        ? "border-primary bg-primary/5"
-                                        : "border-border hover:border-primary/50 hover:bg-accent",
-                                    !isSelected && selected.length >= 4 && "opacity-50 cursor-not-allowed"
-                                )}
-                            >
-                                <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <span className="font-medium">{stat.label}</span>
-                                        <Badge variant="outline" className="text-xs">
-                                            {stat.icon} {stat.scope}
-                                        </Badge>
+                {/* Scrollable area with visual indicators */}
+                <div className="flex-1 overflow-y-auto py-4 -mx-6 px-6 relative">
+                    <div className="grid gap-3 pb-4">
+                        {sortedStats.map((stat) => {
+                            const isSelected = selected.includes(stat.id)
+                            return (
+                                <button
+                                    key={stat.id}
+                                    onClick={() => handleToggle(stat.id)}
+                                    disabled={!isSelected && selected.length >= 4}
+                                    className={cn(
+                                        "flex items-center justify-between p-4 rounded-lg border-2 transition-all text-left min-h-[72px]",
+                                        isSelected
+                                            ? "border-primary bg-primary/5"
+                                            : "border-border hover:border-primary/50 hover:bg-accent",
+                                        !isSelected && selected.length >= 4 && "opacity-50 cursor-not-allowed"
+                                    )}
+                                >
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="font-medium">{stat.label}</span>
+                                            <Badge variant="outline" className="text-xs">
+                                                {stat.icon} {stat.scope}
+                                            </Badge>
+                                        </div>
+                                        <p className="text-sm text-muted-foreground">{stat.description}</p>
                                     </div>
-                                    <p className="text-sm text-muted-foreground">{stat.description}</p>
-                                </div>
-                                {isSelected && (
-                                    <Check className="h-5 w-5 text-primary ml-2 flex-shrink-0" />
-                                )}
-                            </button>
-                        )
-                    })}
+                                    {isSelected && (
+                                        <Check className="h-5 w-5 text-primary ml-2 flex-shrink-0" />
+                                    )}
+                                </button>
+                            )
+                        })}
+                    </div>
+
+                    {/* Bottom gradient fade indicator */}
+                    <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-background to-transparent" />
                 </div>
 
-                <DialogFooter>
+                <DialogFooter className="flex-shrink-0">
                     <Button variant="outline" onClick={onClose}>
                         Cancel
                     </Button>

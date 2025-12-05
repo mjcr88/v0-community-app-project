@@ -4,16 +4,17 @@ import { useState, useMemo } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Card, CardContent } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Search, Filter, X, ChevronDown, Package, ArrowUpDown } from 'lucide-react'
+import { Search, Filter, X, ArrowUpDown, Tag, DollarSign, Sparkles, CheckCircle2 } from 'lucide-react'
 import { ExchangeListingCard } from "@/components/exchange/exchange-listing-card"
 import { ExchangeListingDetailModal } from "@/components/exchange/exchange-listing-detail-modal"
 import { RioEmptyState } from "@/components/exchange/rio-empty-state"
 import { getCategoryEmoji } from "@/lib/exchange-category-emojis"
 import type { ExchangePricingType, ExchangeCondition } from "@/types/exchange"
+import { motion, AnimatePresence } from "framer-motion"
+import { cn } from "@/lib/utils"
 
 interface Listing {
   id: string
@@ -62,6 +63,8 @@ interface Location {
   coordinates?: { lat: number; lng: number } | null
 }
 
+type FilterSection = "categories" | "price" | "condition" | "availability" | "sort" | null
+
 export function ExchangePageClient({
   listings,
   categories,
@@ -92,6 +95,7 @@ export function ExchangePageClient({
   const [sortBy, setSortBy] = useState("newest")
   const [selectedListingId, setSelectedListingId] = useState<string | null>(null)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
+  const [activeFilter, setActiveFilter] = useState<FilterSection>(null)
 
   const filteredAndSortedListings = useMemo(() => {
     let filtered = listings.filter((listing) => {
@@ -189,6 +193,7 @@ export function ExchangePageClient({
     setShowUnavailable(false)
     setSelectedNeighborhoods([])
     setSortBy("newest")
+    setActiveFilter(null)
   }
 
   const hasActiveFilters =
@@ -225,193 +230,51 @@ export function ExchangePageClient({
     setIsDetailModalOpen(true)
   }
 
+  const filterSections = [
+    { id: "categories" as const, label: "Categories", icon: Tag },
+    { id: "price" as const, label: "Price", icon: DollarSign },
+    { id: "condition" as const, label: "Condition", icon: Sparkles },
+    { id: "availability" as const, label: "Availability", icon: CheckCircle2 },
+    { id: "sort" as const, label: "Sort", icon: ArrowUpDown },
+  ]
+
   return (
-    <div className="space-y-6">
-
-
+    <div className="space-y-6 max-w-7xl mx-auto pb-12">
       {/* Search and Filters */}
       <div className="space-y-4">
-        <div className="relative w-full">
+        {/* Search Bar */}
+        <div className="relative w-full max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search listings..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 h-11 bg-card border-border shadow-sm focus-visible:ring-2 focus-visible:ring-ring"
+            className="pl-9 bg-background/50 border-border/50 focus:bg-background transition-colors"
           />
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="justify-between bg-card border-border shadow-sm hover:bg-accent hover:text-accent-foreground">
-                <span className="flex items-center gap-2">
-                  <Filter className="h-4 w-4" />
-                  Categories
-                  {selectedCategories.length > 0 && (
-                    <Badge variant="secondary" className="ml-1 badge-enter">
-                      {selectedCategories.length}
-                    </Badge>
-                  )}
-                </span>
-                <ChevronDown className="h-4 w-4 ml-2" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-64 shadow-lg border-border" align="start">
-              <div className="space-y-2">
-                <h4 className="font-medium text-sm">Select Categories</h4>
-                {categories.map((category) => (
-                  <div key={category.id} className="flex items-center gap-2">
-                    <Checkbox
-                      id={`category-${category.id}`}
-                      checked={selectedCategories.includes(category.id)}
-                      onCheckedChange={() => handleCategoryToggle(category.id)}
-                    />
-                    <Label
-                      htmlFor={`category-${category.id}`}
-                      className="flex items-center gap-2 cursor-pointer text-sm font-normal"
-                    >
-                      <span className="text-base leading-none">{getCategoryEmoji(category.name)}</span>
-                      {category.name}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
-
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="justify-between bg-card border-border shadow-sm hover:bg-accent hover:text-accent-foreground">
-                <span className="flex items-center gap-2">
-                  Price
-                  {pricingType !== "all" && (
-                    <Badge variant="secondary" className="ml-1 badge-enter">1</Badge>
-                  )}
-                </span>
-                <ChevronDown className="h-4 w-4 ml-2" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-64 shadow-lg border-border" align="start">
-              <div className="space-y-2">
-                <h4 className="font-medium text-sm">Pricing Type</h4>
-                {[
-                  { value: "all", label: "All" },
-                  { value: "free", label: "Free" },
-                  { value: "fixed_price", label: "Fixed Price" },
-                  { value: "pay_what_you_want", label: "Pay What You Want" },
-                ].map((option) => (
-                  <div key={option.value} className="flex items-center gap-2">
-                    <Checkbox
-                      id={`pricing-${option.value}`}
-                      checked={pricingType === option.value}
-                      onCheckedChange={() => setPricingType(option.value)}
-                    />
-                    <Label htmlFor={`pricing-${option.value}`} className="cursor-pointer text-sm font-normal flex-1">
-                      {option.label}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
-
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="justify-between bg-card border-border shadow-sm hover:bg-accent hover:text-accent-foreground">
-                <span className="flex items-center gap-2">
-                  Condition
-                  {selectedConditions.length > 0 && (
-                    <Badge variant="secondary" className="ml-1 badge-enter">
-                      {selectedConditions.length}
-                    </Badge>
-                  )}
-                </span>
-                <ChevronDown className="h-4 w-4 ml-2" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-64 shadow-lg border-border" align="start">
-              <div className="space-y-2">
-                <h4 className="font-medium text-sm">Item Condition</h4>
-                {conditionOptions.map((option) => (
-                  <div key={option.value} className="flex items-center gap-2">
-                    <Checkbox
-                      id={`condition-${option.value}`}
-                      checked={selectedConditions.includes(option.value)}
-                      onCheckedChange={() => handleConditionToggle(option.value)}
-                    />
-                    <Label
-                      htmlFor={`condition-${option.value}`}
-                      className="cursor-pointer text-sm font-normal flex-1"
-                    >
-                      {option.label}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
-
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="justify-between bg-card border-border shadow-sm hover:bg-accent hover:text-accent-foreground">
-                <span className="flex items-center gap-2">
-                  <ArrowUpDown className="h-4 w-4" />
-                  Sort
-                </span>
-                <ChevronDown className="h-4 w-4 ml-2" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-56 shadow-lg border-border" align="start">
-              <div className="space-y-2">
-                <h4 className="font-medium text-sm">Sort By</h4>
-                {sortOptions.map((option) => (
-                  <div key={option.value} className="flex items-center gap-2">
-                    <Checkbox
-                      id={`sort-${option.value}`}
-                      checked={sortBy === option.value}
-                      onCheckedChange={() => setSortBy(option.value)}
-                    />
-                    <Label htmlFor={`sort-${option.value}`} className="cursor-pointer text-sm font-normal flex-1">
-                      {option.label}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="justify-between bg-card border-border shadow-sm hover:bg-accent hover:text-accent-foreground">
-                <span className="flex items-center gap-2">
-                  Availability
-                  {showUnavailable && (
-                    <Badge variant="secondary" className="ml-1 badge-enter">1</Badge>
-                  )}
-                </span>
-                <ChevronDown className="h-4 w-4 ml-2" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-64 shadow-lg border-border" align="start">
-              <div className="space-y-2">
-                <h4 className="font-medium text-sm">Listing Availability</h4>
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="show-unavailable"
-                    checked={showUnavailable}
-                    onCheckedChange={(checked) => setShowUnavailable(checked as boolean)}
-                  />
-                  <Label htmlFor="show-unavailable" className="cursor-pointer text-sm font-normal flex-1">
-                    Include unavailable listings
-                  </Label>
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
+        {/* Filter Cards */}
+        <div className="grid grid-cols-3 gap-3">
+          {filterSections.map((section) => (
+            <button
+              key={section.id}
+              onClick={() => setActiveFilter(activeFilter === section.id ? null : section.id)}
+              className={cn(
+                "flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-200 h-20 w-full hover:shadow-md",
+                activeFilter === section.id
+                  ? "bg-primary/10 border-primary text-primary ring-1 ring-primary shadow-sm"
+                  : "bg-card border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              )}
+            >
+              <section.icon className={cn("w-5 h-5 mb-1.5", activeFilter === section.id ? "text-primary" : "text-muted-foreground")} />
+              <span className="text-xs font-medium text-center leading-tight">{section.label}</span>
+            </button>
+          ))}
         </div>
 
+        {/* Active Filter Chips */}
         {hasActiveFilters && (
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm text-muted-foreground">Active filters:</span>
             {searchQuery && (
               <Badge variant="secondary" className="gap-1">
@@ -460,9 +323,127 @@ export function ExchangePageClient({
           </div>
         )}
 
-        <div className="text-sm text-muted-foreground">
-          Showing {filteredAndSortedListings.length} of {listings.length} listings
-        </div>
+        {/* Collapsible Filter Panel */}
+        <AnimatePresence mode="wait">
+          {activeFilter && (
+            <motion.div
+              key={activeFilter}
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <Card className="border-2 border-muted/50">
+                <CardContent className="p-4">
+                  {activeFilter === "categories" && (
+                    <div className="space-y-4">
+                      <h4 className="font-medium text-sm">Select Categories</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {categories.map((category) => (
+                          <div key={category.id} className="flex items-center gap-2">
+                            <Checkbox
+                              id={`category-${category.id}`}
+                              checked={selectedCategories.includes(category.id)}
+                              onCheckedChange={() => handleCategoryToggle(category.id)}
+                            />
+                            <Label
+                              htmlFor={`category-${category.id}`}
+                              className="flex items-center gap-2 cursor-pointer text-sm font-normal"
+                            >
+                              <span className="text-base leading-none">{getCategoryEmoji(category.name)}</span>
+                              {category.name}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {activeFilter === "price" && (
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">Pricing Type</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {[
+                          { value: "all", label: "All" },
+                          { value: "free", label: "Free" },
+                          { value: "fixed_price", label: "Fixed Price" },
+                          { value: "pay_what_you_want", label: "Pay What You Want" },
+                        ].map((option) => (
+                          <Badge
+                            key={option.value}
+                            variant={pricingType === option.value ? "default" : "outline"}
+                            className="cursor-pointer px-3 py-1.5"
+                            onClick={() => setPricingType(option.value)}
+                          >
+                            {option.label}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {activeFilter === "condition" && (
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">Item Condition</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {conditionOptions.map((option) => (
+                          <Badge
+                            key={option.value}
+                            variant={selectedConditions.includes(option.value) ? "default" : "outline"}
+                            className="cursor-pointer px-3 py-1.5"
+                            onClick={() => handleConditionToggle(option.value)}
+                          >
+                            {option.label}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {activeFilter === "availability" && (
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">Availability</h4>
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="show-unavailable"
+                          checked={showUnavailable}
+                          onCheckedChange={(checked) => setShowUnavailable(checked as boolean)}
+                        />
+                        <Label htmlFor="show-unavailable" className="cursor-pointer text-sm font-normal">
+                          Include unavailable listings
+                        </Label>
+                      </div>
+                    </div>
+                  )}
+
+                  {activeFilter === "sort" && (
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">Sort By</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {sortOptions.map((option) => (
+                          <div key={option.value} className="flex items-center gap-2">
+                            <Checkbox
+                              id={`sort-${option.value}`}
+                              checked={sortBy === option.value}
+                              onCheckedChange={() => setSortBy(option.value)}
+                            />
+                            <Label htmlFor={`sort-${option.value}`} className="cursor-pointer text-sm font-normal flex-1">
+                              {option.label}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      <div className="text-sm text-muted-foreground">
+        Showing {filteredAndSortedListings.length} of {listings.length} listings
       </div>
 
       {filteredAndSortedListings.length === 0 ? (

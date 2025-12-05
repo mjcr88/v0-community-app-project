@@ -35,7 +35,7 @@ export function ArchiveView({ userId, tenantId, tenantSlug }: ArchiveViewProps) 
 
   const loadInitialData = async () => {
     setLoading(true)
-    
+
     const [listingsResult, transactionsResult] = await Promise.all([
       getArchivedListings(userId, tenantId, 0, 10),
       getCompletedTransactions(userId, tenantId, 0, 10)
@@ -55,9 +55,9 @@ export function ArchiveView({ userId, tenantId, tenantSlug }: ArchiveViewProps) 
   const loadMoreListings = async () => {
     setLoadingMore(true)
     const newOffset = listingsOffset + 10
-    
+
     const result = await getArchivedListings(userId, tenantId, newOffset, 10)
-    
+
     setArchivedListings([...archivedListings, ...result.listings])
     setListingsOffset(newOffset)
     setListingsHasMore(result.hasMore)
@@ -67,9 +67,9 @@ export function ArchiveView({ userId, tenantId, tenantSlug }: ArchiveViewProps) 
   const loadMoreTransactions = async () => {
     setLoadingMore(true)
     const newOffset = transactionsOffset + 10
-    
+
     const result = await getCompletedTransactions(userId, tenantId, newOffset, 10)
-    
+
     setCompletedTransactions([...completedTransactions, ...result.transactions])
     setTransactionsOffset(newOffset)
     setTransactionsHasMore(result.hasMore)
@@ -100,21 +100,27 @@ export function ArchiveView({ userId, tenantId, tenantSlug }: ArchiveViewProps) 
       </div>
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "listings" | "transactions")}>
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="listings">
-            <Package className="h-4 w-4 mr-2" />
-            Archived Listings ({listingsTotal})
+        <TabsList className="grid w-full grid-cols-2 mb-4">
+          <TabsTrigger value="listings" className="text-xs md:text-sm gap-1 md:gap-2">
+            <Package className="h-3 w-3 md:h-4 md:w-4" />
+            <span className="hidden sm:inline">Archived Listings ({listingsTotal})</span>
+            <span className="sm:hidden">Lists ({listingsTotal})</span>
           </TabsTrigger>
-          <TabsTrigger value="transactions">
-            <History className="h-4 w-4 mr-2" />
-            My History ({transactionsTotal})
+          <TabsTrigger value="transactions" className="text-xs md:text-sm gap-1 md:gap-2">
+            <History className="h-3 w-3 md:h-4 md:w-4" />
+            <span className="hidden sm:inline">My History ({transactionsTotal})</span>
+            <span className="sm:hidden">History ({transactionsTotal})</span>
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="listings" className="mt-4">
           {archivedListings.length === 0 ? (
             <div className="text-center py-12">
-              <Archive className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <img
+                src="/rio/rio_no_results_confused.png"
+                alt="No archived listings"
+                className="h-24 w-24 mx-auto mb-4 object-contain"
+              />
               <p className="text-sm text-muted-foreground">No archived listings yet</p>
               <p className="text-xs text-muted-foreground mt-1">
                 Listings you archive will appear here
@@ -129,7 +135,7 @@ export function ArchiveView({ userId, tenantId, tenantSlug }: ArchiveViewProps) 
                 tenantSlug={tenantSlug}
                 onListingRestored={handleListingRestored}
               />
-              
+
               {listingsHasMore && (
                 <div className="flex justify-center mt-4">
                   <Button
@@ -155,7 +161,11 @@ export function ArchiveView({ userId, tenantId, tenantSlug }: ArchiveViewProps) 
         <TabsContent value="transactions" className="mt-4">
           {completedTransactions.length === 0 ? (
             <div className="text-center py-12">
-              <History className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <img
+                src="/rio/rio_no_results_confused.png"
+                alt="No transaction history"
+                className="h-24 w-24 mx-auto mb-4 object-contain"
+              />
               <p className="text-sm text-muted-foreground">No completed transactions yet</p>
               <p className="text-xs text-muted-foreground mt-1">
                 Your transaction history will appear here
@@ -169,7 +179,7 @@ export function ArchiveView({ userId, tenantId, tenantSlug }: ArchiveViewProps) 
                 tenantSlug={tenantSlug}
                 tenantId={tenantId}
               />
-              
+
               {transactionsHasMore && (
                 <div className="flex justify-center mt-4">
                   <Button

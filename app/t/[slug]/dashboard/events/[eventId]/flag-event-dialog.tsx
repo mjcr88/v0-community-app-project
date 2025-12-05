@@ -29,6 +29,7 @@ interface FlagEventDialogProps {
   disabled?: boolean
   initialFlagCount: number
   initialHasUserFlagged: boolean
+  customTrigger?: React.ReactNode
 }
 
 export function FlagEventDialog({
@@ -40,6 +41,7 @@ export function FlagEventDialog({
   disabled = false,
   initialFlagCount,
   initialHasUserFlagged,
+  customTrigger,
 }: FlagEventDialogProps) {
   const [open, setOpen] = useState(false)
   const [reason, setReason] = useState("")
@@ -93,15 +95,19 @@ export function FlagEventDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button
-          variant={triggerVariant}
-          size={triggerSize}
-          disabled={disabled || localHasUserFlagged}
-          className="gap-2"
-        >
-          <Flag className="h-4 w-4" />
-          {localHasUserFlagged ? "Flagged" : triggerLabel}
-        </Button>
+        {customTrigger ? (
+          customTrigger
+        ) : (
+          <Button
+            variant={triggerVariant}
+            size={triggerSize}
+            disabled={disabled || localHasUserFlagged}
+            className="gap-2"
+          >
+            <Flag className="h-4 w-4" />
+            {localHasUserFlagged ? "Flagged" : triggerLabel}
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <form onSubmit={handleSubmit}>

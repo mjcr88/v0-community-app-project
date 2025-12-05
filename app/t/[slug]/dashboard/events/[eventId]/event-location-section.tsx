@@ -104,14 +104,14 @@ export function EventLocationSection({
               <MapPin className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Location</p>
               <p className="font-medium">{location.name}</p>
             </div>
           </div>
           <Link href={`/t/${tenantSlug}/dashboard/locations/${location.id}`}>
-            <Button variant="outline" size="sm" className="gap-2 bg-transparent">
+            <Button variant="default" size="sm" className="gap-2">
               <ExternalLink className="h-4 w-4" />
-              View Details
+              <span className="hidden sm:inline">View Details</span>
+              <span className="sm:hidden">Details</span>
             </Button>
           </Link>
         </div>
@@ -123,10 +123,12 @@ export function EventLocationSection({
             tenantSlug={tenantSlug}
             highlightLocationId={location.id}
             mapCenter={mapCenter}
-            mapZoom={16}
+            mapZoom={12}
             showControls={false}
             enableSelection={false}
             checkIns={[]}
+            animationDuration={0}
+            disableAutoScroll={true}
           />
         </div>
       </div>
@@ -148,7 +150,6 @@ export function EventLocationSection({
               <MapPin className="h-5 w-5 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Event Location</p>
               <p className="font-medium">{customLocationName}</p>
               <p className="text-xs text-muted-foreground">Custom event location</p>
             </div>
@@ -168,7 +169,7 @@ export function EventLocationSection({
               tenantId={tenantId}
               tenantSlug={tenantSlug}
               mapCenter={customCenter}
-              mapZoom={16}
+              mapZoom={12}
               showControls={false}
               enableSelection={false}
               customMarker={{
@@ -177,6 +178,8 @@ export function EventLocationSection({
                 label: customLocationName
               }}
               checkIns={[]}
+              animationDuration={0}
+              disableAutoScroll={true}
             />
           </div>
         )}

@@ -110,24 +110,24 @@ export default async function RequestDetailPage({ params }: RequestDetailPagePro
             </Link>
 
             <div className="space-y-4">
+              <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-balance">
+                {request.title}
+              </h1>
+
               <div className="flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-muted/50 border">
-                  <RequestTypeIcon type={request.request_type} className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">{requestTypeLabels[request.request_type]}</span>
+                <div className="flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-muted/50 border text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/70">
+                  <RequestTypeIcon type={request.request_type} className="h-3.5 w-3.5" />
+                  <span>{requestTypeLabels[request.request_type]}</span>
                 </div>
-                <RequestStatusBadge status={request.status} />
-                <RequestPriorityBadge priority={request.priority} />
+                <RequestStatusBadge status={request.status} className="text-xs px-2.5 py-0.5" />
+                <RequestPriorityBadge priority={request.priority} className="text-xs px-2.5 py-0.5" />
                 {request.is_anonymous && (
-                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-muted/50 border text-muted-foreground text-sm">
-                    <Shield className="h-3.5 w-3.5" />
+                  <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-muted/50 border text-muted-foreground text-xs font-medium">
+                    <Shield className="h-3 w-3" />
                     <span>Anonymous</span>
                   </div>
                 )}
               </div>
-
-              <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-balance">
-                {request.title}
-              </h1>
             </div>
           </div>
         </div>

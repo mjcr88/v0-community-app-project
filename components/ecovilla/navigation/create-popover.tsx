@@ -2,7 +2,7 @@
 
 import React from "react"
 import Link from "next/link"
-import { MapPin, Calendar, ShoppingBag, ClipboardList } from "lucide-react"
+import { MapPin, Calendar, ShoppingBag, ClipboardList, Smile } from "lucide-react"
 import {
     Popover,
     PopoverContent,
@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils"
 import { useState } from "react"
 import { CreateCheckInModal } from "@/components/check-ins/create-check-in-modal"
 import { CreateExchangeListingModal } from "@/components/exchange/create-exchange-listing-modal"
+import { useUserJot } from "@/components/userjot/userjot-provider"
 
 interface CreatePopoverProps {
     open: boolean
@@ -40,8 +41,21 @@ export function CreatePopover({
 }: CreatePopoverProps) {
     const [showCheckIn, setShowCheckIn] = useState(false)
     const [showListing, setShowListing] = useState(false)
+    const { openWidget } = useUserJot()
 
     const actions = [
+        {
+            icon: Smile,
+            title: "Give feedback",
+            description: "Share thoughts",
+            onClick: () => {
+                onOpenChange(false)
+                openWidget()
+            },
+            color: "text-sunrise",
+            bgColor: "bg-sunrise-soft",
+            borderColor: "border-sunrise-soft",
+        },
         {
             icon: MapPin,
             title: "Check-in",
@@ -95,32 +109,30 @@ export function CreatePopover({
                 <PopoverContent
                     side={side}
                     align={align}
-                    className="w-72 p-4 rounded-2xl bg-white/95 backdrop-blur-xl border border-earth-pebble shadow-xl"
+                    className="w-72 p-4 rounded-2xl backdrop-blur-xl border shadow-xl"
                     sideOffset={16}
                 >
                     <div className="mb-3 px-1">
-                        <h3 className="font-bold text-forest-canopy text-lg">Create</h3>
-                        <p className="text-xs text-mist-gray">Contribute to your community</p>
+                        <h3 className="font-bold text-lg">Create</h3>
+                        <p className="text-xs text-muted-foreground">Contribute to your community</p>
                     </div>
 
                     <div className="grid grid-cols-1 gap-2">
                         {actions.map((action) => {
                             const content = (
                                 <>
-                                    <div className={cn("p-2 rounded-full bg-white shadow-sm", action.color)}>
+                                    <div className={cn("p-2 rounded-full shadow-sm transition-colors", action.color)}>
                                         <action.icon className="w-4 h-4" />
                                     </div>
                                     <div className="text-left">
-                                        <h4 className={cn("font-semibold text-sm", action.color)}>{action.title}</h4>
-                                        <p className="text-[10px] text-earth-soil/70">{action.description}</p>
+                                        <h4 className={cn("font-semibold text-sm transition-colors", action.color)}>{action.title}</h4>
+                                        <p className="text-[10px] text-muted-foreground">{action.description}</p>
                                     </div>
                                 </>
                             )
 
                             const className = cn(
-                                "flex items-center gap-3 p-2.5 rounded-xl border transition-all hover:shadow-md active:scale-[0.98] w-full",
-                                action.bgColor,
-                                action.borderColor
+                                "flex items-center gap-3 p-2.5 rounded-xl border transition-all hover:bg-accent active:scale-[0.98] w-full",
                             )
 
                             if (action.href) {

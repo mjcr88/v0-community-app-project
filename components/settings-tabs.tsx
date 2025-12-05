@@ -15,7 +15,7 @@ export function SettingsTabs({ tenantSlug }: SettingsTabsProps) {
 
   return (
     <Tabs value={currentTab} className="w-full">
-      <TabsList className="bg-muted/30 p-1 rounded-full h-auto inline-flex">
+      <TabsList className="w-full bg-muted/30 p-1 rounded-full h-auto flex">
         <TabsTrigger
           value="profile"
           asChild

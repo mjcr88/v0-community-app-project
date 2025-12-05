@@ -9,12 +9,13 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Loader2, Plus, Trash2, Users, PawPrint, Home, Upload, AlertCircle } from "lucide-react"
+import { Loader2, Plus, Trash2, Users, PawPrint, Home, Upload, AlertCircle, Camera } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import { PhotoManager } from "@/components/photo-manager"
 import { EditableProfileBanner } from "@/components/profile/editable-profile-banner"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { CollapsibleCard } from "@/components/ui/collapsible-card"
 
 interface FamilyManagementFormProps {
   resident: any
@@ -480,15 +481,8 @@ export function FamilyManagementForm({
       <div className="grid gap-6 lg:grid-cols-2">
         {/* LEFT COLUMN: Family Profile */}
         <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Home className="h-5 w-5" />
-                Family Profile
-              </CardTitle>
-              <CardDescription>Manage your family's public profile</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
+          <CollapsibleCard title="Family Profile" description="Manage your family's public profile" icon={Home}>
+            <div className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="family-name">Family Name</Label>
                 <Input id="family-name" value={familyProfile.name} disabled className="bg-muted" />
@@ -515,251 +509,226 @@ export function FamilyManagementForm({
                   Save Description
                 </Button>
               </div>
+            </div>
+          </CollapsibleCard>
 
-              <div className="space-y-2">
-                <Label>Family Photos</Label>
-                <PhotoManager
-                  photos={familyProfile.photos}
-                  heroPhoto={familyProfile.heroPhoto}
-                  onPhotosChange={handleFamilyPhotosChange}
-                  onHeroPhotoChange={(url) => handleProfilePhotoChange(url)}
-                  maxPhotos={10}
-                  entityType="family"
-                />
-              </div>
-            </CardContent>
-          </Card>
+          {/* Family Photos */}
+          <CollapsibleCard title="Family Photos" description="Share photos of your family" icon={Camera} defaultOpen={false}>
+            <PhotoManager
+              photos={familyProfile.photos}
+              heroPhoto={familyProfile.heroPhoto}
+              onPhotosChange={handleFamilyPhotosChange}
+              onHeroPhotoChange={(url) => handleProfilePhotoChange(url)}
+              maxPhotos={10}
+              entityType="family"
+            />
+          </CollapsibleCard>
         </div>
 
         {/* RIGHT COLUMN: Members & Pets */}
         <div className="space-y-6">
           {/* Family Members */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5" />
-                    Family Members
-                  </CardTitle>
-                  <CardDescription>
-                    Manage relationships
-                  </CardDescription>
-                </div>
-                {availableLotResidents.length > 0 && !showAddFamily && (
-                  <Button variant="outline" size="sm" onClick={() => setShowAddFamily(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Member
-                  </Button>
-                )}
+          <CollapsibleCard title="Family Members" description="Manage relationships" icon={Users}>
+            {availableLotResidents.length > 0 && !showAddFamily && (
+              <div className="mb-4 flex justify-end">
+                <Button variant="outline" size="sm" onClick={() => setShowAddFamily(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Member
+                </Button>
               </div>
-            </CardHeader>
-            <CardContent>
-              {showAddFamily && (
-                <div className="mb-4 space-y-3 rounded-lg border p-4 bg-muted/50">
-                  <div className="space-y-2">
-                    <Label htmlFor="resident-select">Select Resident</Label>
-                    <Select value={selectedResident} onValueChange={setSelectedResident}>
-                      <SelectTrigger id="resident-select">
-                        <SelectValue placeholder="Choose a resident" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableLotResidents.map((r) => (
-                          <SelectItem key={r.id} value={r.id}>
-                            {r.first_name} {r.last_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+            )}
+            {showAddFamily && (
+              <div className="mb-4 space-y-3 rounded-lg border p-4 bg-muted/50">
+                <div className="space-y-2">
+                  <Label htmlFor="resident-select">Select Resident</Label>
+                  <Select value={selectedResident} onValueChange={setSelectedResident}>
+                    <SelectTrigger id="resident-select">
+                      <SelectValue placeholder="Choose a resident" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableLotResidents.map((r) => (
+                        <SelectItem key={r.id} value={r.id}>
+                          {r.first_name} {r.last_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={handleAddFamilyMember} disabled={isLoading || !selectedResident} size="sm">
+                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Add
+                  </Button>
+                  <Button variant="ghost" onClick={() => setShowAddFamily(false)} size="sm">
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {familyMembers.length === 0 ? (
+              <div className="text-center py-6 text-muted-foreground">
+                <p>No other family members added.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {familyMembers.map((member) => (
+                  <div key={member.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-lg border p-3">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={member.profile_picture_url} />
+                        <AvatarFallback>{member.first_name[0]}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium text-sm">
+                          {member.first_name} {member.last_name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{member.email}</p>
+                      </div>
+                    </div>
+                    <div className="w-full sm:w-40">
+                      <Select
+                        value={relationships[member.id] || ""}
+                        onValueChange={(value) => handleRelationshipChange(member.id, value)}
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="Relationship" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {RELATIONSHIP_TYPES.map((type) => (
+                            <SelectItem key={type.value} value={type.value}>
+                              {type.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CollapsibleCard>
+
+          {/* Pets */}
+          {petsEnabled && (
+            <CollapsibleCard title="Pets" description="Manage family pets" icon={PawPrint}>
+              {!showAddPet && (
+                <div className="mb-4 flex justify-end">
+                  <Button onClick={() => setShowAddPet(true)}>
+                    <Plus className="mr-2 h-4 w-4 sm:mr-0" />
+                    <span className="sm:hidden">Add</span>
+                    <span className="hidden sm:inline">Add Pet</span>
+                  </Button>
+                </div>
+              )}
+              {showAddPet && (
+                <div className="mb-4 space-y-4 rounded-lg border p-4 bg-muted/50">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="pet-name">Name</Label>
+                      <Input
+                        id="pet-name"
+                        value={newPet.name}
+                        onChange={(e) => setNewPet({ ...newPet, name: e.target.value })}
+                        placeholder="Pet's name"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="pet-species">Species</Label>
+                      <Select
+                        value={newPet.species}
+                        onValueChange={(value) => setNewPet({ ...newPet, species: value })}
+                      >
+                        <SelectTrigger id="pet-species">
+                          <SelectValue placeholder="Select species" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Dog">Dog</SelectItem>
+                          <SelectItem value="Cat">Cat</SelectItem>
+                          <SelectItem value="Bird">Bird</SelectItem>
+                          <SelectItem value="Other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2 sm:col-span-2">
+                      <Label htmlFor="pet-breed">Breed (Optional)</Label>
+                      <Input
+                        id="pet-breed"
+                        value={newPet.breed}
+                        onChange={(e) => setNewPet({ ...newPet, breed: e.target.value })}
+                        placeholder="e.g. Golden Retriever"
+                      />
+                    </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button onClick={handleAddFamilyMember} disabled={isLoading || !selectedResident} size="sm">
+                    <Button onClick={handleAddPet} disabled={isLoading || !newPet.name || !newPet.species}>
                       {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Add
+                      <span className="sm:hidden">Add</span>
+                      <span className="hidden sm:inline">Add Pet</span>
                     </Button>
-                    <Button variant="ghost" onClick={() => setShowAddFamily(false)} size="sm">
+                    <Button variant="ghost" onClick={() => setShowAddPet(false)} size="sm">
                       Cancel
                     </Button>
                   </div>
                 </div>
               )}
 
-              {familyMembers.length === 0 ? (
+              {pets.length === 0 && !showAddPet ? (
                 <div className="text-center py-6 text-muted-foreground">
-                  <p>No other family members added.</p>
+                  <p>No pets added yet.</p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {familyMembers.map((member) => (
-                    <div key={member.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-lg border p-3">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={member.profile_picture_url} />
-                          <AvatarFallback>{member.first_name[0]}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium text-sm">
-                            {member.first_name} {member.last_name}
-                          </p>
-                          <p className="text-xs text-muted-foreground">{member.email}</p>
-                        </div>
-                      </div>
-                      <div className="w-full sm:w-40">
-                        <Select
-                          value={relationships[member.id] || ""}
-                          onValueChange={(value) => handleRelationshipChange(member.id, value)}
-                        >
-                          <SelectTrigger className="h-8 text-xs">
-                            <SelectValue placeholder="Relationship" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {RELATIONSHIP_TYPES.map((type) => (
-                              <SelectItem key={type.value} value={type.value}>
-                                {type.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  ))}
+                  {pets.map((pet) => {
+                    const petInitials = pet.name.slice(0, 2).toUpperCase()
+                    const petHeroPhoto = pet.hero_photo || pet.profile_picture_url || null
+                    const petPhotos = Array.isArray(pet.photos) ? pet.photos : []
+
+                    return (
+                      <Card key={pet.id} className="overflow-hidden">
+                        <CardContent className="p-0">
+                          <div className="flex items-center justify-between p-4 bg-muted/30">
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-12 w-12 border-2 border-background">
+                                <AvatarImage src={petHeroPhoto || "/placeholder.svg"} />
+                                <AvatarFallback>{petInitials}</AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="font-semibold">{pet.name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {pet.species} {pet.breed && `• ${pet.breed}`}
+                                </p>
+                              </div>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeletePet(pet.id)}
+                              className="text-muted-foreground hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <div className="p-4 pt-0">
+                            <PhotoManager
+                              photos={petPhotos}
+                              heroPhoto={petHeroPhoto}
+                              onPhotosChange={(photos) => handlePetPhotosChange(pet.id, photos)}
+                              onHeroPhotoChange={(heroPhoto) => handlePetHeroPhotoChange(pet.id, heroPhoto)}
+                              maxPhotos={5}
+                              entityType="pet"
+                            />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )
+                  })}
                 </div>
               )}
-            </CardContent>
-          </Card>
-
-          {/* Pets */}
-          {petsEnabled && (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <PawPrint className="h-5 w-5" />
-                      Pets
-                    </CardTitle>
-                    <CardDescription>Manage family pets</CardDescription>
-                  </div>
-                  {!showAddPet && (
-                    <Button variant="outline" size="sm" onClick={() => setShowAddPet(true)}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add Pet
-                    </Button>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {showAddPet && (
-                  <div className="mb-4 space-y-4 rounded-lg border p-4 bg-muted/50">
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="pet-name">Name</Label>
-                        <Input
-                          id="pet-name"
-                          value={newPet.name}
-                          onChange={(e) => setNewPet({ ...newPet, name: e.target.value })}
-                          placeholder="Pet's name"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="pet-species">Species</Label>
-                        <Select
-                          value={newPet.species}
-                          onValueChange={(value) => setNewPet({ ...newPet, species: value })}
-                        >
-                          <SelectTrigger id="pet-species">
-                            <SelectValue placeholder="Select species" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Dog">Dog</SelectItem>
-                            <SelectItem value="Cat">Cat</SelectItem>
-                            <SelectItem value="Bird">Bird</SelectItem>
-                            <SelectItem value="Other">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2 sm:col-span-2">
-                        <Label htmlFor="pet-breed">Breed (Optional)</Label>
-                        <Input
-                          id="pet-breed"
-                          value={newPet.breed}
-                          onChange={(e) => setNewPet({ ...newPet, breed: e.target.value })}
-                          placeholder="e.g. Golden Retriever"
-                        />
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button onClick={handleAddPet} disabled={isLoading || !newPet.name || !newPet.species} size="sm">
-                        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Add Pet
-                      </Button>
-                      <Button variant="ghost" onClick={() => setShowAddPet(false)} size="sm">
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {pets.length === 0 && !showAddPet ? (
-                  <div className="text-center py-6 text-muted-foreground">
-                    <p>No pets added yet.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {pets.map((pet) => {
-                      const petInitials = pet.name.slice(0, 2).toUpperCase()
-                      const petHeroPhoto = pet.hero_photo || pet.profile_picture_url || null
-                      const petPhotos = Array.isArray(pet.photos) ? pet.photos : []
-
-                      return (
-                        <Card key={pet.id} className="overflow-hidden">
-                          <CardContent className="p-0">
-                            <div className="flex items-center justify-between p-4 bg-muted/30">
-                              <div className="flex items-center gap-3">
-                                <Avatar className="h-12 w-12 border-2 border-background">
-                                  <AvatarImage src={petHeroPhoto || "/placeholder.svg"} />
-                                  <AvatarFallback>{petInitials}</AvatarFallback>
-                                </Avatar>
-                                <div>
-                                  <p className="font-semibold">{pet.name}</p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {pet.species} {pet.breed && `• ${pet.breed}`}
-                                  </p>
-                                </div>
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDeletePet(pet.id)}
-                                className="text-muted-foreground hover:text-destructive"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                            <div className="p-4 pt-0">
-                              <div className="mt-4">
-                                <Label className="text-xs mb-2 block text-muted-foreground">Photos</Label>
-                                <PhotoManager
-                                  photos={petPhotos}
-                                  heroPhoto={petHeroPhoto}
-                                  onPhotosChange={(photos) => handlePetPhotosChange(pet.id, photos)}
-                                  onHeroPhotoChange={(heroPhoto) => handlePetHeroPhotoChange(pet.id, heroPhoto)}
-                                  maxPhotos={5}
-                                  entityType="pet"
-                                />
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      )
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            </CollapsibleCard>
           )}
         </div>
       </div>
-    </div>
+    </div >
   )
 }

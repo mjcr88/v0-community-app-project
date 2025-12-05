@@ -4,6 +4,8 @@ import type { Metadata } from "next"
 import { Analytics } from "@vercel/analytics/next"
 import { Toaster } from "@/components/ui/toaster"
 import { RioFeedbackProvider } from "@/components/feedback/rio-feedback-provider"
+import { ThemeProvider } from "@/components/theme-provider"
+import { MobileZoomFix } from "@/components/ui/mobile-zoom-fix"
 import "./globals.css"
 
 import { Geist, Geist_Mono, Source_Serif_4, Geist as V0_Font_Geist, Geist_Mono as V0_Font_Geist_Mono, Source_Serif_4 as V0_Font_Source_Serif_4 } from 'next/font/google'
@@ -37,6 +39,13 @@ export const metadata: Metadata = {
   generator: "v0.app",
 }
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -45,11 +54,19 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${geist.variable} ${geistMono.variable} ${sourceSerif.variable} font-sans antialiased`}>
-        <RioFeedbackProvider>
-          {children}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <RioFeedbackProvider>
+            {children}
+          </RioFeedbackProvider>
           <Analytics />
           <Toaster />
-        </RioFeedbackProvider>
+        </ThemeProvider>
+        <MobileZoomFix />
       </body>
     </html>
   )

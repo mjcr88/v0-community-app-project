@@ -125,28 +125,28 @@ export default async function EventsPage({
     flag_count: flagCountMap.get(event.id) || 0,
   }))
 
+  // Filter out "Test" category
+  const filteredCategories = categories?.filter(c => c.name !== "Test") || []
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-1">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-foreground animate-in fade-in slide-in-from-bottom-2 duration-700">
-            Events
-          </h2>
-          <p className="text-muted-foreground animate-in fade-in slide-in-from-bottom-3 duration-700 delay-100">
-            Discover and join community events
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight">Events</h1>
+          <p className="text-muted-foreground">Discover and join community events</p>
         </div>
         <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground">
           <Link href={`/t/${slug}/dashboard/events/create`}>
             <Plus className="h-4 w-4 mr-2" />
-            <span>Create Event</span>
+            <span className="md:hidden">Create</span>
+            <span className="hidden md:inline">Create Event</span>
           </Link>
         </Button>
       </div>
 
       <EventsPageClient
         events={eventsWithUserData}
-        categories={categories || []}
+        categories={filteredCategories}
         slug={slug}
         userId={user.id}
         tenantId={resident.tenant_id}

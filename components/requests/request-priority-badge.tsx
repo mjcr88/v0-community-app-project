@@ -1,39 +1,25 @@
 import { Badge } from "@/components/ui/badge"
-import { AlertCircle, AlertTriangle } from 'lucide-react'
 import type { RequestPriority } from "@/types/requests"
+import { cn } from "@/lib/utils"
 
 interface RequestPriorityBadgeProps {
-  priority: RequestPriority
+    priority: RequestPriority
+    className?: string
 }
 
-const priorityConfig = {
-  normal: {
-    label: "Normal",
-    variant: "outline",
-    className: "text-muted-foreground border-border",
-    icon: null, // No icon for normal priority
-  },
-  urgent: {
-    label: "Urgent",
-    variant: "secondary",
-    className: "bg-clay/10 text-clay border-clay/20",
-    icon: <AlertCircle className="h-3 w-3" />,
-  },
-  emergency: {
-    label: "Emergency",
-    variant: "destructive",
-    className: "bg-sunrise text-white hover:bg-sunrise/90 border-transparent shadow-sm",
-    icon: <AlertTriangle className="h-3 w-3" />,
-  },
-}
+export function RequestPriorityBadge({ priority, className }: RequestPriorityBadgeProps) {
+    const config = {
+        normal: { label: "Normal", icon: "🟢", color: "bg-slate-100 text-slate-800 border-slate-200" },
+        urgent: { label: "Urgent", icon: "🟠", color: "bg-orange-100 text-orange-800 border-orange-200" },
+        emergency: { label: "Emergency", icon: "🔴", color: "bg-red-100 text-red-800 border-red-200" },
+    }
 
-export function RequestPriorityBadge({ priority }: RequestPriorityBadgeProps) {
-  const config = priorityConfig[priority]
+    const { label, icon, color } = config[priority]
 
-  return (
-    <Badge variant="outline" className={`gap-1 ${config.className}`}>
-      {config.icon}
-      {config.label}
-    </Badge>
-  )
+    return (
+        <Badge variant="outline" className={cn("gap-1.5 font-normal", color, className)}>
+            <span className="text-[10px]">{icon}</span>
+            {label}
+        </Badge>
+    )
 }

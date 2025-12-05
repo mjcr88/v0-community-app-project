@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { Combobox } from "@/components/ui/combobox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Loader2, X, Plus, AlertCircle, Mail, Phone, Languages, Lightbulb, Wrench, MapPin } from "lucide-react"
+import { Loader2, X, Plus, AlertCircle, Mail, Phone, Languages, Lightbulb, Wrench, MapPin, User, MessageSquare, Calendar, Camera, Map as MapIcon } from "lucide-react"
 import { COUNTRIES, LANGUAGES } from "@/lib/data/countries-languages"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { createClient } from "@/lib/supabase/client"
@@ -21,6 +21,7 @@ import { EditableProfileBanner } from "@/components/profile/editable-profile-ban
 import { MapPreviewWidget } from "@/components/map/map-preview-widget"
 import { PhotoManager } from "@/components/photo-manager"
 import { MultiSelect } from "@/components/ui/multi-select"
+import { CollapsibleCard } from "@/components/ui/collapsible-card"
 
 interface Resident {
   id: string
@@ -83,6 +84,7 @@ interface ProfileEditFormProps {
   availableSkills: Skill[]
   tenantSlug: string
   locations?: any[]
+  userEmail: string
 }
 
 export function ProfileEditForm({
@@ -92,6 +94,7 @@ export function ProfileEditForm({
   availableSkills,
   tenantSlug,
   locations = [],
+  userEmail,
 }: ProfileEditFormProps) {
   const router = useRouter()
   const { toast } = useToast()
@@ -353,15 +356,21 @@ export function ProfileEditForm({
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Contact</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Mail className="h-5 w-5" />
+                  Contact
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground p-2 bg-muted rounded-md overflow-hidden">
-                    <Mail className="h-4 w-4 shrink-0" />
-                    <span className="truncate">Contact Admin to change</span>
-                  </div>
+                  <Input
+                    id="email"
+                    value={userEmail}
+                    disabled
+                    className="bg-muted cursor-not-allowed"
+                  />
+                  <p className="text-xs text-muted-foreground">Contact your community administrator to change your email address</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phone">Phone Number</Label>
@@ -381,27 +390,18 @@ export function ProfileEditForm({
           </div>
 
           {/* About */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">About</CardTitle>
-              <CardDescription>Tell your neighbors a bit about yourself</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Textarea
-                value={formData.about}
-                onChange={(e) => setFormData({ ...formData, about: e.target.value })}
-                placeholder="I love gardening and community dinners..."
-                rows={4}
-              />
-            </CardContent>
-          </Card>
+          <CollapsibleCard title="About" description="Tell your neighbors a bit about yourself" icon={MessageSquare} defaultOpen={false}>
+            <Textarea
+              value={formData.about}
+              onChange={(e) => setFormData({ ...formData, about: e.target.value })}
+              placeholder="I love gardening and community dinners..."
+              rows={4}
+            />
+          </CollapsibleCard>
 
           {/* Personal Details */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Personal Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          <CollapsibleCard title="Personal Details" description="Your birthday and pronouns" icon={User}>
+            <div className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="birthday">Birthday</Label>
@@ -433,18 +433,12 @@ export function ProfileEditForm({
                   searchPlaceholder="Search countries..."
                 />
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </CollapsibleCard>
 
           {/* Languages */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Languages className="h-5 w-5" />
-                Languages
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          <CollapsibleCard title="Languages" description="Languages you speak" icon={Languages} defaultOpen={false}>
+            <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Languages You Speak</Label>
                 <Combobox
@@ -480,19 +474,15 @@ export function ProfileEditForm({
                   placeholder="Select preferred language"
                 />
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </CollapsibleCard>
         </div>
 
         {/* RIGHT COLUMN */}
         <div className="space-y-6">
           {/* Journey Section */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">My Journey</CardTitle>
-              <CardDescription>Track your progress in the community</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          <CollapsibleCard title="My Journey" description="Track your progress in the community" icon={Calendar} defaultOpen={false}>
+            <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="journeyStage">Journey Stage *</Label>
                 <Select
@@ -538,43 +528,29 @@ export function ProfileEditForm({
                   />
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </CollapsibleCard>
 
           {/* Interests */}
           {tenant?.features?.interests && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Lightbulb className="h-5 w-5" />
-                  Interests
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Interests</Label>
-                  <MultiSelect
-                    options={availableInterests.map(i => ({ value: i.id, label: i.name }))}
-                    selected={formData.selectedInterests}
-                    onChange={(selected) => setFormData({ ...formData, selectedInterests: selected })}
-                    placeholder="Select interests..."
-                    searchPlaceholder="Search interests..."
-                    emptyMessage="No interests found."
-                  />
-                </div>
-              </CardContent>
-            </Card>
+            <CollapsibleCard title="Interests" description="Things you're passionate about" icon={Lightbulb} defaultOpen={false}>
+              <div className="space-y-2">
+                <Label>Interests</Label>
+                <MultiSelect
+                  options={availableInterests.map(i => ({ value: i.id, label: i.name }))}
+                  selected={formData.selectedInterests}
+                  onChange={(selected) => setFormData({ ...formData, selectedInterests: selected })}
+                  placeholder="Select interests..."
+                  searchPlaceholder="Search interests..."
+                  emptyMessage="No interests found."
+                />
+              </div>
+            </CollapsibleCard>
           )}
 
           {/* Skills */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Wrench className="h-5 w-5" />
-                Skills
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          <CollapsibleCard title="Skills" description="What you can help with" icon={Wrench} defaultOpen={false}>
+            <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Skills</Label>
                 <MultiSelect
@@ -649,26 +625,20 @@ export function ProfileEditForm({
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </CollapsibleCard>
 
           {/* Photo Gallery */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Photo Gallery</CardTitle>
-              <CardDescription>Share photos of yourself and your life</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <PhotoManager
-                photos={formData.photos}
-                heroPhoto={formData.heroPhoto}
-                onPhotosChange={(photos) => setFormData({ ...formData, photos })}
-                onHeroPhotoChange={(heroPhoto) => setFormData({ ...formData, heroPhoto })}
-                entityType="user"
-                maxPhotos={10}
-              />
-            </CardContent>
-          </Card>
+          <CollapsibleCard title="Photo Gallery" description="Share photos of yourself and your life" icon={Camera} defaultOpen={false}>
+            <PhotoManager
+              photos={formData.photos}
+              heroPhoto={formData.heroPhoto}
+              onPhotosChange={(photos) => setFormData({ ...formData, photos })}
+              onHeroPhotoChange={(heroPhoto) => setFormData({ ...formData, heroPhoto })}
+              entityType="user"
+              maxPhotos={10}
+            />
+          </CollapsibleCard>
 
           {/* Location Map */}
           {lotLocation && locations && (
@@ -705,7 +675,7 @@ export function ProfileEditForm({
             </Button>
           </div>
         </div>
-      </form>
-    </div>
+      </form >
+    </div >
   )
 }

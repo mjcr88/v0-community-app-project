@@ -66,13 +66,13 @@ export function DashboardSections({
     // Auto-scroll to content when section becomes active
     useEffect(() => {
         if (activeSection && contentRef.current) {
-            // Small delay to allow animation to start
+            // Delay to allow content to load and animation to complete
             setTimeout(() => {
                 contentRef.current?.scrollIntoView({
                     behavior: 'smooth',
                     block: 'nearest'
                 })
-            }, 100)
+            }, 600)
         }
     }, [activeSection])
 

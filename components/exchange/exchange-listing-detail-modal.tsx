@@ -22,6 +22,7 @@ import { ListingHistoryModal } from "./listing-history-modal"
 import { RequestBorrowDialog } from "./request-borrow-dialog"
 import { ListingFlagDetails } from "./listing-flag-details"
 import { RioConfirmationModal } from "@/components/feedback/rio-confirmation-modal"
+import { SharedPhotoGallery } from "@/components/shared/SharedPhotoGallery"
 
 interface ExchangeListingDetailModalProps {
   listingId: string
@@ -403,9 +404,9 @@ export function ExchangeListingDetailModal({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto [&>[data-slot=dialog-close]]:top-8 md:[&>[data-slot=dialog-close]]:top-4">
           <DialogHeader>
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start justify-between gap-4 mt-8 md:mt-0">
               <div className="flex-1 space-y-3">
                 <div className="flex flex-wrap items-center gap-2">
                   {listing.category && <ExchangeCategoryBadge categoryName={listing.category.name} />}
@@ -516,30 +517,16 @@ export function ExchangeListingDetailModal({
               />
             )}
 
-            {(selectedPhoto || listing.photos?.length > 0) && (
+            {/* Image Gallery */}
+            {listing.photos && listing.photos.length > 0 && (
               <div className="space-y-3">
-                <div className="aspect-video w-full overflow-hidden rounded-lg bg-muted">
-                  <img
-                    src={selectedPhoto || "/placeholder.svg?height=400&width=600"}
-                    alt={listing.title}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-
-                {listing.photos && listing.photos.length > 1 && (
-                  <div className="flex gap-2 overflow-x-auto pb-2">
-                    {listing.photos.map((photo: string, index: number) => (
-                      <button
-                        key={index}
-                        onClick={() => setSelectedPhoto(photo)}
-                        className={`flex-shrink-0 w-20 h-20 rounded-md overflow-hidden border-2 transition-all ${selectedPhoto === photo ? "border-primary ring-2 ring-primary" : "border-border hover:border-primary/50"
-                          }`}
-                      >
-                        <img src={photo || "/placeholder.svg"} alt={`${listing.title} ${index + 1}`} className="w-full h-full object-cover" />
-                      </button>
-                    ))}
-                  </div>
-                )}
+                <SharedPhotoGallery
+                  photos={listing.hero_photo && !listing.photos.includes(listing.hero_photo)
+                    ? [listing.hero_photo, ...listing.photos]
+                    : listing.photos}
+                  altPrefix={listing.title}
+                  columns={4}
+                />
               </div>
             )}
 
@@ -618,6 +605,7 @@ export function ExchangeListingDetailModal({
                         lng: (listing.custom_location_coordinates as any).lng,
                         label: listing.custom_location_name || "Custom Location"
                       } : null}
+                      disableAutoScroll={true}
                     />
                   </div>
                 )}

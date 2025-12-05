@@ -181,10 +181,10 @@ export function CreateRequestModal({
         .then(res => res.json())
         .then(data => {
           if (data.location) {
-            setFormData(prev => ({ ...prev, community_location_name: data.location.name }))
+            setFormData(prev => ({ ...prev, community_location_name: data.location.name }));
           }
         })
-        .catch(err => console.error("Error fetching location name:", err))
+        .catch(err => console.error("Error fetching location name:", err));
     }
   }, [step, formData.location_type, formData.location_id, formData.community_location_name, tenantId])
 
@@ -192,7 +192,7 @@ export function CreateRequestModal({
     switch (step) {
       case 0: // Category
         return (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
+          <div className="grid grid-cols-2 gap-3 py-4">
             {requestTypes.map((type) => (
               <button
                 key={type.value}
@@ -201,15 +201,15 @@ export function CreateRequestModal({
                   setStep(1)
                 }}
                 className={cn(
-                  "flex flex-col items-center justify-center p-6 rounded-xl border-2 transition-all hover:border-primary hover:bg-primary/5",
+                  "flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all hover:border-primary hover:bg-primary/5 h-full",
                   formData.request_type === type.value ? "border-primary bg-primary/5" : "border-muted bg-card"
                 )}
               >
-                <div className="text-4xl mb-3">
+                <div className="text-3xl mb-2">
                   {type.emoji}
                 </div>
-                <span className="font-semibold text-lg">{type.title}</span>
-                <span className="text-sm text-muted-foreground text-center mt-1">{type.description}</span>
+                <span className="font-semibold text-sm text-center leading-tight">{type.title}</span>
+                <span className="text-xs text-muted-foreground text-center mt-1 line-clamp-2">{type.description}</span>
               </button>
             ))}
           </div>
@@ -301,12 +301,15 @@ export function CreateRequestModal({
                 customLocationType="marker"
                 customLocationPath={null}
                 onLocationTypeChange={(type) => setFormData(prev => ({ ...prev, location_type: type === 'none' ? 'none' : type }))}
-                onCommunityLocationChange={(id) => {
-                  // We need to find the location name from the selector, but the selector doesn't expose it directly in the callback easily without state.
-                  // Instead, we'll fetch it or rely on the review step to fetch it if we can't get it here.
-                  // Actually, let's fetch it right here to be safe and store it.
-                  setFormData(prev => ({ ...prev, location_id: id }))
-                  if (id) {
+                onCommunityLocationChange={(id, name) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    location_id: id,
+                    community_location_name: name || prev.community_location_name
+                  }))
+
+                  // Fallback fetch if name not provided (e.g. initial load or edge case)
+                  if (id && !name) {
                     fetch(`/api/locations/${id}?tenantId=${tenantId}`)
                       .then(res => res.json())
                       .then(data => {
@@ -377,7 +380,7 @@ export function CreateRequestModal({
                         <Label className="text-xs text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                           <MapPin className="h-3 w-3" /> Location
                         </Label>
-                        <p className="text-sm font-medium">
+                        <p className="text-sm font-medium truncate">
                           {formData.location_type === 'community'
                             ? (formData.community_location_name || 'Loading location...')
                             : (formData.custom_location_name || 'Custom Location')}

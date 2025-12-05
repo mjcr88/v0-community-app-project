@@ -72,7 +72,7 @@ export function StatsGrid() {
                 {Array.from({ length: Math.max(0, 4 - stats.length) }).map((_, i) => (
                     <div
                         key={`empty-${i}`}
-                        className="h-full min-h-[120px] rounded-xl border-2 border-dashed border-muted-foreground/20 flex items-center justify-center cursor-pointer hover:border-primary/50 hover:bg-accent/5 transition-all"
+                        className="h-full min-h-[100px] md:min-h-[120px] rounded-xl border-2 border-dashed border-muted-foreground/20 flex items-center justify-center cursor-pointer hover:border-primary/50 hover:bg-accent/5 transition-all"
                         onClick={() => setIsEditModalOpen(true)}
                     >
                         <div className="text-center">

@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation"
 import { createServerClient } from "@/lib/supabase/server"
 import { getEvent } from "@/app/actions/events"
-import { ArrowLeft, Calendar, Share2, Pencil, Users, Lock, Flag, AlertTriangle } from "lucide-react"
+import { ArrowLeft, Calendar, Share2, Pencil, Users, Lock, Flag, AlertTriangle, Ban, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -11,15 +11,14 @@ import { EventRsvpSection } from "./event-rsvp-section"
 import { SaveEventButton } from "./save-event-button"
 import { EventAttendeesSection } from "./event-attendees-section"
 import { EventLocationSection } from "./event-location-section"
-import { EventImagesGallery } from "./event-images-gallery"
+import { EventHeroImage, EventPhotoGallery } from "./event-images-gallery"
 import { getEventAttendees } from "@/app/actions/events"
 import { canUserViewEvent } from "@/lib/visibility-filter"
 import { FlagEventDialog } from "./flag-event-dialog"
 import { getEventFlagDetails } from "@/app/actions/events"
 import { EventFlagDetails } from "./event-flag-details"
-import { CancelEventDialog } from "./cancel-event-dialog"
-import { UncancelEventButton } from "./uncancel-event-button"
 import { format } from "date-fns"
+import { EventActionsMenu } from "./event-actions-menu"
 
 interface EventDetailPageProps {
   params: Promise<{ slug: string; eventId: string }>
@@ -290,7 +289,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
       <div className="relative bg-gradient-to-br from-primary/10 via-primary/5 to-background border-b">
-        <div className="container mx-auto px-4 py-8 md:py-12">
+        <div className="container mx-auto px-4 py-6 md:py-10">
           <div className="max-w-4xl mx-auto space-y-6">
             {/* Back Button */}
             <Link href={`/t/${slug}/dashboard/events`}>
@@ -308,9 +307,6 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                     {event.category.icon}
                   </span>
                 )}
-                <Badge variant="outline" className="text-sm">
-                  {event.category?.name || "Uncategorized"}
-                </Badge>
                 <Badge variant={eventTypeVariant as any}>{eventTypeLabel}</Badge>
                 <Badge variant={statusVariant as any}>{statusLabel}</Badge>
                 {flagCount > 0 && (
@@ -333,13 +329,13 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                 )}
               </div>
 
-              <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-balance bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+              <h1 className="text-3xl md:text-5xl font-bold tracking-tight text-balance bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
                 {event.title}
               </h1>
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-3 items-center">
               {event.status !== "cancelled" && (
                 <div className="flex gap-2">
                   <SaveEventButton eventId={eventId} userId={user?.id || null} />
@@ -354,47 +350,25 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                 </div>
               )}
 
-              {canManageEvent && event.status !== "cancelled" && (
-                <div className="flex gap-2">
-                  <Link href={`/t/${slug}/dashboard/events/${eventId}/edit`}>
-                    <Button variant="outline" size="sm" className="gap-2">
-                      <Pencil className="h-4 w-4" />
-                      Edit
-                    </Button>
-                  </Link>
-                  <CancelEventDialog eventId={eventId} tenantSlug={slug} eventTitle={event.title} />
-                  {isCreator && (
-                    <DeleteEventButton
-                      eventId={eventId}
-                      tenantId={tenant.id}
-                      tenantSlug={slug}
-                      eventTitle={event.title}
-                    />
-                  )}
-                </div>
-              )}
-
-              {canManageEvent && event.status === "cancelled" && userData?.is_tenant_admin && (
-                <UncancelEventButton eventId={eventId} tenantSlug={slug} />
-              )}
-
               <Button variant="outline" size="sm" className="gap-2">
                 <Share2 className="h-4 w-4" />
                 Share
               </Button>
-            </div>
-            {event.status !== "cancelled" && (
-              <FlagEventDialog
+
+              {/* More Menu for Secondary Actions */}
+              <EventActionsMenu
                 eventId={eventId}
-                tenantSlug={slug}
-                triggerLabel={hasUserFlagged ? "Flagged" : "Flag Event"}
-                triggerVariant={hasUserFlagged ? "secondary" : "outline"}
-                triggerSize="sm"
-                disabled={hasUserFlagged}
-                initialFlagCount={flagCount}
-                initialHasUserFlagged={hasUserFlagged}
+                slug={slug}
+                tenantId={tenant.id}
+                eventTitle={event.title}
+                eventStatus={event.status}
+                canManageEvent={canManageEvent}
+                isCreator={isCreator}
+                hasUserFlagged={hasUserFlagged}
+                flagCount={flagCount}
+                isTenantAdmin={!!(userData?.is_tenant_admin)}
               />
-            )}
+            </div>
           </div>
         </div>
       </div>
@@ -494,8 +468,16 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
             </div>
           )}
 
-          {/* Image Gallery Section */}
-          {eventImages && eventImages.length > 0 && <EventImagesGallery images={eventImages} />}
+          {/* Hero Image */}
+          {eventImages && eventImages.length > 0 && (
+            <div className="mb-6">
+              <EventHeroImage
+                heroImage={eventImages.find(img => img.is_hero)}
+                fallbackImage={undefined} // Let it handle fallback or return null
+                alt={event.title}
+              />
+            </div>
+          )}
 
           {/* Description Section */}
           {event.description && (
@@ -507,6 +489,11 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                 </p>
               </div>
             </div>
+          )}
+
+          {/* Image Gallery Section (Non-Hero Images) */}
+          {eventImages && eventImages.length > 0 && (
+            <EventPhotoGallery images={eventImages} eventTitle={event.title} />
           )}
 
           {/* Event Info Grid */}

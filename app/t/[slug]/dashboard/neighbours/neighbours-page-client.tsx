@@ -8,6 +8,8 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
 import { ResidentCard } from "@/components/directory/ResidentCard"
 import { FamilyCard } from "@/components/directory/FamilyCard"
@@ -182,7 +184,7 @@ export function NeighboursPageClient({
             <div className="relative w-full max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                    placeholder="Search by name, neighborhood, or lot..."
+                    placeholder="Search by name, lot, interest, skill..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="pl-9 bg-background/50 border-border/50 focus:bg-background transition-colors"
@@ -194,7 +196,7 @@ export function NeighboursPageClient({
                 <TabsList className="bg-muted/30 p-1 rounded-full h-auto inline-flex">
                     <TabsTrigger
                         value="residents"
-                        className="rounded-full px-6 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all"
+                        className="rounded-full px-6 py-2 border border-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all"
                     >
                         <span className="flex items-center gap-2">
                             Residents
@@ -204,8 +206,8 @@ export function NeighboursPageClient({
                                     className={cn(
                                         "px-1.5 py-0.5 text-[10px] h-auto min-w-[1.25rem] justify-center",
                                         activeTab === "residents"
-                                            ? "bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/30"
-                                            : "bg-muted text-muted-foreground"
+                                            ? "bg-primary-foreground text-primary hover:bg-primary-foreground/90"
+                                            : "bg-primary text-primary-foreground hover:bg-primary/90"
                                     )}
                                 >
                                     {filteredResidents.length}
@@ -215,7 +217,7 @@ export function NeighboursPageClient({
                     </TabsTrigger>
                     <TabsTrigger
                         value="families"
-                        className="rounded-full px-6 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all"
+                        className="rounded-full px-6 py-2 border border-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all"
                     >
                         <span className="flex items-center gap-2">
                             Families
@@ -225,8 +227,8 @@ export function NeighboursPageClient({
                                     className={cn(
                                         "px-1.5 py-0.5 text-[10px] h-auto min-w-[1.25rem] justify-center",
                                         activeTab === "families"
-                                            ? "bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/30"
-                                            : "bg-muted text-muted-foreground"
+                                            ? "bg-primary-foreground text-primary hover:bg-primary-foreground/90"
+                                            : "bg-primary text-primary-foreground hover:bg-primary/90"
                                     )}
                                 >
                                     {filteredFamilies.length}
@@ -325,15 +327,31 @@ export function NeighboursPageClient({
                                 <Card className="border-2 border-muted/50">
                                     <CardContent className="p-4">
                                         {activeFilter === "neighborhood" && (
-                                            <div className="space-y-2">
-                                                <MultiSelect
-                                                    options={neighborhoods.map(n => ({ value: n.name, label: n.name }))}
-                                                    selected={selectedNeighborhoods}
-                                                    onChange={setSelectedNeighborhoods}
-                                                    placeholder="Select neighborhoods..."
-                                                    searchPlaceholder="Search neighborhoods..."
-                                                    emptyMessage="No neighborhoods found."
-                                                />
+                                            <div className="space-y-4">
+                                                <h4 className="font-medium text-sm">Select Neighborhoods</h4>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                    {neighborhoods.map((neighborhood) => (
+                                                        <div key={neighborhood.id} className="flex items-center gap-2">
+                                                            <Checkbox
+                                                                id={`neighborhood-${neighborhood.id}`}
+                                                                checked={selectedNeighborhoods.includes(neighborhood.name)}
+                                                                onCheckedChange={(checked) => {
+                                                                    if (checked) {
+                                                                        setSelectedNeighborhoods([...selectedNeighborhoods, neighborhood.name])
+                                                                    } else {
+                                                                        setSelectedNeighborhoods(selectedNeighborhoods.filter((n) => n !== neighborhood.name))
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <Label
+                                                                htmlFor={`neighborhood-${neighborhood.id}`}
+                                                                className="cursor-pointer text-sm font-normal"
+                                                            >
+                                                                {neighborhood.name}
+                                                            </Label>
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             </div>
                                         )}
 

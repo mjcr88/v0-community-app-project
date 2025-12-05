@@ -28,10 +28,10 @@ interface Event {
     icon: string
   } | null
   tenant_id: string
-  requires_rsvp: boolean
-  max_attendees: number
-  attending_count: number
-  rsvp_deadline: string
+  requires_rsvp: boolean | null
+  max_attendees: number | null
+  attending_count: number | null
+  rsvp_deadline: string | null
   user_rsvp_status?: string | null
   is_saved?: boolean
   visibility_scope?: string | null
@@ -84,6 +84,18 @@ export function EventsCalendar({
 
   const selectedEvents = selectedDate ? eventsByDate.get(format(selectedDate, "yyyy-MM-dd")) || [] : []
 
+  const handleDateSelect = (date: Date | undefined) => {
+    setSelectedDate(date)
+    if (date && window.innerWidth < 1024) {
+      setTimeout(() => {
+        const resultsElement = document.getElementById("calendar-results")
+        if (resultsElement) {
+          resultsElement.scrollIntoView({ behavior: "smooth", block: "start" })
+        }
+      }, 100)
+    }
+  }
+
   if (!hasEvents) {
     return (
       <RioEmptyState
@@ -127,7 +139,7 @@ export function EventsCalendar({
           <Calendar
             mode="single"
             selected={selectedDate}
-            onSelect={setSelectedDate}
+            onSelect={handleDateSelect}
             modifiers={{
               hasEvent: (date) => eventDates.has(format(date, "yyyy-MM-dd")),
             }}
@@ -140,7 +152,7 @@ export function EventsCalendar({
         </CardContent>
       </Card>
 
-      <Card>
+      <Card id="calendar-results">
         <CardHeader>
           <CardTitle>{selectedDate ? format(selectedDate, "MMMM d, yyyy") : "Select a Date"}</CardTitle>
           <CardDescription>
@@ -252,10 +264,19 @@ export function EventsCalendar({
             />
           ) : (
             <div className="flex flex-col items-center justify-center py-8 space-y-4 text-center">
-              <div className="relative w-64 h-64">
+              <div className="relative w-64 h-64 hidden lg:block">
                 <Image
                   src="/rio/rio_pointing_calendar.png"
                   alt="Rio pointing to calendar"
+                  fill
+                  className="object-contain"
+                  priority
+                />
+              </div>
+              <div className="relative w-48 h-48 lg:hidden">
+                <Image
+                  src="/rio/rio_pointing_up.png"
+                  alt="Rio pointing up"
                   fill
                   className="object-contain"
                   priority

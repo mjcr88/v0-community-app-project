@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import { DashboardLayoutClient } from "@/components/ecovilla/navigation/dashboard-layout-client"
 import { getUnreadAnnouncementsCount } from "@/app/actions/announcements"
 import { getUnreadCount } from "@/app/actions/notifications"
+import { UserJotProvider } from "@/components/userjot/userjot-provider"
 
 export default async function ResidentDashboardLayout({
   children,
@@ -82,16 +83,31 @@ export default async function ResidentDashboardLayout({
     .order("name")
 
   return (
-    <DashboardLayoutClient
-      slug={slug}
-      tenantName={tenant.name}
-      tenantLogoUrl={tenant.logo_url}
-      user={userNavData}
-      tenantId={tenant.id}
-      categories={categories || []}
-      neighborhoods={neighborhoods || []}
+    <UserJotProvider
+      projectId="cmisww1o00lpk15lbili7uxmo"
+      user={
+        resident
+          ? {
+            id: resident.id,
+            email: resident.email,
+            firstName: resident.first_name || undefined,
+            lastName: resident.last_name || undefined,
+            avatar: resident.profile_picture_url,
+          }
+          : undefined
+      }
     >
-      {children}
-    </DashboardLayoutClient>
+      <DashboardLayoutClient
+        slug={slug}
+        tenantName={tenant.name}
+        tenantLogoUrl={tenant.logo_url}
+        user={userNavData}
+        tenantId={tenant.id}
+        categories={categories || []}
+        neighborhoods={neighborhoods || []}
+      >
+        {children}
+      </DashboardLayoutClient>
+    </UserJotProvider>
   )
 }

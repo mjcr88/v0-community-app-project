@@ -53,15 +53,15 @@ export function ImageLightbox({
                     <h2>Image Gallery - Photo {currentIndex + 1} of {images.length}</h2>
                 </div>
 
-                {/* Close Button */}
-                <Button
+                {/* Close Button - Removed as DialogContent has one built-in */}
+                {/* <Button
                     variant="ghost"
                     size="icon"
                     className="absolute top-4 right-4 z-50 text-white hover:bg-white/20"
                     onClick={onClose}
                 >
                     <X className="h-6 w-6" />
-                </Button>
+                </Button> */}
 
                 {/* Image Counter */}
                 <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-black/60 text-white px-4 py-2 rounded-full text-sm">

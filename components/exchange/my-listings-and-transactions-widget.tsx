@@ -237,112 +237,102 @@ export function MyListingsAndTransactionsWidget({
     return (
       <div
         key={listing.id}
-        className="group flex gap-4 p-4 rounded-xl border bg-card hover:shadow-md hover:border-primary/20 transition-all duration-200 cursor-pointer"
+        className="group flex gap-3 p-3 md:p-4 rounded-xl border bg-card hover:shadow-md hover:border-primary/20 transition-all duration-200 cursor-pointer overflow-hidden"
         onClick={(e) => handleView(listing.id, e)}
       >
+        {/* Image - small on mobile, slightly larger on desktop */}
         {listing.hero_photo ? (
-          <div className="relative w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden bg-muted">
+          <div className="relative w-16 h-16 md:w-20 md:h-20 flex-shrink-0 rounded-lg overflow-hidden bg-muted">
             <Image src={listing.hero_photo || "/placeholder.svg"} alt={listing.title} fill className="object-cover group-hover:scale-105 transition-transform duration-300" />
           </div>
         ) : (
-          <div className="w-24 h-24 flex-shrink-0 rounded-lg bg-muted flex items-center justify-center group-hover:bg-muted/80 transition-colors">
-            <Package className="h-8 w-8 text-muted-foreground/50" />
+          <div className="w-16 h-16 md:w-20 md:h-20 flex-shrink-0 rounded-lg bg-muted flex items-center justify-center group-hover:bg-muted/80 transition-colors">
+            <Package className="h-6 w-6 md:h-8 md:w-8 text-muted-foreground/50" />
           </div>
         )}
 
-        <div className="flex-1 min-w-0 flex flex-col justify-between">
-          <div>
-            <div className="flex items-start justify-between gap-2">
-              <h4 className="font-semibold text-base leading-tight truncate group-hover:text-primary transition-colors">{listing.title}</h4>
+        <div className="flex-1 min-w-0 flex flex-col gap-1">
+          {/* Title + Badges */}
+          <div className="flex items-start gap-2">
+            <h4 className="font-semibold text-sm leading-tight line-clamp-1 group-hover:text-primary transition-colors flex-1 min-w-0">
+              {listing.title}
+            </h4>
+            {(isDraft || isPaused || listing.status === "cancelled") && (
               <div className="flex gap-1 flex-shrink-0">
-                {isDraft && <Badge variant="secondary" className="text-xs">Draft</Badge>}
-                {isPaused && <Badge variant="outline" className="text-xs">Paused</Badge>}
-                {listing.status === "cancelled" && <Badge variant="destructive" className="text-xs">Cancelled</Badge>}
+                {isDraft && <Badge variant="secondary" className="text-[10px] px-1.5 h-4">Draft</Badge>}
+                {isPaused && <Badge variant="outline" className="text-[10px] px-1.5 h-4">Paused</Badge>}
+                {listing.status === "cancelled" && <Badge variant="destructive" className="text-[10px] px-1.5 h-4">Cancelled</Badge>}
               </div>
-            </div>
-
-            <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-              <span className="font-medium text-foreground">
-                {listing.pricing_type === "free"
-                  ? "Free"
-                  : listing.pricing_type === "fixed_price"
-                    ? `${listing.price}`
-                    : "Negotiable"}
-              </span>
-              <span>•</span>
-              <span>{listing.category?.name || "Uncategorized"}</span>
-              <span>•</span>
-              <span>Qty: {listing.available_quantity}</span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-1 mt-3 pt-2 border-t border-border/50 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.preventDefault()}>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 text-xs"
-              onClick={(e) => handleEdit(listing.id, e)}
-              disabled={isLoading}
-            >
-              <Pencil className="h-3 w-3 mr-1" />
-              Edit
-            </Button>
-
-            {isDraft ? (
-              <Button
-                size="sm"
-                variant="default"
-                className="h-7 text-xs"
-                onClick={(e) => handlePublish(listing.id, e)}
-                disabled={isLoading}
-              >
-                <FileText className="h-3 w-3 mr-1" />
-                Publish
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 text-xs"
-                onClick={(e) => handlePause(listing.id, e)}
-                disabled={isLoading}
-              >
-                {isPaused ? (
-                  <>
-                    <Play className="h-3 w-3 mr-1" />
-                    Resume
-                  </>
-                ) : (
-                  <>
-                    <Pause className="h-3 w-3 mr-1" />
-                    Pause
-                  </>
-                )}
-              </Button>
             )}
-
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 text-xs ml-auto"
-              onClick={(e) => handleViewHistory(listing.id, e)}
-              disabled={isLoading}
-            >
-              <History className="h-3 w-3 mr-1" />
-              History
-            </Button>
-
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
-              onClick={(e) => handleDelete(listing.id, e)}
-              disabled={isLoading}
-            >
-              <Trash2 className="h-3 w-3 mr-1" />
-              Delete
-            </Button>
           </div>
+
+          {/* Metadata - stacked on mobile, horizontal on tablet+ */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2 text-xs text-muted-foreground">
+            <span className="font-medium text-foreground">
+              {listing.pricing_type === "free"
+                ? "Free"
+                : listing.pricing_type === "fixed_price"
+                  ? `${listing.price}`
+                  : "Negotiable"}
+            </span>
+            <span className="hidden sm:inline">•</span>
+            <span className="line-clamp-1">{listing.category?.name || "Uncategorized"}</span>
+            <span className="hidden sm:inline">•</span>
+            <span>Qty: {listing.available_quantity}</span>
+          </div>
+        </div>
+
+        {/* Action buttons - HIDDEN on mobile, visible on desktop hover */}
+        <div className="hidden md:flex items-center gap-1 absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity bg-card/95 backdrop-blur-sm px-2 py-1.5 rounded-lg border shadow-sm" onClick={(e) => e.preventDefault()}>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 w-7 p-0"
+            onClick={(e) => handleEdit(listing.id, e)}
+            disabled={isLoading}
+            title="Edit"
+          >
+            <Pencil className="h-3 w-3" />
+          </Button>
+
+          {isDraft ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 w-7 p-0"
+              onClick={(e) => handlePublish(listing.id, e)}
+              disabled={isLoading}
+              title="Publish"
+            >
+              <FileText className="h-3 w-3" />
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 w-7 p-0"
+              onClick={(e) => handlePause(listing.id, e)}
+              disabled={isLoading}
+              title={isPaused ? "Resume" : "Pause"}
+            >
+              {isPaused ? (
+                <Play className="h-3 w-3" />
+              ) : (
+                <Pause className="h-3 w-3" />
+              )}
+            </Button>
+          )}
+
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+            onClick={(e) => handleDelete(listing.id, e)}
+            disabled={isLoading}
+            title="Delete"
+          >
+            <Trash2 className="h-3 w-3" />
+          </Button>
         </div>
       </div>
     )
@@ -379,41 +369,53 @@ export function MyListingsAndTransactionsWidget({
   return (
     <>
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        {/* Mobile: Stack title/badge and buttons | Desktop: Single row */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div className="flex items-center gap-2">
-            <h3 className="text-lg font-semibold">My Listings & Transactions</h3>
+            <h3 className="text-base md:text-lg font-semibold">My Listings & Transactions</h3>
             <Badge variant="secondary" className="bg-orange-100 text-orange-700 hover:bg-orange-100 border-none">
-              {counts.total} {counts.total === 1 ? 'Listing' : 'Listings'}
+              {counts.total}
             </Badge>
           </div>
           <div className="flex gap-2">
-            <Button asChild variant="ghost" size="sm">
+            <Button asChild variant="ghost" size="sm" className="flex-1 md:flex-none">
               <Link href={`/t/${tenantSlug}/dashboard/exchange`}>View All</Link>
             </Button>
-            <Button asChild size="sm">
+            <Button asChild size="sm" className="flex-1 md:flex-none">
               <Link href={`/t/${tenantSlug}/dashboard/exchange/create`}>
                 <Plus className="h-4 w-4 mr-2" />
-                Create Listing
+                <span className="hidden sm:inline">Create Listing</span>
+                <span className="sm:hidden">Create</span>
               </Link>
             </Button>
           </div>
         </div>
 
         <Tabs value={topLevelTab} onValueChange={(v) => setTopLevelTab(v as "listings" | "transactions" | "archive")} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-6">
-            <TabsTrigger value="listings">Listings ({counts.total})</TabsTrigger>
-            <TabsTrigger value="transactions">Transactions ({activeTransactionsCount})</TabsTrigger>
-            <TabsTrigger value="archive">Archive ({archiveCount})</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3 mb-4 md:mb-6">
+            <TabsTrigger value="listings" className="text-xs md:text-sm">
+              <span className="hidden sm:inline">Listings ({counts.total})</span>
+              <span className="sm:hidden">Lists ({counts.total})</span>
+            </TabsTrigger>
+            <TabsTrigger value="transactions" className="text-xs md:text-sm">
+              <span className="hidden sm:inline">Transactions ({activeTransactionsCount})</span>
+              <span className="sm:hidden">Txns ({activeTransactionsCount})</span>
+            </TabsTrigger>
+            <TabsTrigger value="archive" className="text-xs md:text-sm">
+              <span className="hidden sm:inline">Archive ({archiveCount})</span>
+              <span className="sm:hidden">Arch ({archiveCount})</span>
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="listings" className="mt-0">
             <Tabs defaultValue="all" className="w-full">
-              <div className="flex items-center justify-between mb-4">
-                <TabsList className="bg-transparent p-0 h-auto gap-2">
-                  <TabsTrigger value="all" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-full px-4 py-1 h-auto border border-transparent data-[state=active]:border-primary/20">All</TabsTrigger>
-                  <TabsTrigger value="published" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-full px-4 py-1 h-auto border border-transparent data-[state=active]:border-primary/20">Published</TabsTrigger>
-                  <TabsTrigger value="drafts" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-full px-4 py-1 h-auto border border-transparent data-[state=active]:border-primary/20">Drafts</TabsTrigger>
-                  <TabsTrigger value="paused" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-full px-4 py-1 h-auto border border-transparent data-[state=active]:border-primary/20">Paused</TabsTrigger>
+              {/* Filter tabs - scrollable on mobile */}
+              <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0 mb-4">
+                <TabsList className="bg-transparent p-0 h-auto gap-2 inline-flex md:flex">
+                  <TabsTrigger value="all" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-full px-3 md:px-4 py-1 h-auto border border-transparent data-[state=active]:border-primary/20 text-xs md:text-sm whitespace-nowrap">All</TabsTrigger>
+                  <TabsTrigger value="published" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-full px-3 md:px-4 py-1 h-auto border border-transparent data-[state=active]:border-primary/20 text-xs md:text-sm whitespace-nowrap">Published</TabsTrigger>
+                  <TabsTrigger value="drafts" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-full px-3 md:px-4 py-1 h-auto border border-transparent data-[state=active]:border-primary/20 text-xs md:text-sm whitespace-nowrap">Drafts</TabsTrigger>
+                  <TabsTrigger value="paused" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-full px-3 md:px-4 py-1 h-auto border border-transparent data-[state=active]:border-primary/20 text-xs md:text-sm whitespace-nowrap">Paused</TabsTrigger>
                 </TabsList>
               </div>
 

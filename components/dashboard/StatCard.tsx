@@ -27,16 +27,17 @@ interface StatCardProps {
 
 export function StatCard({ stat, isEditing, onEdit, className }: StatCardProps) {
     return (
-        <Card className={cn("relative overflow-hidden p-4 flex flex-col justify-between h-full group hover:shadow-md transition-all", className)}>
-            <div className="flex items-start justify-between">
-                <div className="text-4xl font-bold tracking-tight text-foreground">
+        <Card className={cn("relative overflow-hidden p-3 md:p-4 flex flex-col justify-between h-full group hover:shadow-md transition-all border-primary/20", className)}>
+            <div className="flex items-start justify-between gap-2">
+                <div className="text-3xl md:text-4xl font-bold tracking-tight text-foreground">
                     {stat.value ?? 0}
                 </div>
                 {isEditing && (
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity absolute top-2 right-2"
+                        // Mobile: Always show. Desktop: show on hover
+                        className="h-6 w-6 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex-shrink-0"
                         onClick={(e) => {
                             e.stopPropagation()
                             onEdit?.()

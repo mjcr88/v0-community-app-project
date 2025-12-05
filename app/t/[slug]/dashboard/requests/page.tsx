@@ -55,10 +55,10 @@ export default async function RequestsPage({ params }: RequestsPageProps) {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto space-y-8">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center justify-between gap-4 mb-1">
             <div className="space-y-1">
-              <h1 className="text-3xl font-bold tracking-tight">Requests & Forms</h1>
-              <p className="text-muted-foreground text-lg">
+              <h1 className="text-3xl font-bold tracking-tight">Requests</h1>
+              <p className="text-muted-foreground text-lg hidden md:block">
                 Submit requests and track community issues
               </p>
             </div>

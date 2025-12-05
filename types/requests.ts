@@ -7,33 +7,33 @@ export interface ResidentRequest {
   tenant_id: string
   created_by: string | null // null if anonymous
   original_submitter_id: string | null
-  
+
   // Core fields
   title: string
   request_type: RequestType
   description: string
   status: RequestStatus
   priority: RequestPriority
-  
+
   // Location
   location_type: 'community' | 'custom' | null
   location_id: string | null
   custom_location_name: string | null
   custom_location_lat: number | null
   custom_location_lng: number | null
-  
+
   // Metadata
   is_anonymous: boolean
   images: string[]
   tagged_resident_ids: string[]
   tagged_pet_ids: string[]
-  
+
   // Admin interaction
   admin_reply: string | null
   admin_internal_notes: string | null
   rejection_reason: string | null
   resolved_by: string | null
-  
+
   // Timestamps
   created_at: string
   updated_at: string
@@ -46,6 +46,7 @@ export interface ResidentRequestWithRelations extends ResidentRequest {
     id: string
     first_name: string
     last_name: string
+    profile_picture_url?: string | null
     lot_id: string | null
     lots?: {
       lot_number: string

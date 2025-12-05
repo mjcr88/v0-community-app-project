@@ -20,7 +20,8 @@ export function CreateRequestModalWrapper({ tenantSlug, tenantId }: CreateReques
                 className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm"
             >
                 <Plus className="mr-2 h-4 w-4" />
-                New Request
+                <span className="md:hidden">Create</span>
+                <span className="hidden md:inline">Create Request</span>
             </Button>
 
             <CreateRequestModal

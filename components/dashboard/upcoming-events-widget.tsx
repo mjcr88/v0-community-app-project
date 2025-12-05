@@ -142,7 +142,8 @@ export function UpcomingEventsWidget({ slug, userId, tenantId }: UpcomingEventsW
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      {/* Mobile: Stack title/badge and buttons | Desktop: Single row */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="flex items-center gap-2">
           <h3 className="text-lg font-semibold">Upcoming Events</h3>
           <Badge variant="secondary" className="bg-orange-100 text-orange-700 hover:bg-orange-100 border-none">
@@ -150,13 +151,14 @@ export function UpcomingEventsWidget({ slug, userId, tenantId }: UpcomingEventsW
           </Badge>
         </div>
         <div className="flex gap-2">
-          <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+          <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground flex-1 md:flex-none">
             <Link href={`/t/${slug}/dashboard/events`}>View All</Link>
           </Button>
-          <Button asChild size="sm">
+          <Button asChild size="sm" className="flex-1 md:flex-none">
             <Link href={`/t/${slug}/dashboard/events/create`}>
               <Plus className="h-4 w-4 mr-2" />
-              Create Event
+              <span className="hidden sm:inline">Create Event</span>
+              <span className="sm:hidden">Create</span>
             </Link>
           </Button>
         </div>
@@ -175,8 +177,8 @@ export function UpcomingEventsWidget({ slug, userId, tenantId }: UpcomingEventsW
               <div
                 className={`group flex gap-4 p-4 rounded-xl border bg-card hover:shadow-md hover:border-primary/20 transition-all duration-200 ${isCancelled ? "opacity-60" : ""}`}
               >
-                {/* Date box */}
-                <div className="flex flex-col items-center justify-center bg-primary/5 rounded-lg px-4 py-2 min-w-[4.5rem] flex-shrink-0 group-hover:bg-primary/10 transition-colors">
+                {/* Date box - narrower on mobile */}
+                <div className="flex flex-col items-center justify-center bg-primary/5 rounded-lg px-2 md:px-4 py-2 min-w-[3.5rem] md:min-w-[4.5rem] flex-shrink-0 group-hover:bg-primary/10 transition-colors">
                   <div className="text-xs font-semibold text-primary/80 uppercase tracking-wide">{format(startDate, "MMM")}</div>
                   <div className="text-2xl font-bold text-primary leading-none mt-0.5">{format(startDate, "d")}</div>
                 </div>

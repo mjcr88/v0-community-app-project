@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
   AlertDialog,
@@ -269,10 +269,30 @@ export function CreateExchangeListingModal({
   const handleSaveDraft = () => handleSubmitListing(false)
   const handlePublish = () => handleSubmitListing(true)
 
+  const topRef = useRef<HTMLDivElement>(null)
+
+  // Scroll to top when step changes
+  useEffect(() => {
+    if (topRef.current) {
+      // Small timeout to ensure rendering is complete
+      setTimeout(() => {
+        topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+      }, 100)
+    }
+  }, [currentStep])
+
+  const handleStepClick = (step: number) => {
+    // Allow going back or to the immediate next step if valid
+    if (step < currentStep || (step === currentStep + 1 && canProceed)) {
+      setCurrentStep(step)
+    }
+  }
+
   return (
     <>
       <Dialog open={open} onOpenChange={handleModalClose}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <div ref={topRef} />
           <DialogHeader>
             <DialogTitle>Create Listing</DialogTitle>
             <DialogDescription>
@@ -280,7 +300,11 @@ export function CreateExchangeListingModal({
             </DialogDescription>
           </DialogHeader>
 
-          <StepProgress currentStep={currentStep} steps={steps} />
+          <StepProgress
+            currentStep={currentStep}
+            steps={steps}
+            onStepClick={handleStepClick}
+          />
 
           <div className="min-h-[400px]">
             {currentStep === 1 && (

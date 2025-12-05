@@ -26,21 +26,6 @@ export function Step1BasicInfo({
 }: Step1BasicInfoProps) {
     return (
         <div className="space-y-6">
-            {/* Photos */}
-            <div className="space-y-2">
-                <Label>Photos (Optional)</Label>
-                <p className="text-sm text-muted-foreground">
-                    Add up to 5 photos to make your listing more attractive
-                </p>
-                <PhotoManager
-                    photos={formData.photos}
-                    heroPhoto={formData.hero_photo}
-                    onPhotosChange={(photos) => onUpdate({ photos })}
-                    onHeroPhotoChange={(heroPhoto) => onUpdate({ hero_photo: heroPhoto })}
-                    maxPhotos={5}
-                />
-            </div>
-
             {/* Title */}
             <div className="space-y-2">
                 <Label htmlFor="title">
@@ -56,6 +41,22 @@ export function Step1BasicInfo({
                 />
                 <p className="text-xs text-muted-foreground">
                     {formData.title.length}/100 characters
+                </p>
+            </div>
+
+            {/* Description */}
+            <div className="space-y-2">
+                <Label htmlFor="description">Description (Optional)</Label>
+                <Textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => onUpdate({ description: e.target.value })}
+                    placeholder="Describe your item or service in detail..."
+                    maxLength={500}
+                    rows={4}
+                />
+                <p className="text-xs text-muted-foreground">
+                    {formData.description.length}/500 characters
                 </p>
             </div>
 
@@ -85,20 +86,15 @@ export function Step1BasicInfo({
                 </Select>
             </div>
 
-            {/* Description */}
+            {/* Photos */}
             <div className="space-y-2">
-                <Label htmlFor="description">Description (Optional)</Label>
-                <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => onUpdate({ description: e.target.value })}
-                    placeholder="Describe your item or service in detail..."
-                    maxLength={500}
-                    rows={4}
+                <PhotoManager
+                    photos={formData.photos}
+                    heroPhoto={formData.hero_photo}
+                    onPhotosChange={(photos) => onUpdate({ photos })}
+                    onHeroPhotoChange={(heroPhoto) => onUpdate({ hero_photo: heroPhoto })}
+                    maxPhotos={5}
                 />
-                <p className="text-xs text-muted-foreground">
-                    {formData.description.length}/500 characters
-                </p>
             </div>
         </div>
     )

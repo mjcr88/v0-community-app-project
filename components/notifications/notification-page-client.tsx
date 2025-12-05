@@ -4,10 +4,10 @@ import { useState, useMemo } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Card, CardContent } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
-import { Search, Filter, X, ChevronDown, CheckCheck, Bell, BellOff, Inbox, Archive } from 'lucide-react'
+import { Search, Filter, X, CheckCheck, Bell, BellOff, Inbox, Archive } from 'lucide-react'
 import { NotificationCard } from "@/components/notifications/notification-card"
 import { ExchangeNotificationCard } from "@/components/notifications/exchange-notification-card"
 import { EventNotificationCard } from "@/components/notifications/event-notification-card"
@@ -17,6 +17,8 @@ import { toast } from "sonner"
 import useSWR from "swr"
 import type { NotificationFull } from "@/types/notifications"
 import { RioEmptyState } from "@/components/exchange/rio-empty-state"
+import { motion, AnimatePresence } from "framer-motion"
+import { cn } from "@/lib/utils"
 
 interface NotificationPageClientProps {
     tenantSlug: string
@@ -35,6 +37,7 @@ export function NotificationPageClient({
     // Default to showing unread and action required items
     const [selectedStatuses, setSelectedStatuses] = useState<string[]>(["unread", "action_required"])
     const [selectedTypes, setSelectedTypes] = useState<string[]>([])
+    const [activeFilter, setActiveFilter] = useState<"type" | "status" | null>(null)
 
     // Fetch notifications with SWR for real-time updates
     const { data: notifications, mutate } = useSWR<NotificationFull[]>(
@@ -166,101 +169,99 @@ export function NotificationPageClient({
                     />
                 </div>
 
-                {/* Filters Row */}
-                <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        {/* Type Filter */}
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant="outline" className="justify-between bg-card border-border shadow-sm hover:bg-accent hover:text-accent-foreground min-w-[140px]">
-                                    <span className="flex items-center gap-2">
-                                        <Filter className="h-4 w-4" />
-                                        Type
-                                        {selectedTypes.length > 0 && (
-                                            <Badge variant="secondary" className="ml-1 h-5 px-1.5">
-                                                {selectedTypes.length}
-                                            </Badge>
-                                        )}
-                                    </span>
-                                    <ChevronDown className="h-4 w-4 ml-2 opacity-50" />
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-56 shadow-lg border-border" align="start">
-                                <div className="space-y-2">
-                                    <h4 className="font-medium text-sm px-1">Filter by Type</h4>
-                                    {typeOptions.map((option) => (
-                                        <div key={option.value} className="flex items-center gap-2 px-1">
-                                            <Checkbox
-                                                id={`type-${option.value}`}
-                                                checked={selectedTypes.includes(option.value)}
-                                                onCheckedChange={() => handleTypeToggle(option.value)}
-                                            />
-                                            <Label
-                                                htmlFor={`type-${option.value}`}
-                                                className="flex items-center gap-2 cursor-pointer text-sm font-normal flex-1 py-1"
-                                            >
-                                                <span>{option.icon}</span>
-                                                {option.label}
-                                            </Label>
-                                        </div>
-                                    ))}
-                                </div>
-                            </PopoverContent>
-                        </Popover>
-
-                        {/* Status Filter */}
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant="outline" className="justify-between bg-card border-border shadow-sm hover:bg-accent hover:text-accent-foreground min-w-[140px]">
-                                    <span className="flex items-center gap-2">
-                                        <Inbox className="h-4 w-4" />
-                                        Status
-                                        {selectedStatuses.length > 0 && (
-                                            <Badge variant="secondary" className="ml-1 h-5 px-1.5">
-                                                {selectedStatuses.length}
-                                            </Badge>
-                                        )}
-                                    </span>
-                                    <ChevronDown className="h-4 w-4 ml-2 opacity-50" />
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-56 shadow-lg border-border" align="start">
-                                <div className="space-y-2">
-                                    <h4 className="font-medium text-sm px-1">Filter by Status</h4>
-                                    {statusOptions.map((option) => (
-                                        <div key={option.value} className="flex items-center gap-2 px-1">
-                                            <Checkbox
-                                                id={`status-${option.value}`}
-                                                checked={selectedStatuses.includes(option.value)}
-                                                onCheckedChange={() => handleStatusToggle(option.value)}
-                                            />
-                                            <Label
-                                                htmlFor={`status-${option.value}`}
-                                                className="flex items-center gap-2 cursor-pointer text-sm font-normal flex-1 py-1"
-                                            >
-                                                <option.icon className="h-4 w-4 text-muted-foreground" />
-                                                {option.label}
-                                            </Label>
-                                        </div>
-                                    ))}
-                                </div>
-                            </PopoverContent>
-                        </Popover>
-                    </div>
-
-                    {/* Mark All Read Button */}
-                    {unreadCount > 0 && (
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleMarkAllAsRead}
-                            className="ml-auto sm:ml-0 text-muted-foreground hover:text-foreground"
+                {/* Filter Cards */}
+                <div className="grid grid-cols-2 gap-3">
+                    {[
+                        { id: "type" as const, label: "Type", icon: Filter, count: selectedTypes.length },
+                        { id: "status" as const, label: "Status", icon: Inbox, count: selectedStatuses.length },
+                    ].map((section) => (
+                        <button
+                            key={section.id}
+                            onClick={() => setActiveFilter(activeFilter === section.id ? null : section.id)}
+                            className={cn(
+                                "flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-200 h-20 w-full hover:shadow-md",
+                                activeFilter === section.id
+                                    ? "bg-primary/10 border-primary text-primary ring-1 ring-primary shadow-sm"
+                                    : "bg-card border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                            )}
                         >
-                            <CheckCheck className="h-4 w-4 mr-2" />
-                            Mark all as read
-                        </Button>
-                    )}
+                            <section.icon className={cn("w-5 h-5 mb-1.5", activeFilter === section.id ? "text-primary" : "text-muted-foreground")} />
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-xs font-medium text-center leading-tight">{section.label}</span>
+                                {section.count > 0 && (
+                                    <Badge variant="secondary" className="h-4 px-1.5 text-[10px]">
+                                        {section.count}
+                                    </Badge>
+                                )}
+                            </div>
+                        </button>
+                    ))}
                 </div>
+
+                {/* Collapsible Filter Panel */}
+                <AnimatePresence mode="wait">
+                    {activeFilter && (
+                        <motion.div
+                            key={activeFilter}
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.2 }}
+                        >
+                            <Card className="border-2 border-muted/50">
+                                <CardContent className="p-4">
+                                    {activeFilter === "type" && (
+                                        <div className="space-y-4">
+                                            <h4 className="font-medium text-sm">Filter by Type</h4>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                {typeOptions.map((option) => (
+                                                    <div key={option.value} className="flex items-center gap-2">
+                                                        <Checkbox
+                                                            id={`type-${option.value}`}
+                                                            checked={selectedTypes.includes(option.value)}
+                                                            onCheckedChange={() => handleTypeToggle(option.value)}
+                                                        />
+                                                        <Label
+                                                            htmlFor={`type-${option.value}`}
+                                                            className="flex items-center gap-2 cursor-pointer text-sm font-normal flex-1"
+                                                        >
+                                                            <span className="text-base leading-none">{option.icon}</span>
+                                                            {option.label}
+                                                        </Label>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {activeFilter === "status" && (
+                                        <div className="space-y-4">
+                                            <h4 className="font-medium text-sm">Filter by Status</h4>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                {statusOptions.map((option) => (
+                                                    <div key={option.value} className="flex items-center gap-2">
+                                                        <Checkbox
+                                                            id={`status-${option.value}`}
+                                                            checked={selectedStatuses.includes(option.value)}
+                                                            onCheckedChange={() => handleStatusToggle(option.value)}
+                                                        />
+                                                        <Label
+                                                            htmlFor={`status-${option.value}`}
+                                                            className="flex items-center gap-2 cursor-pointer text-sm font-normal flex-1"
+                                                        >
+                                                            <option.icon className="h-4 w-4 text-muted-foreground" />
+                                                            {option.label}
+                                                        </Label>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
                 {/* Active Filters Display */}
                 {hasActiveFilters && (
@@ -293,6 +294,24 @@ export function NotificationPageClient({
                             Reset to default
                         </Button>
                     </div>
+                )}
+            </div>
+
+            {/* Notifications Header with Mark All Read */}
+            <div className="flex items-center justify-between mb-4">
+                <p className="text-sm text-muted-foreground">
+                    {filteredNotifications.length} {filteredNotifications.length === 1 ? 'notification' : 'notifications'}
+                </p>
+                {unreadCount > 0 && (
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleMarkAllAsRead}
+                        className="text-muted-foreground hover:text-foreground"
+                    >
+                        <CheckCheck className="h-4 w-4 mr-2" />
+                        Mark all as read
+                    </Button>
                 )}
             </div>
 

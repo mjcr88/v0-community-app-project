@@ -25,5 +25,5 @@ interface RequestLocationMapProps {
 }
 
 export function RequestLocationMap(props: RequestLocationMapProps) {
-    return <MapboxFullViewer {...props} mapZoom={16} checkIns={props.checkIns || []} showControls={!props.minimal} enableSelection={false} />
+    return <MapboxFullViewer {...props} mapZoom={16} checkIns={props.checkIns || []} showControls={!props.minimal} enableSelection={false} disableAutoScroll={true} />
 }

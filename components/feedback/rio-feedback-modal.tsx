@@ -62,7 +62,7 @@ export function RioFeedbackModal({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent showCloseButton={false} className="sm:max-w-md p-0 overflow-hidden border-none shadow-xl bg-white/95 backdrop-blur-sm">
+            <DialogContent showCloseButton={false} className="sm:max-w-md p-0 overflow-hidden shadow-xl bg-background/95 backdrop-blur-sm rounded-2xl border border-border/10 dark:border-white/10">
                 <VisuallyHidden>
                     <DialogTitle>{title}</DialogTitle>
                 </VisuallyHidden>
@@ -124,13 +124,9 @@ export function RioFeedbackModal({
                 {autoDismiss && (
                     <div className="absolute bottom-0 left-0 h-1 bg-muted w-full">
                         <div
-                            className={cn(
-                                "h-full transition-all ease-linear w-full",
-                                variant === 'success' && "bg-[#06092F]",
-                                variant === 'error' && "bg-[#B45B2D]",
-                                variant === 'warning' && "bg-[#143D37]"
-                            )}
+                            className="h-full transition-all ease-linear w-full"
                             style={{
+                                background: "linear-gradient(to right, #D97742, #6B9B47)",
                                 animation: `shrink ${dismissDuration}ms linear forwards`
                             }}
                         />

@@ -20,6 +20,7 @@ import { SkillsList } from "@/components/directory/SkillsList"
 import { FamilyMemberCard } from "@/components/directory/FamilyMemberCard"
 import { ExchangeListingCard } from "@/components/directory/ExchangeListingCard"
 import { PhotoGallerySection } from "@/components/directory/PhotoGallerySection"
+import { CollapsibleSection } from "@/components/directory/CollapsibleSection"
 
 export default async function PublicProfilePage({
   params,
@@ -262,7 +263,7 @@ export default async function PublicProfilePage({
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
       {/* Back Button */}
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
@@ -288,17 +289,46 @@ export default async function PublicProfilePage({
       />
 
       {/* Two Column Grid */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="flex flex-col gap-6 lg:grid lg:grid-cols-2">
         {/* LEFT COLUMN */}
         <div className="space-y-4">
+
+          {/* About Section - Moved to top of left column */}
+          {(filteredResident.show_about && filteredResident.about) || !filteredResident.show_about ? (
+            <CollapsibleSection title="About" iconName="Users" defaultOpen={true}>
+              {filteredResident.show_about && filteredResident.about ? (
+                <AboutSection content={filteredResident.about} />
+              ) : (
+                <p className="text-sm text-muted-foreground">About information is private</p>
+              )}
+            </CollapsibleSection>
+          ) : null}
+
+          {/* Languages */}
+          {(filteredResident.show_languages && filteredResident.languages && filteredResident.languages.length > 0) || !filteredResident.show_languages ? (
+            <CollapsibleSection
+              title="Languages"
+              iconName="Languages"
+              description={filteredResident.show_preferred_language && filteredResident.preferred_language ? `Prefers: ${filteredResident.preferred_language}` : undefined}
+              defaultOpen={true}
+            >
+              {filteredResident.show_languages && filteredResident.languages && filteredResident.languages.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {filteredResident.languages.map((lang: string) => (
+                    <Badge key={lang} variant="outline">{lang}</Badge>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Languages are private</p>
+              )}
+            </CollapsibleSection>
+          ) : null}
+
           {/* Contact & Personal Details (Side by Side) */}
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-4 sm:grid sm:grid-cols-2">
             {/* Contact Info */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Contact</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
+            <CollapsibleSection title="Contact" iconName="Mail" defaultOpen={true}>
+              <div className="space-y-3">
                 {filteredResident.show_email && filteredResident.email ? (
                   <div className="flex items-center gap-3">
                     <Mail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
@@ -326,15 +356,12 @@ export default async function PublicProfilePage({
                     <span className="text-sm">Phone hidden</span>
                   </div>
                 ) : null}
-              </CardContent>
-            </Card>
+              </div>
+            </CollapsibleSection>
 
             {/* Personal Details */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Personal</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
+            <CollapsibleSection title="Personal" iconName="IdCard">
+              <div className="space-y-3">
                 {filteredResident.show_birthday && filteredResident.birthday && (
                   <div className="flex items-center gap-3">
                     <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
@@ -353,219 +380,144 @@ export default async function PublicProfilePage({
                     <span className="text-sm">Currently in: {filteredResident.current_country}</span>
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </CollapsibleSection>
           </div>
-
-          {/* Languages */}
-          {(filteredResident.show_languages && filteredResident.languages && filteredResident.languages.length > 0) || !filteredResident.show_languages ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Languages className="h-5 w-5" />
-                  Languages
-                </CardTitle>
-                {filteredResident.show_preferred_language && filteredResident.preferred_language && (
-                  <CardDescription>Prefers: {filteredResident.preferred_language}</CardDescription>
-                )}
-              </CardHeader>
-              <CardContent>
-                {filteredResident.show_languages && filteredResident.languages && filteredResident.languages.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {filteredResident.languages.map((lang: string) => (
-                      <Badge key={lang} variant="outline">{lang}</Badge>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">Languages are private</p>
-                )}
-              </CardContent>
-            </Card>
-          ) : null}
-
-          {/* About Section */}
-          {(filteredResident.show_about && filteredResident.about) || !filteredResident.show_about ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">About</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {filteredResident.show_about && filteredResident.about ? (
-                  <AboutSection content={filteredResident.about} />
-                ) : (
-                  <p className="text-sm text-muted-foreground">About information is private</p>
-                )}
-              </CardContent>
-            </Card>
-          ) : null}
 
           {/* Interests */}
           {filteredResident.show_interests !== false && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Lightbulb className="h-5 w-5" />
-                  Interests
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {!filteredResident.show_interests ? (
-                  <p className="text-sm text-muted-foreground">Interests are private</p>
-                ) : filteredResident.user_interests?.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {filteredResident.user_interests.map((ui: any) => (
-                      <Badge key={ui.interests.id} variant="secondary">
-                        {ui.interests.name}
-                      </Badge>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No interests added yet</p>
-                )}
-              </CardContent>
-            </Card>
+            <CollapsibleSection title="Interests" iconName="Heart">
+              {!filteredResident.show_interests ? (
+                <p className="text-sm text-muted-foreground">Interests are private</p>
+              ) : filteredResident.user_interests?.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {filteredResident.user_interests.map((ui: any) => (
+                    <Badge key={ui.interests.id} variant="secondary">
+                      {ui.interests.name}
+                    </Badge>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No interests added yet</p>
+              )}
+            </CollapsibleSection>
           )}
 
           {/* Skills */}
           {filteredResident.show_skills !== false && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Wrench className="h-5 w-5" />
-                  Skills
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {!filteredResident.show_skills ? (
-                  <p className="text-sm text-muted-foreground">Skills are private</p>
-                ) : filteredResident.user_skills?.length > 0 ? (
-                  <SkillsList
-                    skills={filteredResident.user_skills.map((us: any) => ({
-                      name: us.skills.name,
-                      open_to_requests: us.open_to_requests,
-                    }))}
-                    showOpenToRequests={filteredResident.show_open_to_requests !== false}
-                  />
-                ) : (
-                  <p className="text-sm text-muted-foreground">No skills added yet</p>
-                )}
-              </CardContent>
-            </Card>
+            <CollapsibleSection title="Skills" iconName="Lightbulb">
+              {!filteredResident.show_skills ? (
+                <p className="text-sm text-muted-foreground">Skills are private</p>
+              ) : filteredResident.user_skills?.length > 0 ? (
+                <SkillsList
+                  skills={filteredResident.user_skills.map((us: any) => ({
+                    name: us.skills.name,
+                    open_to_requests: us.open_to_requests,
+                  }))}
+                  showOpenToRequests={filteredResident.show_open_to_requests !== false}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground">No skills added yet</p>
+              )}
+            </CollapsibleSection>
           )}
 
 
           {/* Photo Gallery */}
-          <PhotoGallerySection photos={residentPhotos} residentName={displayName} />
+          <CollapsibleSection title="Photos" iconName="Image">
+            <PhotoGallerySection photos={residentPhotos} residentName={displayName} />
+          </CollapsibleSection>
         </div>
 
         {/* RIGHT COLUMN */}
         <div className="space-y-4">
-          {/* Location Map */}
-          {filteredResident.show_neighborhood && lotLocation && locations && (
-            <MapPreviewWidget
-              tenantSlug={slug}
-              tenantId={currentResident.tenant_id}
-              locations={locations}
-              mapCenter={mapCenter}
-              highlightLocationId={lotLocation.id}
-            />
-          )}
 
           {/* Family */}
           {filteredResident.show_family && resident.family_unit_id ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Users className="h-5 w-5" />
-                  Family
-                </CardTitle>
-                {resident.family_units && (
-                  <CardDescription>{resident.family_units.name}</CardDescription>
+            <CollapsibleSection title="Family" iconName="Users" description={resident.family_units?.name}>
+              <div className="space-y-4">
+                {filteredFamilyMembers && filteredFamilyMembers.length > 0 ? (
+                  <div className="grid gap-3">
+                    {filteredFamilyMembers.map((member: any) => (
+                      <FamilyMemberCard
+                        key={member.id}
+                        member={member}
+                        currentUserFamilyId={currentResident.family_unit_id}
+                        tenantSlug={slug}
+                        compact={true}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No other family members to display
+                  </p>
                 )}
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {filteredFamilyMembers && filteredFamilyMembers.length > 0 ? (
-                    <div className="grid gap-3">
-                      {filteredFamilyMembers.map((member: any) => (
-                        <FamilyMemberCard
-                          key={member.id}
-                          member={member}
-                          currentUserFamilyId={currentResident.family_unit_id}
-                          tenantSlug={slug}
-                          compact={true}
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      No other family members to display
-                    </p>
-                  )}
 
-                  <Button variant="ghost" size="sm" className="w-full" asChild>
-                    <Link href={`/t/${slug}/dashboard/families/${resident.family_unit_id}`}>
-                      View Family Profile
-                    </Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                <Button variant="ghost" size="sm" className="w-full" asChild>
+                  <Link href={`/t/${slug}/dashboard/families/${resident.family_unit_id}`}>
+                    View Family Profile
+                  </Link>
+                </Button>
+              </div>
+            </CollapsibleSection>
           ) : null}
 
           {/* Pets */}
           {filteredResident.show_family && pets && pets.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <PawPrint className="h-5 w-5" />
-                  Pets
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {pets.map((pet: any) => (
-                    <div key={pet.id} className="flex items-center gap-3 rounded-lg border p-3">
-                      <Avatar className="h-12 w-12">
-                        <AvatarImage src={pet.profile_picture_url} alt={pet.name} />
-                        <AvatarFallback>{pet.name[0]}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{pet.name}</p>
-                        <p className="text-sm text-muted-foreground truncate">
-                          {pet.breed || pet.species}
-                        </p>
-                      </div>
+            <CollapsibleSection title="Pets" iconName="PawPrint">
+              <div className="grid gap-3 sm:grid-cols-2">
+                {pets.map((pet: any) => (
+                  <div key={pet.id} className="flex items-center gap-3 rounded-lg border p-3">
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={pet.profile_picture_url} alt={pet.name} />
+                      <AvatarFallback>{pet.name[0]}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{pet.name}</p>
+                      <p className="text-sm text-muted-foreground truncate">
+                        {pet.breed || pet.species}
+                      </p>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                  </div>
+                ))}
+              </div>
+            </CollapsibleSection>
+          )}
+
+          {/* Location Map */}
+          {filteredResident.show_neighborhood && lotLocation && locations && (
+            <CollapsibleSection title="Community Map" iconName="MapPin">
+              <div className="rounded-lg overflow-hidden -mx-6 -mb-6">
+                <MapPreviewWidget
+                  tenantSlug={slug}
+                  tenantId={currentResident.tenant_id}
+                  locations={locations}
+                  mapCenter={mapCenter}
+                  highlightLocationId={lotLocation.id}
+                  hideSidebar={true}
+                  disableAutoScroll={true}
+                  hideHeader={true}
+                />
+              </div>
+            </CollapsibleSection>
           )}
 
           {/* Exchange Listings */}
           {exchangeEnabled && residentListings.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Exchange Listings</CardTitle>
-                <CardDescription>
-                  {residentListings.length} active listing{residentListings.length === 1 ? '' : 's'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-4">
-                  {residentListings.map((listing: any) => (
-                    <Link key={listing.id} href={`/t/${slug}/dashboard/exchange`}>
-                      <ExchangeListingCard
-                        listing={listing}
-                        ownerName={displayName}
-                        ownerAvatar={resident.profile_picture_url}
-                      />
-                    </Link>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            <CollapsibleSection title="Exchange Listings" iconName="Package" description={`${residentListings.length} active listing${residentListings.length === 1 ? '' : 's'}`}>
+              <div className="grid gap-4">
+                {residentListings.map((listing: any) => (
+                  <Link key={listing.id} href={`/t/${slug}/dashboard/exchange`}>
+                    <ExchangeListingCard
+                      listing={listing}
+                      ownerName={displayName}
+                      ownerAvatar={resident.profile_picture_url}
+                    />
+                  </Link>
+                ))}
+              </div>
+            </CollapsibleSection>
           )}
         </div>
       </div>

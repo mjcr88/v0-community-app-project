@@ -76,36 +76,18 @@ export function LocationEventsSection({
       <Card>
         <CollapsibleTrigger asChild>
           <CardHeader className="cursor-pointer hover:bg-accent/50 transition-colors">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-start gap-3 flex-1 min-w-0">
-                <Calendar className="h-5 w-5 mt-0.5 shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <CardTitle className="text-lg">
-                    Upcoming Events ({events.length})
-                  </CardTitle>
-                  <CardDescription className="mt-1">Events happening at {locationName}</CardDescription>
-                </div>
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                <CardTitle className="text-lg font-semibold">
+                  Upcoming Events ({events.length})
+                </CardTitle>
               </div>
-              <div className="flex items-center gap-2 shrink-0 self-start sm:self-center">
-                {canCreateEvents && (
-                  <Button 
-                    asChild 
-                    variant="outline" 
-                    size="sm"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Link href={`/t/${slug}/dashboard/events/create?locationId=${locationId}`}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Create Event
-                    </Link>
-                  </Button>
-                )}
-                <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`} />
-              </div>
+              <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`} />
             </div>
           </CardHeader>
         </CollapsibleTrigger>
-        
+
         <CollapsibleContent>
           <CardContent>
             <Tabs value={view} onValueChange={(v) => setView(v as "list" | "calendar")} className="w-full">

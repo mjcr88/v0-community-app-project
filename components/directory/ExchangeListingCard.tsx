@@ -58,7 +58,7 @@ export function ExchangeListingCard({
                     </div>
 
                     <div className="flex gap-1.5 flex-shrink-0">
-                        <Badge variant="default" className="bg-green-600 hover:bg-green-700">
+                        <Badge variant="default" className="bg-[#6B9B47] hover:bg-[#6B9B47]/90 text-white">
                             <span className="text-xs">✓</span>
                             <span className="ml-1">Available</span>
                         </Badge>
@@ -77,7 +77,7 @@ export function ExchangeListingCard({
 
                     {/* Price/Free */}
                     {listing.is_free ? (
-                        <Badge variant="default" className="bg-green-600 hover:bg-green-700">
+                        <Badge variant="default" className="bg-[#6B9B47] hover:bg-[#6B9B47]/90 text-white">
                             Free
                         </Badge>
                     ) : (

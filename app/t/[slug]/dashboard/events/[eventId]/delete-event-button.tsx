@@ -9,14 +9,17 @@ import { deleteEvent } from "@/app/actions/events"
 import { RioConfirmationModal } from "@/components/feedback/rio-confirmation-modal"
 import { useRioFeedback } from "@/components/feedback/rio-feedback-provider"
 
+import React from "react"
+
 interface DeleteEventButtonProps {
   eventId: string
   tenantId: string
   tenantSlug: string
   eventTitle: string
+  customTrigger?: React.ReactNode
 }
 
-export function DeleteEventButton({ eventId, tenantId, tenantSlug, eventTitle }: DeleteEventButtonProps) {
+export function DeleteEventButton({ eventId, tenantId, tenantSlug, eventTitle, customTrigger }: DeleteEventButtonProps) {
   const router = useRouter()
   const { showFeedback } = useRioFeedback()
   const [isDeleting, setIsDeleting] = useState(false)
@@ -44,10 +47,16 @@ export function DeleteEventButton({ eventId, tenantId, tenantSlug, eventTitle }:
 
   return (
     <>
-      <Button variant="destructive" size="sm" className="gap-2" onClick={() => setIsOpen(true)}>
-        <Trash2 className="h-4 w-4" />
-        Delete Event
-      </Button>
+      {customTrigger ? (
+        <div onClick={() => setIsOpen(true)} className="cursor-pointer">
+          {customTrigger}
+        </div>
+      ) : (
+        <Button variant="destructive" size="sm" className="gap-2" onClick={() => setIsOpen(true)}>
+          <Trash2 className="h-4 w-4" />
+          Delete Event
+        </Button>
+      )}
 
       <RioConfirmationModal
         open={isOpen}

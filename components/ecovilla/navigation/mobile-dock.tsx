@@ -59,7 +59,8 @@ export function MobileDock({ tenantSlug, unreadEvents, tenantId, categories, nei
             <Dock
                 magnification={0}
                 distance={0}
-                className="pointer-events-auto bg-earth-snow/90 backdrop-blur-xl border border-earth-pebble rounded-full shadow-2xl px-4 pb-3 pt-3 h-auto gap-4"
+                className="pointer-events-auto bg-earth-snow/90 backdrop-blur-xl border border-earth-pebble rounded-full shadow-2xl px-4 pb-3 pt-3 h-auto gap-4 relative left-auto transform-none"
+                style={{ x: 0 }}
             >
                 {dockItems.map((item) => (
                     <DockCard key={item.id} id={item.id} className={item.isElevated ? "border-none bg-transparent shadow-none hover:bg-transparent dark:bg-transparent" : undefined}>
@@ -75,7 +76,7 @@ export function MobileDock({ tenantSlug, unreadEvents, tenantId, categories, nei
                                 align="center"
                             >
                                 <div
-                                    className="cursor-pointer flex items-center justify-center w-12 h-12 rounded-full bg-forest-canopy text-white shadow-lg hover:bg-forest-deep transition-colors"
+                                    className="cursor-pointer flex items-center justify-center w-12 h-12 rounded-full bg-primary text-white shadow-lg hover:bg-primary/90 transition-colors"
                                     role="button"
                                     aria-label={item.label}
                                 >

@@ -95,7 +95,7 @@ export function EventRsvpQuickAction({
   }
 
   return (
-    <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+    <div className="flex items-center gap-2 flex-wrap min-w-0" onClick={(e) => e.stopPropagation()}>
       {/* Save Button */}
       <Button
         variant="ghost"
@@ -143,7 +143,7 @@ export function EventRsvpQuickAction({
           </Button>
 
           {/* Attendance Count */}
-          <div className="flex items-center gap-0.5 text-xs text-muted-foreground whitespace-nowrap">
+          <div className="flex items-center gap-0.5 text-xs text-muted-foreground flex-shrink-0">
             <NumberTicker value={currentAttendeeCount} className="text-xs" />
             {maxAttendees && (
               <span className="text-xs">/{maxAttendees}</span>

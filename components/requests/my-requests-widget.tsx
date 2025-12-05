@@ -47,7 +47,8 @@ export function MyRequestsWidget({ requests, tenantSlug }: MyRequestsWidgetProps
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      {/* Mobile: Stack title/badge and buttons | Desktop: Single row */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="flex items-center gap-2">
           <h3 className="text-lg font-semibold">My Active Requests</h3>
           <Badge variant="secondary" className="bg-orange-100 text-orange-700 hover:bg-orange-100 border-none">
@@ -55,13 +56,14 @@ export function MyRequestsWidget({ requests, tenantSlug }: MyRequestsWidgetProps
           </Badge>
         </div>
         <div className="flex gap-2">
-          <Button asChild variant="ghost" size="sm">
+          <Button asChild variant="ghost" size="sm" className="flex-1 md:flex-none">
             <Link href={`/t/${tenantSlug}/dashboard/requests`}>View All</Link>
           </Button>
-          <Button asChild size="sm">
+          <Button asChild size="sm" className="flex-1 md:flex-none">
             <Link href={`/t/${tenantSlug}/dashboard/requests/create`}>
               <Plus className="h-4 w-4 mr-2" />
-              Create Request
+              <span className="hidden sm:inline">Create Request</span>
+              <span className="sm:hidden">Create</span>
             </Link>
           </Button>
         </div>

@@ -61,10 +61,11 @@ interface DockProps {
   magnification?: number
   distance?: number
   children: ReactNode // React children to be rendered within the dock
+  style?: React.CSSProperties & { x?: number | string }
 }
 
 // Main Dock component: orchestrating the dock's animation behavior
-function Dock({ className, magnification = 60, distance = 140, children }: DockProps) {
+function Dock({ className, magnification = 60, distance = 140, children, style }: DockProps) {
   const [hovered, setHovered] = useState(false) // State to track if the dock is hovered. When the mouse hovers over the dock, this state changes to true.
   const [width, setWidth] = useState(0) // State to track the width of the dock. This dynamically updates based on the dock's current width.
   const dockRef = useRef<HTMLDivElement>(null) // Reference to the dock element in the DOM. This allows direct manipulation and measurement of the dock.
@@ -105,7 +106,7 @@ function Dock({ className, magnification = 60, distance = 140, children }: DockP
         ref={dockRef} // Reference to the dock element
         // className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-end h-14 p-2 gap-3 bg-neutral-50 dark:bg-black bg-opacity-90 rounded-xl"
         className={cn(
-          "absolute bottom-4 left-3/4 transform -translate-x-1/2 flex items-end h-14 p-2 gap-3  bg-opacity-90 rounded-xl",
+          "relative flex items-end h-14 p-2 gap-3 bg-opacity-90 rounded-xl",
           " dark:bg-neutral-900 bg-neutral-50 p-2 no-underline shadow-sm transition-colors hover:bg-neutral-100 dark:hover:bg-neutral-800/80 ",
           "shadow-[0px_1px_1px_0px_rgba(0,0,0,0.05),0px_1px_1px_0px_rgba(255,252,240,0.5)_inset,0px_0px_0px_1px_hsla(0,0%,100%,0.1)_inset,0px_0px_1px_0px_rgba(28,27,26,0.5)]",
           "shadow-[rgba(17,24,28,0.08)_0_0_0_1px,rgba(17,24,28,0.08)_0_1px_2px_-1px,rgba(17,24,28,0.04)_0_2px_4px]",
@@ -126,8 +127,8 @@ function Dock({ className, magnification = 60, distance = 140, children }: DockP
           setHovered(false) // Set hovered state to false
         }}
         style={{
-          x: "-50%", // Center the dock horizontally
           scale: zoomLevel, // Bind the zoom level to the scale style property
+          ...style,
         }}
       >
         {children} {/* Render the dock's children within the motion div */}

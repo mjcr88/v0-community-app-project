@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Card } from "@/components/ui/card"
+
 import type { ExchangePricingType, ExchangeCondition } from "@/types/exchange"
 
 interface Step2PricingVisibilityProps {
@@ -47,7 +47,7 @@ export function Step2PricingVisibility({
                     }
                 >
                     <div className="space-y-2">
-                        <Card className={formData.pricing_type === "free" ? "border-primary" : ""}>
+                        <div className={`rounded-lg border-2 bg-card text-card-foreground shadow-none overflow-hidden ${formData.pricing_type === "free" ? "border-primary" : "border-border"}`}>
                             <label className="flex items-center gap-3 p-3 cursor-pointer">
                                 <RadioGroupItem value="free" id="pricing-free" />
                                 <div className="flex-1">
@@ -57,9 +57,9 @@ export function Step2PricingVisibility({
                                     </div>
                                 </div>
                             </label>
-                        </Card>
+                        </div>
 
-                        <Card className={formData.pricing_type === "fixed_price" ? "border-primary" : ""}>
+                        <div className={`rounded-lg border-2 bg-card text-card-foreground shadow-none overflow-hidden ${formData.pricing_type === "fixed_price" ? "border-primary" : "border-border"}`}>
                             <label className="flex items-center gap-3 p-3 cursor-pointer">
                                 <RadioGroupItem value="fixed_price" id="pricing-fixed" />
                                 <div className="flex-1">
@@ -69,12 +69,10 @@ export function Step2PricingVisibility({
                                     </div>
                                 </div>
                             </label>
-                        </Card>
+                        </div>
 
-                        <Card
-                            className={
-                                formData.pricing_type === "pay_what_you_want" ? "border-primary" : ""
-                            }
+                        <div
+                            className={`rounded-lg border-2 bg-card text-card-foreground shadow-none overflow-hidden ${formData.pricing_type === "pay_what_you_want" ? "border-primary" : "border-border"}`}
                         >
                             <label className="flex items-center gap-3 p-3 cursor-pointer">
                                 <RadioGroupItem value="pay_what_you_want" id="pricing-pwyw" />
@@ -85,7 +83,7 @@ export function Step2PricingVisibility({
                                     </div>
                                 </div>
                             </label>
-                        </Card>
+                        </div>
                     </div>
                 </RadioGroup>
             </div>
@@ -171,7 +169,7 @@ export function Step2PricingVisibility({
                     }
                 >
                     <div className="space-y-2">
-                        <Card className={formData.visibility_scope === "community" ? "border-primary" : ""}>
+                        <div className={`rounded-lg border-2 bg-card text-card-foreground shadow-none overflow-hidden ${formData.visibility_scope === "community" ? "border-primary" : "border-border"}`}>
                             <label className="flex items-center gap-3 p-3 cursor-pointer">
                                 <RadioGroupItem value="community" id="visibility-community" />
                                 <div className="flex-1">
@@ -181,9 +179,9 @@ export function Step2PricingVisibility({
                                     </div>
                                 </div>
                             </label>
-                        </Card>
+                        </div>
 
-                        <Card className={formData.visibility_scope === "neighborhood" ? "border-primary" : ""}>
+                        <div className={`rounded-lg border-2 bg-card text-card-foreground shadow-none overflow-hidden ${formData.visibility_scope === "neighborhood" ? "border-primary" : "border-border"}`}>
                             <label className="flex items-center gap-3 p-3 cursor-pointer">
                                 <RadioGroupItem value="neighborhood" id="visibility-neighborhood" />
                                 <div className="flex-1">
@@ -193,7 +191,7 @@ export function Step2PricingVisibility({
                                     </div>
                                 </div>
                             </label>
-                        </Card>
+                        </div>
                     </div>
                 </RadioGroup>
             </div>

@@ -1,14 +1,17 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import Image from "next/image"
 import { Eye, EyeOff, Mail } from "lucide-react"
+import { motion, useMotionTemplate, useMotionValue } from "motion/react"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/library/button"
 import { Input } from "@/components/library/input"
 import { Label } from "@/components/library/label"
 import { Alert, AlertDescription } from "@/components/library/alert"
+import { ShineBorder } from "@/components/library/shine-border"
 import { MagicCard } from "@/components/library/magic-card"
 import { cn } from "@/lib/utils"
 
@@ -18,6 +21,45 @@ interface TenantLoginFormProps {
     name: string
     slug: string
   }
+}
+
+function ResponsiveLoginCard({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <>
+      {/* Mobile View: ShineBorder */}
+      <div className={cn("relative w-full max-w-md rounded-2xl overflow-hidden lg:hidden", className)}>
+        {/* Background Layer - Bottom */}
+        <div className="absolute inset-0 bg-earth-snow/90 backdrop-blur-sm z-0" />
+
+        {/* ShineBorder - Middle */}
+        <ShineBorder
+          className="pointer-events-none absolute inset-0 z-10"
+          shineColor={["transparent", "transparent", "#D97742", "#6B9B47", "transparent", "transparent"]}
+          borderWidth={2}
+        />
+
+        {/* Content - Top (Transparent background to show layers below) */}
+        <div className="relative z-20 h-full w-full">
+          {children}
+        </div>
+      </div>
+
+      {/* Desktop View: MagicCard */}
+      <MagicCard
+        className={cn("hidden lg:block w-full max-w-md shadow-xl border-earth-pebble rounded-2xl", className)}
+        gradientColor="hsl(var(--forest-growth))"
+        gradientFrom="hsl(var(--forest-canopy))"
+        gradientTo="hsl(var(--sunrise))"
+        gradientOpacity={0.25}
+        gradientSize={400}
+      >
+        {/* Background for Desktop */}
+        <div className="bg-earth-snow/90 backdrop-blur-sm h-full w-full rounded-[inherit]">
+          {children}
+        </div>
+      </MagicCard>
+    </>
+  )
 }
 
 export function TenantLoginForm({ tenant }: TenantLoginFormProps) {
@@ -89,17 +131,21 @@ export function TenantLoginForm({ tenant }: TenantLoginFormProps) {
   }
 
   return (
-    <MagicCard
-      className="w-full max-w-md shadow-xl border-earth-pebble rounded-2xl"
-      gradientColor="hsl(var(--forest-growth))"
-      gradientFrom="hsl(var(--forest-canopy))"
-      gradientTo="hsl(var(--sunrise))"
-      gradientOpacity={0.25}
-      gradientSize={400}
-    >
-      <div className="p-8 bg-earth-snow/90 backdrop-blur-sm rounded-2xl">
-        <div className="mb-8 text-center">
-          <h2 className="text-2xl font-bold text-forest-canopy mb-2">Welcome back, neighbor! ☀️</h2>
+    <ResponsiveLoginCard className="shadow-xl border-earth-pebble">
+      <div className="p-8">
+        <div className="mb-8 text-center flex flex-col items-center">
+          <h2 className="text-2xl font-bold text-forest-canopy mb-4">Welcome back, neighbor! ☀️</h2>
+
+          <div className="relative w-24 h-24 mb-4 lg:hidden">
+            <Image
+              src="/rio/parrot.png"
+              alt="Rio the Parrot"
+              fill
+              className="object-contain"
+              priority
+            />
+          </div>
+
           <p className="text-mist-gray">Good to see you at {tenant.name}</p>
         </div>
 
@@ -169,6 +215,6 @@ export function TenantLoginForm({ tenant }: TenantLoginFormProps) {
           </p>
         </div>
       </div>
-    </MagicCard>
+    </ResponsiveLoginCard>
   )
 }

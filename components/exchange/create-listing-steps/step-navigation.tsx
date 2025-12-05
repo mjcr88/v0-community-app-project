@@ -64,14 +64,14 @@ export function StepNavigation({
                             onClick={onSaveDraft}
                             disabled={isSubmitting}
                         >
-                            Save as Draft
+                            Save
                         </Button>
                         <Button
                             type="button"
                             onClick={onPublish}
                             disabled={isSubmitting}
                         >
-                            {isSubmitting ? "Publishing..." : "Publish Listing"}
+                            {isSubmitting ? "Publishing..." : "Publish"}
                         </Button>
                     </>
                 )}

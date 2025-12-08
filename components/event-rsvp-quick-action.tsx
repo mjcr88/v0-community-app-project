@@ -100,7 +100,10 @@ export function EventRsvpQuickAction({
       <Button
         variant="ghost"
         size="sm"
-        onClick={handleSave}
+        onClick={(e) => {
+          e.stopPropagation()
+          handleSave()
+        }}
         disabled={isPending}
         className="h-8 w-8 p-0 flex-shrink-0"
         title={localIsSaved ? "Unsave event" : "Save event"}
@@ -114,7 +117,10 @@ export function EventRsvpQuickAction({
           <Button
             variant={localRsvpStatus === "yes" ? "default" : "ghost"}
             size="sm"
-            onClick={() => handleRsvp("yes")}
+            onClick={(e) => {
+              e.stopPropagation()
+              handleRsvp("yes")
+            }}
             disabled={isPending || isEventFull || isDeadlinePassed}
             className="h-8 w-8 p-0 flex-shrink-0"
             title="Attending"
@@ -124,7 +130,10 @@ export function EventRsvpQuickAction({
           <Button
             variant={localRsvpStatus === "maybe" ? "default" : "ghost"}
             size="sm"
-            onClick={() => handleRsvp("maybe")}
+            onClick={(e) => {
+              e.stopPropagation()
+              handleRsvp("maybe")
+            }}
             disabled={isPending || isDeadlinePassed}
             className="h-8 w-8 p-0 flex-shrink-0"
             title="Maybe"
@@ -134,7 +143,10 @@ export function EventRsvpQuickAction({
           <Button
             variant={localRsvpStatus === "no" ? "default" : "ghost"}
             size="sm"
-            onClick={() => handleRsvp("no")}
+            onClick={(e) => {
+              e.stopPropagation()
+              handleRsvp("no")
+            }}
             disabled={isPending || isDeadlinePassed}
             className="h-8 w-8 p-0 flex-shrink-0"
             title="Not Attending"

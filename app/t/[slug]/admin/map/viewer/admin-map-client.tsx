@@ -508,7 +508,7 @@ export default function AdminMapClient({
         <div className={`relative h-full w-full flex flex-col overflow-hidden ${className || ''}`}>
             {/* Top Bar - Search + Category Filters (hide in minimal mode) */}
             {!minimal && (
-                <div className="relative z-20 bg-white border-b border-gray-200 px-4 py-3">
+                <div className="relative z-20 bg-background dark:bg-card border-b border-border px-4 py-3">
                     <div className="flex items-center gap-4">
                         {/* Search */}
                         <div className="relative flex-1 max-w-md">
@@ -523,11 +523,11 @@ export default function AdminMapClient({
                             />
                             {/* Search Results Dropdown */}
                             {showSearchDropdown && searchResults.length > 0 && (
-                                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto z-30">
+                                <div className="absolute top-full left-0 right-0 mt-1 bg-background dark:bg-card border border-border rounded-lg shadow-lg max-h-64 overflow-y-auto z-30">
                                     {searchResults.map((location) => (
                                         <button
                                             key={location.id}
-                                            className="w-full text-left px-4 py-2 hover:bg-gray-50 border-b last:border-b-0 transition-colors"
+                                            className="w-full text-left px-4 py-2 hover:bg-muted/50 dark:hover:bg-muted border-b border-border last:border-b-0 transition-colors"
                                             onClick={() => {
                                                 setSelectedLocation(location);
                                                 setSearchQuery('');
@@ -568,7 +568,7 @@ export default function AdminMapClient({
                                         }}
                                         className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${highlightedCategories.has(category.type)
                                             ? 'bg-primary text-white border-primary shadow-sm'
-                                            : 'bg-white hover:bg-gray-50 border-gray-300'
+                                            : 'bg-background dark:bg-card hover:bg-muted/50 dark:hover:bg-muted border-border'
                                             }`}
                                         disabled={category.count === 0}
                                     >
@@ -834,7 +834,7 @@ export default function AdminMapClient({
                                         {isHighlighted && (
                                             <div className="absolute -inset-2 rounded-full border-2 border-[#F97316] animate-pulse opacity-70"></div>
                                         )}
-                                        <div className={`bg-white p-1.5 rounded-full shadow-md border ${isSelected ? 'border-primary ring-2 ring-primary ring-offset-1' : 'border-gray-200'} text-xl flex items-center justify-center w-10 h-10`}>
+                                        <div className={`bg-background dark:bg-card p-1.5 rounded-full shadow-md border ${isSelected ? 'border-primary ring-2 ring-primary ring-offset-1' : 'border-border'} text-xl flex items-center justify-center w-10 h-10`}>
                                             {location.icon || '🏛️'}
                                         </div>
                                     </div>
@@ -850,7 +850,7 @@ export default function AdminMapClient({
                                 anchor="bottom"
                             >
                                 <div className="flex flex-col items-center">
-                                    <div className="bg-white px-2 py-1 rounded shadow text-xs font-medium mb-1 whitespace-nowrap">
+                                    <div className="bg-background dark:bg-card px-2 py-1 rounded shadow text-xs font-medium mb-1 whitespace-nowrap">
                                         {customMarker.label || 'Custom Location'}
                                     </div>
                                     <MapPin className="h-8 w-8 text-primary fill-current" />
@@ -1053,7 +1053,7 @@ export default function AdminMapClient({
                             <Button
                                 variant="secondary"
                                 size="icon"
-                                className="h-[29px] w-[29px] rounded-md bg-white shadow-md hover:bg-gray-100"
+                                className="h-[29px] w-[29px] rounded-md bg-background dark:bg-card shadow-md hover:bg-muted/50 dark:hover:bg-muted"
                                 onClick={() => {
                                     mapRef.current?.flyTo({
                                         pitch: 0,
@@ -1119,7 +1119,7 @@ export default function AdminMapClient({
 
                         {/* Expandable Layers Panel */}
                         {showLayersPanel && (
-                            <div className="mt-2 rounded-lg border bg-white p-4 shadow-lg w-56">
+                            <div className="mt-2 rounded-lg border border-border bg-background dark:bg-card p-4 shadow-lg w-56">
                                 <h3 className="mb-3 font-semibold text-sm">Map Layers</h3>
                                 <div className="space-y-2">
                                     <label className="flex items-center gap-2 text-sm cursor-pointer hover:bg-gray-50 p-1 rounded">
@@ -1265,7 +1265,7 @@ export default function AdminMapClient({
 
                         {/* Expandable Base Map Panel */}
                         {showBaseMapPanel && (
-                            <div className="mt-2 rounded-lg border bg-white p-4 shadow-lg w-64">
+                            <div className="mt-2 rounded-lg border border-border bg-background dark:bg-card p-4 shadow-lg w-64">
                                 <h4 className="mb-3 text-sm font-semibold">Base Map</h4>
                                 <div className="grid grid-cols-2 gap-2">
                                     <button
@@ -1330,7 +1330,7 @@ export default function AdminMapClient({
                 {/* Sidebar - Shows single selection OR category list (hide in minimal mode) */}
                 {!minimal && (
                     <div
-                        className={`relative h-full bg-white border-l border-gray-200 transition-all duration-300 ease-in-out overflow-y-auto ${(selectedLocation || highlightedCategories.size > 0) ? 'w-1/3' : 'w-0'
+                        className={`relative h-full bg-background dark:bg-card border-l border-border transition-all duration-300 ease-in-out overflow-y-auto ${(selectedLocation || highlightedCategories.size > 0) ? 'w-1/3' : 'w-0'
                             }`}
                     >
                         {/* Single Location View */}

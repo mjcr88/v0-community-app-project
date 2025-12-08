@@ -556,7 +556,10 @@ export function ExchangeListingDetailModal({
             {listing.description && (
               <div className="space-y-2">
                 <h3 className="font-semibold text-lg">Description</h3>
-                <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed">{listing.description}</p>
+                <div
+                  className="prose prose-neutral dark:prose-invert max-w-none"
+                  dangerouslySetInnerHTML={{ __html: listing.description }}
+                />
               </div>
             )}
 

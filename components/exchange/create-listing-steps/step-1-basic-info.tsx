@@ -1,6 +1,6 @@
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { PhotoManager } from "@/components/photo-manager"
 import { getCategoryEmoji } from "@/lib/exchange-category-emojis"
@@ -44,20 +44,17 @@ export function Step1BasicInfo({
                 </p>
             </div>
 
+
             {/* Description */}
             <div className="space-y-2">
-                <Label htmlFor="description">Description (Optional)</Label>
-                <Textarea
-                    id="description"
+                <Label htmlFor="description">Description</Label>
+                <RichTextEditor
                     value={formData.description}
-                    onChange={(e) => onUpdate({ description: e.target.value })}
-                    placeholder="Describe your item or service in detail..."
-                    maxLength={500}
-                    rows={4}
+                    onChange={(value) => onUpdate({ description: value })}
+                    placeholder="Tell your community about this item or service in detail..."
+                    className="min-h-[200px]"
                 />
-                <p className="text-xs text-muted-foreground">
-                    {formData.description.length}/500 characters
-                </p>
+                <p className="text-xs text-muted-foreground">Optional: Share more details to help your neighbors</p>
             </div>
 
             {/* Category */}

@@ -27,6 +27,7 @@ const RELATIONSHIP_TYPES = [
 ]
 
 export function HouseholdStep({ onNext, onBack, initialData }: HouseholdStepProps) {
+    const [familyName, setFamilyName] = useState("")
     const [familyMembers, setFamilyMembers] = useState<any[]>([])
     const [pets, setPets] = useState<any[]>([])
     const [relationships, setRelationships] = useState<Record<string, string>>({})
@@ -38,8 +39,10 @@ export function HouseholdStep({ onNext, onBack, initialData }: HouseholdStepProp
 
     useEffect(() => {
         if (initialData) {
-            setFamilyMembers(initialData.familyMembers || [])
-            setPets(initialData.pets || [])
+            setFamilyName(initialData.familyName || "")
+            // Ensure we're setting arrays, even if empty
+            setFamilyMembers(Array.isArray(initialData.familyMembers) ? initialData.familyMembers : [])
+            setPets(Array.isArray(initialData.pets) ? initialData.pets : [])
 
             // Initialize relationships from initialData if available
             if (initialData.relationships) {
@@ -47,6 +50,8 @@ export function HouseholdStep({ onNext, onBack, initialData }: HouseholdStepProp
             }
         }
     }, [initialData])
+
+    // ... handleRelationshipChange, handleFileChange, handleAddPet remain same ...
 
     const handleRelationshipChange = async (memberId: string, relationshipType: string) => {
         setRelationships(prev => ({ ...prev, [memberId]: relationshipType }))
@@ -182,8 +187,17 @@ export function HouseholdStep({ onNext, onBack, initialData }: HouseholdStepProp
         }
     }
 
-    const handleNext = () => {
-        onNext({ familyMembers, pets, relationships })
+    const handleNext = async () => {
+        // Optional: Save family name if changed
+        if (initialData.familyUnitId && familyName !== initialData.familyName) {
+            const supabase = createClient()
+            await supabase
+                .from("family_units")
+                .update({ name: familyName })
+                .eq("id", initialData.familyUnitId)
+        }
+
+        onNext({ familyMembers, pets, relationships, familyName })
     }
 
     return (
@@ -196,7 +210,18 @@ export function HouseholdStep({ onNext, onBack, initialData }: HouseholdStepProp
                     </p>
                 </div>
 
-                <div className="max-w-md mx-auto space-y-4">
+                <div className="max-w-md mx-auto space-y-6">
+                    {/* Family Name Edit */}
+                    <div className="space-y-2">
+                        <Label htmlFor="familyName">Family Name</Label>
+                        <Input
+                            id="familyName"
+                            value={familyName}
+                            onChange={(e) => setFamilyName(e.target.value)}
+                            placeholder="e.g. The Smiths"
+                        />
+                    </div>
+
                     {/* Family Members List */}
                     <div className="space-y-3">
                         <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Family Members</h3>

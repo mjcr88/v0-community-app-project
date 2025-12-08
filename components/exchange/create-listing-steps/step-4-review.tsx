@@ -46,10 +46,10 @@ export function Step4Review({
         if (!formData.condition) return null
         const conditionMap: Record<string, string> = {
             new: "New",
-            like_new: "Like New",
-            good: "Good",
-            fair: "Fair",
-            damaged: "Damaged/For Parts",
+            slightly_used: "Slightly Used",
+            used: "Used",
+            slightly_damaged: "Slightly Damaged",
+            maintenance: "Needs Maintenance",
         }
         return conditionMap[formData.condition] || formData.condition
     }

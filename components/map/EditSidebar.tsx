@@ -52,11 +52,17 @@ export function EditSidebar({
     const [formData, setFormData] = useState<any>(initialData || {});
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-    // Update state when props change
+    // Only update formData when switching locations (id change) or on initial mount
+    // Don't reset on every initialData change to preserve user edits (like photo uploads)
     useEffect(() => {
         setSelectedType(locationType);
-        setFormData(initialData || {});
-    }, [locationType, initialData]);
+
+        // Only reset formData if we're switching to a different location
+        // or if formData is empty (initial mount)
+        if (!formData.id || formData.id !== initialData?.id) {
+            setFormData(initialData || {});
+        }
+    }, [locationType, initialData?.id]); // Only depend on id, not entire initialData object
 
     const handleTypeChange = (type: LocationType) => {
         setSelectedType(type);
@@ -96,9 +102,9 @@ export function EditSidebar({
     };
 
     return (
-        <div className="absolute top-0 right-0 h-full w-96 bg-white border-l shadow-lg flex flex-col z-20 animate-in slide-in-from-right duration-300">
+        <div className="absolute top-0 right-0 h-full w-96 bg-background dark:bg-card border-l border-border shadow-lg flex flex-col z-20 animate-in slide-in-from-right duration-300">
             {/* Sticky Header */}
-            <div className="p-4 border-b bg-white z-10 flex items-center justify-between shrink-0">
+            <div className="p-4 border-b border-border bg-background dark:bg-card z-10 flex items-center justify-between shrink-0">
                 <h2 className="text-lg font-semibold">{getTitle()}</h2>
                 <Button variant="ghost" size="icon" onClick={onCancel}>
                     <X className="h-4 w-4" />
@@ -166,7 +172,7 @@ export function EditSidebar({
 
             {/* Sticky Footer */}
             {selectedType && (
-                <div className="p-4 border-t bg-white z-10 shrink-0 space-y-2">
+                <div className="p-4 border-t border-border bg-background dark:bg-card z-10 shrink-0 space-y-2">
                     <div className="flex gap-2">
                         <Button onClick={handleSave} className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90">
                             {mode === 'create' ? 'Create Location' : 'Save Changes'}

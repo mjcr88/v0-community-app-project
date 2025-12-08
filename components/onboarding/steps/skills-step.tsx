@@ -152,9 +152,12 @@ export function SkillsStep({ onNext, onBack, initialData, availableSkills = [] }
 
                     {/* Selected Skills Display */}
                     {selectedSkills.length > 0 && (
-                        <div className="p-4 rounded-xl bg-muted/30 border">
-                            <p className="text-sm font-medium text-muted-foreground mb-3">Skills</p>
-                            <div className="space-y-3">
+                        <div className="p-4 rounded-xl bg-muted/30 border space-y-3">
+                            <div className="flex items-center justify-between">
+                                <p className="text-sm font-medium text-muted-foreground">Selected Skills</p>
+                            </div>
+
+                            <div className="space-y-2">
                                 {selectedSkills.map(skill => {
                                     if (!skill) return null
                                     const skillSelection = selected.find(s => s.id === skill.id)
@@ -191,6 +194,10 @@ export function SkillsStep({ onNext, onBack, initialData, availableSkills = [] }
                                     )
                                 })}
                             </div>
+
+                            <p className="text-xs text-muted-foreground/80 italic pt-1 border-t border-border/50 mt-2">
+                                "Open to help" lets neighbors know they can ask you about these topics.
+                            </p>
                         </div>
                     )}
                 </div>

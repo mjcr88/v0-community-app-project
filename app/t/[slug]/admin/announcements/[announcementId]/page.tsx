@@ -208,9 +208,10 @@ export default async function AdminAnnouncementDetailPage({
         <Card>
           <CardContent className="pt-6">
             <h2 className="text-xl font-semibold mb-4">Description</h2>
-            <div className="prose prose-sm max-w-none">
-              <p className="whitespace-pre-wrap">{announcement.description}</p>
-            </div>
+            <div
+              className="prose prose-sm max-w-none dark:prose-invert"
+              dangerouslySetInnerHTML={{ __html: announcement.description }}
+            />
           </CardContent>
         </Card>
 

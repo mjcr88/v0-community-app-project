@@ -164,7 +164,7 @@ export function AnnouncementCard({ announcement, slug, onClick, onMarkAsRead }: 
 
                             {/* Description */}
                             <p className="text-muted-foreground line-clamp-2 text-sm leading-relaxed">
-                                {announcement.description}
+                                {announcement.description?.replace(/(<([^>]+)>)/gi, '').trim() || ''}
                             </p>
 
                             {/* Bottom Row: Metadata */}

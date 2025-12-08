@@ -483,11 +483,10 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
           {event.description && (
             <div className="space-y-4">
               <h2 className="text-2xl font-semibold">About This Event</h2>
-              <div className="prose prose-neutral dark:prose-invert max-w-none">
-                <p className="text-muted-foreground whitespace-pre-wrap text-pretty leading-relaxed">
-                  {event.description}
-                </p>
-              </div>
+              <div
+                className="prose prose-neutral dark:prose-invert max-w-none"
+                dangerouslySetInnerHTML={{ __html: event.description }}
+              />
             </div>
           )}
 

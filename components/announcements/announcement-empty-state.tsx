@@ -49,9 +49,9 @@ export function AnnouncementEmptyState({ type, onClearSearch }: AnnouncementEmpt
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
-            className="flex flex-col items-center justify-center py-12 text-center px-4"
+            className="flex flex-col items-center justify-center py-0 text-center px-4"
         >
-            <div className="relative w-56 h-56 mb-6">
+            <div className="relative w-40 h-40 mb-2">
                 <Image
                     src={image}
                     alt="Río the Macaw"

@@ -24,7 +24,7 @@ export function EnhancedEventCard({
     return (
         <Card
             className={cn(
-                "h-full event-card-hover",
+                "h-full event-card-hover min-w-0 w-full overflow-hidden",
                 eventIsPast || isCancelled ? "opacity-60" : "",
                 className
             )}

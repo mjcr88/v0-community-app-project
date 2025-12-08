@@ -1,13 +1,13 @@
-import { createServerClient } from "@/lib/supabase/server"
+import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { LotsTable } from "./lots-table"
 
 type SortField = "lot_number" | "neighborhood" | "created_at"
 type SortDirection = "asc" | "desc"
 
-export default async function LotsPage({ params }: { params: { slug: string } }) {
-  const { slug } = params
-  const supabase = await createServerClient()
+export default async function LotsPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
+  const supabase = await createClient()
 
   const {
     data: { user },

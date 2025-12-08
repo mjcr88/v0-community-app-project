@@ -5,7 +5,7 @@ import { useState, useRef, useCallback, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
@@ -90,14 +90,14 @@ export function EditExchangeListingModal({
 
     if (result.success && result.data) {
       const listing = result.data
-      
+
       const categoryId = listing.category?.id || listing.category_id || ""
-      
+
       let initialPhotos = listing.photos || []
       if (initialPhotos.length === 0 && listing.hero_photo) {
         initialPhotos = [listing.hero_photo]
       }
-      
+
       console.log("[v0] EDIT MODAL - Loading listing data:", {
         categoryId: categoryId,
         categoryName: listing.category?.name,
@@ -109,7 +109,7 @@ export function EditExchangeListingModal({
         heroPhoto: listing.hero_photo,
         heroPhotoType: typeof listing.hero_photo,
       })
-      
+
       setHasActiveTransactions(false) // TODO: Add this check in getExchangeListingById
 
       let locationType: "none" | "community" | "custom" = "none"
@@ -137,7 +137,7 @@ export function EditExchangeListingModal({
         photos: initialPhotos,
         hero_photo: listing.hero_photo || null,
       }
-      
+
       console.log("[v0] EDIT MODAL - Setting form data:", {
         categoryId: newFormData.category_id,
         photos: newFormData.photos,
@@ -146,7 +146,7 @@ export function EditExchangeListingModal({
       })
 
       setFormData(newFormData)
-      
+
       setTimeout(() => {
         console.log("[v0] EDIT MODAL - Form data after setState:", {
           categoryId: formData.category_id,
@@ -316,9 +316,9 @@ export function EditExchangeListingModal({
 
   const handleDelete = async () => {
     setIsDeleting(true)
-    
+
     const result = await deleteExchangeListing(listingId, tenantSlug, tenantId)
-    
+
     if (result.success) {
       toast({
         title: "Listing deleted",
@@ -430,13 +430,11 @@ export function EditExchangeListingModal({
 
                 <div className="space-y-2">
                   <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    placeholder="Tell your community more about this item or service..."
+                  <RichTextEditor
                     value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    disabled={hasActiveTransactions}
-                    rows={4}
+                    onChange={(value) => setFormData({ ...formData, description: value })}
+                    placeholder="Tell your community more about this item or service..."
+                    className="min-h-[200px]"
                   />
                 </div>
 
@@ -535,9 +533,9 @@ export function EditExchangeListingModal({
                       onChange={(e) => setFormData({ ...formData, available_quantity: e.target.value })}
                     />
                     <p className="text-xs text-muted-foreground">
-                      {hasActiveTransactions 
+                      {hasActiveTransactions
                         ? "You can update quantity even with active transactions"
-                        : isFoodProduce 
+                        : isFoodProduce
                           ? "E.g., 10 mangos, 5 loaves of bread"
                           : "E.g., how many tools are available to lend"}
                     </p>
@@ -608,10 +606,10 @@ export function EditExchangeListingModal({
                     {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     {isSubmitting ? "Saving..." : "Save Changes"}
                   </Button>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={() => onOpenChange(false)} 
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => onOpenChange(false)}
                     disabled={isSubmitting}
                     className="flex-1 sm:flex-none"
                   >

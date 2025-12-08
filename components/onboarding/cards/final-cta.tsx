@@ -28,9 +28,20 @@ export function FinalCTACard() {
 
             <div className="z-10 flex flex-col items-center text-center max-w-2xl space-y-8">
 
-                <div className="space-y-4">
+                <div className="space-y-4 flex flex-col items-center">
+                    {/* Rio Image */}
+                    <div className="relative w-32 h-32 md:w-40 md:h-40 mb-4">
+                        <img
+                            src="/rio/rio_app_tour_completed.png"
+                            alt="Rio celebrating"
+                            className="w-full h-full object-contain"
+                        />
+                    </div>
+
                     <h2 className="text-4xl md:text-6xl font-bold tracking-tighter">
-                        <AuroraText>Welcome Home</AuroraText>
+                        <span className="bg-gradient-to-r from-orange-500 to-primary bg-clip-text text-transparent">
+                            Welcome Home
+                        </span>
                     </h2>
                     <p className="text-lg md:text-2xl text-muted-foreground max-w-lg mx-auto">
                         Ready to move in? Let's set up your profile and introduce you to the community.

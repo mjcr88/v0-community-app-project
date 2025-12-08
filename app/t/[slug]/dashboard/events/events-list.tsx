@@ -161,7 +161,7 @@ export function EventsList({
             isPriority={isPriority}
             isCancelled={isCancelled}
           >
-            <Link href={`/t/${slug}/dashboard/events/${event.id}`}>
+            <Link href={`/t/${slug}/dashboard/events/${event.id}`} className="block h-full">
               <CardHeader>
                 <div className="flex items-start justify-between gap-2">
                   <CardTitle className="line-clamp-2 text-balance">{event.title}</CardTitle>
@@ -199,7 +199,7 @@ export function EventsList({
                   <span className="line-clamp-1">{displayDate}</span>
                 </div>
                 {event.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-2 text-pretty">{event.description}</p>
+                  <p className="text-sm text-muted-foreground line-clamp-2 text-pretty">{event.description.replace(/(<([^>]+)>)/gi, '').trim()}</p>
                 )}
                 <div className="flex items-center gap-2 flex-wrap">
                   <Badge variant="secondary" className="capitalize">

@@ -318,6 +318,7 @@ export function RequestsPageClient({ requests, tenantSlug }: RequestsPageClientP
                                 </Button>
                             ) : undefined
                         }
+                        className="py-0 [&>div:first-child]:w-40 [&>div:first-child]:h-40 [&>div:first-child]:mb-2 [&>div:last-child]:mt-4"
                     />
                 ) : (
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

@@ -25,7 +25,7 @@ export function OrbitingNeighborsCard() {
                     <OrbitingCircles
                         className="h-12 w-12 md:h-16 md:w-16 border-2 border-primary/30"
                         duration={20}
-                        radius={120}
+                        radius={80} // Mobile radius
                     >
                         <div className="h-full w-full rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm md:text-base">
                             MJ
@@ -45,7 +45,7 @@ export function OrbitingNeighborsCard() {
                     <OrbitingCircles
                         className="h-14 w-14 md:h-18 md:w-18 border-2 border-primary/30"
                         duration={30}
-                        radius={200}
+                        radius={140} // Mobile radius
                         reverse
                     >
                         <div className="h-full w-full rounded-full bg-gradient-to-br from-pink-400 to-pink-600 flex items-center justify-center text-white font-bold text-sm md:text-base">

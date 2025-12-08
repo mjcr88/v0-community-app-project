@@ -125,10 +125,10 @@ export function Step2DetailsPricing({
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="new">New</SelectItem>
-                            <SelectItem value="like_new">Like New</SelectItem>
-                            <SelectItem value="good">Good</SelectItem>
-                            <SelectItem value="fair">Fair</SelectItem>
-                            <SelectItem value="damaged">Damaged/For Parts</SelectItem>
+                            <SelectItem value="slightly_used">Slightly Used</SelectItem>
+                            <SelectItem value="used">Used</SelectItem>
+                            <SelectItem value="slightly_damaged">Slightly Damaged</SelectItem>
+                            <SelectItem value="maintenance">Needs Maintenance</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
@@ -141,7 +141,7 @@ export function Step2DetailsPricing({
                     <Input
                         id="quantity"
                         type="number"
-                        value={formData.available_quantity || "1"}
+                        value={formData.available_quantity}
                         onChange={(e) => onUpdate({ available_quantity: e.target.value })}
                         placeholder="1"
                         min="1"

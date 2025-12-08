@@ -167,7 +167,8 @@ export async function createExchangeListing(
       insertData.price = data.price
     }
 
-    if (data.condition) {
+    // Only include condition if it has a valid value (not null, undefined, or empty string)
+    if (data.condition && typeof data.condition === 'string' && data.condition.trim() !== '') {
       insertData.condition = data.condition
     }
 

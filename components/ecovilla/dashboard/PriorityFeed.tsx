@@ -404,9 +404,10 @@ export function PriorityFeed({ slug, userId, tenantId }: { slug: string; userId:
                             </div>
                         </div>
 
-                        <p className="text-xs text-muted-foreground line-clamp-1">
-                            {item.description}
-                        </p>
+                        <div
+                            className="text-xs text-muted-foreground line-clamp-1"
+                            dangerouslySetInnerHTML={{ __html: item.description }}
+                        />
 
                         {item.type === "check_in" && item.location && (
                             <div>

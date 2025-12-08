@@ -374,7 +374,17 @@ export function MapboxEditorClient({
                     geometry={editSidebar.geometry}
                     initialData={
                         editSidebar.mode === 'edit' && editSidebar.locationId
-                            ? locations.find(loc => loc.id === editSidebar.locationId) || {}
+                            ? (() => {
+                                const loc = locations.find(l => l.id === editSidebar.locationId);
+                                if (!loc) return {};
+                                // Transform snake_case DB fields to camelCase for form
+                                return {
+                                    ...loc,
+                                    facilityType: loc.facility_type,
+                                    heroPhoto: loc.hero_photo,
+                                    parkingSpaces: loc.parking_spaces,
+                                };
+                            })()
                             : {}
                     } // Pass existing location data in edit mode
                     lots={lots}
@@ -383,21 +393,11 @@ export function MapboxEditorClient({
                     }}
                     onSave={async (data) => {
                         try {
-                            // Calculate centroid for coordinates field (needed for pins)
-                            let centroid = null;
+                            // Calculate centroid ONLY for point-based markers
+                            // For polygons and lines, coordinates should be null to preserve their rendering type
+                            let coordinates = null;
                             if (editSidebar.geometry?.type === 'Point') {
-                                centroid = { lat: editSidebar.geometry.coordinates[1], lng: editSidebar.geometry.coordinates[0] };
-                            } else if (editSidebar.geometry?.type === 'Polygon') {
-                                // Simple average of outer ring
-                                const ring = editSidebar.geometry.coordinates[0];
-                                let latSum = 0, lngSum = 0;
-                                ring.forEach((c: any) => { lngSum += c[0]; latSum += c[1]; });
-                                centroid = { lat: latSum / ring.length, lng: lngSum / ring.length };
-                            } else if (editSidebar.geometry?.type === 'LineString') {
-                                const points = editSidebar.geometry.coordinates;
-                                let latSum = 0, lngSum = 0;
-                                points.forEach((c: any) => { lngSum += c[0]; latSum += c[1]; });
-                                centroid = { lat: latSum / points.length, lng: lngSum / points.length };
+                                coordinates = { lat: editSidebar.geometry.coordinates[1], lng: editSidebar.geometry.coordinates[0] };
                             }
 
                             const locationData = {
@@ -405,7 +405,7 @@ export function MapboxEditorClient({
                                 name: data.name,
                                 type: data.type,
                                 description: data.description,
-                                coordinates: centroid,
+                                coordinates: coordinates, // Only set for Point geometry
                                 boundary_coordinates: (editSidebar.geometry?.type === 'Polygon' && data.type === 'boundary')
                                     ? editSidebar.geometry.coordinates[0].map((c: any) => [c[1], c[0]]) // [lng, lat] -> [lat, lng]
                                     : null,
@@ -414,12 +414,13 @@ export function MapboxEditorClient({
                                         ? editSidebar.geometry.coordinates[0].map((c: any) => [c[1], c[0]])
                                         : editSidebar.geometry.coordinates.map((c: any) => [c[1], c[0]]))
                                     : null,
-                                facility_type: data.facility_type,
+                                facility_type: data.facilityType,
                                 icon: data.icon,
                                 lot_id: data.lot_id,
                                 photos: data.photos,
+                                hero_photo: data.heroPhoto,
                                 accessibility_features: data.accessibility_features,
-                                parking_spaces: data.parking_spaces ? parseInt(data.parking_spaces) : null,
+                                parking_spaces: data.parkingSpaces ? parseInt(data.parkingSpaces) : null,
                                 opening_hours: data.opening_hours,
                                 contact_phone: data.contact_phone,
                                 contact_email: data.contact_email,

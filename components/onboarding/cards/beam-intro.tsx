@@ -58,7 +58,7 @@ export function BeamIntroCard() {
                                 "Listings"
                             ]}
                             className="text-primary"
-                            duration={2000}
+                            duration={1000}
                         />
                     </div>
                     <div>all in one place</div>

@@ -20,13 +20,19 @@ export function CompleteStep({ onNext }: CompleteStepProps) {
     return (
         <div className="space-y-8 animate-in fade-in zoom-in duration-500 text-center py-12">
 
-            <div className="mx-auto h-24 w-24 bg-gradient-to-br from-green-100 to-primary/20 rounded-full flex items-center justify-center text-primary mb-6 shadow-lg">
-                <Sparkles className="h-12 w-12" />
+            <div className="mx-auto h-32 w-32 md:h-40 md:w-40 flex items-center justify-center mb-6">
+                <img
+                    src="/rio/rio_profile_tour_complete.png"
+                    alt="Rio celebrating"
+                    className="w-full h-full object-contain"
+                />
             </div>
 
             <div className="space-y-4">
                 <h2 className="text-3xl md:text-4xl font-bold">
-                    <AuroraText>You're all set!</AuroraText>
+                    <span className="bg-gradient-to-r from-orange-500 to-primary bg-clip-text text-transparent">
+                        You're all set!
+                    </span>
                 </h2>
                 <p className="text-xl text-muted-foreground max-w-md mx-auto">
                     Your profile is ready. Welcome to the neighborhood!

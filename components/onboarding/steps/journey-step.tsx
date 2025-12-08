@@ -114,7 +114,7 @@ export function JourneyStep({ onNext, onBack, initialData }: JourneyStepProps) {
                     </div>
 
                     {(journeyStage === "building" || journeyStage === "planning") && (
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <div className="space-y-2">
                                 <Label className="text-sm">Construction Start</Label>
                                 <DateTimePicker

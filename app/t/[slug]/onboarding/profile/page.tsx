@@ -43,26 +43,19 @@ export default async function ProfileSetupPage({ params }: { params: Promise<{ s
   let familyMembers: any[] = []
   let pets: any[] = []
   let relationships: Record<string, string> = {}
+  let familyName = ""
 
   if (userData?.family_unit_id) {
-    const { data: familyData, error: familyError } = await supabase
-      .from("family_units")
-      .select(`
-        users (
-          id, first_name, last_name, profile_picture_url
-        ),
-        pets (
-          id, name, species, breed, profile_picture_url
-        )
-      `)
-      .eq("id", userData.family_unit_id)
-      .single()
+    const { getFamilyById } = await import("@/lib/data/families")
+    const familyUnit = await getFamilyById(userData.family_unit_id, {
+      enrichWithMembers: true,
+      enrichWithPets: true
+    })
 
-    if (familyError) {
-      console.error("Error fetching family data:", familyError)
-    } else if (familyData) {
+    if (familyUnit) {
+      familyName = familyUnit.name
       // Map to expected format, excluding current user
-      familyMembers = (familyData.users || [])
+      familyMembers = (familyUnit.members || [])
         .filter((member: any) => member.id !== user.id)
         .map((member: any) => ({
           id: member.id,
@@ -70,11 +63,11 @@ export default async function ProfileSetupPage({ params }: { params: Promise<{ s
           avatarUrl: member.profile_picture_url
         }))
 
-      pets = (familyData.pets || []).map((pet: any) => ({
+      pets = (familyUnit.pets || []).map((pet: any) => ({
         id: pet.id,
         name: pet.name,
         species: pet.species,
-        breed: pet.breed,
+        breed: pet.breed || null, // breed might be missing in some types
         avatarUrl: pet.profile_picture_url
       }))
     }
@@ -104,11 +97,12 @@ export default async function ProfileSetupPage({ params }: { params: Promise<{ s
     .select("id, name, description")
     .order("name")
 
-  // Prepare initial data for the wizard
+  // Prepare initial data for the wizard (Rebuild Trigger)
   const initialData = {
     userId: user.id,
     tenantId: userData?.tenant_id,
     familyUnitId: userData?.family_unit_id,
+    familyName,
     lotId: userData?.lot_id,
     firstName: userData?.first_name,
     lastName: userData?.last_name,

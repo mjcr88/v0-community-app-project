@@ -105,25 +105,25 @@ export function ExchangeListCard() {
             </div>
 
             {/* Content area - Split layout */}
-            <div className="flex-1 w-full flex items-center justify-center max-w-6xl max-h-[500px]">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 w-full h-full items-center">
+            <div className="flex-1 w-full flex items-center justify-center max-w-6xl md:max-h-[500px]">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 w-full md:h-full items-center">
 
-                    {/* Left: Screenshot */}
-                    <div className="relative w-full h-full min-h-[250px] rounded-2xl overflow-hidden border-2 border-primary/20 shadow-xl bg-muted/20 order-2 md:order-1 group">
+                    {/* Left: Screenshot (Mobile: Top) */}
+                    <div className="relative w-full h-[250px] md:h-full min-h-[250px] shrink-0 rounded-2xl overflow-hidden border-2 border-primary/20 shadow-xl bg-muted/20 order-1 group">
                         <div className="absolute bottom-3 left-3 z-10 bg-background/90 backdrop-blur-sm px-3 py-1 rounded-full border shadow-sm">
                             <span className="text-xs font-medium text-primary">Community Directory</span>
                         </div>
                         <Image
-                            src="/artifacts/exchange_directory_mockup.png"
+                            src="/artifacts/exchange_directory_actual.png"
                             alt="Exchange directory screenshot"
                             fill
-                            className="object-contain p-1"
+                            className="object-cover md:object-contain p-1"
                             priority
                         />
                     </div>
 
-                    {/* Right: Animated List */}
-                    <div className="relative flex h-full w-full flex-col items-center justify-center overflow-hidden rounded-lg bg-background p-6 order-1 md:order-2">
+                    {/* Right: Animated List (Mobile: Bottom) */}
+                    <div className="relative flex h-full w-full flex-col items-center justify-center overflow-hidden rounded-lg bg-background p-6 order-2 min-h-[300px] md:min-h-0">
                         <div className="absolute bottom-3 right-3 z-10 bg-background/90 backdrop-blur-sm px-3 py-1 rounded-full border shadow-sm">
                             <span className="text-xs font-medium text-primary">Live Activity</span>
                         </div>

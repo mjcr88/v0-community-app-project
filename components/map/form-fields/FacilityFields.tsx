@@ -15,7 +15,15 @@ interface FacilityFieldsProps {
 
 export function FacilityFields({ data, onChange }: FacilityFieldsProps) {
     const updateField = (field: string, value: any) => {
-        onChange({ ...data, [field]: value });
+        console.log('[FacilityFields] updateField:', field, value);
+        console.log('[FacilityFields] current data:', data);
+
+        // Use functional update to ensure we get the latest state
+        onChange((prevData: any) => {
+            const newData = { ...prevData, [field]: value };
+            console.log('[FacilityFields] new data:', newData);
+            return newData;
+        });
     };
 
     return (
@@ -56,7 +64,7 @@ export function FacilityFields({ data, onChange }: FacilityFieldsProps) {
                     photos={data.photos || []}
                     heroPhoto={data.heroPhoto}
                     onPhotosChange={(photos) => updateField('photos', photos)}
-                    onHeroChange={(heroPhoto) => updateField('heroPhoto', heroPhoto)}
+                    onHeroPhotoChange={(heroPhoto) => updateField('heroPhoto', heroPhoto)}
                 />
             </div>
 

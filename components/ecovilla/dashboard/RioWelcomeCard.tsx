@@ -10,26 +10,25 @@ import { Play } from "lucide-react"
 export function RioWelcomeCard({ slug }: { slug: string }) {
     return (
         <Card className="overflow-hidden bg-gradient-to-br from-orange-50 to-amber-50 border-orange-100">
-            <CardContent className="p-3 md:p-6 flex flex-col md:flex-row items-center md:items-center justify-between gap-2 md:gap-4 relative min-h-[160px] md:min-h-[220px]">
-                {/* Mobile: Parrot on top, smaller scale */}
+            <CardContent className="p-3 md:p-6 flex flex-row items-center md:items-center justify-between gap-3 md:gap-4 relative min-h-0 md:min-h-[220px]">
+                {/* Mobile: Parrot on left, small */}
                 {/* Desktop: Parrot on left, larger scale */}
-                <div className="md:absolute md:left-0 md:bottom-0 md:top-0 md:w-[40%] flex items-center justify-center order-1 md:order-none">
-                    <div className="transform scale-100 md:scale-[1.4] md:translate-y-2 md:-translate-x-2">
+                <div className="w-1/2 shrink-0 md:absolute md:left-0 md:bottom-0 md:top-0 md:w-[40%] flex items-center justify-center order-1 md:order-none">
+                    <div className="transform scale-125 md:scale-[1.4] md:translate-y-2 md:-translate-x-2">
                         {/* @ts-ignore */}
                         <RioImage pose="general" size="md" />
                     </div>
                 </div>
 
-                {/* Mobile: Full width below parrot */}
+                {/* Mobile: Right side */}
                 {/* Desktop: Right side, 60% width */}
-                <div className="md:ml-auto space-y-2 md:space-y-4 z-10 w-full md:max-w-[60%] order-2">
-                    <div className="space-y-1.5 md:space-y-2 text-center md:text-left">
-                        <h3 className="text-lg md:text-xl font-bold text-orange-900">Welcome Home!</h3>
+                <div className="md:ml-auto space-y-2 md:space-y-4 z-10 flex-1 md:w-full md:max-w-[60%] order-2">
+                    <div className="space-y-1.5 md:space-y-2 text-left">
                         <p className="text-orange-800/80 text-sm leading-relaxed">
                             I'm Rio, your community guide. I'll keep an eye out for important updates for you.
                         </p>
                     </div>
-                    <div className="flex flex-wrap gap-2 md:gap-3 justify-center md:justify-start">
+                    <div className="flex flex-wrap gap-2 md:gap-3 justify-start">
                         <Button
                             asChild
                             size="sm"

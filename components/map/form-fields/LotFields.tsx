@@ -84,7 +84,7 @@ export function LotFields({ data, onChange, lots }: LotFieldsProps) {
                     photos={data.photos || []}
                     heroPhoto={data.heroPhoto}
                     onPhotosChange={(photos) => updateField('photos', photos)}
-                    onHeroChange={(heroPhoto) => updateField('heroPhoto', heroPhoto)}
+                    onHeroPhotoChange={(heroPhoto) => updateField('heroPhoto', heroPhoto)}
                 />
             </div>
         </div>

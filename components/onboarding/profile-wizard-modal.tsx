@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { ProfileWizard } from "./profile-wizard"
 import { WizardProgress } from "./wizard-progress"
 import { motion, AnimatePresence } from "framer-motion"
+import { useEffect, useRef } from "react"
 
 interface ProfileWizardModalProps {
     isOpen: boolean
@@ -29,6 +30,15 @@ export function ProfileWizardModal({
     availableInterests = [],
     availableSkills = []
 }: ProfileWizardModalProps) {
+    const scrollContainerRef = useRef<HTMLDivElement>(null)
+
+    // Reset scroll position when step changes
+    useEffect(() => {
+        if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTop = 0
+        }
+    }, [currentStep])
+
     return (
         <AnimatePresence mode="wait">
             {isOpen && (
@@ -51,18 +61,25 @@ export function ProfileWizardModal({
                         </Button>
 
                         {/* Content container */}
-                        <div className="h-full flex flex-col justify-center pt-16 pb-8">
-                            <div className="relative w-full h-full bg-background rounded-3xl overflow-hidden shadow-2xl">
-                                {/* Circular Progress - Inside modal, top right - fully contained */}
-                                <div className="absolute top-8 right-8 z-10">
-                                    <WizardProgress
-                                        currentStep={currentStep}
-                                        totalSteps={totalSteps}
-                                        progress={progress}
-                                    />
+                        <div className="h-full flex flex-col pt-16 pb-8">
+                            <div className="relative w-full h-full bg-background rounded-3xl overflow-hidden shadow-2xl flex flex-col">
+
+                                {/* Sticky Header with Progress Circle */}
+                                <div className="shrink-0 z-20 bg-background flex justify-center py-4 border-b border-border/5">
+                                    <div className="scale-75 md:scale-100 origin-center">
+                                        <WizardProgress
+                                            currentStep={currentStep}
+                                            totalSteps={totalSteps}
+                                            progress={progress}
+                                        />
+                                    </div>
                                 </div>
 
-                                <div className="h-full overflow-y-auto p-8">
+                                {/* Scrollable Content */}
+                                <div
+                                    ref={scrollContainerRef}
+                                    className="flex-1 overflow-y-auto p-8 md:p-12"
+                                >
                                     <ProfileWizard
                                         userId={userId}
                                         initialData={initialData}

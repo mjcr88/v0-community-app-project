@@ -131,7 +131,7 @@ export function WalkingPathFields({ data, onChange }: WalkingPathFieldsProps) {
                     photos={data.photos || []}
                     heroPhoto={data.heroPhoto}
                     onPhotosChange={(photos) => updateField('photos', photos)}
-                    onHeroChange={(heroPhoto) => updateField('heroPhoto', heroPhoto)}
+                    onHeroPhotoChange={(heroPhoto) => updateField('heroPhoto', heroPhoto)}
                 />
             </div>
         </div>

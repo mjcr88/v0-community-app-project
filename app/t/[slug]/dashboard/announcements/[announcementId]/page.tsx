@@ -118,17 +118,73 @@ export default async function AnnouncementDetailPage({ params }: AnnouncementDet
           </div>
         </header>
 
-        {/* Hero Image */}
+        {/* Hero Image or Photo Gallery */}
         {announcement.images && announcement.images.length > 0 && (
-          <div className="relative aspect-video w-full overflow-hidden rounded-xl border bg-muted shadow-sm">
-            <Image
-              src={announcement.images[0]}
-              alt={announcement.title}
-              fill
-              className="object-cover"
-              priority
-            />
-          </div>
+          <>
+            {announcement.images.length === 1 ? (
+              // Single image - show as hero
+              <div className="relative aspect-video w-full overflow-hidden rounded-xl border bg-muted shadow-sm">
+                <Image
+                  src={announcement.images[0]}
+                  alt={announcement.title}
+                  fill
+                  className="object-cover"
+                  priority
+                />
+              </div>
+            ) : (
+              // Multiple images - show collapsible gallery
+              <div className="space-y-4">
+                {/* Hero image from first photo */}
+                <div className="relative aspect-video w-full overflow-hidden rounded-xl border bg-muted shadow-sm">
+                  <Image
+                    src={announcement.images[0]}
+                    alt={announcement.title}
+                    fill
+                    className="object-cover"
+                    priority
+                  />
+                </div>
+
+                {/* Collapsible Photo Gallery */}
+                <div className="border rounded-lg">
+                  <details className="group">
+                    <summary className="cursor-pointer hover:bg-accent/50 transition-colors p-4 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold">Photo Gallery</span>
+                        <span className="text-sm text-muted-foreground">({announcement.images.length} photos)</span>
+                      </div>
+                      <svg
+                        className="h-5 w-5 text-muted-foreground transition-transform group-open:rotate-180"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </summary>
+                    <div className="p-4 pt-0">
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {announcement.images.map((photo: string, index: number) => (
+                          <div
+                            key={index}
+                            className="relative aspect-square overflow-hidden rounded-lg border bg-muted cursor-pointer hover:opacity-90 transition-opacity"
+                          >
+                            <Image
+                              src={photo}
+                              alt={`${announcement.title} - Photo ${index + 1}`}
+                              fill
+                              className="object-cover"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </details>
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {/* Location Callout (if exists) */}
@@ -148,9 +204,7 @@ export default async function AnnouncementDetailPage({ params }: AnnouncementDet
 
         {/* Content Body */}
         <article className="prose prose-lg prose-neutral dark:prose-invert max-w-none">
-          <p className="leading-relaxed whitespace-pre-wrap text-pretty">
-            {announcement.description}
-          </p>
+          <div dangerouslySetInnerHTML={{ __html: announcement.description }} />
         </article>
 
         {/* Footer / Meta */}

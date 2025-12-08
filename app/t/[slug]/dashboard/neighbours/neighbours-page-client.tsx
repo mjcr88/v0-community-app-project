@@ -92,7 +92,11 @@ export function NeighboursPageClient({
                 search === "" ||
                 `${resident.first_name} ${resident.last_name}`.toLowerCase().includes(searchLower) ||
                 resident.lots?.lot_number?.toLowerCase().includes(searchLower) ||
-                resident.lots?.neighborhoods?.name?.toLowerCase().includes(searchLower)
+                resident.lots?.neighborhoods?.name?.toLowerCase().includes(searchLower) ||
+                (Array.isArray(resident.user_interests) &&
+                    resident.user_interests.some((ui: any) => ui.interests?.name?.toLowerCase().includes(searchLower))) ||
+                (Array.isArray(resident.user_skills) &&
+                    resident.user_skills.some((us: any) => us.skills?.name?.toLowerCase().includes(searchLower)))
 
             // Neighborhood filter - match any selected
             const matchesNeighborhood =

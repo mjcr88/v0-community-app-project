@@ -8,7 +8,7 @@ import { format } from "date-fns"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -260,13 +260,11 @@ export function EventForm({ tenantSlug, tenantId, categories, initialLocation }:
               <Label htmlFor="description">
                 Description <span className="text-destructive">*</span>
               </Label>
-              <Textarea
-                id="description"
-                placeholder="Tell your neighbors about this event..."
+              <RichTextEditor
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                rows={4}
-                required
+                onChange={(value) => setFormData({ ...formData, description: value })}
+                placeholder="Tell your neighbors about this event..."
+                className="min-h-[200px]"
               />
             </div>
 

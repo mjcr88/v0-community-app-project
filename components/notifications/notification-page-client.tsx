@@ -379,6 +379,7 @@ export function NotificationPageClient({
                                 ? "Try adjusting your filters to see more results."
                                 : "You've seen everything new. Río is taking a siesta too. ☀️"
                         }
+                        className="py-0 [&>div:first-child]:w-40 [&>div:first-child]:h-40 [&>div:first-child]:mb-2 [&>div:last-child]:mt-4"
                         imageSrc={(() => {
                             // Default view (Unread + Action Required)
                             if (selectedStatuses.length === 2 && selectedStatuses.includes("unread") && selectedStatuses.includes("action_required") && selectedTypes.length === 0 && !searchQuery) {

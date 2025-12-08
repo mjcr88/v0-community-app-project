@@ -8,12 +8,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { createBrowserClient } from "@/lib/supabase/client"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Trash2 } from "lucide-react"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { createFamilyUnit } from "@/app/actions/families"
 
 type Lot = {
   id: string
@@ -60,7 +60,6 @@ export default function CreateFamilyForm({
   existingResidents: Resident[]
 }) {
   const router = useRouter()
-  const supabase = createBrowserClient()
   const [loading, setLoading] = useState(false)
   const [familyName, setFamilyName] = useState("")
 
@@ -106,82 +105,19 @@ export default function CreateFamilyForm({
     setLoading(true)
 
     try {
-      if (creationMode === "existing") {
-        const { data: family, error: familyError } = await supabase
-          .from("family_units")
-          .insert({
-            tenant_id: tenantId,
-            name: familyName,
-            primary_contact_id: selectedResidentIds[0],
-          })
-          .select()
-          .single()
+      const result = await createFamilyUnit(slug, tenantId, {
+        familyName,
+        mode: creationMode,
+        selectedResidentIds: creationMode === "existing" ? selectedResidentIds : undefined,
+        selectedLotId: creationMode === "new" ? selectedLotId : undefined,
+        members: creationMode === "new" ? members : undefined,
+        pets: creationMode === "new" && pets.length > 0 ? pets : undefined,
+        primaryContactIndex: creationMode === "new" ? primaryContactIndex : undefined,
+      })
 
-        if (familyError) throw familyError
-
-        const { error: updateError } = await supabase
-          .from("users")
-          .update({ family_unit_id: family.id })
-          .in("id", selectedResidentIds)
-
-        if (updateError) throw updateError
-      } else {
-        if (!selectedLotId) {
-          alert("Please select a lot for the family members")
-          setLoading(false)
-          return
-        }
-
-        const { data: family, error: familyError } = await supabase
-          .from("family_units")
-          .insert({
-            tenant_id: tenantId,
-            name: familyName,
-          })
-          .select()
-          .single()
-
-        if (familyError) throw familyError
-
-        const residentsToInsert = members.map((member) => ({
-          tenant_id: tenantId,
-          lot_id: selectedLotId,
-          family_unit_id: family.id,
-          role: "resident",
-          first_name: member.first_name,
-          last_name: member.last_name,
-          email: member.email || null,
-          phone: member.phone || null,
-        }))
-
-        const { data: createdResidents, error: residentsError } = await supabase
-          .from("users")
-          .insert(residentsToInsert)
-          .select()
-
-        if (residentsError) {
-          console.error("Error creating:", residentsError)
-          throw residentsError
-        }
-
-        if (createdResidents && createdResidents.length > 0) {
-          const primaryContactId = createdResidents[primaryContactIndex]?.id
-          await supabase.from("family_units").update({ primary_contact_id: primaryContactId }).eq("id", family.id)
-        }
-
-        if (pets.length > 0) {
-          const petsToInsert = pets.map((pet) => ({
-            tenant_id: tenantId,
-            lot_id: selectedLotId,
-            family_unit_id: family.id,
-            name: pet.name,
-            species: pet.species,
-            breed: pet.breed,
-          }))
-
-          const { error: petsError } = await supabase.from("pets").insert(petsToInsert)
-          if (petsError) throw petsError
-        }
+      if (!result.success) {
+        alert(result.error || "Failed to create family unit")
+        return
       }
 
       router.push(`/t/${slug}/admin/families`)

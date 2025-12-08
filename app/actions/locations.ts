@@ -237,6 +237,48 @@ export async function deleteLocation(locationId: string, tenantId: string, path?
     await supabase.from("tenants").update({ map_boundary_coordinates: null }).eq("id", tenantId)
   }
 
+  // Update ONLY ACTIVE check-ins that reference this location to use custom_temporary location type
+  // Historical/expired check-ins can keep their location_id for record keeping
+  // This prevents the "valid_location" constraint violation for active check-ins
+  const { data: affectedCheckIns } = await supabase
+    .from("check_ins")
+    .select("id, start_time, duration_minutes, custom_location_name, custom_location_coordinates")
+    .eq("location_id", locationId)
+
+  if (affectedCheckIns && affectedCheckIns.length > 0) {
+    const now = new Date()
+
+    // Filter to only active (non-expired) check-ins
+    const activeCheckIns = affectedCheckIns.filter((checkIn) => {
+      const startTime = new Date(checkIn.start_time)
+      const endTime = new Date(startTime.getTime() + (checkIn.duration_minutes * 60 * 1000))
+      return endTime > now // Only include if not yet expired
+    })
+
+    if (activeCheckIns.length > 0) {
+      // Get location name for check-ins that don't have a custom name
+      const { data: locationData } = await supabase
+        .from("locations")
+        .select("name, coordinates")
+        .eq("id", locationId)
+        .single()
+
+      // Convert active check-ins to custom_temporary to preserve them
+      for (const checkIn of activeCheckIns) {
+        await supabase
+          .from("check_ins")
+          .update({
+            location_id: null,
+            location_type: "custom_temporary",
+            custom_location_name: checkIn.custom_location_name || locationData?.name || "Deleted Location",
+            custom_location_coordinates: checkIn.custom_location_coordinates || locationData?.coordinates || null
+          })
+          .eq("id", checkIn.id)
+      }
+    }
+  }
+
+  // Clear location references from lots and neighborhoods
   await supabase.from("lots").update({ location_id: null }).eq("location_id", locationId)
   await supabase.from("neighborhoods").update({ location_id: null }).eq("location_id", locationId)
 
@@ -248,7 +290,7 @@ export async function deleteLocation(locationId: string, tenantId: string, path?
 
   if (deleteError) {
     console.error("Error deleting location:", deleteError)
-    throw new Error("Failed to delete location")
+    throw new Error(`Failed to delete location: ${deleteError.message || JSON.stringify(deleteError)}`)
   }
 
   if (path) {

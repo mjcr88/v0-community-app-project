@@ -15,13 +15,13 @@ export function CheckinTyperCard() {
             </div>
 
             {/* Content area - Split layout */}
-            <div className="flex-1 w-full flex items-center justify-center max-w-6xl max-h-[500px]">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 w-full h-full items-center">
+            <div className="flex-1 w-full flex items-center justify-center max-w-6xl md:max-h-[500px]">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 w-full md:h-full items-center">
 
-                    {/* Left: Card View + Typing Animation */}
-                    <div className="flex flex-col gap-6 h-full justify-center order-2 md:order-1">
+                    {/* Left: Card View (Hidden on Mobile) + Typing Animation (Desktop only) */}
+                    <div className="hidden md:flex flex-col gap-6 h-full justify-center order-2 md:order-1 relative">
 
-                        {/* Typing Animation Bubble */}
+                        {/* Typing Animation Bubble - Desktop */}
                         <div className="bg-primary/10 p-4 rounded-2xl rounded-tl-none border border-primary/20 self-start max-w-md">
                             <TypingAnimation
                                 className="text-lg font-medium text-primary"
@@ -48,8 +48,20 @@ export function CheckinTyperCard() {
 
                     </div>
 
-                    {/* Right: Map View */}
-                    <div className="relative w-full h-full min-h-[250px] rounded-2xl overflow-hidden border-2 border-primary/20 shadow-xl bg-muted/20 order-1 md:order-2 group">
+                    {/* Right: Map View (and Mobile Typing Animation) */}
+                    <div className="relative w-full h-full min-h-[300px] md:min-h-[250px] rounded-2xl overflow-hidden border-2 border-primary/20 shadow-xl bg-muted/20 order-1 md:order-2 group">
+
+                        {/* Typing Animation Bubble - Mobile Only (Overlay) */}
+                        <div className="absolute top-4 left-4 z-20 md:hidden bg-background/95 backdrop-blur-md p-3 rounded-2xl rounded-tl-none border border-primary/20 shadow-lg max-w-[200px]">
+                            <TypingAnimation
+                                className="text-sm font-medium text-primary"
+                                duration={50}
+                                delay={1000}
+                            >
+                                Heading to the river! 🌊
+                            </TypingAnimation>
+                        </div>
+
                         <div className="absolute bottom-3 left-3 z-10 bg-background/90 backdrop-blur-sm px-3 py-1 rounded-full border shadow-sm">
                             <span className="text-xs font-medium text-primary">Real-time Map</span>
                         </div>
@@ -57,7 +69,7 @@ export function CheckinTyperCard() {
                             src="/artifacts/checkin_map.png"
                             alt="Check-in map view"
                             fill
-                            className="object-contain p-1"
+                            className="object-cover md:object-contain p-1"
                             priority
                         />
                     </div>

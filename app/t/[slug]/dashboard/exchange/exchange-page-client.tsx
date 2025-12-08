@@ -455,6 +455,7 @@ export function ExchangePageClient({
               ? "Try adjusting your search or filters to see more results."
               : "Be the first to share something with your community!"
           }
+          className="py-0 [&>div:first-child]:w-40 [&>div:first-child]:h-40 [&>div:first-child]:mb-2 [&>div:last-child]:mt-4"
           action={
             hasActiveFilters ? (
               <Button variant="outline" onClick={clearFilters}>

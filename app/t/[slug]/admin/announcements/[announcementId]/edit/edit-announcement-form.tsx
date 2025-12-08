@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
@@ -78,8 +79,8 @@ export function EditAnnouncementForm({
     announcement.location_type === "community_location"
       ? "community"
       : announcement.location_type === "custom_temporary"
-      ? "custom"
-      : "none"
+        ? "custom"
+        : "none"
   )
   const [locationId, setLocationId] = useState(announcement.location_id || "")
   const [customLocationName, setCustomLocationName] = useState(announcement.custom_location_name || "")
@@ -190,12 +191,11 @@ export function EditAnnouncementForm({
           {/* Description */}
           <div className="space-y-2">
             <Label htmlFor="description">Description *</Label>
-            <Textarea
-              id="description"
+            <RichTextEditor
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={setDescription}
               placeholder="Enter announcement description"
-              rows={6}
+              className="min-h-[200px]"
             />
           </div>
 

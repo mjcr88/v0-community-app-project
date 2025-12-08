@@ -69,6 +69,7 @@ export interface BaseLocation {
   icon: string | null
   facility_type: string | null
   photos: string[] | null
+  hero_photo: string | null
   lot_id: string | null
   neighborhood_id: string | null
   tenant_id: string
@@ -77,6 +78,7 @@ export interface BaseLocation {
   hours: string | null
   path_difficulty: string | null
   path_surface: string | null
+  parking_spaces: number | null
   status: string | null
   created_at: string
   updated_at: string
@@ -147,6 +149,7 @@ export const getLocations = cache(async (
     icon,
     facility_type,
     photos,
+    hero_photo,
     lot_id,
     neighborhood_id,
     tenant_id,
@@ -155,6 +158,7 @@ export const getLocations = cache(async (
     hours,
     path_difficulty,
     path_surface,
+    parking_spaces,
     status,
     created_at,
     updated_at,
@@ -216,6 +220,7 @@ export const getLocations = cache(async (
       icon: loc.icon || null,
       facility_type: loc.facility_type || null,
       photos: loc.photos || null,
+      hero_photo: loc.hero_photo || null,
       lot_id: loc.lot_id || null,
       neighborhood_id: loc.neighborhood_id || null,
       tenant_id: loc.tenant_id,
@@ -224,6 +229,7 @@ export const getLocations = cache(async (
       hours: loc.hours || null,
       path_difficulty: loc.path_difficulty || null,
       path_surface: loc.path_surface || null,
+      parking_spaces: loc.parking_spaces || null,
       status: loc.status || null,
       created_at: loc.created_at,
       updated_at: loc.updated_at,

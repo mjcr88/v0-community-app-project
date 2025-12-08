@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -157,13 +158,11 @@ export function AnnouncementForm({ tenantSlug, tenantId }: AnnouncementFormProps
             <Label htmlFor="description">
               Description <span className="text-destructive">*</span>
             </Label>
-            <Textarea
-              id="description"
-              placeholder="Provide details about this announcement..."
+            <RichTextEditor
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              rows={6}
-              required
+              onChange={(html) => setFormData({ ...formData, description: html })}
+              placeholder="Provide details about this announcement..."
+              className="min-h-[200px]"
             />
           </div>
 

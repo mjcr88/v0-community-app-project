@@ -20,6 +20,7 @@ import { ResidentInviteSelector } from "@/components/event-forms/resident-invite
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { LocationSelector } from "@/components/event-forms/location-selector"
 import { PhotoManager } from "@/components/photo-manager"
+import { EventsAnalytics, ErrorAnalytics } from "@/lib/analytics"
 
 type Category = {
   id: string
@@ -207,6 +208,8 @@ export function EditEventForm({
           })
         }
 
+        EventsAnalytics.edited(eventId)
+
         let description = "Your changes have been saved successfully."
 
         if (visibilityChangeType === "expanding") {
@@ -247,8 +250,10 @@ export function EditEventForm({
           description: result.error || "Failed to update event",
           variant: "destructive",
         })
+        ErrorAnalytics.actionFailed('update_event', result.error || "Failed to update event")
       }
     } catch (error) {
+      ErrorAnalytics.actionFailed('update_event', error instanceof Error ? error.message : "Unexpected error")
       toast({
         title: "Error",
         description: "An unexpected error occurred",

@@ -17,6 +17,7 @@ import { CheckCircle } from 'lucide-react'
 import { updateRequestStatus } from "@/app/actions/resident-requests"
 import { useRouter } from 'next/navigation'
 import { toast } from "sonner"
+import { RequestsAnalytics } from "@/lib/analytics"
 
 interface MarkResolvedDialogProps {
   requestIds: string[]
@@ -44,6 +45,7 @@ export function MarkResolvedDialog({
         for (const requestId of requestIds) {
           const result = await updateRequestStatus(requestId, tenantId, tenantSlug, 'resolved')
           if (result.success) {
+            RequestsAnalytics.updated(requestId, 'resolved')
             successCount++
           } else {
             failCount++
@@ -65,7 +67,7 @@ export function MarkResolvedDialog({
     })
   }
 
-  const title = requestIds.length === 1 && requestTitle 
+  const title = requestIds.length === 1 && requestTitle
     ? `Mark "${requestTitle}" as resolved?`
     : `Mark ${requestIds.length} request(s) as resolved?`
 

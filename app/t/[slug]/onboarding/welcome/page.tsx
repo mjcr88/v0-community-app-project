@@ -50,12 +50,11 @@ export default async function WelcomePage({
     )
   }
 
-  // For regular users, get their resident record
   const { data: resident } = await supabase
     .from("users")
     .select("*, tenants:tenant_id(id, name, slug, features)")
     .eq("id", user.id)
-    .eq("role", "resident")
+    .in("role", ["resident", "tenant_admin"])
     .maybeSingle()
 
   if (!resident) {

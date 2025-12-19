@@ -19,6 +19,7 @@ import { getEventFlagDetails } from "@/app/actions/events"
 import { EventFlagDetails } from "./event-flag-details"
 import { format } from "date-fns"
 import { EventActionsMenu } from "./event-actions-menu"
+import { TrackEventView } from "@/components/analytics/track-views"
 
 interface EventDetailPageProps {
   params: Promise<{ slug: string; eventId: string }>
@@ -287,6 +288,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
 
   return (
     <div className="min-h-screen bg-background">
+      <TrackEventView eventId={eventId} />
       {/* Hero Section */}
       <div className="relative bg-gradient-to-br from-primary/10 via-primary/5 to-background border-b">
         <div className="container mx-auto px-4 py-6 md:py-10">

@@ -74,7 +74,7 @@ export const getFamilies = cache(async (
 
     if (enrichWithPets) {
         selectQuery += `,
-      pets(id, name, species, profile_picture_url)
+      pets(id, name, species, breed, profile_picture_url)
     `
     }
 

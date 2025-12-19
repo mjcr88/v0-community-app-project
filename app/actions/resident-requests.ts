@@ -242,6 +242,7 @@ export async function getMyRequests(tenantId: string) {
     const requests = await getResidentRequests(tenantId, {
       originalSubmitterId: user.id,
       excludeStatus: "resolved",
+      enrichWithCreator: true, // Show submitter avatar
       enrichWithLocation: true,
       enrichWithResolvedBy: true,
     })

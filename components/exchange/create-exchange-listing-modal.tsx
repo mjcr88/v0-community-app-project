@@ -24,6 +24,7 @@ import { Step1BasicInfo } from "./create-listing-steps/step-1-basic-info"
 import { Step2PricingVisibility } from "./create-listing-steps/step-2-pricing-visibility"
 import { Step3Location } from "./create-listing-steps/step-3-location"
 import { Step4Review } from "./create-listing-steps/step-4-review"
+import { MarketplaceAnalytics, NavigationAnalytics, ErrorAnalytics } from "@/lib/analytics"
 
 interface CreateExchangeListingModalProps {
   open: boolean
@@ -89,6 +90,8 @@ export function CreateExchangeListingModal({
   useEffect(() => {
     if (!open) {
       setCurrentStep(1)
+    } else {
+      NavigationAnalytics.modalOpened('create_exchange_listing')
     }
   }, [open])
 
@@ -234,6 +237,13 @@ export function CreateExchangeListingModal({
       const result = await createExchangeListing(tenantSlug, tenantId, listingData)
 
       if (result.success) {
+        MarketplaceAnalytics.listingCreated({
+          category_id: formData.category_id,
+          category_name: categories.find(c => c.id === formData.category_id)?.name || 'unknown',
+          pricing_type: formData.pricing_type,
+          visibility: formData.visibility_scope,
+          has_photos: formData.photos.length > 0,
+        })
         showFeedback({
           title: publishNow ? "Listing Published!" : "Draft Saved",
           description: publishNow
@@ -246,6 +256,7 @@ export function CreateExchangeListingModal({
         onOpenChange(false)
         router.refresh()
       } else {
+        ErrorAnalytics.actionFailed('create_listing', result.error || "Failed to create listing")
         showFeedback({
           title: "Couldn't create listing",
           description: result.error || "Something went wrong. Please try again.",
@@ -254,7 +265,7 @@ export function CreateExchangeListingModal({
         })
       }
     } catch (error) {
-      console.error("Error creating listing:", error)
+      ErrorAnalytics.actionFailed('create_listing', error instanceof Error ? error.message : "Unexpected error")
       showFeedback({
         title: "Something went wrong",
         description: "An unexpected error occurred. Please try again.",

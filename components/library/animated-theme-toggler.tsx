@@ -5,6 +5,7 @@ import { Moon, Sun } from "lucide-react"
 import { flushSync } from "react-dom"
 
 import { cn } from "@/lib/utils"
+import { ThemeAnalytics } from "@/lib/analytics"
 
 interface AnimatedThemeTogglerProps
   extends React.ComponentPropsWithoutRef<"button"> {
@@ -26,6 +27,10 @@ export const AnimatedThemeToggler = ({
 
     updateTheme()
 
+    const currentTheme = document.documentElement.classList.contains("dark") ? "dark" : "light"
+    const source = localStorage.getItem("theme") ? "preference" : "system"
+    ThemeAnalytics.detected(currentTheme, source)
+
     const observer = new MutationObserver(updateTheme)
     observer.observe(document.documentElement, {
       attributes: true,
@@ -44,6 +49,7 @@ export const AnimatedThemeToggler = ({
         setIsDark(newTheme)
         document.documentElement.classList.toggle("dark")
         localStorage.setItem("theme", newTheme ? "dark" : "light")
+        ThemeAnalytics.changed(newTheme ? "dark" : "light")
       })
     }).ready
 

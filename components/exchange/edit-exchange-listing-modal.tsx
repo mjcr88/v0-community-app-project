@@ -29,6 +29,7 @@ import type { ExchangePricingType, ExchangeCondition } from "@/types/exchange"
 import { LocationSelector } from "@/components/event-forms/location-selector"
 import { PhotoManager } from "@/components/photo-manager"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { MarketplaceAnalytics, NavigationAnalytics, ErrorAnalytics } from "@/lib/analytics"
 
 interface EditExchangeListingModalProps {
   listingId: string
@@ -235,6 +236,7 @@ export function EditExchangeListingModal({
       const result = await updateExchangeListing(listingId, tenantSlug, tenantId, listingData)
 
       if (result.success) {
+        MarketplaceAnalytics.listingEdited(listingId)
         toast({
           title: "Listing updated!",
           description: "Your changes have been saved.",
@@ -246,6 +248,7 @@ export function EditExchangeListingModal({
           router.refresh()
         }
       } else {
+        ErrorAnalytics.actionFailed('update_listing', result.error || "Failed to update listing")
         toast({
           title: "Error",
           description: result.error || "Failed to update listing",
@@ -254,6 +257,7 @@ export function EditExchangeListingModal({
       }
     } catch (error) {
       console.error("Listing update error:", error)
+      ErrorAnalytics.actionFailed('update_listing', error instanceof Error ? error.message : "Unexpected error")
       toast({
         title: "Error",
         description: "An unexpected error occurred",
@@ -320,6 +324,7 @@ export function EditExchangeListingModal({
     const result = await deleteExchangeListing(listingId, tenantSlug, tenantId)
 
     if (result.success) {
+      MarketplaceAnalytics.listingDeleted(listingId)
       toast({
         title: "Listing deleted",
         description: "Your listing has been permanently deleted.",

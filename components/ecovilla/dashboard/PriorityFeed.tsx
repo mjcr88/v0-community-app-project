@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card } from "@/components/library/card"
 import { Badge } from "@/components/library/badge"
 import { Button } from "@/components/ui/button"
@@ -11,6 +11,7 @@ import {
     Check,
     Loader2,
     Heart,
+    X,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
@@ -18,6 +19,7 @@ import useSWR from "swr"
 import { rsvpToEvent, saveEvent, unsaveEvent } from "@/app/actions/events"
 import { rsvpToCheckIn } from "@/app/actions/check-ins"
 import { useToast } from "@/hooks/use-toast"
+import { DashboardAnalytics } from "@/lib/analytics"
 
 interface ApiPriorityItem {
     type: "announcement" | "event" | "check_in" | "listing" | "exchange_request" | "exchange_confirmed" | "exchange_rejected" | "exchange_return_due"
@@ -76,8 +78,25 @@ export function PriorityFeed({ slug, userId, tenantId }: { slug: string; userId:
     const [optimisticRsvps, setOptimisticRsvps] = useState<Record<string, "going" | "maybe" | "not_going" | null>>({})
     const [optimisticSaves, setOptimisticSaves] = useState<Record<string, boolean>>({})
     const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({})
+    const [dismissedItems, setDismissedItems] = useState<string[]>([])
+
+    useEffect(() => {
+        const saved = localStorage.getItem("dismissed_priority_items")
+        if (saved) {
+            setDismissedItems(JSON.parse(saved))
+        }
+    }, [])
+
+    const handleDismiss = (item: ApiPriorityItem) => {
+        const newDismissed = [...dismissedItems, item.id]
+        setDismissedItems(newDismissed)
+        localStorage.setItem("dismissed_priority_items", JSON.stringify(newDismissed))
+        DashboardAnalytics.priorityItemDismissed(item.type, item.id)
+        toast({ title: "Item dismissed", duration: 2000 })
+    }
 
     const handleItemClick = (item: ApiPriorityItem) => {
+        DashboardAnalytics.priorityItemClicked(item.type, item.id)
         if (item.type === "event") {
             router.push(`/t/${slug}/dashboard/events/${item.id}`)
         } else if (item.type === "listing") {
@@ -333,7 +352,8 @@ export function PriorityFeed({ slug, userId, tenantId }: { slug: string; userId:
 
     if (error) return <div className="h-full flex items-center justify-center text-muted-foreground text-sm">Failed to load feed</div>
 
-    const items = data?.items || []
+    const allItems = data?.items || []
+    const items = allItems.filter(item => !dismissedItems.includes(item.id))
 
     if (items.length === 0) {
         return (
@@ -399,8 +419,19 @@ export function PriorityFeed({ slug, userId, tenantId }: { slug: string; userId:
                             </div>
 
                             {/* Actions - Top Right */}
-                            <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+                            <div className="shrink-0 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                                 {renderActions(item)}
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleDismiss(item)
+                                    }}
+                                >
+                                    <X className="h-4 w-4" />
+                                </Button>
                             </div>
                         </div>
 

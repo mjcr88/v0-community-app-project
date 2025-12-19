@@ -11,6 +11,7 @@ import { createClient } from "@/lib/supabase/client"
 import { Users, Plus, X, PawPrint } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Combobox } from "@/components/ui/combobox"
+import { OnboardingAnalytics } from "@/lib/analytics"
 
 const RELATIONSHIP_TYPES = [
   { value: "spouse", label: "Spouse" },
@@ -141,6 +142,7 @@ export function FamilyForm({
       }
 
       console.log("[v0] Family data saved successfully")
+      OnboardingAnalytics.stepCompleted(1, 'family')
       router.push(`/t/${tenant.slug}/onboarding/journey`)
     } catch (error) {
       console.error("[v0] Error saving family data:", error)

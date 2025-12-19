@@ -21,6 +21,7 @@ import { FamilyMemberCard } from "@/components/directory/FamilyMemberCard"
 import { ExchangeListingCard } from "@/components/directory/ExchangeListingCard"
 import { PhotoGallerySection } from "@/components/directory/PhotoGallerySection"
 import { CollapsibleSection } from "@/components/directory/CollapsibleSection"
+import { TrackProfileView } from "@/components/analytics/track-views"
 
 export default async function PublicProfilePage({
   params,
@@ -264,6 +265,7 @@ export default async function PublicProfilePage({
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+      <TrackProfileView isOwnProfile={user.id === resident.id} />
       {/* Back Button */}
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>

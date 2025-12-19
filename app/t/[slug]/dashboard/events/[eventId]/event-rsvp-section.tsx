@@ -16,6 +16,9 @@ interface EventRsvpSectionProps {
   maxAttendees: number | null
   userId: string | null
   eventStatus?: "draft" | "published" | "cancelled"
+  initialUserStatus?: string | null
+  initialCounts?: { yes: number; maybe: number; no: number }
+  disableAutoFetch?: boolean
 }
 
 export function EventRsvpSection({
@@ -26,11 +29,14 @@ export function EventRsvpSection({
   maxAttendees,
   userId,
   eventStatus,
+  initialUserStatus = null,
+  initialCounts = { yes: 0, maybe: 0, no: 0 },
+  disableAutoFetch = false,
 }: EventRsvpSectionProps) {
   const router = useRouter()
   const { showFeedback } = useRioFeedback()
-  const [currentStatus, setCurrentStatus] = useState<string | null>(null)
-  const [counts, setCounts] = useState({ yes: 0, maybe: 0, no: 0 })
+  const [currentStatus, setCurrentStatus] = useState<string | null>(initialUserStatus)
+  const [counts, setCounts] = useState(initialCounts)
   const [isLoading, setIsLoading] = useState(false)
 
   const isCancelled = eventStatus === "cancelled"
@@ -46,7 +52,7 @@ export function EventRsvpSection({
   const canRsvp = userId && !isDeadlinePassed && (!isFull || currentStatus === "yes") && !isCancelled
 
   useEffect(() => {
-    if (!userId) return
+    if (!userId || disableAutoFetch) return
 
     async function loadData() {
       // Load RSVP status

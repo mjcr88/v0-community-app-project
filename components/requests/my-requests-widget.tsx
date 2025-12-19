@@ -8,6 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { RequestTypeIcon } from "./request-type-icon"
 import { RequestStatusBadge } from "./request-status-badge"
 import { format } from "date-fns"
+import { useEffect } from "react"
+import { DashboardAnalytics } from "@/lib/analytics"
 
 interface MyRequestsWidgetProps {
   requests: any[]
@@ -19,6 +21,10 @@ export function MyRequestsWidget({ requests, tenantSlug }: MyRequestsWidgetProps
   const activeRequests = requests.filter(
     (r) => r.status === "pending" || r.status === "in_progress"
   )
+
+  useEffect(() => {
+    DashboardAnalytics.widgetViewed('my_requests')
+  }, [])
 
   if (activeRequests.length === 0) {
     return (
@@ -34,7 +40,7 @@ export function MyRequestsWidget({ requests, tenantSlug }: MyRequestsWidgetProps
               You don't have any active requests.
             </p>
             <Button asChild>
-              <Link href={`/t/${tenantSlug}/dashboard/requests/create`}>
+              <Link href={`/t/${tenantSlug}/dashboard/requests`}>
                 <Plus className="h-4 w-4 mr-2" />
                 New Request
               </Link>
@@ -56,11 +62,11 @@ export function MyRequestsWidget({ requests, tenantSlug }: MyRequestsWidgetProps
           </Badge>
         </div>
         <div className="flex gap-2">
-          <Button asChild variant="ghost" size="sm" className="flex-1 md:flex-none">
+          <Button asChild variant="ghost" size="sm" className="flex-1 md:flex-none" onClick={() => DashboardAnalytics.widgetActionClicked('my_requests', 'view_all')}>
             <Link href={`/t/${tenantSlug}/dashboard/requests`}>View All</Link>
           </Button>
-          <Button asChild size="sm" className="flex-1 md:flex-none">
-            <Link href={`/t/${tenantSlug}/dashboard/requests/create`}>
+          <Button asChild size="sm" className="flex-1 md:flex-none" onClick={() => DashboardAnalytics.widgetActionClicked('my_requests', 'create_request')}>
+            <Link href={`/t/${tenantSlug}/dashboard/requests`}>
               <Plus className="h-4 w-4 mr-2" />
               <span className="hidden sm:inline">Create Request</span>
               <span className="sm:hidden">Create</span>

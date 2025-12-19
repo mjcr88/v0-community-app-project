@@ -12,6 +12,7 @@ import { RequestTypeIcon } from "@/components/requests/request-type-icon"
 import { format } from "date-fns"
 import Image from "next/image"
 import { RequestLocationMap } from "@/components/requests/request-location-map"
+import { TrackRequestView } from "@/components/analytics/track-views"
 
 interface RequestDetailPageProps {
   params: Promise<{ slug: string; requestId: string }>
@@ -98,6 +99,7 @@ export default async function RequestDetailPage({ params }: RequestDetailPagePro
 
   return (
     <div className="min-h-screen bg-background pb-12">
+      <TrackRequestView requestId={requestId} />
       {/* Header Section */}
       <div className="relative bg-gradient-to-br from-primary/5 via-background to-background border-b">
         <div className="container mx-auto px-4 py-8">

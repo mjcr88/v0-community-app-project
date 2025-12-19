@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { ProfileEditForm } from "./profile-edit-form"
 import { SettingsLayout } from "@/components/settings/settings-layout"
+import { TrackProfileView } from "@/components/analytics/track-views"
 
 export default async function ProfileSettingsPage({
   params,
@@ -77,6 +78,7 @@ export default async function ProfileSettingsPage({
 
   return (
     <SettingsLayout tenantSlug={slug} title="Profile Settings" description="Manage your personal information and public profile">
+      <TrackProfileView isOwnProfile={true} />
       <ProfileEditForm
         resident={resident}
         tenant={tenant}

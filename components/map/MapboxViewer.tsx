@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo, useCallback, useEffect, useRef } from "react"
+import { useRouter } from "next/navigation"
 import Map, { Source, Layer, MapRef, Marker } from "react-map-gl"
 import * as turf from "@turf/turf"
 import { Search, X, Filter, Layers, Check, MapPin } from "lucide-react"
@@ -9,6 +10,7 @@ import "mapbox-gl/dist/mapbox-gl.css"
 import { rsvpToCheckIn } from "@/app/actions/check-ins"
 
 import { LocationWithRelations } from "@/lib/data/locations"
+import { MapAnalytics } from "@/lib/analytics"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -101,6 +103,7 @@ export function MapboxFullViewer({
     hideSidebar = false,
 }: MapboxFullViewerProps) {
     const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+    const router = useRouter()
 
     // Calculate initial center - prioritize boundary center, then mapCenter prop, then default
     const initialCenter = useMemo(() => {
@@ -140,8 +143,9 @@ export function MapboxFullViewer({
     const hasUserInteracted = useRef(false) // Track if user manually selected a location
     const [isFullscreen, setIsFullscreen] = useState(false)
 
-    // Debug logging
+    // Debug logging & Analytics
     useEffect(() => {
+        MapAnalytics.viewed()
         console.log("[MapboxFullViewer] Mounted")
         console.log("[MapboxFullViewer] Token:", mapboxToken ? "Present" : "Missing")
         console.log("[MapboxFullViewer] Locations:", locations.length)
@@ -152,11 +156,44 @@ export function MapboxFullViewer({
         })
     }, [locations, mapCenter, mapboxToken])
 
+    // Helper to check if a point is inside the community boundary
+    const checkIfInsideBoundary = useCallback((lat: number, lng: number) => {
+        const boundaryLoc = locations.find(l => l.type === 'boundary');
+        if (!boundaryLoc?.boundary_coordinates || boundaryLoc.boundary_coordinates.length < 3) return false;
+
+        try {
+            const coords = [...boundaryLoc.boundary_coordinates];
+            // Ensure closed polygon
+            if (coords[0][0] !== coords[coords.length - 1][0] || coords[0][1] !== coords[coords.length - 1][1]) {
+                coords.push(coords[0]);
+            }
+            // Turf expects [lng, lat]
+            const polygonCoords = coords.map(c => [c[1], c[0]]);
+            const boundaryPoly = turf.polygon([polygonCoords]);
+            const point = turf.point([lng, lat]);
+            return turf.booleanPointInPolygon(point, boundaryPoly);
+        } catch (e) {
+            console.error("Error checking boundary:", e);
+            return false;
+        }
+    }, [locations]);
+
     // Search state
     const [searchQuery, setSearchQuery] = useState("")
     const [searchResults, setSearchResults] = useState<LocationWithRelations[]>([])
     const [showSearchDropdown, setShowSearchDropdown] = useState(false)
     const [highlightedCategories, setHighlightedCategories] = useState<Set<string>>(externalHighlightedCategories || new Set())
+
+    // Debounced search analytics
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (searchQuery.trim().length > 2) {
+                MapAnalytics.searched(searchQuery.length, searchResults.length)
+            }
+        }, 1500) // Debounce 1.5s
+
+        return () => clearTimeout(timer)
+    }, [searchQuery, searchResults.length])
 
     // Collapsible panel state
     const [showLayersPanel, setShowLayersPanel] = useState(false)
@@ -788,6 +825,9 @@ export function MapboxFullViewer({
                         ref={mapRef}
                         interactiveLayerIds={["lots-fill", "facilities-fill", "paths-line", "paths-hit-area", "streets-line", "poi-label"]}
                         onClick={(e: any) => {
+                            const { lng, lat } = e.lngLat;
+                            const isInside = checkIfInsideBoundary(lat, lng);
+
                             if (e.features && e.features.length > 0) {
                                 const feature = e.features[0]
 
@@ -802,6 +842,7 @@ export function MapboxFullViewer({
                                     const locationId = feature.properties.id
                                     const location = locations.find((loc) => loc.id === locationId)
                                     if (location) {
+                                        MapAnalytics.locationClicked(locationId, location.type, isInside)
                                         // Call external callback if provided
                                         if (onLocationClick) {
                                             onLocationClick(locationId, location)
@@ -826,6 +867,7 @@ export function MapboxFullViewer({
                                     })
                                 }
                             } else {
+                                MapAnalytics.mapClicked(isInside, { lat, lng })
                                 setSelectedLocation(null)
                                 // Handle background click (for pin dropping)
                                 if (onMapClick) {
@@ -1003,6 +1045,10 @@ export function MapboxFullViewer({
                                     style={{ zIndex: isSelected ? 40 : 5 }}
                                     onClick={(e) => {
                                         e.originalEvent.stopPropagation();
+                                        // Check boundary status for marker
+                                        const isInside = checkIfInsideBoundary(location.coordinates!.lat, location.coordinates!.lng);
+                                        MapAnalytics.locationClicked(location.id, location.type, isInside)
+
                                         if (onLocationClick) {
                                             onLocationClick(location.id, location);
                                         }
@@ -1097,6 +1143,10 @@ export function MapboxFullViewer({
                                         style={{ zIndex: isSelected ? 40 : 5 }}
                                         onClick={(e) => {
                                             e.originalEvent.stopPropagation()
+                                            // Check boundary status for marker
+                                            const isInside = checkIfInsideBoundary(location.coordinates!.lat, location.coordinates!.lng);
+                                            MapAnalytics.locationClicked(location.id, location.type, isInside)
+
                                             if (onLocationClick) {
                                                 onLocationClick(location.id, location)
                                             }
@@ -1521,6 +1571,13 @@ export function MapboxFullViewer({
                                             className={`group relative cursor-pointer transition-all duration-300 ${isHighlighted ? 'scale-110' : ''}`}
                                             onClick={(e) => {
                                                 e.stopPropagation();
+                                                // Check boundary status for checkin
+                                                const lat = checkIn.displayCoords?.lat;
+                                                const lng = checkIn.displayCoords?.lng;
+                                                const isInside = lat && lng ? checkIfInsideBoundary(lat, lng) : false;
+
+                                                MapAnalytics.locationClicked(checkIn.id, 'checkin', isInside)
+
                                                 console.log('[Mapbox] Check-in clicked:', checkIn);
                                                 console.log('[Mapbox] Setting selectedLocation to:', checkIn);
                                                 hasUserInteracted.current = true
@@ -1958,8 +2015,8 @@ export function MapboxFullViewer({
                                 {!(selectedLocation as any).activity_type && (
                                     <div className="mt-auto pt-4 border-t">
                                         <Button
-                                            className="w-full"
-                                            onClick={() => window.open(`/t/${tenantSlug}/dashboard/locations/${selectedLocation.id}`, "_blank")}
+                                            className="w-full mt-4"
+                                            onClick={() => router.push(`/t/${tenantSlug}/dashboard/locations/${selectedLocation.id}`)}
                                         >
                                             View Full Details
                                         </Button>

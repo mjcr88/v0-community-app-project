@@ -31,6 +31,8 @@ type ResidentInviteSelectorProps = {
   selectedFamilyIds: string[]
   onResidentsChange: (ids: string[]) => void
   onFamiliesChange: (ids: string[]) => void
+  initialResidents?: Resident[]
+  initialFamilies?: FamilyUnit[]
 }
 
 export function ResidentInviteSelector({
@@ -39,14 +41,21 @@ export function ResidentInviteSelector({
   selectedFamilyIds,
   onResidentsChange,
   onFamiliesChange,
+  initialResidents = [],
+  initialFamilies = [],
 }: ResidentInviteSelectorProps) {
-  const [residents, setResidents] = useState<Resident[]>([])
-  const [families, setFamilies] = useState<FamilyUnit[]>([])
+  const [residents, setResidents] = useState<Resident[]>(initialResidents)
+  const [families, setFamilies] = useState<FamilyUnit[]>(initialFamilies)
   const [residentSearch, setResidentSearch] = useState("")
   const [familySearch, setFamilySearch] = useState("")
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
+    if (initialResidents.length > 0 || initialFamilies.length > 0) {
+      setIsLoading(false)
+      return
+    }
+
     async function fetchData() {
       setIsLoading(true)
       const [residentsResult, familiesResult] = await Promise.all([getResidents(tenantId), getFamilyUnits(tenantId)])
@@ -55,7 +64,7 @@ export function ResidentInviteSelector({
       setIsLoading(false)
     }
     fetchData()
-  }, [tenantId])
+  }, [tenantId, initialResidents, initialFamilies])
 
   const filteredResidents = residents.filter((r) =>
     `${r.first_name} ${r.last_name}`.toLowerCase().includes(residentSearch.toLowerCase()),

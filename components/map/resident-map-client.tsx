@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import Map, { Source, Layer, Marker, NavigationControl, GeolocateControl, MapRef } from 'react-map-gl';
 import * as turf from '@turf/turf';
 import { MapPin, Search, Layers, Filter, X } from 'lucide-react';
@@ -19,6 +20,7 @@ import {
     DropdownMenuLabel,
     DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { MapAnalytics } from "@/lib/analytics";
 
 interface ResidentMapClientProps {
     locations: LocationWithRelations[];
@@ -35,6 +37,7 @@ export function ResidentMapClient({
     mapCenter,
     mapZoom = 14,
 }: ResidentMapClientProps) {
+    const router = useRouter();
     const [viewState, setViewState] = useState({
         longitude: mapCenter?.lng || -84.5333,
         latitude: mapCenter?.lat || 9.9567,
@@ -62,6 +65,26 @@ export function ResidentMapClient({
         easement: true,
         recreational_zone: true,
     });
+
+    // Track map view on mount
+    useEffect(() => {
+        MapAnalytics.viewed()
+    }, [])
+
+    // Track detailed view
+    useEffect(() => {
+        if (selectedLocation) {
+            MapAnalytics.locationDetailsViewed(selectedLocation.id)
+        }
+    }, [selectedLocation])
+
+    // Filter effect
+    useEffect(() => {
+        const activeFilters = Object.entries(visibleTypes)
+            .filter(([_, isVisible]) => isVisible)
+            .map(([type]) => type)
+        // We could track filter changes here too, but existing code might handle it
+    }, [visibleTypes])
 
     const mapRef = useRef<MapRef>(null);
     const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
@@ -150,12 +173,39 @@ export function ResidentMapClient({
         };
     }, [filteredLocations]);
 
+    // Helper to check if a point is inside the community boundary
+    const checkIfInsideBoundary = useCallback((lat: number, lng: number) => {
+        const boundaryLoc = locations.find(l => l.type === 'boundary');
+        if (!boundaryLoc?.boundary_coordinates || boundaryLoc.boundary_coordinates.length < 3) return false;
+
+        try {
+            const coords = [...boundaryLoc.boundary_coordinates];
+            // Ensure closed polygon
+            if (coords[0][0] !== coords[coords.length - 1][0] || coords[0][1] !== coords[coords.length - 1][1]) {
+                coords.push(coords[0]);
+            }
+            // Turf expects [lng, lat]
+            const polygonCoords = coords.map(c => [c[1], c[0]]);
+            const boundaryPoly = turf.polygon([polygonCoords]);
+            const point = turf.point([lng, lat]);
+            return turf.booleanPointInPolygon(point, boundaryPoly);
+        } catch (e) {
+            console.error("Error checking boundary:", e);
+            return false;
+        }
+    }, [locations]);
+
     const handleLocationClick = useCallback((event: any) => {
+        const { lng, lat } = event.lngLat;
+        const isInside = checkIfInsideBoundary(lat, lng);
         const feature = event.features?.[0];
+
         if (feature) {
             const locationId = feature.properties.id;
+            const locationType = feature.properties.type;
             const location = locations.find(l => l.id === locationId);
             if (location) {
+                MapAnalytics.locationClicked(locationId, locationType, isInside)
                 setSelectedLocation(location);
 
                 // Fly to location
@@ -179,8 +229,12 @@ export function ResidentMapClient({
                     });
                 }
             }
+        } else {
+            // Empty map click
+            MapAnalytics.mapClicked(isInside, { lat, lng })
+            setSelectedLocation(null);
         }
-    }, [locations]);
+    }, [locations, checkIfInsideBoundary]);
 
     // Layer Styles
     const layers = {
@@ -265,6 +319,11 @@ export function ResidentMapClient({
                                 className="pl-9 bg-white/90 backdrop-blur-sm shadow-sm border-0"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
+                                onBlur={() => {
+                                    if (searchQuery.length > 2) {
+                                        MapAnalytics.searched(searchQuery.length, filteredLocations.length)
+                                    }
+                                }}
                             />
                             {searchQuery && (
                                 <button
@@ -293,9 +352,11 @@ export function ResidentMapClient({
                                     <DropdownMenuCheckboxItem
                                         key={type}
                                         checked={visibleTypes[type]}
-                                        onCheckedChange={(checked) =>
-                                            setVisibleTypes(prev => ({ ...prev, [type]: checked }))
-                                        }
+                                        onCheckedChange={(checked) => {
+                                            const newTypes = { ...visibleTypes, [type]: checked }
+                                            setVisibleTypes(newTypes)
+                                            MapAnalytics.filterChanged(Object.keys(newTypes).filter(t => newTypes[t]))
+                                        }}
                                         className="capitalize"
                                     >
                                         {type.replace('_', ' ')}
@@ -314,19 +375,28 @@ export function ResidentMapClient({
                             <DropdownMenuContent align="end">
                                 <DropdownMenuCheckboxItem
                                     checked={mapStyle.includes('satellite')}
-                                    onCheckedChange={() => setMapStyle('mapbox://styles/mapbox/satellite-streets-v12')}
+                                    onCheckedChange={() => {
+                                        setMapStyle('mapbox://styles/mapbox/satellite-streets-v12')
+                                        MapAnalytics.styleChanged('satellite')
+                                    }}
                                 >
                                     Satellite
                                 </DropdownMenuCheckboxItem>
                                 <DropdownMenuCheckboxItem
                                     checked={mapStyle.includes('streets') && !mapStyle.includes('satellite')}
-                                    onCheckedChange={() => setMapStyle('mapbox://styles/mapbox/streets-v12')}
+                                    onCheckedChange={() => {
+                                        setMapStyle('mapbox://styles/mapbox/streets-v12')
+                                        MapAnalytics.styleChanged('streets')
+                                    }}
                                 >
                                     Streets
                                 </DropdownMenuCheckboxItem>
                                 <DropdownMenuCheckboxItem
                                     checked={mapStyle.includes('outdoors')}
-                                    onCheckedChange={() => setMapStyle('mapbox://styles/mapbox/outdoors-v12')}
+                                    onCheckedChange={() => {
+                                        setMapStyle('mapbox://styles/mapbox/outdoors-v12')
+                                        MapAnalytics.styleChanged('outdoors')
+                                    }}
                                 >
                                     Outdoors
                                 </DropdownMenuCheckboxItem>
@@ -356,7 +426,7 @@ export function ResidentMapClient({
                     }}
                 >
                     <NavigationControl position="bottom-right" />
-                    <GeolocateControl position="bottom-right" />
+                    <GeolocateControl position="bottom-right" onGeolocate={() => MapAnalytics.geolocationUsed()} />
 
                     {/* Polygons Layer */}
                     <Source id="polygons" type="geojson" data={geojsonData.polygons}>
@@ -492,7 +562,7 @@ export function ResidentMapClient({
                                 </>
                             )}
 
-                            <Button className="w-full mt-4" onClick={() => window.open(`/t/${tenantSlug}/dashboard/locations/${selectedLocation.id}`, '_blank')}>
+                            <Button className="w-full mt-4" onClick={() => router.push(`/t/${tenantSlug}/dashboard/locations/${selectedLocation.id}`)}>
                                 View Full Details
                             </Button>
                         </div>

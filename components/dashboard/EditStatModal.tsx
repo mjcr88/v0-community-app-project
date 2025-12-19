@@ -8,6 +8,8 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { SortableList, SortableListItem, Item } from "@/components/library/sortable-list"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { ChevronUp, ChevronDown } from "lucide-react"
+import { DashboardAnalytics } from "@/lib/analytics"
 
 export interface AvailableStat {
     id: string
@@ -74,6 +76,13 @@ export function EditStatModal({ open, onOpenChange, currentStats, availableStats
         try {
             // Extract real IDs from items
             const selectedIds = items.map(item => item.description)
+
+            // Check if order changed (simple comparison)
+            const isReordered = JSON.stringify(selectedIds) !== JSON.stringify(currentStats)
+            if (isReordered) {
+                DashboardAnalytics.statsReordered(selectedIds)
+            }
+
             await onSave(selectedIds, scope)
             onOpenChange(false)
         } catch (error) {
@@ -81,6 +90,21 @@ export function EditStatModal({ open, onOpenChange, currentStats, availableStats
         } finally {
             setIsSaving(false)
         }
+    }
+
+    const moveItem = (index: number, direction: 'up' | 'down') => {
+        if (direction === 'up' && index === 0) return
+        if (direction === 'down' && index === items.length - 1) return
+
+        const newItems = [...items]
+        const targetIndex = direction === 'up' ? index - 1 : index + 1
+
+        // Swap
+        const temp = newItems[index]
+        newItems[index] = newItems[targetIndex]
+        newItems[targetIndex] = temp
+
+        setItems(newItems)
     }
 
     return (
@@ -153,6 +177,33 @@ export function EditStatModal({ open, onOpenChange, currentStats, availableStats
                                                                 </Badge>
                                                             )}
                                                         </div>
+                                                    </div>
+
+                                                    <div className="flex flex-col gap-0.5">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-5 w-5 hover:bg-muted"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation()
+                                                                moveItem(order, 'up')
+                                                            }}
+                                                            disabled={order === 0}
+                                                        >
+                                                            <ChevronUp className="h-3 w-3" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-5 w-5 hover:bg-muted"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation()
+                                                                moveItem(order, 'down')
+                                                            }}
+                                                            disabled={order === items.length - 1}
+                                                        >
+                                                            <ChevronDown className="h-3 w-3" />
+                                                        </Button>
                                                     </div>
                                                 </div>
                                             )

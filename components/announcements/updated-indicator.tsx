@@ -4,11 +4,11 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 interface UpdatedIndicatorProps {
   publishedAt: string | null
-  lastEditedAt: string
+  lastEditedAt?: string | null
 }
 
 export function UpdatedIndicator({ publishedAt, lastEditedAt }: UpdatedIndicatorProps) {
-  if (!publishedAt) return null
+  if (!publishedAt || !lastEditedAt) return null
 
   const updated = new Date(lastEditedAt)
   const published = new Date(publishedAt)

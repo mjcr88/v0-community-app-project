@@ -24,6 +24,7 @@ import { LocationSelector } from "@/components/event-forms/location-selector"
 import { PhotoManager } from "@/components/photo-manager"
 import { PulsatingButton } from "@/components/library/pulsating-button"
 import { DateTimePicker } from "@/components/ui/date-time-picker"
+import { EventsAnalytics, ErrorAnalytics } from "@/lib/analytics"
 
 type Category = {
   id: string
@@ -182,6 +183,14 @@ export function EventForm({ tenantSlug, tenantId, categories, initialLocation }:
       })
 
       if (result.success) {
+        EventsAnalytics.created({
+          event_type: formData.event_type,
+          category_id: formData.category_id,
+          category_name: categories.find(c => c.id === formData.category_id)?.name || 'unknown',
+          visibility: formData.visibility_scope,
+          has_rsvp: formData.requires_rsvp,
+          has_location: formData.location_type !== "none",
+        })
         if (photos.length > 0 && result.data?.id) {
           const imageResult = await saveEventImages(result.data.id, tenantSlug, photos, heroPhoto)
 
@@ -204,19 +213,19 @@ export function EventForm({ tenantSlug, tenantId, categories, initialLocation }:
         })
         router.push(`/t/${tenantSlug}/dashboard/events`)
       } else {
-        showFeedback({
-          title: "Couldn't create event",
-          description: result.error || "Something went wrong. Please try again.",
-          variant: "error",
-          image: "/rio/rio_no_results_confused.png"
+        ErrorAnalytics.actionFailed('create_event', result.error || "Failed to create event")
+        toast({
+          title: "Error",
+          description: result.error || "Failed to create event",
+          variant: "destructive",
         })
       }
     } catch (error) {
-      showFeedback({
-        title: "Something went wrong",
-        description: "An unexpected error occurred. Please try again.",
-        variant: "error",
-        image: "/rio/rio_no_results_confused.png"
+      ErrorAnalytics.actionFailed('create_event', error instanceof Error ? error.message : "Unexpected error")
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
       })
     } finally {
       setIsSubmitting(false)

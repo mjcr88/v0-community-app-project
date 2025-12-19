@@ -5,6 +5,7 @@ import { Analytics } from "@vercel/analytics/next"
 import { Toaster } from "@/components/ui/toaster"
 import { RioFeedbackProvider } from "@/components/feedback/rio-feedback-provider"
 import { ThemeProvider } from "@/components/theme-provider"
+import { PostHogProvider } from "@/components/providers/posthog-provider"
 import { MobileZoomFix } from "@/components/ui/mobile-zoom-fix"
 import "./globals.css"
 
@@ -34,9 +35,18 @@ const sourceSerif = Source_Serif_4({
 })
 
 export const metadata: Metadata = {
-  title: "v0 App",
-  description: "Created with v0",
+  title: "Rio Community",
+  description: "Community management app for Rio residents",
   generator: "v0.app",
+  icons: {
+    icon: [
+      { url: '/icon.png' },
+      { url: '/icon.png', sizes: '32x32', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/apple-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
+  }
 }
 
 export const viewport = {
@@ -60,9 +70,11 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <RioFeedbackProvider>
-            {children}
-          </RioFeedbackProvider>
+          <PostHogProvider>
+            <RioFeedbackProvider>
+              {children}
+            </RioFeedbackProvider>
+          </PostHogProvider>
           <Analytics />
           <Toaster />
         </ThemeProvider>

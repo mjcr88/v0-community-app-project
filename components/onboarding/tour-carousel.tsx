@@ -1,24 +1,47 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "motion/react"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight, X } from "lucide-react"
+import { TourAnalytics } from "@/lib/analytics"
 
 interface TourCarouselProps {
     cards: React.ReactNode[]
     onComplete: () => void
     onClose: () => void
+    tourType?: "product" | "profile"
 }
 
-export function TourCarousel({ cards, onComplete, onClose }: TourCarouselProps) {
+export function TourCarousel({ cards, onComplete, onClose, tourType = "product" }: TourCarouselProps) {
     const [currentSlide, setCurrentSlide] = useState(0)
     const totalSlides = cards.length
+
+    // Track tour started on mount
+    useEffect(() => {
+        if (tourType === "product") {
+            TourAnalytics.productTourStarted()
+        } else {
+            TourAnalytics.profileTourStarted()
+        }
+    }, [tourType])
+
+    // Track each step view
+    useEffect(() => {
+        if (tourType === "product") {
+            TourAnalytics.productTourStepViewed(currentSlide + 1, totalSlides)
+        }
+    }, [currentSlide, totalSlides, tourType])
 
     const handleNext = () => {
         if (currentSlide < totalSlides - 1) {
             setCurrentSlide(currentSlide + 1)
         } else {
+            if (tourType === "product") {
+                TourAnalytics.productTourCompleted()
+            } else {
+                TourAnalytics.profileTourCompleted()
+            }
             onComplete()
         }
     }
@@ -55,7 +78,14 @@ export function TourCarousel({ cards, onComplete, onClose }: TourCarouselProps) 
                             variant="ghost"
                             size="icon"
                             className="text-muted-foreground hover:text-foreground hover:bg-muted rounded-full"
-                            onClick={onClose}
+                            onClick={() => {
+                                if (tourType === "product") {
+                                    TourAnalytics.productTourSkipped(currentSlide + 1)
+                                } else {
+                                    TourAnalytics.profileTourSkipped(currentSlide + 1)
+                                }
+                                onClose()
+                            }}
                         >
                             <X className="h-6 w-6" />
                         </Button>

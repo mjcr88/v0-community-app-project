@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button"
 import { Archive } from 'lucide-react'
 import { archiveAnnouncement } from "@/app/actions/announcements"
 import { useToast } from "@/hooks/use-toast"
+import { AnnouncementsAnalytics, ErrorAnalytics } from "@/lib/analytics"
 
 interface ArchiveAnnouncementDialogProps {
   announcementId: string
@@ -48,14 +49,16 @@ export function ArchiveAnnouncementDialog({
           title: "Announcement archived",
           description: "The announcement has been moved to the archive.",
         })
+        AnnouncementsAnalytics.archived(announcementId)
         setOpen(false)
-        
+
         if (redirectAfter) {
           router.push(`/t/${tenantSlug}/admin/announcements`)
         } else {
           router.refresh()
         }
       } else {
+        ErrorAnalytics.actionFailed('archive_announcement', result.error || "Failed to archive announcement")
         toast({
           variant: "destructive",
           title: "Error",
@@ -63,6 +66,7 @@ export function ArchiveAnnouncementDialog({
         })
       }
     } catch (error) {
+      ErrorAnalytics.actionFailed('archive_announcement', error instanceof Error ? error.message : "Unexpected error")
       toast({
         variant: "destructive",
         title: "Error",

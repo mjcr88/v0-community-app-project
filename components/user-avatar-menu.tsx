@@ -14,6 +14,7 @@ import { User, Settings, LogOut, Home, Shield } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
+import { resetUser } from "@/lib/analytics"
 
 interface UserAvatarMenuProps {
   user: {
@@ -58,6 +59,7 @@ export function UserAvatarMenu({
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
+    resetUser()
     router.push(`/t/${tenantSlug}/login`)
   }
 

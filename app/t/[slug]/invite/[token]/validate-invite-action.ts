@@ -10,10 +10,11 @@ export async function validateInviteToken(token: string, tenantId: string) {
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
   if (!supabaseUrl || !supabaseServiceKey) {
-    console.error("[v0] Missing Supabase credentials")
+    const missing = !supabaseUrl ? "NEXT_PUBLIC_SUPABASE_URL" : "SUPABASE_SERVICE_ROLE_KEY"
+    console.error(`[v0] Missing Supabase credentials: ${missing}`)
     return {
       success: false,
-      error: "Server configuration error",
+      error: `Server configuration error: Missing ${missing}`,
       resident: null,
     }
   }

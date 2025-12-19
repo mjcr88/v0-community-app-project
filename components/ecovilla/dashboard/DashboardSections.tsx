@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { Megaphone, Calendar, MapPin, Package, AlertCircle, Map } from "lucide-react"
 import { AnimatePresence, motion } from "framer-motion"
+import { DashboardAnalytics } from "@/lib/analytics"
 
 interface DashboardSectionsProps {
     children: React.ReactNode
@@ -98,7 +99,15 @@ export function DashboardSections({
                         label={section.label}
                         icon={section.icon}
                         isActive={activeSection === section.id}
-                        onClick={() => setActiveSection(activeSection === section.id ? null : section.id)}
+                        onClick={() => {
+                            const isOpening = activeSection !== section.id
+                            if (isOpening) {
+                                DashboardAnalytics.sectionOpened(section.id)
+                            } else {
+                                DashboardAnalytics.sectionClosed(section.id)
+                            }
+                            setActiveSection(isOpening ? section.id : null)
+                        }}
                     />
                 ))}
             </div>

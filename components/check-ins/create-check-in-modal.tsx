@@ -19,7 +19,8 @@ import { useRioFeedback } from "@/components/feedback/rio-feedback-provider"
 import { NeighborhoodMultiSelect } from "@/components/event-forms/neighborhood-multi-select"
 import { ResidentInviteSelector } from "@/components/event-forms/resident-invite-selector"
 import { LocationSelector } from "@/components/event-forms/location-selector"
-import { CHECK_IN_ACTIVITIES } from "@/lib/check-in-activities"
+import { CHECK_IN_ACTIVITIES, getActivityLabel } from "@/lib/check-in-activities"
+import { CheckInAnalytics, ErrorAnalytics } from "@/lib/analytics"
 
 interface CreateCheckInModalProps {
   open: boolean
@@ -229,7 +230,7 @@ export function CreateCheckInModal({
         neighborhood_ids: formData.selected_neighborhoods,
         invitee_ids: formData.selected_residents,
         family_unit_ids: formData.selected_families,
-        location_type: dbLocationType,
+        location_type: dbLocationType as "community_location" | "custom_temporary",
         location_id: formData.location_type === "community" ? formData.location_id : null,
         custom_location_name: formData.location_type === "custom" ? formData.custom_location_name : null,
         custom_location_coordinates: formData.location_type === "custom" ? formData.custom_location_coordinates : null,
@@ -245,6 +246,14 @@ export function CreateCheckInModal({
       const result = await createCheckIn(tenantSlug, tenantId, checkInData)
 
       if (result.success) {
+        const dbLocationType = formData.location_type === "community" ? "community_location" : "custom_temporary"
+        CheckInAnalytics.created({
+          activity_type: formData.activity_type,
+          activity_name: getActivityLabel(formData.activity_type),
+          duration_minutes: formData.duration_minutes,
+          visibility: formData.visibility_scope,
+          location_type: dbLocationType as 'community_location' | 'custom_temporary',
+        })
         showFeedback({
           title: "Checked In!",
           description: "Your check-in is now live for the community. Have fun!",
@@ -264,9 +273,11 @@ export function CreateCheckInModal({
           variant: "error",
           image: "/rio/rio_no_results_confused.png"
         })
+        ErrorAnalytics.actionFailed('create_checkin', result.error || "Failed to create check-in")
       }
     } catch (error) {
       console.error("[v0] CHECK-IN CREATION EXCEPTION:", error)
+      ErrorAnalytics.actionFailed('create_checkin', error instanceof Error ? error.message : "Unexpected error")
       showFeedback({
         title: "Something went wrong",
         description: "An unexpected error occurred. Please try again.",

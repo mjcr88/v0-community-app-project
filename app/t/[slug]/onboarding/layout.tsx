@@ -59,7 +59,6 @@ export default async function OnboardingLayout({
     .from("users")
     .select("*, tenants:tenant_id(id, name, slug, features)")
     .eq("id", user.id)
-    .eq("role", "resident")
     .maybeSingle()
 
   if (!userRecord) {

@@ -40,7 +40,7 @@ export async function GET() {
         const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString()
 
         // ---------------------------------------------------------
-        // 1. Announcements (Score: 100) - All Published
+        // 1. Announcements (Score: 100) - Only Unread Published
         // ---------------------------------------------------------
         const { data: announcements } = await supabase
             .from("announcements")
@@ -48,9 +48,22 @@ export async function GET() {
             .eq("tenant_id", resident.tenant_id)
             .eq("status", "published")
             .order("published_at", { ascending: false })
-            .limit(5)
+            .limit(10) // Fetch more since we'll filter some out
 
-        announcements?.forEach(announcement => {
+        // Get read announcements for this user
+        let readAnnouncementIds: Set<string> = new Set()
+        if (announcements && announcements.length > 0) {
+            const { data: readAnnouncements } = await supabase
+                .from("announcement_reads")
+                .select("announcement_id")
+                .eq("user_id", user.id)
+                .in("announcement_id", announcements.map(a => a.id))
+
+            readAnnouncementIds = new Set(readAnnouncements?.map(r => r.announcement_id) || [])
+        }
+
+        // Only include unread announcements
+        announcements?.filter(a => !readAnnouncementIds.has(a.id)).slice(0, 5).forEach(announcement => {
             priorityItems.push({
                 type: "announcement",
                 id: announcement.id,

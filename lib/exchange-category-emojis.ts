@@ -2,6 +2,7 @@
 export const EXCHANGE_CATEGORY_EMOJIS: Record<string, string> = {
     "Tools & Equipment": "🔧",
     "Food & Produce": "🍎",
+    "Household items": "🏡",
     "Services & Skills": "💼",
     "House sitting & Rentals": "🏠",
     "Rides & Carpooling": "🚗",

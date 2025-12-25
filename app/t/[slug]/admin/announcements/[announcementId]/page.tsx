@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
+import { sanitizeHtml } from "@/lib/sanitize-html"
 import { notFound, redirect } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -210,7 +211,7 @@ export default async function AdminAnnouncementDetailPage({
             <h2 className="text-xl font-semibold mb-4">Description</h2>
             <div
               className="prose prose-sm max-w-none dark:prose-invert"
-              dangerouslySetInnerHTML={{ __html: announcement.description }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(announcement.description) }}
             />
           </CardContent>
         </Card>

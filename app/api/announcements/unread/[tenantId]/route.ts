@@ -105,16 +105,23 @@ export async function GET(
 
     console.log("[v0] Read announcement IDs:", Array.from(readIds))
 
-    const recentAnnouncements = sortedAnnouncements.slice(0, 5)
+    // Filter to only unread announcements for the feed
+    const unreadAnnouncements = sortedAnnouncements.filter((a) => !readIds.has(a.id))
+    const recentAnnouncements = unreadAnnouncements.slice(0, 5)
 
     // Get total unread count for badge
-    const totalUnread = sortedAnnouncements.filter((a) => !readIds.has(a.id)).length
+    const totalUnread = unreadAnnouncements.length
 
     console.log("[v0] Returning announcements:", recentAnnouncements.length, "with", totalUnread, "unread")
 
     return NextResponse.json({
       announcements: recentAnnouncements,
       unreadCount: totalUnread,
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
+        'Pragma': 'no-cache',
+      }
     })
   } catch (error) {
     console.error("[v0] Error fetching unread announcements:", error)

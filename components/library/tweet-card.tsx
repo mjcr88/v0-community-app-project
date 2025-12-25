@@ -3,6 +3,7 @@ import { enrichTweet, type EnrichedTweet, type TweetProps } from "react-tweet"
 import { getTweet, type Tweet } from "react-tweet/api"
 
 import { cn } from "@/lib/utils"
+import { sanitizeHtml } from "@/lib/sanitize-html"
 
 interface TwitterIconProps {
   className?: string
@@ -163,7 +164,7 @@ export const TweetBody = ({ tweet }: { tweet: EnrichedTweet }) => (
             <span
               key={idx}
               className="text-sm font-normal"
-              dangerouslySetInnerHTML={{ __html: entity.text }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(entity.text) }}
             />
           )
       }
@@ -260,12 +261,12 @@ export const TweetCard = async ({
 }) => {
   const tweet = id
     ? await getTweet(id).catch((err) => {
-        if (onError) {
-          onError(err)
-        } else {
-          console.error(err)
-        }
-      })
+      if (onError) {
+        onError(err)
+      } else {
+        console.error(err)
+      }
+    })
     : undefined
 
   if (!tweet) {

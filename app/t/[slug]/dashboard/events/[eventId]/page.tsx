@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation"
 import { createServerClient } from "@/lib/supabase/server"
+import { sanitizeHtml } from "@/lib/sanitize-html"
 import { getEvent } from "@/app/actions/events"
 import { ArrowLeft, Calendar, Share2, Pencil, Users, Lock, Flag, AlertTriangle, Ban, Trash2 } from "lucide-react"
 import Link from "next/link"
@@ -485,7 +486,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
               <h2 className="text-2xl font-semibold">About This Event</h2>
               <div
                 className="prose prose-neutral dark:prose-invert max-w-none"
-                dangerouslySetInnerHTML={{ __html: event.description }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(event.description) }}
               />
             </div>
           )}

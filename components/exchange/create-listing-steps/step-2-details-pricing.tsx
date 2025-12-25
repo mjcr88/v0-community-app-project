@@ -26,7 +26,7 @@ export function Step2DetailsPricing({
     const selectedCategory = categories.find((c) => c.id === formData.category_id)
     const categoryName = selectedCategory?.name || ""
 
-    const showCondition = categoryName === "Tools & Equipment"
+    const showCondition = categoryName === "Tools & Equipment" || categoryName === "Household items"
     const showQuantity =
         categoryName === "Tools & Equipment" || categoryName === "Food & Produce"
 

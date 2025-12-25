@@ -1,9 +1,10 @@
 # Ecovilla Community Platform - Current State Overview
 
-**Version**: 1.0  
+**Version**: 2.0  
 **Created**: November 23, 2024  
+**Last Updated**: December 24, 2024  
 **Purpose**: Comprehensive overview for market research, competitive analysis, and go-to-market planning  
-**Status**: Alpha Preparation Phase
+**Status**: Alpha Ready
 
 ---
 
@@ -11,16 +12,18 @@
 
 **Ecovilla Community Platform** is a multi-tenant SaaS solution designed specifically for intentional communities, eco-villages, HOAs, and residential developments. The platform replaces fragmented communication tools (WhatsApp, Facebook Groups) with a unified, location-aware community management system.
 
-### Key Metrics
-- **61 screens** across 3 user roles (Super Admin, Tenant Admin, Resident)
-- **MVP Complete** with functional prototype built in ~3 months
-- **20-30 alpha testers** ready (Ecovilla San Mateo residents)
-- **Target**: Alpha launch in 4-6 weeks
+### Key Metrics (December 2024)
+- **340+ components** across the application
+- **65+ screens** across 3 user roles (Super Admin, Tenant Admin, Resident)
+- **15 server actions** for data operations
+- **API v1** with 6 domain endpoints
+- **Mobile dock navigation** implemented
+- **Rich text editor** for announcements and content
 
 ### Business Model
 - **Revenue**: Usage-based pricing (~$3/lot/month or ~$3/resident/month)
 - **Target Market**: 250+ eco-villages in Central/South America, 30,000+ HOAs in North America
-- **Bootstrap Approach**: Solo non-technical founder, $100-200/month AI tool budget
+- **Bootstrap Approach**: Solo non-technical founder, AI-assisted development
 
 ---
 
@@ -29,13 +32,33 @@
 ### Frontend
 | Technology | Version | Purpose |
 |------------|---------|---------|
-| **Next.js** | 16.0.0 | React framework with App Router |
-| **React** | 19.2.0 | UI library |
+| **Next.js** | ^16.0.10 | React framework with App Router |
+| **React** | ^19.2.1 | UI library |
 | **TypeScript** | 5.x | Type safety |
 | **Tailwind CSS** | 4.1.9 | Utility-first styling |
-| **shadcn/ui** | Latest | Component library (Radix UI) |
-| **Framer Motion** | 12.x | Animations |
-| **Lucide React** | 0.454.0 | Icon system |
+| **shadcn/ui** | Latest | Component library (40 components) |
+| **Framer Motion** | ^12.23.24 | Animations |
+| **Lucide React** | ^0.454.0 | Icon system |
+| **react-icons** | ^5.5.0 | Additional icons |
+
+### Mapping (Mapbox Stack)
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| **mapbox-gl** | ^2.15.0 | Primary map library |
+| **react-map-gl** | ^7.1.7 | React wrapper for Mapbox |
+| **@mapbox/mapbox-gl-draw** | ^1.5.1 | Drawing tools (polygons, lines) |
+| **@mapbox/search-js-react** | ^1.5.0 | Location autocomplete |
+| **@turf/turf** | ^7.3.0 | Geospatial analysis |
+
+### Rich Text Editing
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| **@tiptap/react** | ^3.13.0 | Rich text editor |
+| **@tiptap/extension-link** | ^3.13.0 | Link support |
+| **@tiptap/extension-table** | ^3.13.0 | Table editing |
+| **@tiptap/extension-text-align** | ^3.13.0 | Text alignment |
+| **@tiptap/extension-underline** | ^3.13.0 | Underline formatting |
+| **dompurify** | ^3.3.1 | HTML sanitization |
 
 ### Backend & Infrastructure
 | Technology | Purpose |
@@ -43,7 +66,6 @@
 | **Supabase** | PostgreSQL database, authentication, real-time, storage |
 | **Vercel** | Hosting, serverless functions, deployments |
 | **Vercel Blob** | File storage for images/uploads |
-| **Google Maps API** | Interactive mapping, coordinates, GeoJSON |
 | **Upstash Redis** | Rate limiting |
 
 ### Data & Forms
@@ -53,8 +75,8 @@
 - **recharts** - Data visualization
 
 ### Development Tools
-- **Vercel v0** - Rapid UI prototyping (61 initial screens)
-- **Cursor AI** - Code generation and refactoring
+- **Storybook** - Component documentation and testing
+- **Cursor AI / Gemini** - Code generation and refactoring
 - **Claude Projects** - Architecture planning
 - **GitHub** - Version control
 
@@ -84,14 +106,29 @@
 | Role | Access | Screens |
 |------|--------|---------|
 | **Super Admin** | All tenants, backoffice management | 4 screens |
-| **Tenant Admin** | Single tenant, full management | ~20 screens |
-| **Resident** | Single tenant, community participation | ~25 screens |
+| **Tenant Admin** | Single tenant, full management | ~25 screens |
+| **Resident** | Single tenant, community participation | ~35 screens |
 
-### 2.3 Database Schema (PostgreSQL + PostGIS)
+### 2.3 API v1 Architecture
+
+RESTful API at `/api/v1/`:
+
+| Domain | Endpoints | Purpose |
+|--------|-----------|---------|
+| `/residents` | GET list, GET single | Resident directory |
+| `/events` | GET list, GET single, POST rsvp | Event management |
+| `/locations` | GET list, GET single | Location data |
+| `/exchange` | GET listings | Marketplace |
+| `/notifications` | GET list, PATCH read | Notification center |
+| `/check-ins` | GET list | Check-in data |
+
+**Features**: Authentication via JWT, pagination, tenant isolation, error handling.
+
+### 2.4 Database Schema (PostgreSQL + PostGIS)
 
 **Core Tables**:
 - `tenants` - Multi-tenant foundation
-- `users` - Unified user table (replacing `residents`)
+- `users` - Unified user table
 - `families` - Household groupings
 - `family_members` - User-family relationships
 - `locations` - Geographic entities (PostGIS geometry)
@@ -121,29 +158,35 @@
 - Email + Password
 - Invite-only system for new residents
 
-**7-Step Onboarding Flow**:
-1. **Welcome** - Introduction and community overview
-2. **Profile** - Basic info (name, email, phone, bio, photo)
-3. **Family** - Create or join family unit
-4. **Journey** - Share your story (move-in date, motivation)
-5. **Interests** - Select personal interests (gardening, yoga, etc.)
-6. **Skills** - Share skills (carpentry, design, cooking, etc.)
-7. **Complete** - Confirmation and dashboard redirect
+**Onboarding Wizard** (26 components):
+- Profile wizard with modal wrapper
+- Tour carousel for feature introduction
+- Río mascot character (animated sprite)
+- Progress indicator
+- Step-by-step flow: Welcome → Profile → Family → Journey → Interests → Skills → Complete
 
-### 3.2 Interactive Community Map
+### 3.2 Interactive Community Map (Mapbox)
 
 **Technical Implementation**:
-- Google Maps API with React integration
+- Mapbox GL with React integration
 - PostGIS for spatial data storage
 - UTM → WGS84 coordinate transformation
 - GeoJSON import for complex geometries
+- Turf.js for geospatial analysis
+
+**Map Components**:
+- `MapboxViewer.tsx` - Main map viewer (119KB)
+- `MapboxEditorMap.tsx` - Admin editor with drawing tools (40KB)
+- `mapbox-places-autocomplete.tsx` - Location search
+- `DrawingToolbar.tsx` - Polygon/line drawing tools
+- `EditSidebar.tsx` - Location properties editing
 
 **Map Features**:
 - **Location Types**: Lots, amenities, landmarks, protected zones, roads
 - **Visualization**: Polygons for lots, markers for amenities, lines for paths
-- **Search & Filter**: Find locations by name or type
+- **Search & Filter**: Mapbox Places autocomplete
 - **"View on Map"**: Deep links from events, check-ins, listings
-- **Highlighting**: Spotlight specific locations
+- **Drawing Tools**: Create/edit polygons, lines, markers
 - **Admin Tools**: GeoJSON import, manual location creation
 
 ### 3.3 Events Management
@@ -154,6 +197,7 @@
 - Category (social, work day, workshop, etc.)
 - Max attendees and RSVP deadline
 - Visibility (community, neighborhood, private invites)
+- Rich text description support
 
 **RSVP System**:
 - Status: Going, Maybe, Not Going
@@ -161,16 +205,11 @@
 - Capacity enforcement
 - Waitlist support
 
-**Event Types**:
-- Resident-created events (open to all)
-- Official community events (admin-created)
-- Private events (invite-only)
-
 **Calendar Integration**:
 - List view and calendar view
 - Filter by category, date range
 - My events view
-- Past and upcoming events
+- 20 event-related files in dashboard
 
 ### 3.4 Check-In System
 
@@ -184,11 +223,6 @@
 - **Map Visualization**: See active check-ins on map
 - **Privacy Controls**: Community, neighborhood, or private
 
-**Use Cases**:
-- "Anyone at the coffee shop?"
-- "Working from the garden if anyone wants to join"
-- "Available for impromptu hangouts"
-
 ### 3.5 Community Exchange (Marketplace)
 
 **Listing Types**:
@@ -198,7 +232,7 @@
 - Wanted (seeking items)
 
 **Listing Details**:
-- Title, description, category
+- Title, description, category (with emoji icons)
 - Price and pricing model
 - Condition (new, like new, good, fair, poor)
 - Photos (up to 10 images via Vercel Blob)
@@ -212,23 +246,26 @@
 4. Pickup coordination
 5. Mark as completed
 
-**Categories**: Furniture, electronics, tools, vehicles, clothing, books, services, etc.
+**Components**: 29 files in exchange component folder
 
-### 3.6 Neighbor Discovery
+### 3.6 Neighbor Discovery (Directory)
 
-**Directory Features**:
+**Directory Components** (14 files):
+- `ProfileHeroSection.tsx` - Profile header with banner
+- `ProfileInfoPanels.tsx` - Tabbed info display
+- `ProfileBanner.tsx` - Cover photo/banner
+- `ResidentCard.tsx` - Resident preview card
+- `FamilyCard.tsx` - Family unit display
+- `FamilyMemberCard.tsx` - Individual family member
+- `SkillsList.tsx` - Skills display
+- `AboutSection.tsx` - Bio/about content
+- `ImageLightbox.tsx` - Photo viewer
+
+**Features**:
 - Browse all residents
 - Search by name, interests, skills
 - Filter by family, lot, neighborhood
-- View detailed profiles
-
-**Profile Information** (respects privacy settings):
-- Basic info (name, photo, bio)
-- Family members
-- Lot assignment
-- Contact info (email, phone) - optional
-- Interests and skills
-- Joined date and journey story
+- View detailed profiles with photo galleries
 
 **Privacy Controls**:
 - Hide profile from directory
@@ -250,28 +287,20 @@
 4. Communication thread
 5. Resolution and feedback
 
-**Request Details**:
-- Title and description
-- Category and urgency
-- Location (map integration)
-- Photos/attachments
-- Tagging (other residents, pets)
-- Admin notes (internal only)
+**Components**: 17 files in requests component folder
 
 ### 3.8 Announcements
 
 **Admin Communication Tool**:
-- Title and rich text content
+- Title and rich text content (TipTap editor)
+- Tables, links, formatting support
 - Priority levels (high, normal, low)
 - Expiration dates
 - Targeting (all community or specific neighborhoods)
 - Draft/published/archived status
+- HTML sanitization for security
 
-**Resident View**:
-- Browse all announcements
-- Filter by priority, date
-- Mark as read
-- Push notifications for high priority
+**Components**: 10 files in announcements component folder
 
 ### 3.9 Notifications System
 
@@ -290,10 +319,7 @@
 - Click to navigate to source
 - Push notifications (via Supabase Realtime)
 
-**Preferences**:
-- Per-category notification settings
-- Email vs. in-app only
-- Quiet hours
+**Components**: 7 files in notifications component folder
 
 ### 3.10 Family Management
 
@@ -303,17 +329,41 @@
 - Lot assignment
 - Family name and description
 
-**Family Members**:
-- Link users to families
-- Relationship types (parent, child, partner, etc.)
-- Shared lot information
-- Family-wide privacy settings
+**Server Actions**: `families.ts` for family CRUD operations
 
 ---
 
-## 4. Design & User Experience
+## 4. Mobile Experience
 
-### 4.1 Design Philosophy
+### 4.1 Mobile Dock Navigation
+
+**Implemented**: `MobileDock` component (`components/ecovilla/navigation/mobile-dock.tsx`)
+
+**Features**:
+- Fixed bottom navigation bar
+- 5 primary actions: Home, Map, Create (elevated), Events, Exchange
+- Active state highlighting
+- Badge indicators for unread items
+- Create popover for quick actions (events, listings, etc.)
+
+**Design**:
+- Glassmorphism effect (backdrop blur)
+- Rounded floating dock
+- 44px+ touch targets
+- Design system colors (forest-canopy active, mist-gray inactive)
+
+### 4.2 Mobile Optimizations
+
+- `mobile-zoom-fix.tsx` - Prevents iOS zoom on input focus
+- Responsive layouts throughout
+- Touch-friendly spacing
+- Dev server binds to `0.0.0.0` for device testing
+
+---
+
+## 5. Design & User Experience
+
+### 5.1 Design Philosophy
 
 **Core Values**:
 1. **Regenerative by Design** - Interactions energize, not deplete
@@ -322,544 +372,241 @@
 4. **Efficiency with Warmth** - Streamlined without feeling cold
 5. **Mindful Transparency** - Users always understand what's happening
 
-**North Star**: _"Technology should serve human connection and ecological regeneration, never the other way around."_
-
-### 4.2 Color Palette (Nature-Inspired)
+### 5.2 Color Palette (Nature-Inspired)
 
 **Primary - Forest Canopy**:
 - Deep Forest (#2D5016) - Grounding, stability
 - Living Canopy (#4A7C2C) - Primary brand color
-- Fresh Growth (#6B9B47) - Success states, positive actions
+- Fresh Growth (#6B9B47) - Success states
 
 **Accent - Sunrise**:
 - Sunrise Orange (#D97742) - Community moments, urgent coordination
-- Reserved for special moments to maintain impact
 
 **Supporting - Sky & Water**:
 - River Current (#5B8FA3) - Information, calm
-- Clear Sky (#7BA5B8) - Hover states, lighter information
-
-**Semantic Colors**:
-- Success: Fresh Growth green
-- Warning: Honey (#D4A574)
-- Error: Clay (#C25B4F)
-- Info: River Current blue
 
 **Neutrals - Earth & Clay**:
 - Rich Soil (#1A1A1A) - Primary text
 - Weathered Stone (#4A4A4A) - Secondary text
 - Morning Mist (#8C8C8C) - Disabled states
-- Sand (#E8E5E0) - Borders
 - Cloud (#F8F6F3) - Page backgrounds
-- Sunlight (#FFFFFF) - Cards, modals
 
-### 4.3 Typography
+### 5.3 Component System
 
-**Font Families**:
-- **Inter** (Primary) - All UI text, highly legible
-- **JetBrains Mono** (Data) - Timestamps, coordinates, technical data
+**UI Components** (40 files in `components/ui/`):
+- Core: Button, Card, Input, Label, Textarea
+- Selection: Select, Checkbox, Radio Group, Switch, Multi-Select, Combobox
+- Overlay: Dialog, Sheet, Popover, Tooltip, Alert Dialog
+- Data: Table, Accordion, Tabs, Carousel
+- Feedback: Toast, Skeleton, Spinner
+- Rich: Rich Text Editor, Date-Time Picker, Calendar
+- Layout: Sidebar, Scroll Area, Separator, Collapsible
 
-**Type Scale** (Mobile-First):
-- H1: 28px (Page titles)
-- H2: 22px (Sections)
-- H3: 18px (Subsections)
-- Body: 15px (Default content)
-- Button: 16px (All buttons)
+**Ecovilla Components** (20 files in `components/ecovilla/`):
+- Navigation: Mobile Dock, Create Popover
+- Layout: Page containers, sections
 
-**Desktop Enhancements**: +2-4px for larger screens
-
-### 4.4 Component System
-
-**Layout Components**:
-- PageHeader, PageContainer, Section
-- Navigation (mobile bottom tabs, desktop sidebar)
-
-**Data Display**:
-- ResidentCard, EventCard, ListingCard
-- EmptyState, LoadingSpinner
-- StatCards, DataTables
-
-**Forms**:
-- FormField, SearchBar, FileUpload
-- DatePicker, Select, Checkbox, RadioGroup
-
-**Feedback**:
-- Toast notifications (Sonner)
-- ConfirmDialog, AlertDialog
-- Progress indicators
-
-**shadcn/ui Base Components** (32 components):
-- Accordion, Alert, Avatar, Badge, Button, Card, Checkbox, Dialog, Dropdown Menu, Input, Label, Popover, Radio Group, ScrollArea, Select, Separator, Sheet, Skeleton, Slider, Switch, Table, Tabs, Textarea, Toast, Tooltip, etc.
-
-### 4.5 Spacing & Layout
-
-**8-Point Grid System**:
-- All spacing is multiples of 8px
-- Exception: 4px for tight groupings
-- Consistent vertical rhythm
-
-**Responsive Breakpoints**:
-- Mobile: 320px - 767px (single column, edge padding 16px)
-- Tablet: 768px - 1023px (2 columns, edge padding 24px)
-- Desktop: 1024px+ (3-4 columns, max-width 1200px)
-
-**Touch Targets**:
-- Minimum: 44x44px (iOS standard)
-- Recommended: 48x48px for primary actions
-
-### 4.6 Current UX Gaps (To Address)
-
-- ❌ No mobile bottom navigation (only desktop sidebar)
-- ❌ Placeholder copy throughout ("Submit", "Cancel")
-- ❌ Inconsistent component usage (ad-hoc implementations)
-- ❌ No design system documentation
-- ❌ Missing helpful microcopy and tooltips
-- ❌ No empty state illustrations
-- ❌ Limited error messages
+**Library Components** (105 files in `components/library/`):
+- Reusable patterns and utilities
+- Dock component for navigation
 
 ---
 
-## 5. Current State Assessment
+## 6. Server Actions
 
-### 5.1 What's Working Well
+| Action File | Size | Purpose |
+|-------------|------|---------|
+| `events.ts` | 56KB | Event CRUD, RSVP, categories |
+| `exchange-listings.ts` | 49KB | Marketplace listings |
+| `check-ins.ts` | 31KB | Check-in operations |
+| `announcements.ts` | 25KB | Announcement management |
+| `exchange-transactions.ts` | 20KB | Transaction workflow |
+| `resident-requests.ts` | 10KB | Request handling |
+| `exchange-history.ts` | 9KB | Transaction history |
+| `locations.ts` | 9KB | Location management |
+| `notifications.ts` | 8KB | Notification operations |
+| `families.ts` | 7KB | Family management |
+| `tenant-features.ts` | 6KB | Feature flags |
+| `onboarding.ts` | 4KB | Onboarding state |
+| `neighborhoods.ts` | 4KB | Neighborhood data |
+| `event-categories.ts` | 3KB | Event categories |
+| `privacy-settings.ts` | 3KB | Privacy controls |
 
-✅ **Functional MVP**: All core features work  
+---
+
+## 7. Current State Assessment
+
+### 7.1 What's Working Well
+
+✅ **Feature Complete**: All core features implemented  
 ✅ **Multi-Tenancy**: Solid tenant isolation architecture  
 ✅ **Modern Stack**: Next.js 16, React 19, TypeScript, Tailwind  
-✅ **Feature-Rich**: 61 screens covering comprehensive use cases  
-✅ **Real Users Ready**: 20-30 alpha testers confirmed  
-✅ **Geographic Intelligence**: Advanced mapping with PostGIS  
+✅ **API v1**: RESTful endpoints with documentation  
+✅ **Mobile Navigation**: Dock navigation implemented  
+✅ **Rich Text**: TipTap editor with tables, links, formatting  
+✅ **Map Consolidated**: Single library (Mapbox)  
+✅ **Onboarding**: Comprehensive wizard system  
+✅ **Directory**: Detailed profile components  
 
-### 5.2 Technical Debt (Prioritized)
-
-**🔴 Priority 1 - Critical (Blocks Alpha)**:
-
-1. **Incomplete Database Migration** (49 files remaining)
-   - Migrating from `residents` table → `users` table
-   - Only 3 files updated, 49 remaining
-   - Risk: Data inconsistencies, security vulnerabilities
-
-2. **RLS Policy Vulnerabilities**
-   - Some tables have incomplete policies
-   - Potential cross-tenant data leaks
-   - Needs comprehensive audit of all 20+ tables
-
-3. **Performance Issues**
-   - GeoJSON upload freezes on large files (>480KB)
-   - No query optimization
-   - Missing indexes
-
-4. **Map Component Bloat**
-   - 4 different map libraries (Google, Leaflet, Mapbox, Pigeon)
-   - GoogleMapEditor is primary, others are legacy
-   - Causes bundle bloat
-
-**🟡 Priority 2 - High (Impacts Polish)**:
-
-5. **No Design System Implementation**
-   - Components built ad-hoc
-   - Inconsistent spacing, colors, typography
-   - Design spec exists but not implemented
-
-6. **Placeholder Copy**
-   - No tone of voice
-   - Generic labels throughout
-   - Missing helpful microcopy
-
-7. **Mobile Experience**
-   - Responsive but not optimized
-   - No bottom navigation
-   - Touch targets too small in places
-
-8. **No Error Handling**
-   - Missing error boundaries
-   - No user-friendly error messages
-   - No logging/monitoring
-
-**🟢 Priority 3 - Medium (Post-Alpha)**:
-
-9. **No Testing**
-   - Zero unit tests
-   - Zero integration tests
-   - Manual testing only
-
-10. **No API Architecture**
-    - Direct Supabase calls from components
-    - Makes AI assistant integration difficult
-
-11. **Accessibility Gaps**
-    - Minimal keyboard navigation
-    - Missing ARIA labels
-    - No screen reader testing
-
-### 5.3 Code Quality Score: 6.5/10
+### 7.2 Code Quality Score: 7.1/10
 
 | Dimension | Score | Notes |
 |-----------|-------|-------|
-| Architecture | 7/10 | Solid foundation, but data layer incomplete |
-| Security | 6/10 | RLS exists but needs comprehensive audit |
-| Performance | 5/10 | Works but has bottlenecks |
-| Code Quality | 6/10 | Readable but inconsistent patterns |
-| Testing | 2/10 | Manual only, no automated tests |
-| Design | 5/10 | Functional but not polished |
-| Mobile UX | 4/10 | Responsive but not optimized |
-| Accessibility | 4/10 | Basic semantics, needs improvement |
-| Maintainability | 6/10 | Good structure but tech debt piling up |
+| Architecture | 8/10 | Solid foundation with API v1 |
+| Security | 7/10 | RLS, sanitization in place |
+| Performance | 6/10 | Map consolidated, some optimization needed |
+| Code Quality | 7/10 | Consistent patterns |
+| Testing | 3/10 | Storybook only, no unit tests |
+| Design | 6/10 | Design system defined, implementation ongoing |
+| Mobile UX | 5/10 | Dock implemented, more optimization possible |
+| Accessibility | 5/10 | Basic, improving |
+| Maintainability | 7/10 | Good organization |
+
+### 7.3 Remaining Technical Debt
+
+1. **Database Migration** - Verify `residents` → `users` migration status
+2. **RLS Policy Audit** - Comprehensive security review needed
+3. **Automated Testing** - No unit/integration tests
+4. **i18n** - English only, no localization
+5. **Bundle Size** - Mapbox GL is large (~600KB)
 
 ---
 
-## 6. Competitive Positioning
+## 8. Environment Configuration
 
-### 6.1 Current Solutions
+### Required Environment Variables
 
-**Generic Tools** (WhatsApp, Facebook Groups, Email):
-- ✅ Free, familiar
-- ❌ Fragmented, no structure, poor searchability
-- ❌ No geographic context
-- ❌ No management features
+```bash
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 
-**HOA Software** (Buildium, AppFolio, Caliber):
-- ✅ Comprehensive management features
-- ❌ Expensive ($100-500/month)
-- ❌ Enterprise-focused, complex
-- ❌ Not community-friendly
-- ❌ No social features
+# Mapbox
+NEXT_PUBLIC_MAPBOX_TOKEN=your_mapbox_token
 
-**Community Platforms** (Hivebrite, Mighty Networks):
-- ✅ Social features, customizable
-- ❌ Generic (not residential-specific)
-- ❌ Missing geographic/lot features
-- ❌ No maintenance/request management
-- ❌ Expensive for small communities
+# Vercel Blob (for file uploads)
+BLOB_READ_WRITE_TOKEN=your_blob_token
 
-### 6.2 Our Competitive Advantages
+# Upstash Redis (for rate limiting)
+UPSTASH_REDIS_REST_URL=your_redis_url
+UPSTASH_REDIS_REST_TOKEN=your_redis_token
+```
 
-1. **Community-First Design**: Built specifically for intentional communities and residential neighborhoods
-2. **Geographic Intelligence**: Native map integration with lot assignments, GeoJSON support
+---
+
+## 9. Competitive Positioning
+
+### Our Competitive Advantages
+
+1. **Community-First Design**: Built specifically for intentional communities
+2. **Geographic Intelligence**: Mapbox with PostGIS, lot assignments, GeoJSON
 3. **All-in-One**: Events + Directory + Marketplace + Requests + Map + Check-ins
 4. **Multi-Tenant SaaS**: Single platform, many communities
-5. **Affordable**: $3/lot/month vs. $100-500/month for enterprise solutions
-6. **Modern UX**: Mobile-first, delightful, easy to use (vs. clunky enterprise tools)
-7. **Future AI**: Foundation for AI assistant to summarize Telegram/WhatsApp groups
+5. **Affordable**: $3/lot/month vs. $100-500/month for enterprise
+6. **Modern UX**: Mobile dock navigation, rich text, delightful experience
+7. **API Ready**: Foundation for AI assistant and integrations
 
-### 6.3 Unique Features (vs. Competitors)
+### Unique Features (vs. Competitors)
 
 | Feature | Ecovilla | WhatsApp | Buildium | Mighty Networks |
 |---------|----------|----------|----------|-----------------|
-| **Interactive Map** | ✅ PostGIS | ❌ | ❌ | ❌ |
-| **Check-Ins** | ✅ Unique | ❌ | ❌ | ❌ |
+| **Interactive Map** | ✅ Mapbox/PostGIS | ❌ | ❌ | ❌ |
+| **Check-Ins** | ✅ | ❌ | ❌ | ❌ |
+| **Rich Text Announcements** | ✅ TipTap | ❌ | ✅ | ✅ |
 | **Marketplace** | ✅ | ❌ | ✅ | ~ Limited |
-| **Events** | ✅ | ~ Fragmented | ❌ | ✅ |
-| **Request Management** | ✅ | ~ Fragmented | ✅ | ❌ |
-| **Neighbor Directory** | ✅ | ~ Fragmented | ✅ | ✅ |
-| **Lot/Property Management** | ✅ | ❌ | ✅ | ❌ |
-| **Mobile-First** | ✅ | ✅ | ❌ | ~ | ✅ |
-| **Affordable** | ✅ | ✅ | ❌ | ~ |
+| **Mobile Dock Navigation** | ✅ | ✅ | ❌ | ✅ |
+| **API v1** | ✅ Documented | ❌ | ✅ | ✅ |
 | **Multi-Tenant** | ✅ | ❌ | ✅ | ✅ |
+| **Affordable** | ✅ | ✅ | ❌ | ~ |
 
 ---
 
-## 7. Roadmap & Future Features
+## 10. Roadmap & Future Features
 
-### 7.1 Current Roadmap (Next 6 Weeks)
-
-**WP1: Tech Debt Elimination** (Week 1)
-- Complete database migration (49 files)
-- Audit and fix RLS policies
-- Optimize performance
-- Build API v1 foundation
-
-**WP2-3: Design System & Components** (Week 1-2)
-- Implement design tokens
-- Build component library
-- Replace ad-hoc components
-
-**WP5-6: Screen Redesign** (Week 3-4)
-- Mobile-first redesign of all 61 screens
-- Bottom navigation
-- Copy rewrite
-
-**WP9: Testing & Launch** (Week 6)
-- Comprehensive testing
-- Bug fixes
-- Alpha launch
-
-### 7.2 Planned Enhancements (Your Roadmap)
+### Planned Enhancements
 
 **1. AI Assistant** 🤖
-- **Purpose**: Summarize Telegram/WhatsApp groups, provide personalized community updates
-- **Approach**: MCP server integration for app actions
-- **Features**:
-  - "What did I miss today?" - Personalized summaries based on interests
-  - "Any events this week?" - Natural language queries
-  - "Create an event for Saturday BBQ" - Action execution
-  - Telegram bot integration for external group summarization
-- **Technical**: Claude API, MCP server, `/api/v1/ai/*` endpoints
+- Summarize Telegram/WhatsApp groups
+- Personalized community updates based on interests
+- Natural language queries
+- MCP server for app actions
 
 **2. Third-Party Access**
-- **Visitor Management**: Pre-register guests, QR codes for gate access
-- **Security Workflows**: Guard integration, visitor logs, emergency contacts
-- **Maintenance Teams**: Work order system, before/after photos, resident feedback
-- **Service Providers**: Cleaning, landscaping, pool service access and scheduling
-- **Payments**: Integrated billing for third-party services
+- Visitor Management
+- Security Workflows
+- Maintenance Teams
+- Service Providers
+- Integrated payments
 
 **3. Social Connections**
-- **Friend System**: Connect with neighbors
-- **Friend-only Features**:
-  - Private event invites
-  - "Friends on the map" view
-  - Friend activity feed
-  - Direct messaging
-- **Privacy**: Enhanced controls around friend visibility
+- Friend system
+- Friend-only events
+- Private messaging
+- Enhanced privacy controls
 
 **4. Native Mobile Apps**
-- **iOS/Android**: React Native or Flutter
-- **Native Features**:
-  - Push notifications (proper native support)
-  - Camera access (inline photo uploads)
-  - GPS/location services
-  - Biometric authentication
-  - Offline mode
-  - Maps with native turn-by-turn directions
+- iOS/Android with React Native
+- Push notifications
+- Camera access
+- GPS/location services
+- Biometric authentication
 
 ---
 
-## 8. Market Opportunity
+## 11. Project Structure
 
-### 8.1 Target Markets
-
-**Primary: Eco-Villages & Intentional Communities**
-- 250+ in Costa Rica/Central America
-- Growing movement in North/South America
-- High engagement, tight-knit communities
-- Willing to pay for quality tools
-
-**Secondary: HOAs (Homeowners Associations)**
-- 30,000+ in North America
-- Established market, large TAM
-- Currently using expensive enterprise tools or fragmented solutions
-- Price-sensitive but value-conscious
-
-**Tertiary: Co-Housing & Planned Developments**
-- Emerging market
-- Similar needs to eco-villages
-- Smaller but growing segment
-
-**Future: HOA Management Companies**
-- Manage 10-100+ communities each
-- Enterprise deals ($1,000-10,000/month)
-- Require white-label/custom branding
-- Long sales cycles but high LTV
-
-### 8.2 Pricing Strategy (Draft)
-
-**Usage-Based Tiers**:
-
-| Tier | Price | Features |
-|------|-------|----------|
-| **Basic** | $2/lot/month | Events, Directory, Announcements, Map (view only) |
-| **Standard** | $3/lot/month | + Check-Ins, Marketplace, Requests, Map (full) |
-| **Premium** | $5/lot/month | + AI Assistant, Third-Party Access, API Access, Custom Branding |
-
-**Example Revenue** (300-lot community):
-- Basic: $600/month
-- Standard: $900/month
-- Premium: $1,500/month
-
-**Alternative Pricing**:
-- Per resident: $3/resident/month
-- Flat rate: $500-2,000/month (for small communities)
-- Enterprise: Custom pricing for management companies
-
-### 8.3 Go-to-Market Phases
-
-**Phase 1: Proof of Concept** (Months 1-3)
-- Free for Ecovilla San Mateo (showcase customer)
-- 20-30 alpha testers → 100+ beta testers
-- Case studies, testimonials, metrics
-- **Goal**: Product-market fit validation
-
-**Phase 2: Early Adopters** (Months 4-6)
-- 5-10 Costa Rican eco-villages
-- Discounted pricing ($1-2/lot/month)
-- Hands-on onboarding and support
-- **Goal**: $1,000-5,000 MRR, product refinement
-
-**Phase 3: Paid Launch** (Months 7-12)
-- Marketing website launch
-- Content marketing (community management blog)
-- Direct outreach to communities
-- **Goal**: 20-30 paying communities, $10,000-30,000 MRR
+```
+/
+├── app/
+│   ├── actions/          # 15 server action files
+│   ├── api/v1/           # RESTful API endpoints
+│   ├── backoffice/       # Super admin
+│   └── t/[slug]/         # Tenant routes
+│       ├── admin/        # Tenant admin (~25 screens)
+│       ├── dashboard/    # Resident dashboard (~35 screens)
+│       └── onboarding/   # Onboarding wizard
+├── components/
+│   ├── ui/               # 40 shadcn/ui components
+│   ├── ecovilla/         # 20 platform components
+│   ├── library/          # 105 reusable patterns
+│   ├── map/              # 22 Mapbox components
+│   ├── onboarding/       # 26 wizard components
+│   ├── directory/        # 14 profile components
+│   ├── exchange/         # 29 marketplace components
+│   └── ...               # Feature-specific components
+├── lib/
+│   ├── data/             # Data layer modules
+│   ├── supabase/         # Supabase clients
+│   └── ...               # Utilities
+├── PRD/                  # Product documentation
+├── design/               # Design specifications
+└── storybook-static/     # Component documentation
+```
 
 ---
 
-## 9. Technical Details for Competitive Analysis
+## 12. Getting Started
 
-### 9.1 Performance Benchmarks
+```bash
+# Clone repository
+git clone <repo-url>
+cd v0-community-app-project
 
-**Current State**:
-- Dashboard load: ~2-3s (mobile 3G)
-- Map load: ~2-4s (depends on GeoJSON size)
-- Image upload: Works for <5MB files
-- Lighthouse mobile: ~60-70 (not yet optimized)
+# Install dependencies
+npm install
 
-**Target State** (Post-WP1):
-- Dashboard load: <2s
-- Map load: <2s
-- Lighthouse mobile: 80+
-- No freezing on interactions
+# Set up environment variables
+cp .env.example .env.local
+# Edit .env.local with your credentials
 
-### 9.2 Security Features
+# Run development server
+npm run dev
 
-- **Multi-Tenant Isolation**: RLS at database level
-- **Role-Based Access**: Super Admin, Tenant Admin, Resident
-- **Visibility Controls**: Community, Neighborhood, Private scopes
-- **Rate Limiting**: Via Upstash Redis
-- **Input Validation**: Zod schemas on all forms
-- **File Upload Security**: Type checking, size limits (5MB)
-- **Authentication**: Supabase Auth (Magic Links, Password)
-
-**To Improve**:
-- Comprehensive RLS audit needed
-- Missing CSRF protection in some routes
-- No automated security scanning yet
-
-### 9.3 Scalability
-
-**Current Architecture**:
-- Serverless (Vercel + Supabase)
-- Auto-scaling by default
-- No custom servers to manage
-
-**Tested Load**:
-- Currently: 1 tenant, ~30 users
-- Expected: 50 tenants, 5,000+ users (in 6 months)
-
-**Bottlenecks to Address**:
-- GeoJSON parsing (large files)
-- Database queries without indexes
-- No caching layer yet
-
-### 9.4 Data Architecture Highlights
-
-**PostGIS (Geographic Data)**:
-- Native geometry storage
-- Efficient spatial queries
-- GeoJSON import/export
-- Coordinate transformations (UTM ↔ WGS84)
-
-**JSONB (Flexible Metadata)**:
-- Tenant features/settings
-- Location properties
-- Notification content
-- No rigid schemas needed
-
-**Auditability**:
-- Soft deletes (status columns)
-- Created/updated timestamps
-- User tracking (created_by_user_id)
-- No hard deletes (data preservation)
+# Access at http://localhost:3000
+```
 
 ---
 
-## 10. User Personas (From Design Spec)
-
-### Sofia (The Newcomer)
-- **Profile**: Just moved in, overwhelmed, anxious
-- **Needs**: Clear navigation, safety, reassurance
-- **Use Cases**: Profile setup, finding neighbors, learning about events
-
-### Marcus (The Coordinator)
-- **Profile**: Community organizer, manages events and work days
-- **Needs**: Efficiency, quick communication, status at a glance
-- **Use Cases**: Create events, send announcements, coordinate work days
-
-### Elena (The Balanced Resident)
-- **Profile**: Selective participation, values calm
-- **Needs**: Control over notifications, selective engagement
-- **Use Cases**: Browse events, occasional check-ins, opt-in to announcements
-
-### Carmen (The Resource Coordinator)
-- **Profile**: Manages tools, amenities, shared resources
-- **Needs**: Clear status, coordination tools, data tracking
-- **Use Cases**: Manage marketplace, track tool borrowing, handle requests
-
----
-
-## 11. Integration Capabilities
-
-### 11.1 Current Integrations
-
-- **Google Maps**: Full integration for mapping
-- **Supabase Auth**: Email authentication
-- **Vercel Blob**: File storage
-- **Vercel Analytics**: Basic usage tracking
-
-### 11.2 Planned Integrations
-
-- **Telegram**: Bot for group summarization
-- **WhatsApp**: Message archive and search (if possible)
-- **Stripe**: Payment processing
-- **PostHog**: Advanced analytics
-- **Sentry**: Error logging and monitoring
-- **Intercom**: Customer support chat
-
-### 11.3 API for Third Parties
-
-**Future API v1** (`/api/v1/*`):
-- RESTful endpoints
-- Authentication via API keys
-- Rate limiting
-- Read/write access to core entities
-- Webhooks for events
-
-**Use Cases**:
-- Custom integrations for management companies
-- Third-party apps (visitor management systems)
-- Data export for reporting
-- AI assistant access (MCP server)
-
----
-
-## 12. Summary for Market Research
-
-### Unique Value Proposition
-
-**"The first all-in-one community management platform designed specifically for intentional communities and residential neighborhoods, combining social connection, geographic intelligence, and practical coordination tools—at a fraction of the cost of enterprise HOA software."**
-
-### Key Differentiators
-
-1. **Community-Centric**: Unlike generic social platforms or enterprise HOA tools
-2. **Geographic Intelligence**: Map-first design with lot assignments
-3. **All-in-One**: Replaces 5-10 separate tools
-4. **Affordable**: 10-50x cheaper than enterprise alternatives
-5. **Modern UX**: Mobile-first, delightful experience
-6. **Multi-Tenant SaaS**: Scales from 10 to 10,000 communities
-7. **AI-Ready**: Foundation for intelligent assistant
-
-### Current Limitations (Transparency)
-
-- **Alpha stage**: Not production-ready (4-6 weeks out)
-- **Limited mobile optimization**: Responsive but not native
-- **No AI yet**: Roadmap item, not built
-- **Single language**: English only (no i18n)
-- **Limited analytics**: Basic tracking only
-- **No white-label**: Single branding (can customize per tenant)
-
-### Investment Thesis
-
-- **Market**: $500M+ TAM (HOAs + intentional communities)
-- **Timing**: Post-COVID shift to community-centric living
-- **Technology**: Modern stack, AI-ready, scalable
-- **Moat**: Category expertise, first-mover in eco-village segment
-- **Execution**: Bootstrap first, scalable with funding
-- **Vision**: Expand to visitor management, third-party access, native apps
-
----
-
-**Document End**
-
-For detailed technical specifications, see:
-- `PRD/prd_v0.5.md` - Full product requirements
-- `design/design_specification.md` - Complete design system
-- `PROJECT_OVERVIEW.md` - Technical architecture overview
+**Document Version**: 2.0  
+**Last Updated**: December 24, 2024  
+**Status**: Alpha Ready

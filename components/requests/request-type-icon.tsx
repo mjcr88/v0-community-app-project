@@ -1,4 +1,4 @@
-import { Wrench, HelpCircle, AlertTriangle, Shield, MoreHorizontal } from 'lucide-react'
+import { Wrench, HelpCircle, AlertTriangle, Shield, MoreHorizontal, UserPlus } from 'lucide-react'
 import type { RequestType } from "@/types/requests"
 
 interface RequestTypeIconProps {
@@ -12,6 +12,7 @@ export function RequestTypeIcon({ type, className = "h-5 w-5" }: RequestTypeIcon
     question: <HelpCircle className={className} />,
     complaint: <AlertTriangle className={className} />,
     safety: <Shield className={className} />,
+    account_access: <UserPlus className={className} />,
     other: <MoreHorizontal className={className} />,
   }
 

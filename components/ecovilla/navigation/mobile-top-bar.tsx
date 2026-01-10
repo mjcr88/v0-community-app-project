@@ -6,6 +6,8 @@ import { LogOut, User, Bell } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/library/avatar"
 import { HamburgerMenu } from "./hamburger-menu"
 import { AnimatedThemeToggler } from "@/components/library/animated-theme-toggler"
+import { LanguageToggle } from "@/components/language-toggle"
+import { useTranslation } from "@/lib/i18n"
 import {
     Popover,
     PopoverContent,
@@ -28,6 +30,7 @@ interface MobileTopBarProps {
 
 export function MobileTopBar({ tenantSlug, user, className }: MobileTopBarProps) {
     const supabase = createClient()
+    const { t } = useTranslation()
     const [isVisible, setIsVisible] = React.useState(false)
     const [lastScrollY, setLastScrollY] = React.useState(0)
 
@@ -101,21 +104,22 @@ export function MobileTopBar({ tenantSlug, user, className }: MobileTopBarProps)
                             className="flex items-center gap-2 px-2 py-2 text-sm hover:bg-accent rounded-lg transition-colors"
                         >
                             <User className="w-4 h-4" />
-                            Profile
+                            {t("nav.profile")}
                         </Link>
                         <div className="flex items-center gap-2 px-2 py-2 text-sm hover:bg-accent rounded-lg transition-colors">
                             <div className="w-4 h-4 flex items-center justify-center">
                                 <AnimatedThemeToggler />
                             </div>
-                            <span>Theme</span>
+                            <span>{t("common.theme")}</span>
                         </div>
+                        <LanguageToggle className="flex items-center gap-2 px-2 py-2 text-sm hover:bg-accent rounded-lg transition-colors w-full" />
                         <Separator className="my-1" />
                         <button
                             onClick={handleLogout}
                             className="flex items-center gap-2 px-2 py-2 text-sm text-destructive hover:bg-destructive/10 rounded-lg transition-colors w-full text-left"
                         >
                             <LogOut className="w-4 h-4" />
-                            Logout
+                            {t("nav.logout")}
                         </button>
                     </PopoverContent>
                 </Popover>

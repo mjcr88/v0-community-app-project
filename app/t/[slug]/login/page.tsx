@@ -49,23 +49,25 @@ export default async function TenantLoginPage({
     }
   }
 
-  return <div className="flex min-h-[100dvh] flex-col lg:grid lg:grid-cols-2">
-    {/* Left Panel: Login Form */}
-    <div className="flex flex-1 flex-col items-center justify-center p-8 bg-earth-cloud/30 w-full">
-      <TenantLoginForm tenant={tenant as any} />
-    </div>
+  return (
+    <div className="flex min-h-[100dvh] flex-col lg:grid lg:grid-cols-2">
+      {/* Left Panel: Login Form */}
+      <div className="flex flex-1 flex-col items-center justify-center p-8 bg-earth-cloud/30 w-full">
+        <TenantLoginForm tenant={tenant as any} />
+      </div>
 
-    {/* Right Side - Hero/Brand */}
-    <div className="hidden lg:block relative h-full overflow-hidden bg-forest-deep">
-      <Image
-        src="/login.png"
-        alt="Login Hero"
-        fill
-        className="object-cover object-center saturate-150 brightness-90"
-        priority
-      />
-      {/* Overlay */}
-      <div className="absolute inset-0 bg-forest-canopy/20 mix-blend-overlay" />
+      {/* Right Side - Hero/Brand */}
+      <div className="hidden lg:block relative h-full overflow-hidden bg-forest-deep">
+        <Image
+          src="/login.png"
+          alt="Login Hero"
+          fill
+          className="object-cover object-center saturate-150 brightness-90"
+          priority
+        />
+        {/* Overlay */}
+        <div className="absolute inset-0 bg-forest-canopy/20 mix-blend-overlay" />
+      </div>
     </div>
-  </div>
+  )
 }

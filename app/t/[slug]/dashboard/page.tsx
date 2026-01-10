@@ -24,28 +24,53 @@ const getCachedUser = cache(async () => {
 
 const getCachedResident = cache(async (userId: string) => {
   const supabase = await createClient()
-  const { data: resident } = await supabase
+
+  // 1. Fetch Resident Basic Info
+  const { data: resident, error: residentError } = await supabase
     .from("users")
-    .select(
-      `
-      *,
-      lots (
+    .select("*")
+    .eq("id", userId)
+    .single()
+
+  if (residentError || !resident) {
+    console.error("Dashboard Page: Error fetching resident", residentError)
+    return null
+  }
+
+  // 2. Fetch Lot & Neighborhood (if applicable)
+  let lotsData = null
+  if (resident.lot_id) {
+    const { data: lot } = await supabase
+      .from("lots")
+      .select(`
         lot_number,
         neighborhoods (
           name,
           id
         )
-      ),
-      family_units (
-        name,
-        id
-      )
-    `,
-    )
-    .eq("id", userId)
-    .eq("role", "resident")
-    .single()
-  return resident
+      `)
+      .eq("id", resident.lot_id)
+      .single()
+    lotsData = lot
+  }
+
+  // 3. Fetch Family Unit (if applicable)
+  let familyData = null
+  if (resident.family_unit_id) {
+    const { data: family } = await supabase
+      .from("family_units")
+      .select("name, id")
+      .eq("id", resident.family_unit_id)
+      .single()
+    familyData = family
+  }
+
+  // 4. Combine Data
+  return {
+    ...resident,
+    lots: lotsData,
+    family_units: familyData
+  }
 })
 
 const getCachedExchangeCategories = cache(async (tenantId: string) => {
@@ -99,6 +124,7 @@ export default async function ResidentDashboardPage({ params }: { params: Promis
   const resident = await getCachedResident(user.id)
 
   if (!resident) {
+    console.error("Dashboard Page: Resident not found for user", user.id)
     return null
   }
 

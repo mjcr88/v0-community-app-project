@@ -16,8 +16,11 @@ import {
     ChevronRight,
     LogOut,
     Bell,
+    FileText,
 } from "lucide-react"
 import { AnimatedThemeToggler } from "@/components/library/animated-theme-toggler"
+import { LanguageToggle } from "@/components/language-toggle"
+import { useTranslation } from "@/lib/i18n"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/library/avatar"
 import { Button } from "@/components/library/button"
 import { Separator } from "@/components/library/separator"
@@ -59,55 +62,63 @@ export function DesktopNav({
 }: DesktopNavProps) {
     const pathname = usePathname()
     const supabase = createClient()
+    const { t } = useTranslation()
 
     const handleLogout = async () => {
         await supabase.auth.signOut()
         window.location.href = `/t/${tenantSlug}/login`
     }
 
-    const navSections = [
+    type NavItem = {
+        icon: any
+        label: string
+        href: string
+        badge?: number
+    }
+
+    const navSections: { title: string; items: NavItem[] }[] = [
         {
-            title: "PERSONAL",
+            title: t("nav.personal"),
             items: [
                 {
                     icon: Home,
-                    label: "Dashboard",
+                    label: t("nav.dashboard"),
                     href: `/t/${tenantSlug}/dashboard`,
                 },
                 {
-                    icon: Megaphone,
-                    label: "Announcements",
-                    href: `/t/${tenantSlug}/dashboard/announcements`,
+                    icon: FileText,
+                    label: t("nav.official"),
+                    href: `/t/${tenantSlug}/dashboard/official`,
                     badge: user.unreadAnnouncements,
                 },
             ],
         },
         {
-            title: "COMMUNITY",
+            title: t("nav.community"),
             items: [
                 {
                     icon: Users,
-                    label: "Neighbors",
+                    label: t("nav.neighbours"),
                     href: `/t/${tenantSlug}/dashboard/neighbours`,
                 },
                 {
                     icon: Map,
-                    label: "Map",
+                    label: t("nav.map"),
                     href: `/t/${tenantSlug}/dashboard/community-map`,
                 },
                 {
                     icon: Calendar,
-                    label: "Events",
+                    label: t("nav.events"),
                     href: `/t/${tenantSlug}/dashboard/events`,
                 },
                 {
                     icon: ShoppingBag,
-                    label: "Exchange",
+                    label: t("nav.exchange"),
                     href: `/t/${tenantSlug}/dashboard/exchange`,
                 },
                 {
                     icon: ClipboardList,
-                    label: "Requests",
+                    label: t("nav.requests"),
                     href: `/t/${tenantSlug}/dashboard/requests`,
                 },
             ],
@@ -156,18 +167,21 @@ export function DesktopNav({
                                 <Link href={`/t/${tenantSlug}/dashboard/settings/profile`}>
                                     <Button variant="ghost" size="sm" className="w-full justify-start text-forest-canopy">
                                         <User className="mr-2 h-4 w-4" />
-                                        Profile
+                                        {t("nav.profile")}
                                     </Button>
                                 </Link>
                                 <div className="px-2 py-1.5">
                                     <AnimatedThemeToggler className="w-full justify-start text-forest-canopy hover:bg-forest-mist/50 h-9 px-2 inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50">
-                                        Theme
+                                        {t("common.theme")}
                                     </AnimatedThemeToggler>
+                                </div>
+                                <div className="px-2 py-1.5">
+                                    <LanguageToggle className="w-full justify-start text-forest-canopy hover:bg-forest-mist/50 h-9 px-2 inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50" />
                                 </div>
                                 <Separator className="my-1" />
                                 <Button variant="ghost" size="sm" onClick={handleLogout} className="w-full justify-start text-clay-red hover:text-clay-red hover:bg-clay-mist">
                                     <LogOut className="mr-2 h-4 w-4" />
-                                    Logout
+                                    {t("nav.logout")}
                                 </Button>
                             </div>
                         </PopoverContent>

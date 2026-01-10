@@ -1550,6 +1550,7 @@ export default function AdminMapClient({
                                     </>
                                 ) : (
                                     /* Regular Location Card */
+                                    /* Regular Location Card */
                                     <>
                                         {/* Header */}
                                         <div className="flex items-start justify-between mb-4">
@@ -1712,10 +1713,10 @@ export default function AdminMapClient({
                                             </div>
                                         </div>
                                     </>
-                                )
-                                }
+                                )}
                             </div>
                         )}
+
                         {/* List View - When a category is highlighted but no specific location selected */}
                         {!selectedLocation && highlightedCategories.size > 0 && (
                             <div className="p-4 space-y-4">

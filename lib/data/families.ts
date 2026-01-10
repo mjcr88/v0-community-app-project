@@ -68,7 +68,7 @@ export const getFamilies = cache(async (
 
     if (enrichWithMembers) {
         selectQuery += `,
-      members:users(id, first_name, last_name, profile_picture_url, role)
+      members:users!users_family_unit_id_fkey(id, first_name, last_name, profile_picture_url, role)
     `
     }
 

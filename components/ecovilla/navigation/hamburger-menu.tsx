@@ -3,6 +3,7 @@
 import React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useTranslation } from "@/lib/i18n"
 import {
     Megaphone,
     Users,
@@ -12,6 +13,7 @@ import {
     Map,
     Calendar,
     ShoppingBag,
+    FileText,
 } from "lucide-react"
 import {
     Sheet,
@@ -37,56 +39,81 @@ export function HamburgerMenu({
     trigger,
 }: HamburgerMenuProps) {
     const pathname = usePathname()
+    const { t } = useTranslation()
     const [open, setOpen] = React.useState(false)
 
-    const navSections = [
+    type NavItem = {
+        icon?: any
+        label: string
+        href: string
+        badge?: number
+    }
+
+    const navSections: { title: string; items: NavItem[] }[] = [
         {
-            title: "PERSONAL",
+            title: t("nav.personal"),
             items: [
                 {
                     icon: Home,
-                    label: "Dashboard",
+                    label: t("nav.dashboard"),
                     href: `/t/${tenantSlug}/dashboard`,
                 },
                 {
-                    icon: Megaphone,
-                    label: "Announcements",
-                    href: `/t/${tenantSlug}/dashboard/announcements`,
+                    icon: FileText,
+                    label: t("nav.official"),
+                    href: `/t/${tenantSlug}/dashboard/official`,
                     badge: unreadAnnouncements,
                 },
             ],
         },
         {
-            title: "COMMUNITY",
+            title: t("nav.community"),
             items: [
                 {
                     icon: Users,
-                    label: "Neighbors",
+                    label: t("nav.neighbours"),
                     href: `/t/${tenantSlug}/dashboard/neighbours`,
                 },
                 {
                     icon: Map,
-                    label: "Map",
+                    label: t("nav.map"),
                     href: `/t/${tenantSlug}/dashboard/community-map`,
                 },
                 {
                     icon: Calendar,
-                    label: "Events",
+                    label: t("nav.events"),
                     href: `/t/${tenantSlug}/dashboard/events`,
                 },
                 {
                     icon: ShoppingBag,
-                    label: "Exchange",
+                    label: t("nav.exchange"),
                     href: `/t/${tenantSlug}/dashboard/exchange`,
                 },
                 {
                     icon: ClipboardList,
-                    label: "Requests",
+                    label: t("nav.requests"),
                     href: `/t/${tenantSlug}/dashboard/requests`,
                 },
             ],
         },
     ]
+
+    const [mounted, setMounted] = React.useState(false)
+
+    React.useEffect(() => {
+        setMounted(true)
+    }, [])
+
+    if (!mounted) {
+        return (
+            trigger || (
+                <Button variant="ghost" size="icon" className="text-forest-canopy">
+                    <Menu className="h-6 w-6" />
+                    <span className="sr-only">Open menu</span>
+                </Button>
+            )
+        )
+    }
 
     return (
         <Sheet open={open} onOpenChange={setOpen}>
@@ -101,7 +128,7 @@ export function HamburgerMenu({
             <SheetContent side="left" className="w-[280px] bg-white dark:bg-neutral-950 p-0 border-r border-earth-pebble overflow-y-auto">
                 <SheetHeader className="p-6 border-b border-earth-pebble/50">
                     <SheetTitle className="text-left text-forest-canopy font-bold text-xl">
-                        Menu
+                        {t("common.menu")}
                     </SheetTitle>
                 </SheetHeader>
                 <div className="flex flex-col py-4">
@@ -123,7 +150,7 @@ export function HamburgerMenu({
                                                 : "text-earth-soil"
                                         )}
                                     >
-                                        <item.icon className="h-5 w-5" />
+                                        {item.icon && <item.icon className="h-5 w-5" />}
                                         <span className="flex-1">{item.label}</span>
                                         {item.badge && item.badge > 0 && (
                                             <span className="bg-sunrise text-white text-xs font-bold px-2 py-0.5 rounded-full">

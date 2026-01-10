@@ -40,6 +40,11 @@ export default async function FamilyProfilePage({ params }: { params: Promise<{ 
     enrichWithPets: true,
   })
 
+  console.log("[DEBUG] Family page - id:", id)
+  console.log("[DEBUG] Family page - familyUnit found:", !!familyUnit)
+  console.log("[DEBUG] Family page - currentResident.tenant_id:", currentResident?.tenant_id)
+  console.log("[DEBUG] Family page - familyUnit.tenant_id:", familyUnit?.tenant_id)
+
   if (!familyUnit || familyUnit.tenant_id !== currentResident.tenant_id) {
     notFound()
   }

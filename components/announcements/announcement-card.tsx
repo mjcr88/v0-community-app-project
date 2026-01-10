@@ -93,11 +93,11 @@ export function AnnouncementCard({ announcement, slug, onClick, onMarkAsRead }: 
                 )}
 
                 <CardContent className="p-4 sm:p-5">
-                    <div className="flex gap-4">
+                    <div className="flex gap-4 items-stretch">
                         {/* Left: Image Thumbnail (if exists) or Icon */}
-                        <div className="flex-shrink-0 pt-1">
+                        <div className="flex-shrink-0">
                             {hasImage ? (
-                                <div className="relative h-24 w-24 sm:h-28 sm:w-28 rounded-md overflow-hidden border bg-muted/50">
+                                <div className="relative w-24 min-h-24 h-full sm:w-28 sm:min-h-28 rounded-md overflow-hidden border bg-muted/50">
                                     <Image
                                         src={announcement.images[0]}
                                         alt="Announcement preview"
@@ -108,7 +108,7 @@ export function AnnouncementCard({ announcement, slug, onClick, onMarkAsRead }: 
                             ) : (
                                 <div
                                     className={cn(
-                                        "flex h-12 w-12 items-center justify-center rounded-full transition-colors",
+                                        "flex h-12 w-12 items-center justify-center rounded-full transition-colors mt-1",
                                         isUrgent
                                             ? "bg-orange-100 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400"
                                             : "bg-primary/10 text-primary"
@@ -211,7 +211,7 @@ export function AnnouncementCard({ announcement, slug, onClick, onMarkAsRead }: 
 
                                 <UpdatedIndicator
                                     publishedAt={announcement.published_at}
-                                    lastEditedAt={announcement.last_edited_at}
+                                    lastEditedAt={announcement.last_edited_at ?? undefined}
                                 />
                             </div>
                         </div>

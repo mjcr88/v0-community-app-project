@@ -378,11 +378,21 @@ export function MapboxEditorClient({
                                 const loc = locations.find(l => l.id === editSidebar.locationId);
                                 if (!loc) return {};
                                 // Transform snake_case DB fields to camelCase for form
+                                // Convert array to object for checkbox state
+                                const amenitiesObj = loc.amenities
+                                    ? (loc.amenities as string[]).reduce((acc, key) => ({ ...acc, [key]: true }), {})
+                                    : undefined;
+                                const accessibilityObj = loc.accessibility_features
+                                    ? (loc.accessibility_features as string[]).reduce((acc, key) => ({ ...acc, [key]: true }), {})
+                                    : undefined;
                                 return {
                                     ...loc,
                                     facilityType: loc.facility_type,
                                     heroPhoto: loc.hero_photo,
                                     parkingSpaces: loc.parking_spaces,
+                                    maxOccupancy: loc.max_occupancy,
+                                    amenities: amenitiesObj,
+                                    accessibilityFeatures: accessibilityObj,
                                 };
                             })()
                             : {}
@@ -419,13 +429,27 @@ export function MapboxEditorClient({
                                 lot_id: data.lot_id,
                                 photos: data.photos,
                                 hero_photo: data.heroPhoto,
-                                accessibility_features: data.accessibility_features,
+                                capacity: data.capacity ? parseInt(data.capacity) : null,
+                                max_occupancy: data.maxOccupancy ? parseInt(data.maxOccupancy) : null,
+                                // Convert amenities object {wifi: true, parking: false} to array ['wifi']
+                                amenities: data.amenities
+                                    ? Object.entries(data.amenities)
+                                        .filter(([_, enabled]) => enabled)
+                                        .map(([key]) => key)
+                                    : null,
+                                hours: data.hours || null,
+                                status: data.status || null,
                                 parking_spaces: data.parkingSpaces ? parseInt(data.parkingSpaces) : null,
+                                // Convert accessibility object to array
+                                accessibility_features: data.accessibilityFeatures
+                                    ? Object.entries(data.accessibilityFeatures)
+                                        .filter(([_, enabled]) => enabled)
+                                        .map(([key]) => key)
+                                    : null,
                                 opening_hours: data.opening_hours,
                                 contact_phone: data.contact_phone,
                                 contact_email: data.contact_email,
                                 website: data.website,
-                                capacity: data.capacity ? parseInt(data.capacity) : null,
                                 rules: data.rules,
                             };
 

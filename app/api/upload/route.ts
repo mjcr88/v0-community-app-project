@@ -1,4 +1,4 @@
-import { put } from "@vercel/blob"
+import { uploadFile } from "@/lib/supabase-storage"
 import { NextResponse } from "next/server"
 
 export async function POST(request: Request) {
@@ -13,9 +13,18 @@ export async function POST(request: Request) {
     // Validate file type
     const { validateFileType, validateFileSize, ALLOWED_FILE_TYPES } = await import("@/lib/upload-security")
 
-    const typeValidation = validateFileType(file, ALLOWED_FILE_TYPES.image)
-    if (!typeValidation.valid) {
-      return NextResponse.json({ error: typeValidation.error }, { status: 400 })
+    // Determine allowed types based on file MIME type category
+    // Default to strict image check if unlikely to be a document
+    // TODO: Pass type preference from client if needed. For now, we check if it is ANY allowed type.
+    const isImage = ALLOWED_FILE_TYPES.image.includes(file.type)
+    const isDoc = ALLOWED_FILE_TYPES.document.includes(file.type)
+
+    // For now, most uploads are images. If we support documents later via this generic route, we might need a flag.
+    // But safely, we can just check if it matches *any* allowed type.
+    const isValidType = isImage || isDoc
+
+    if (!isValidType) {
+      return NextResponse.json({ error: "File type not allowed" }, { status: 400 })
     }
 
     // Validate file size (max 5MB)
@@ -25,19 +34,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: sizeValidation.error }, { status: 400 })
     }
 
-    // Upload to Vercel Blob
-    const blob = await put(file.name, file, {
-      access: "public",
-      addRandomSuffix: true,
-    })
+    // Upload to Supabase Storage
+    // Defaulting to "photos" bucket for now as most existing uploads are images
+    // We can infer bucket from type or formData later
+    const bucket = isDoc ? "documents" : "photos"
 
-    return NextResponse.json({
-      url: blob.url,
-      pathname: blob.pathname,
-      contentType: blob.contentType,
-    })
-  } catch (error) {
+    const result = await uploadFile(file, bucket)
+
+    return NextResponse.json(result)
+  } catch (error: any) {
     console.error("[v0] Upload error:", error)
-    return NextResponse.json({ error: "Failed to upload file" }, { status: 500 })
+    return NextResponse.json({ error: error.message || "Failed to upload file" }, { status: 500 })
   }
 }

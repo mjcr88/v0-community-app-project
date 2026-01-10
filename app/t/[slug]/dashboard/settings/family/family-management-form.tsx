@@ -9,13 +9,23 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Loader2, Plus, Trash2, Users, PawPrint, Home, Upload, AlertCircle, Camera } from "lucide-react"
+import { Loader2, Plus, Trash2, Users, PawPrint, Home, Upload, AlertCircle, Camera, Mail } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
+import { createFamilyMember, requestAccountAccess } from "@/app/actions/families"
 import { PhotoManager } from "@/components/photo-manager"
 import { EditableProfileBanner } from "@/components/profile/editable-profile-banner"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CollapsibleCard } from "@/components/ui/collapsible-card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 interface FamilyManagementFormProps {
   resident: any
@@ -61,13 +71,36 @@ export function FamilyManagementForm({
   const [newPet, setNewPet] = useState({ name: "", species: "", breed: "" })
   const [showAddPet, setShowAddPet] = useState(false)
   const [showAddFamily, setShowAddFamily] = useState(false)
+  const [addMemberMode, setAddMemberMode] = useState<"existing" | "new">("new")
   const [selectedResident, setSelectedResident] = useState<string>("")
+  const [newMember, setNewMember] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    birthday: "",
+    relationship: "",
+    profilePictureUrl: "",
+  })
   const [familyProfile, setFamilyProfile] = useState({
     name: familyUnit?.name || "",
     description: familyUnit?.description || "",
     photos: familyUnit?.photos || [],
     heroPhoto: familyUnit?.hero_photo || familyUnit?.profile_picture_url || null,
     bannerImage: familyUnit?.banner_image_url || null,
+  })
+  const [accessRequestDialog, setAccessRequestDialog] = useState<{
+    open: boolean
+    memberId: string | null
+    memberName: string
+    email: string
+    isSubmitting: boolean
+  }>({
+    open: false,
+    memberId: null,
+    memberName: "",
+    email: "",
+    isSubmitting: false
   })
 
   useEffect(() => {
@@ -211,26 +244,120 @@ export function FamilyManagementForm({
   }
 
   const handleAddFamilyMember = async () => {
-    if (!selectedResident) return
-
     setIsLoading(true)
-    const supabase = createClient()
 
     try {
-      const { error } = await supabase
-        .from("users")
-        .update({ family_unit_id: resident.family_unit_id })
-        .eq("id", selectedResident)
+      if (addMemberMode === "existing") {
+        if (!selectedResident) return
 
-      if (error) throw error
+        const supabase = createClient()
+        const { error } = await supabase
+          .from("users")
+          .update({ family_unit_id: resident.family_unit_id })
+          .eq("id", selectedResident)
+
+        if (error) throw error
+
+      } else {
+        // Create new member
+        if (!newMember.firstName || !newMember.lastName) {
+          toast({
+            title: "Missing fields",
+            description: "First and Last name are required.",
+            variant: "destructive"
+          })
+          setIsLoading(false)
+          return
+        }
+
+        const result = await createFamilyMember(
+          tenantSlug,
+          resident.tenant_id,
+          familyUnit.id,
+          {
+            firstName: newMember.firstName,
+            lastName: newMember.lastName,
+            email: newMember.email || undefined,
+            phone: newMember.phone || undefined,
+            birthday: newMember.birthday || undefined,
+            relationshipType: newMember.relationship || undefined,
+            profilePictureUrl: newMember.profilePictureUrl || undefined
+          }
+        )
+
+        if (!result.success) {
+          throw new Error(result.error)
+        }
+      }
 
       setShowAddFamily(false)
       setSelectedResident("")
+      setNewMember({
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone: "",
+        birthday: "",
+        relationship: "",
+        profilePictureUrl: "",
+      })
       router.refresh()
-    } catch (error) {
+      toast({
+        title: "Success",
+        description: "Family member added successfully",
+      })
+
+    } catch (error: any) {
       console.error("[v0] Error adding family member:", error)
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add family member",
+        variant: "destructive",
+      })
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleRequestAccess = async () => {
+    if (!accessRequestDialog.memberId || !accessRequestDialog.email) return
+
+    setAccessRequestDialog(prev => ({ ...prev, isSubmitting: true }))
+
+    try {
+      const result = await requestAccountAccess(
+        tenantSlug,
+        resident.tenant_id,
+        accessRequestDialog.memberId,
+        accessRequestDialog.email
+      )
+
+      if (!result.success) {
+        throw new Error(result.error)
+      }
+
+      toast({
+        title: "Request Submitted",
+        description: `Access request for ${accessRequestDialog.memberName} has been sent to the admin.`,
+      })
+
+      setAccessRequestDialog({
+        open: false,
+        memberId: null,
+        memberName: "",
+        email: "",
+        isSubmitting: false
+      })
+      router.refresh()
+
+    } catch (error: any) {
+      console.error("[v0] Error requesting access:", error)
+      toast({
+        title: "Error",
+        description: error.message || "Failed to submit access request",
+        variant: "destructive",
+      })
+      setAccessRequestDialog(prev => ({ ...prev, isSubmitting: false }))
     }
   }
 
@@ -529,35 +656,189 @@ export function FamilyManagementForm({
         <div className="space-y-6">
           {/* Family Members */}
           <CollapsibleCard title="Family Members" description="Manage relationships" icon={Users}>
-            {availableLotResidents.length > 0 && !showAddFamily && (
+            {!showAddFamily && (
               <div className="mb-4 flex justify-end">
-                <Button variant="outline" size="sm" onClick={() => setShowAddFamily(true)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Member
+                <Button onClick={() => setShowAddFamily(true)}>
+                  <Plus className="mr-2 h-4 w-4 sm:mr-0" />
+                  <span className="sm:hidden">Add</span>
+                  <span className="hidden sm:inline">Add Member</span>
                 </Button>
               </div>
             )}
             {showAddFamily && (
-              <div className="mb-4 space-y-3 rounded-lg border p-4 bg-muted/50">
-                <div className="space-y-2">
-                  <Label htmlFor="resident-select">Select Resident</Label>
-                  <Select value={selectedResident} onValueChange={setSelectedResident}>
-                    <SelectTrigger id="resident-select">
-                      <SelectValue placeholder="Choose a resident" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableLotResidents.map((r) => (
-                        <SelectItem key={r.id} value={r.id}>
-                          {r.first_name} {r.last_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex gap-2">
-                  <Button onClick={handleAddFamilyMember} disabled={isLoading || !selectedResident} size="sm">
+              <div className="mb-4 space-y-3 rounded-lg border p-4 bg-muted/30">
+                <Tabs value={addMemberMode} onValueChange={(v) => setAddMemberMode(v as "existing" | "new")} className="w-full">
+                  <TabsList className="grid w-full grid-cols-2 mb-4">
+                    <TabsTrigger value="new">Create New</TabsTrigger>
+                    <TabsTrigger value="existing">Select Existing</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="new" className="space-y-4">
+                    {/* Avatar Upload */}
+                    <div className="flex items-center gap-4">
+                      <div className="relative group">
+                        <Avatar className="h-16 w-16 border-2 border-dashed border-muted-foreground/30">
+                          <AvatarImage src={newMember.profilePictureUrl || undefined} />
+                          <AvatarFallback className="bg-muted">
+                            {newMember.firstName ? newMember.firstName[0].toUpperCase() : "?"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <label
+                          htmlFor="member-avatar-upload"
+                          className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                        >
+                          <Camera className="h-5 w-5 text-white" />
+                        </label>
+                        <input
+                          id="member-avatar-upload"
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0]
+                            if (!file) return
+
+                            const formData = new FormData()
+                            formData.append("file", file)
+                            formData.append("folder", "family-members")
+
+                            try {
+                              const response = await fetch("/api/upload", {
+                                method: "POST",
+                                body: formData,
+                              })
+                              const { url } = await response.json()
+                              setNewMember({ ...newMember, profilePictureUrl: url })
+                            } catch (error) {
+                              console.error("Error uploading avatar:", error)
+                              toast({
+                                title: "Upload failed",
+                                description: "Failed to upload photo. Please try again.",
+                                variant: "destructive"
+                              })
+                            }
+                          }}
+                        />
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        <p className="font-medium">Profile Photo</p>
+                        <p className="text-xs">Optional. Hover to upload.</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="new-firstname">First Name *</Label>
+                        <Input
+                          id="new-firstname"
+                          placeholder="Jane"
+                          value={newMember.firstName}
+                          onChange={(e) => setNewMember({ ...newMember, firstName: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="new-lastname">Last Name *</Label>
+                        <Input
+                          id="new-lastname"
+                          placeholder="Doe"
+                          value={newMember.lastName}
+                          onChange={(e) => setNewMember({ ...newMember, lastName: e.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="new-email">Email (Optional)</Label>
+                      <Input
+                        id="new-email"
+                        type="email"
+                        placeholder="Required for app access"
+                        value={newMember.email}
+                        onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
+                      />
+                      <p className="text-[10px] text-muted-foreground">
+                        Leave blank for children or members who don't need app access.
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="new-phone">Phone (Optional)</Label>
+                        <Input
+                          id="new-phone"
+                          type="tel"
+                          placeholder="+1..."
+                          value={newMember.phone}
+                          onChange={(e) => setNewMember({ ...newMember, phone: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="new-birthday">Birthday (Optional)</Label>
+                        <Input
+                          id="new-birthday"
+                          type="date"
+                          value={newMember.birthday}
+                          onChange={(e) => setNewMember({ ...newMember, birthday: e.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="new-relationship">Relationship to You</Label>
+                      <Select
+                        value={newMember.relationship}
+                        onValueChange={(val) => setNewMember({ ...newMember, relationship: val })}
+                      >
+                        <SelectTrigger id="new-relationship">
+                          <SelectValue placeholder="Select relationship" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {RELATIONSHIP_TYPES.map((type) => (
+                            <SelectItem key={type.value} value={type.value}>
+                              {type.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="existing" className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="resident-select">Select Neighbor from Lot</Label>
+                      <Select value={selectedResident} onValueChange={setSelectedResident}>
+                        <SelectTrigger id="resident-select">
+                          <SelectValue placeholder="Choose a resident" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableLotResidents.length > 0 ? (
+                            availableLotResidents.map((r) => (
+                              <SelectItem key={r.id} value={r.id}>
+                                {r.first_name} {r.last_name}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <div className="p-2 text-xs text-muted-foreground text-center">
+                              No other residents found in your lot.
+                            </div>
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-[10px] text-muted-foreground">
+                        Add someone who is already registered in your unit/lot.
+                      </p>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    onClick={handleAddFamilyMember}
+                    disabled={isLoading || (addMemberMode === 'existing' && !selectedResident) || (addMemberMode === 'new' && (!newMember.firstName || !newMember.lastName))}
+                    size="sm"
+                  >
                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Add
+                    {addMemberMode === 'new' ? 'Create Member' : 'Add Selected'}
                   </Button>
                   <Button variant="ghost" onClick={() => setShowAddFamily(false)} size="sm">
                     Cancel
@@ -571,28 +852,44 @@ export function FamilyManagementForm({
                 <p>No other family members added.</p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {familyMembers.map((member) => (
-                  <div key={member.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-lg border p-3">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-10 w-10">
-                        <AvatarImage src={member.profile_picture_url} />
-                        <AvatarFallback>{member.first_name[0]}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium text-sm">
-                          {member.first_name} {member.last_name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">{member.email}</p>
-                      </div>
+                  <div key={member.id} className="flex items-center gap-3 rounded-lg border p-3">
+                    <Avatar className="h-10 w-10 shrink-0">
+                      <AvatarImage src={member.profile_picture_url} />
+                      <AvatarFallback>{member.first_name[0]}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm">
+                        {member.first_name} {member.last_name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {member.email || "No email"}
+                      </p>
                     </div>
-                    <div className="w-full sm:w-40">
+                    <div className="flex items-center gap-2">
+                      {!member.email && isPrimaryContact && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
+                          onClick={() => setAccessRequestDialog({
+                            open: true,
+                            memberId: member.id,
+                            memberName: `${member.first_name} ${member.last_name}`,
+                            email: "",
+                            isSubmitting: false
+                          })}
+                        >
+                          <Mail className="h-3 w-3" />
+                        </Button>
+                      )}
                       <Select
                         value={relationships[member.id] || ""}
                         onValueChange={(value) => handleRelationshipChange(member.id, value)}
                       >
-                        <SelectTrigger className="h-8 text-xs">
-                          <SelectValue placeholder="Relationship" />
+                        <SelectTrigger className="h-7 w-28 text-xs">
+                          <SelectValue placeholder="Relation" />
                         </SelectTrigger>
                         <SelectContent>
                           {RELATIONSHIP_TYPES.map((type) => (
@@ -729,6 +1026,53 @@ export function FamilyManagementForm({
           )}
         </div>
       </div>
+
+      {/* Request Access Dialog */}
+      <Dialog
+        open={accessRequestDialog.open}
+        onOpenChange={(open) => !accessRequestDialog.isSubmitting && setAccessRequestDialog(prev => ({ ...prev, open }))}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Request App Access</DialogTitle>
+            <DialogDescription>
+              Request app access for {accessRequestDialog.memberName}. Enter an email address where they can receive their invitation.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="access-email">Email Address</Label>
+              <Input
+                id="access-email"
+                type="email"
+                placeholder="email@example.com"
+                value={accessRequestDialog.email}
+                onChange={(e) => setAccessRequestDialog(prev => ({ ...prev, email: e.target.value }))}
+                disabled={accessRequestDialog.isSubmitting}
+              />
+              <p className="text-xs text-muted-foreground">
+                An admin will review this request and send an invitation to this email.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setAccessRequestDialog(prev => ({ ...prev, open: false }))}
+              disabled={accessRequestDialog.isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleRequestAccess}
+              disabled={!accessRequestDialog.email || accessRequestDialog.isSubmitting}
+            >
+              {accessRequestDialog.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Submit Request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div >
   )
 }

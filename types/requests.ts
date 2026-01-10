@@ -1,4 +1,4 @@
-export type RequestType = 'maintenance' | 'question' | 'complaint' | 'safety' | 'other'
+export type RequestType = 'maintenance' | 'question' | 'complaint' | 'safety' | 'account_access' | 'other'
 export type RequestStatus = 'pending' | 'in_progress' | 'resolved' | 'rejected'
 export type RequestPriority = 'normal' | 'urgent' | 'emergency'
 

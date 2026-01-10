@@ -75,10 +75,13 @@ export interface BaseLocation {
   tenant_id: string
   amenities: string[] | null
   capacity: number | null
+  max_occupancy: number | null
   hours: string | null
   path_difficulty: string | null
   path_surface: string | null
   parking_spaces: number | null
+  accessibility_features: any | null
+  rules: string | null
   status: string | null
   created_at: string
   updated_at: string
@@ -155,10 +158,13 @@ export const getLocations = cache(async (
     tenant_id,
     amenities,
     capacity,
+    max_occupancy,
     hours,
     path_difficulty,
     path_surface,
     parking_spaces,
+    accessibility_features,
+    rules,
     status,
     created_at,
     updated_at,
@@ -226,10 +232,13 @@ export const getLocations = cache(async (
       tenant_id: loc.tenant_id,
       amenities: loc.amenities || null,
       capacity: loc.capacity || null,
+      max_occupancy: loc.max_occupancy || null,
       hours: loc.hours || null,
       path_difficulty: loc.path_difficulty || null,
       path_surface: loc.path_surface || null,
       parking_spaces: loc.parking_spaces || null,
+      accessibility_features: loc.accessibility_features || null,
+      rules: loc.rules || null,
       status: loc.status || null,
       created_at: loc.created_at,
       updated_at: loc.updated_at,

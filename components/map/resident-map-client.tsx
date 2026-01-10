@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import Map, { Source, Layer, Marker, NavigationControl, GeolocateControl, MapRef } from 'react-map-gl';
 import * as turf from '@turf/turf';
 import { MapPin, Search, Layers, Filter, X } from 'lucide-react';
@@ -8,6 +9,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 
 import { LocationWithRelations } from '@/lib/data/locations';
 import { Card } from '@/components/ui/card';
+import { LocationInfoCard } from './location-info-card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -380,122 +382,14 @@ export function ResidentMapClient({
                 className={`relative h-full bg-white border-l border-gray-200 transition-all duration-300 ease-in-out overflow-y-auto ${selectedLocation ? 'w-1/3' : 'w-0'}`}
             >
                 {selectedLocation && (
-                    <div className="p-6">
-                        {/* Header */}
-                        <div className="flex items-start justify-between mb-4">
-                            <div>
-                                <h2 className="font-semibold text-2xl mb-2">{selectedLocation.name}</h2>
-                                <Badge variant="secondary" className="capitalize">
-                                    {selectedLocation.type.replace('_', ' ')}
-                                </Badge>
-                            </div>
-                            <button
-                                onClick={() => setSelectedLocation(null)}
-                                className="text-gray-400 hover:text-gray-600 transition-colors p-2"
-                                title="Close"
-                            >
-                                <X className="h-6 w-6" />
-                            </button>
-                        </div>
-
-                        {/* Hero Photo */}
-                        {((selectedLocation as any).hero_photo || ((selectedLocation as any).photos && (selectedLocation as any).photos.length > 0)) && (
-                            <div className="mb-4 rounded-lg overflow-hidden">
-                                <img
-                                    src={(selectedLocation as any).hero_photo || (selectedLocation as any).photos[0]}
-                                    alt={selectedLocation.name}
-                                    className="w-full h-48 object-cover"
-                                />
-                            </div>
-                        )}
-
-                        {/* Description */}
-                        {selectedLocation.description && (
-                            <p className="text-gray-600 mb-4">{selectedLocation.description}</p>
-                        )}
-
-                        {/* Details Grid */}
-                        <div className="space-y-3">
-                            {selectedLocation.neighborhood && (
-                                <div>
-                                    <span className="text-sm font-medium text-gray-500">Neighborhood</span>
-                                    <p className="text-gray-900">{selectedLocation.neighborhood.name}</p>
-                                </div>
-                            )}
-
-                            {selectedLocation.facility_type && (
-                                <div>
-                                    <span className="text-sm font-medium text-gray-500">Type</span>
-                                    <p className="text-gray-900 capitalize">{selectedLocation.facility_type}</p>
-                                </div>
-                            )}
-
-                            {selectedLocation.hours && (
-                                <div>
-                                    <span className="text-sm font-medium text-gray-500">Hours</span>
-                                    <p className="text-gray-900">{selectedLocation.hours}</p>
-                                </div>
-                            )}
-
-                            {/* Facility: Capacity, Parking, Accessibility */}
-                            {selectedLocation.type === 'facility' && (
-                                <>
-                                    {(selectedLocation as any).capacity && (
-                                        <div>
-                                            <span className="text-sm font-medium text-gray-500">Capacity</span>
-                                            <p className="text-gray-900">{(selectedLocation as any).capacity} people</p>
-                                        </div>
-                                    )}
-                                    {(selectedLocation as any).parking_spaces && (
-                                        <div>
-                                            <span className="text-sm font-medium text-gray-500">Parking</span>
-                                            <p className="text-gray-900">{(selectedLocation as any).parking_spaces} spaces</p>
-                                        </div>
-                                    )}
-                                    {(selectedLocation as any).accessibility_features && (selectedLocation as any).accessibility_features.length > 0 && (
-                                        <div>
-                                            <span className="text-sm font-medium text-gray-500 block mb-2">Accessibility</span>
-                                            <div className="flex flex-wrap gap-1">
-                                                {(selectedLocation as any).accessibility_features.map((feature: string, idx: number) => (
-                                                    <Badge key={idx} variant="outline" className="bg-green-50">
-                                                        ♿ {feature}
-                                                    </Badge>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                </>
-                            )}
-
-                            {selectedLocation.amenities && selectedLocation.amenities.length > 0 && (
-                                <div>
-                                    <span className="text-sm font-medium text-gray-500 block mb-2">Amenities</span>
-                                    <div className="flex flex-wrap gap-1">
-                                        {selectedLocation.amenities.map((amenity: string, idx: number) => (
-                                            <Badge key={idx} variant="outline">
-                                                {amenity}
-                                            </Badge>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Lot-specific info */}
-                            {selectedLocation.type === 'lot' && (
-                                <>
-                                    {selectedLocation.lot?.lot_number && (
-                                        <div>
-                                            <span className="text-sm font-medium text-gray-500">Lot Number</span>
-                                            <p className="text-gray-900">{selectedLocation.lot.lot_number}</p>
-                                        </div>
-                                    )}
-                                </>
-                            )}
-
-                            <Button className="w-full mt-4" onClick={() => window.open(`/t/${tenantSlug}/dashboard/locations/${selectedLocation.id}`, '_blank')}>
-                                View Full Details
-                            </Button>
-                        </div>
+                    <div className="h-full">
+                        <LocationInfoCard
+                            location={selectedLocation}
+                            onClose={() => setSelectedLocation(null)}
+                            tenantSlug={tenantSlug}
+                            className="h-full"
+                            variant="embedded"
+                        />
                     </div>
                 )}
             </div>

@@ -40,15 +40,26 @@ export async function GET() {
         const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString()
 
         // ---------------------------------------------------------
-        // 1. Announcements (Score: 100) - All Published
+        // 1. Announcements (Score: 100) - All Published & Unread
         // ---------------------------------------------------------
-        const { data: announcements } = await supabase
+        const { data: readData } = await supabase
+            .from("announcement_reads")
+            .select("announcement_id")
+            .eq("user_id", user.id)
+
+        const readIds = readData?.map(r => r.announcement_id) || []
+
+        let announcementsQuery = supabase
             .from("announcements")
             .select("id, title, description, published_at, priority")
             .eq("tenant_id", resident.tenant_id)
             .eq("status", "published")
             .order("published_at", { ascending: false })
-            .limit(5)
+            .limit(20)
+
+        const { data: rawAnnouncements } = await announcementsQuery
+
+        const announcements = rawAnnouncements?.filter(a => !readIds.includes(a.id)).slice(0, 5) || []
 
         announcements?.forEach(announcement => {
             priorityItems.push({
@@ -202,10 +213,10 @@ export async function GET() {
             .eq("status", "requested")
 
         requests?.forEach(req => {
-            // @ts-ignore
-            const borrowerName = req.borrower ? `${req.borrower.first_name} ${req.borrower.last_name}` : "Neighbor"
-            // @ts-ignore
-            const listingTitle = req.listing?.title || "Item"
+            const borrowerData = Array.isArray(req.borrower) ? req.borrower[0] : req.borrower
+            const borrowerName = borrowerData ? `${borrowerData.first_name} ${borrowerData.last_name}` : "Neighbor"
+            const listingData = Array.isArray(req.listing) ? req.listing[0] : req.listing
+            const listingTitle = listingData?.title || "Item"
 
             priorityItems.push({
                 type: "exchange_request",
@@ -235,8 +246,6 @@ export async function GET() {
             .eq("status", "confirmed")
 
         confirmed?.forEach(tx => {
-            // @ts-ignore
-            const listingTitle = tx.listing?.title || "Item"
             const isLender = tx.lender_id === user.id
 
             // Handle potential array response from Supabase for joined relations
@@ -247,6 +256,8 @@ export async function GET() {
 
             const otherParty = isLender ? borrowerData : lenderData
             const otherName = otherParty ? `${otherParty.first_name} ${otherParty.last_name}` : "Neighbor"
+            const listingData = Array.isArray(tx.listing) ? tx.listing[0] : tx.listing
+            const listingTitle = listingData?.title || "Item"
 
             priorityItems.push({
                 type: "exchange_confirmed",
@@ -280,10 +291,10 @@ export async function GET() {
         lenderDueTransactions?.forEach(tx => {
             const dueDate = new Date(tx.expected_return_date)
             const isOverdue = dueDate < now
-            // @ts-ignore
-            const borrowerName = tx.borrower ? `${tx.borrower.first_name} ${tx.borrower.last_name}` : "Borrower"
-            // @ts-ignore
-            const listingTitle = tx.listing?.title || "Item"
+            const borrowerData = Array.isArray(tx.borrower) ? tx.borrower[0] : tx.borrower
+            const borrowerName = borrowerData ? `${borrowerData.first_name} ${borrowerData.last_name}` : "Borrower"
+            const listingData = Array.isArray(tx.listing) ? tx.listing[0] : tx.listing
+            const listingTitle = listingData?.title || "Item"
 
             priorityItems.push({
                 type: "exchange_return_due",
@@ -322,21 +333,24 @@ export async function GET() {
         }
         console.log('[Priority Feed] Found', borrowerDueTransactions?.length || 0, 'borrowed items due soon')
         if (borrowerDueTransactions && borrowerDueTransactions.length > 0) {
-            console.log('[Priority Feed] Borrowed items:', borrowerDueTransactions.map(tx => ({
-                id: tx.id,
-                listing: tx.listing?.title,
-                status: tx.status,
-                due: tx.expected_return_date
-            })))
+            console.log('[Priority Feed] Borrowed items:', borrowerDueTransactions.map(tx => {
+                const l = Array.isArray(tx.listing) ? tx.listing[0] : tx.listing
+                return {
+                    id: tx.id,
+                    listing: l?.title,
+                    status: tx.status,
+                    due: tx.expected_return_date
+                }
+            }))
         }
 
         borrowerDueTransactions?.forEach(tx => {
             const dueDate = new Date(tx.expected_return_date)
             const isOverdue = dueDate < now
-            // @ts-ignore
-            const lenderName = tx.lender ? `${tx.lender.first_name} ${tx.lender.last_name}` : "Lender"
-            // @ts-ignore
-            const listingTitle = tx.listing?.title || "Item"
+            const lenderData = Array.isArray(tx.lender) ? tx.lender[0] : tx.lender
+            const lenderName = lenderData ? `${lenderData.first_name} ${lenderData.last_name}` : "Lender"
+            const listingData = Array.isArray(tx.listing) ? tx.listing[0] : tx.listing
+            const listingTitle = listingData?.title || "Item"
 
             priorityItems.push({
                 type: "exchange_return_due",

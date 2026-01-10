@@ -26,7 +26,7 @@ export default async function NeighboursPage({ params }: { params: Promise<{ slu
   }
 
   // Get all residents with privacy settings
-  const { data: residents } = await supabase
+  const { data: residents, error: residentsError } = await supabase
     .from("users")
     .select(
       `
@@ -44,7 +44,7 @@ export default async function NeighboursPage({ params }: { params: Promise<{ slu
       preferred_language,
       birthday,
       family_unit_id,
-      family_units (
+      family_units!users_family_unit_id_fkey (
         id,
         name,
         profile_picture_url
@@ -92,8 +92,11 @@ export default async function NeighboursPage({ params }: { params: Promise<{ slu
     )
     .eq("tenant_id", currentResident.tenant_id)
     .eq("role", "resident")
-    .eq("onboarding_completed", true)
     .order("first_name")
+
+  console.log("[DEBUG] Neighbours page - tenant_id:", currentResident.tenant_id)
+  console.log("[DEBUG] Neighbours page - residents query error:", residentsError)
+  console.log("[DEBUG] Neighbours page - residents found:", residents?.length, residents?.map(r => `${r.first_name} ${r.last_name}`))
 
   // Get all families
   const { data: families } = await supabase

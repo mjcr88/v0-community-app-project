@@ -4,14 +4,17 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 interface UpdatedIndicatorProps {
   publishedAt: string | null
-  lastEditedAt: string
+  lastEditedAt?: string | null
 }
 
 export function UpdatedIndicator({ publishedAt, lastEditedAt }: UpdatedIndicatorProps) {
-  if (!publishedAt) return null
+  if (!publishedAt || !lastEditedAt) return null
 
   const updated = new Date(lastEditedAt)
   const published = new Date(publishedAt)
+
+  // Validate dates
+  if (isNaN(updated.getTime()) || isNaN(published.getTime())) return null
 
   // Only show if updated at least 1 minute after publishing
   if (updated.getTime() - published.getTime() < 60000) return null

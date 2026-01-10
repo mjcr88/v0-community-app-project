@@ -109,6 +109,39 @@ export function AnnouncementsPageClient({
 
       {/* Search & Tabs Section */}
       <div className="space-y-4">
+        {/* Custom Tabs - Moved above Search */}
+        <div className="flex flex-wrap gap-2 items-center">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full sm:w-auto">
+            <TabsList className="bg-muted/30 p-1 rounded-full h-auto flex w-full sm:w-auto overflow-x-auto no-scrollbar gap-1">
+              {tabs.map((tab) => (
+                <TabsTrigger
+                  key={tab.value}
+                  value={tab.value}
+                  className="rounded-full px-2 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all whitespace-nowrap flex-none"
+                >
+                  <span className="flex items-center gap-2">
+                    <tab.icon className="h-4 w-4" />
+                    {tab.label}
+                    {tab.count > 0 && (
+                      <Badge
+                        variant="secondary"
+                        className={cn(
+                          "px-1.5 py-0.5 text-[10px] h-auto min-w-[1.25rem] justify-center",
+                          activeTab === tab.value
+                            ? "bg-primary-foreground text-primary hover:bg-primary-foreground/90"
+                            : "bg-primary text-primary-foreground hover:bg-primary/90"
+                        )}
+                      >
+                        {tab.count}
+                      </Badge>
+                    )}
+                  </span>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        </div>
+
         {/* Search - Left Aligned */}
         <div className="relative w-full md:w-72">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -119,37 +152,6 @@ export function AnnouncementsPageClient({
             className="pl-9 bg-background border-input focus:bg-background transition-colors"
           />
         </div>
-
-        {/* Custom Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="bg-muted/30 p-1 rounded-full h-auto inline-flex">
-            {tabs.map((tab) => (
-              <TabsTrigger
-                key={tab.value}
-                value={tab.value}
-                className="rounded-full px-4 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all whitespace-nowrap"
-              >
-                <span className="flex items-center gap-2">
-                  <tab.icon className="h-4 w-4" />
-                  {tab.label}
-                  {tab.count > 0 && (
-                    <Badge
-                      variant="secondary"
-                      className={cn(
-                        "px-1.5 py-0.5 text-[10px] h-auto min-w-[1.25rem] justify-center",
-                        activeTab === tab.value
-                          ? "bg-primary-foreground text-primary hover:bg-primary-foreground/90"
-                          : "bg-primary text-primary-foreground hover:bg-primary/90"
-                      )}
-                    >
-                      {tab.count}
-                    </Badge>
-                  )}
-                </span>
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
       </div>
 
       {/* Divider */}

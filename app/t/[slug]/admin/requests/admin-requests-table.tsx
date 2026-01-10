@@ -30,7 +30,7 @@ type AdminRequest = {
   id: string
   title: string
   description: string
-  request_type: 'maintenance' | 'question' | 'complaint' | 'safety' | 'other'
+  request_type: 'maintenance' | 'question' | 'complaint' | 'safety' | 'account_access' | 'other'
   status: 'pending' | 'in_progress' | 'resolved' | 'rejected'
   priority: 'normal' | 'urgent' | 'emergency'
   is_anonymous: boolean
@@ -220,6 +220,7 @@ export function AdminRequestsTable({
       question: "Question",
       complaint: "Complaint",
       safety: "Safety",
+      account_access: "App Access",
       other: "Other",
     }
     return labels[type] || type
@@ -313,6 +314,7 @@ export function AdminRequestsTable({
                     <DropdownMenuItem onClick={() => setRequestTypeFilter("question")}>Question</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setRequestTypeFilter("complaint")}>Complaint</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setRequestTypeFilter("safety")}>Safety</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setRequestTypeFilter("account_access")}>App Access</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setRequestTypeFilter("other")}>Other</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -416,7 +418,7 @@ export function AdminRequestsTable({
               </TableRow>
             ) : (
               sortedRequests.map((request) => (
-                <TableRow 
+                <TableRow
                   key={request.id}
                   className="cursor-pointer hover:bg-muted/50"
                   onClick={(e) => {
@@ -488,10 +490,10 @@ export function AdminRequestsTable({
                   <TableCell>
                     {((request.tagged_resident_ids && request.tagged_resident_ids.length > 0) ||
                       (request.tagged_pet_ids && request.tagged_pet_ids.length > 0)) && (
-                      <Badge variant="secondary" className="text-xs">
-                        {(request.tagged_resident_ids?.length || 0) + (request.tagged_pet_ids?.length || 0)}
-                      </Badge>
-                    )}
+                        <Badge variant="secondary" className="text-xs">
+                          {(request.tagged_resident_ids?.length || 0) + (request.tagged_pet_ids?.length || 0)}
+                        </Badge>
+                      )}
                   </TableCell>
                   <TableCell className="text-sm">{getRequestDate(request)}</TableCell>
                 </TableRow>

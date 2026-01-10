@@ -144,10 +144,11 @@ export function FacilityFields({ data, onChange }: FacilityFieldsProps) {
                                     <SelectValue placeholder="Select status..." />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="open">Open</SelectItem>
-                                    <SelectItem value="closed">Closed</SelectItem>
-                                    <SelectItem value="maintenance">Maintenance</SelectItem>
-                                    <SelectItem value="coming_soon">Coming Soon</SelectItem>
+                                    <SelectItem value="Open">Open</SelectItem>
+                                    <SelectItem value="Closed">Closed</SelectItem>
+                                    <SelectItem value="Maintenance">Maintenance</SelectItem>
+                                    <SelectItem value="Coming Soon">Coming Soon</SelectItem>
+                                    <SelectItem value="Temporarily Unavailable">Temporarily Unavailable</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>

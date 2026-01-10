@@ -1,7 +1,11 @@
 "use client"
 
 import React from "react"
-import { MobileTopBar } from "./mobile-top-bar"
+import dynamic from "next/dynamic"
+
+const MobileTopBar = dynamic(() => import("./mobile-top-bar").then((mod) => mod.MobileTopBar), {
+    ssr: false,
+})
 import { MobileDock } from "./mobile-dock"
 
 interface MobileNavProps {

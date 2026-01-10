@@ -105,16 +105,17 @@ export async function GET(
 
     console.log("[v0] Read announcement IDs:", Array.from(readIds))
 
-    const recentAnnouncements = sortedAnnouncements.slice(0, 5)
+    // Filter out read announcements for the widget
+    const unreadAnnouncements = sortedAnnouncements.filter((a) => !readIds.has(a.id))
 
-    // Get total unread count for badge
-    const totalUnread = sortedAnnouncements.filter((a) => !readIds.has(a.id)).length
+    // Get top 5 unread announcements for display
+    const recentAnnouncements = unreadAnnouncements.slice(0, 5)
 
-    console.log("[v0] Returning announcements:", recentAnnouncements.length, "with", totalUnread, "unread")
+    console.log("[v0] Returning announcements:", recentAnnouncements.length, "with", unreadAnnouncements.length, "total unread")
 
     return NextResponse.json({
       announcements: recentAnnouncements,
-      unreadCount: totalUnread,
+      unreadCount: unreadAnnouncements.length,
     })
   } catch (error) {
     console.error("[v0] Error fetching unread announcements:", error)

@@ -8,7 +8,7 @@ import { markAsRead, archiveNotification } from "@/app/actions/notifications"
 import { toast } from "sonner"
 import type { NotificationFull } from "@/types/notifications"
 import { formatDistanceToNow } from "date-fns"
-import { Archive, Check, X, Megaphone, Users } from 'lucide-react'
+import { Archive, Check, X, Megaphone, Users, FileText } from 'lucide-react'
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 
@@ -55,6 +55,8 @@ export function NotificationCard({ notification, tenantSlug, onUpdate }: Notific
       router.push(notification.action_url)
     } else if (notification.type === 'announcement' && notification.announcement_id) {
       router.push(`/t/${tenantSlug}/dashboard/announcements/${notification.announcement_id}`)
+    } else if (notification.type.startsWith('document_') && notification.document_id) {
+      router.push(`/t/${tenantSlug}/dashboard/official`)
     }
   }
 
@@ -80,6 +82,10 @@ export function NotificationCard({ notification, tenantSlug, onUpdate }: Notific
             ) : isAnnouncement ? (
               <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
                 <Megaphone className="h-5 w-5 text-primary" />
+              </div>
+            ) : notification.type.startsWith('document_') ? (
+              <div className="h-10 w-10 rounded-full bg-indigo-50 flex items-center justify-center border border-indigo-100">
+                <FileText className="h-5 w-5 text-indigo-600" />
               </div>
             ) : (
               <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">

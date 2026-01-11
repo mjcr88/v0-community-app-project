@@ -32,6 +32,13 @@ export async function createEvent(
     custom_location_coordinates?: { lat: number; lng: number } | null
     custom_location_type?: "pin" | "polygon" | null
     custom_location_path?: Array<{ lat: number; lng: number }> | null
+    recurrence?: {
+      frequency: "daily" | "weekly" | "monthly"
+      interval: number
+      count?: number
+      until?: string
+      rsvp_offset_hours?: number
+    } | null
   },
 ) {
   try {
@@ -86,46 +93,168 @@ export async function createEvent(
       customLocationCoordinates = data.custom_location_path as any
     }
 
-    const { data: event, error } = await supabase
+    // Prepare events to insert (Parent + Children)
+    const MAX_INSTANCES = 12
+    const eventsToCreate: any[] = []
+
+    // Helper to calculate RSVP deadline
+    const calculateDeadline = (dateStr: string, timeStr: string | null, offsetHours?: number) => {
+      if (!offsetHours) return data.rsvp_deadline || null
+
+      const date = new Date(dateStr)
+      // If time provided, set it, otherwise default to start of day (00:00)
+      if (timeStr) {
+        const [hours, minutes] = timeStr.split(':').map(Number)
+        date.setHours(hours, minutes)
+      } else {
+        date.setHours(0, 0, 0, 0)
+      }
+
+      // Subtract offset
+      date.setHours(date.getHours() - offsetHours)
+      return date.toISOString()
+    }
+
+    // 1. Parent Event (First Instance)
+    eventsToCreate.push({
+      tenant_id: tenantId,
+      created_by: user.id,
+      title: data.title.trim(),
+      description: data.description?.trim() || null,
+      category_id: data.category_id,
+      event_type: data.event_type,
+      start_date: data.start_date,
+      start_time: startTime,
+      end_date: endDate,
+      end_time: endTime,
+      is_all_day: data.is_all_day || false,
+      visibility_scope: data.visibility_scope,
+      status: data.status || "published",
+      requires_rsvp: data.requires_rsvp || false,
+      rsvp_deadline: calculateDeadline(data.start_date, startTime, data.recurrence?.rsvp_offset_hours),
+      max_attendees: data.max_attendees || null,
+      location_type: dbLocationType,
+      location_id: data.location_id || null,
+      custom_location_name: data.custom_location_name || null,
+      custom_location_coordinates: customLocationCoordinates || null,
+      custom_location_type: dbCustomLocationType,
+      recurrence_rule: data.recurrence || null, // Store rule on parent
+      parent_event_id: null,
+    })
+
+    // Insert Parent
+    const { data: parentEvent, error: parentError } = await supabase
       .from("events")
-      .insert({
-        tenant_id: tenantId,
-        created_by: user.id,
-        title: data.title.trim(),
-        description: data.description?.trim() || null,
-        category_id: data.category_id,
-        event_type: data.event_type,
-        start_date: data.start_date,
-        start_time: startTime,
-        end_date: endDate,
-        end_time: endTime,
-        is_all_day: data.is_all_day || false,
-        visibility_scope: data.visibility_scope,
-        status: data.status || "published",
-        requires_rsvp: data.requires_rsvp || false,
-        rsvp_deadline: data.rsvp_deadline || null,
-        max_attendees: data.max_attendees || null,
-        location_type: dbLocationType,
-        location_id: data.location_id || null,
-        custom_location_name: data.custom_location_name || null,
-        custom_location_coordinates: customLocationCoordinates || null,
-        custom_location_type: dbCustomLocationType,
-      })
+      .insert(eventsToCreate[0])
       .select()
       .single()
 
-    if (error) {
-      console.error("[v0] Error creating event:", error)
-      return { success: false, error: error.message }
+    if (parentError) {
+      console.error("[v0] Error creating parent event:", parentError)
+      return { success: false, error: parentError.message }
     }
 
-    if (data.visibility_scope === "neighborhood" && data.neighborhood_ids && data.neighborhood_ids.length > 0) {
-      const neighborhoodInserts = data.neighborhood_ids.map((neighborhoodId) => ({
-        event_id: event.id,
-        neighborhood_id: neighborhoodId,
-      }))
+    // 2. Generate Child Events Loop
+    if (data.recurrence) {
+      const { frequency, interval = 1, count, until, rsvp_offset_hours } = data.recurrence
+      let currentStartDate = new Date(data.start_date)
+      let currentEndDate = new Date(endDate)
 
-      const { error: neighborhoodError } = await supabase.from("event_neighborhoods").insert(neighborhoodInserts)
+      // Calculate duration to maintain it for future instances
+      const durationMs = currentEndDate.getTime() - currentStartDate.getTime()
+
+      let instanceCount = 1 // We already created the parent
+      const maxCount = Math.min(count || MAX_INSTANCES, MAX_INSTANCES)
+      const untilDate = until ? new Date(until) : null
+
+      // Safety limit: 1 year from now
+      const oneYearFromNow = new Date()
+      oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1)
+
+      while (instanceCount < maxCount) {
+        // Increment date
+        if (frequency === "daily") {
+          currentStartDate.setDate(currentStartDate.getDate() + interval)
+        } else if (frequency === "weekly") {
+          currentStartDate.setDate(currentStartDate.getDate() + (interval * 7))
+        } else if (frequency === "monthly") {
+          currentStartDate.setMonth(currentStartDate.getMonth() + interval)
+        }
+
+        // Check limits
+        if (untilDate && currentStartDate > untilDate) break
+        if (currentStartDate > oneYearFromNow) break
+
+        // Calculate new end date
+        const newEndDate = new Date(currentStartDate.getTime() + durationMs)
+        const newStartDateStr = currentStartDate.toISOString().split('T')[0]
+
+        // Add to batch
+        eventsToCreate.push({
+          tenant_id: tenantId,
+          created_by: user.id,
+          title: data.title.trim(),
+          description: data.description?.trim() || null,
+          category_id: data.category_id,
+          event_type: data.event_type,
+          start_date: newStartDateStr,
+          start_time: startTime,
+          end_date: newEndDate.toISOString().split('T')[0],
+          end_time: endTime,
+          is_all_day: data.is_all_day || false,
+          visibility_scope: data.visibility_scope,
+          status: data.status || "published",
+          requires_rsvp: data.requires_rsvp || false,
+          rsvp_deadline: calculateDeadline(newStartDateStr, startTime, rsvp_offset_hours),
+          max_attendees: data.max_attendees || null,
+          location_type: dbLocationType,
+          location_id: data.location_id || null,
+          custom_location_name: data.custom_location_name || null,
+          custom_location_coordinates: customLocationCoordinates || null,
+          custom_location_type: dbCustomLocationType,
+          recurrence_rule: null, // Only parent has rule
+          parent_event_id: parentEvent.id, // Link to parent
+        })
+
+        instanceCount++
+      }
+
+      // Bulk Insert Children
+      if (eventsToCreate.length > 1) {
+        const children = eventsToCreate.slice(1)
+        const { error: childrenError } = await supabase.from("events").insert(children)
+
+        if (childrenError) {
+          console.error("[v0] Error creating recurring instances:", childrenError)
+          // We don't rollback parent for MVP flexibility, but ideally would transaction this.
+          // Continuing with at least parent created.
+        }
+      }
+    }
+
+    // Fetch all events created (Parent + Children) to apply visibility
+    const { data: allCreatedEvents } = await supabase
+      .from("events")
+      .select("id")
+      .or(`id.eq.${parentEvent.id},parent_event_id.eq.${parentEvent.id}`)
+
+    const allEventIds = allCreatedEvents?.map(e => e.id) || [parentEvent.id]
+
+    const event = parentEvent // Keep existing reference specific to parent for return
+
+    if (data.visibility_scope === "neighborhood" && data.neighborhood_ids && data.neighborhood_ids.length > 0) {
+      const allNeighborhoodInserts: any[] = []
+
+      allEventIds.forEach(eventId => {
+        data.neighborhood_ids!.forEach(neighborhoodId => {
+          allNeighborhoodInserts.push({
+            event_id: eventId,
+            neighborhood_id: neighborhoodId
+          })
+        })
+      })
+
+      const { error: neighborhoodError } = await supabase.from("event_neighborhoods").insert(allNeighborhoodInserts)
 
       if (neighborhoodError) {
         console.error("[v0] Error adding neighborhoods:", neighborhoodError)
@@ -134,39 +263,43 @@ export async function createEvent(
     }
 
     if (data.visibility_scope === "private") {
-      const invites: Array<{ event_id: string; invitee_id: string | null; family_unit_id: string | null }> = []
+      const allInvites: Array<{ event_id: string; invitee_id: string | null; family_unit_id: string | null }> = []
 
-      // Add individual invitees
-      if (data.invitee_ids && data.invitee_ids.length > 0) {
-        data.invitee_ids.forEach((inviteeId) => {
-          invites.push({
-            event_id: event.id,
-            invitee_id: inviteeId,
-            family_unit_id: null,
+      allEventIds.forEach(eventId => {
+        // Add individual invitees
+        if (data.invitee_ids && data.invitee_ids.length > 0) {
+          data.invitee_ids.forEach((inviteeId) => {
+            allInvites.push({
+              event_id: eventId,
+              invitee_id: inviteeId,
+              family_unit_id: null,
+            })
           })
-        })
-      }
+        }
 
-      // Add family invites
-      if (data.family_unit_ids && data.family_unit_ids.length > 0) {
-        data.family_unit_ids.forEach((familyId) => {
-          invites.push({
-            event_id: event.id,
-            invitee_id: null,
-            family_unit_id: familyId,
+        // Add family invites
+        if (data.family_unit_ids && data.family_unit_ids.length > 0) {
+          data.family_unit_ids.forEach((familyId) => {
+            allInvites.push({
+              event_id: eventId,
+              invitee_id: null,
+              family_unit_id: familyId,
+            })
           })
-        })
-      }
+        }
+      })
 
-      if (invites.length > 0) {
-        const { error: inviteError } = await supabase.from("event_invites").insert(invites)
+      if (allInvites.length > 0) {
+        const { error: inviteError } = await supabase.from("event_invites").insert(allInvites)
 
         if (inviteError) {
           console.error("[v0] Error adding invites:", inviteError)
           // Don't fail the whole operation, just log it
         } else {
-          // Send invitations to private event invitees
-          await sendEventInviteNotifications(event.id, tenantId, tenantSlug, user.id, invites)
+          // Send invitations to private event invitees - Only for Parent to avoid spam
+          // Filter invites mapped to parent ID
+          const parentInvites = allInvites.filter(i => i.event_id === parentEvent.id)
+          await sendEventInviteNotifications(parentEvent.id, tenantId, tenantSlug, user.id, parentInvites)
         }
       }
     }
@@ -177,7 +310,8 @@ export async function createEvent(
       data.status === "published" &&
       (data.visibility_scope === "community" || data.visibility_scope === "neighborhood")
     ) {
-      await sendEventPublishedNotifications(event.id, tenantId, tenantSlug, user.id, data.visibility_scope, data.neighborhood_ids)
+      // Only notify for parent event
+      await sendEventPublishedNotifications(parentEvent.id, tenantId, tenantSlug, user.id, data.visibility_scope, data.neighborhood_ids)
     }
 
     revalidatePath(`/t/${tenantSlug}/dashboard`)
@@ -596,7 +730,12 @@ export const getUpcomingEvents = cache(async (tenantId: string, limit = 5) => {
   }
 })
 
-export async function rsvpToEvent(eventId: string, tenantId: string, status: "yes" | "maybe" | "no") {
+export async function rsvpToEvent(
+  eventId: string,
+  tenantId: string,
+  status: "yes" | "maybe" | "no",
+  scope: "this" | "series" = "this"
+) {
   try {
     const supabase = await createServerClient()
 
@@ -608,10 +747,10 @@ export async function rsvpToEvent(eventId: string, tenantId: string, status: "ye
       return { success: false, error: "User not authenticated" }
     }
 
-    // Get event details to check capacity and deadline
+    // Get event details to identify series and check constraints
     const { data: event, error: eventError } = await supabase
       .from("events")
-      .select("id, max_attendees, rsvp_deadline, requires_rsvp, tenant_id")
+      .select("id, max_attendees, rsvp_deadline, requires_rsvp, tenant_id, parent_event_id, start_date, title")
       .eq("id", eventId)
       .single()
 
@@ -623,63 +762,114 @@ export async function rsvpToEvent(eventId: string, tenantId: string, status: "ye
       return { success: false, error: "This event does not require RSVPs" }
     }
 
-    // Check RSVP deadline
-    if (event.rsvp_deadline) {
-      const deadline = new Date(event.rsvp_deadline)
-      if (new Date() > deadline) {
-        return { success: false, error: "RSVP deadline has passed" }
+    // Determine target event IDs based on scope
+    let targetEventIds: string[] = [eventId]
+
+    if (scope === "series") {
+      const seriesId = event.parent_event_id || event.id // If parent_id is null, this might be the parent, or a standalone event.
+      // We need to support "This and following". So find events in series with start_date >= this event.
+      // Note: If this is a standalone event (no parent, no children), series logic will just target itself ideally.
+      // But we should check if it actually has a series.
+
+      // Fetch all future events in the series
+      const { data: seriesEvents, error: seriesError } = await supabase
+        .from("events")
+        .select("id, start_date")
+        .or(`id.eq.${seriesId},parent_event_id.eq.${seriesId}`)
+        .gte("start_date", event.start_date)
+
+      if (!seriesError && seriesEvents) {
+        targetEventIds = seriesEvents.map(e => e.id)
       }
     }
 
-    // Check capacity if user is RSVPing as attending
-    if (status === "yes" && event.max_attendees) {
-      const { count } = await supabase
-        .from("event_rsvps")
-        .select("*", { count: "exact", head: true })
-        .eq("event_id", eventId)
-        .eq("rsvp_status", "yes")
+    // Process RSVPs for all target events
+    const results = []
 
-      // Check if event is at capacity (excluding current user's existing RSVP)
-      const { data: existingRsvp } = await supabase
-        .from("event_rsvps")
-        .select("rsvp_status")
-        .eq("event_id", eventId)
-        .eq("user_id", user.id)
-        .single()
+    for (const targetId of targetEventIds) {
+      // We need to check capacity/deadline for each event individually ideally.
+      // For simplicity/performance in MVP:
+      // 1. We'll skip deadline checks for future series events (assuming user wants to RSVP now)
+      // 2. We SHOULD check capacity. If one is full, what do we do?
+      //    Option A: Fail all.
+      //    Option B: Skip full ones and warn.
+      //    Option C: Apply to as many as possible.
+      // Let's go with C (Apply to as many as possible). 
+      // But we must check the SPECIFIC target event (the one clicked) strictly.
 
-      const currentAttending = count || 0
-      const userWasAttending = existingRsvp?.rsvp_status === "yes"
+      const isPrimaryTarget = targetId === eventId
 
-      // If user wasn't attending before and event is at capacity, reject
-      if (!userWasAttending && currentAttending >= event.max_attendees) {
-        return { success: false, error: "Event is at full capacity" }
+      // Fetch target event details if not primary (we already have primary)
+      let targetEvent = event
+      if (!isPrimaryTarget) {
+        const { data: tEvent } = await supabase
+          .from("events")
+          .select("id, max_attendees, rsvp_deadline, requires_rsvp")
+          .eq("id", targetId)
+          .single()
+
+        if (!tEvent) continue
+        targetEvent = tEvent as any
       }
-    }
 
-    // Upsert RSVP (insert or update) with tenant_id
-    const { error: rsvpError } = await supabase.from("event_rsvps").upsert(
-      {
-        event_id: eventId,
-        user_id: user.id,
-        tenant_id: tenantId,
-        rsvp_status: status,
-        attending_count: 1,
-        updated_at: new Date().toISOString(),
-      },
-      {
-        onConflict: "event_id,user_id",
-      },
-    )
+      // Check Deadline (Strict for primary, lenient for future? logic says deadlines are relevant)
+      // Actually, if I RSVP for "all future", I am anticipating.
+      // Only check deadline if it's already passed.
+      if (targetEvent.rsvp_deadline) {
+        const deadline = new Date(targetEvent.rsvp_deadline)
+        if (new Date() > deadline) {
+          if (isPrimaryTarget) return { success: false, error: "RSVP deadline has passed" }
+          continue // Skip this instance
+        }
+      }
 
-    if (rsvpError) {
-      console.error("[v0] Error updating RSVP:", rsvpError.message)
-      return { success: false, error: rsvpError.message }
+      // Check Capacity
+      if (status === "yes" && targetEvent.max_attendees) {
+        const { count } = await supabase
+          .from("event_rsvps")
+          .select("*", { count: "exact", head: true })
+          .eq("event_id", targetId)
+          .eq("rsvp_status", "yes")
+
+        const { data: existingRsvp } = await supabase
+          .from("event_rsvps")
+          .select("rsvp_status")
+          .eq("event_id", targetId)
+          .eq("user_id", user.id)
+          .single()
+
+        const currentAttending = count || 0
+        const userWasAttending = existingRsvp?.rsvp_status === "yes"
+
+        if (!userWasAttending && currentAttending >= targetEvent.max_attendees) {
+          if (isPrimaryTarget) return { success: false, error: "Event is at full capacity" }
+          continue // Skip this instance
+        }
+      }
+
+      // Upsert RSVP
+      const { error: rsvpError } = await supabase.from("event_rsvps").upsert(
+        {
+          event_id: targetId,
+          user_id: user.id,
+          tenant_id: tenantId,
+          rsvp_status: status,
+          attending_count: 1,
+          updated_at: new Date().toISOString(),
+        },
+        {
+          onConflict: "event_id,user_id",
+        },
+      )
+
+      if (rsvpError && isPrimaryTarget) {
+        return { success: false, error: rsvpError.message }
+      }
     }
 
     const { data: tenant } = await supabase.from("tenants").select("slug").eq("id", tenantId).single()
 
     if (tenant?.slug) {
-      // Revalidate all pages that show RSVP data
       revalidatePath(`/t/${tenant.slug}/dashboard`)
       revalidatePath(`/t/${tenant.slug}/dashboard/events`)
       revalidatePath(`/t/${tenant.slug}/dashboard/events/${eventId}`)

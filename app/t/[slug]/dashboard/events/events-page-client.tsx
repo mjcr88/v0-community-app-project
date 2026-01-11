@@ -57,6 +57,7 @@ interface Event {
   custom_location_name?: string | null
   flag_count?: number
   status?: "draft" | "published" | "cancelled"
+  attendee_ids?: string[]
 }
 
 interface Category {
@@ -73,12 +74,14 @@ export function EventsPageClient({
   slug,
   userId,
   tenantId,
+  friendIds = [],
 }: {
   events: Event[]
   categories: Category[]
   slug: string
   userId: string
   tenantId: string
+  friendIds?: string[]
 }) {
   const [view, setView] = useState("list")
 
@@ -117,6 +120,11 @@ export function EventsPageClient({
 
         if (timeFilter === "upcoming" && eventDate < today) return false
         if (timeFilter === "past" && eventDate >= today) return false
+      }
+
+      // Hide declined events (UX Refinement)
+      if (event.user_rsvp_status === "no") {
+        return false
       }
 
       return true
@@ -377,6 +385,7 @@ export function EventsPageClient({
             userId={userId}
             tenantId={tenantId}
             emptyStateVariant={emptyStateVariant}
+            friendIds={friendIds}
           />
         </TabsContent>
 

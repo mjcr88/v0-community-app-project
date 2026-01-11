@@ -69,7 +69,16 @@ export function generateNotificationTitle(
 
     // Announcements (future)
     case "announcement":
+    case "announcement_published":
       return "Community Announcement"
+    case "announcement_updated":
+      return "Announcement Updated"
+
+    // Documents
+    case "document_published":
+      return "New Official Document"
+    case "document_updated":
+      return "Document Updated"
 
     // Mentions (future)
     case "mention":
@@ -142,6 +151,10 @@ export function generateNotificationMessage(
       }
       return "This item is now overdue. Please coordinate with the lender to return it as soon as possible."
 
+    case "document_published":
+    case "document_updated":
+      return context.message || null
+
     default:
       return message || null
   }
@@ -158,6 +171,10 @@ export function generateActionUrl(
   },
 ): string {
   const { listingId, transactionId, eventId, checkInId } = context
+
+  if (type === "document_published" || type === "document_updated") {
+    return `/t/${tenantSlug}/dashboard/official`
+  }
 
   // Most notifications should link to the notifications page where actions can be taken
   return `/t/${tenantSlug}/dashboard/notifications`

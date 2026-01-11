@@ -11,6 +11,7 @@ import {
     Check,
     Loader2,
     Heart,
+    FileText,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
@@ -20,7 +21,7 @@ import { rsvpToCheckIn } from "@/app/actions/check-ins"
 import { useToast } from "@/hooks/use-toast"
 
 interface ApiPriorityItem {
-    type: "announcement" | "event" | "check_in" | "listing" | "exchange_request" | "exchange_confirmed" | "exchange_rejected" | "exchange_return_due"
+    type: "announcement" | "event" | "check_in" | "listing" | "exchange_request" | "exchange_confirmed" | "exchange_rejected" | "exchange_return_due" | "document"
     id: string
     title: string
     description: string
@@ -59,6 +60,7 @@ const typeColors: Record<string, string> = {
     exchange_return_due: "bg-amber-100 text-amber-600 border-amber-200",
     exchange_confirmed: "bg-emerald-100 text-emerald-600 border-emerald-200",
     exchange_rejected: "bg-gray-100 text-gray-600 border-gray-200",
+    document: "bg-indigo-100 text-indigo-700 border-indigo-200",
 }
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
@@ -84,6 +86,8 @@ export function PriorityFeed({ slug, userId, tenantId }: { slug: string; userId:
             router.push(`/t/${slug}/dashboard/exchange/${item.id}`)
         } else if (item.type.includes("exchange")) {
             router.push(`/t/${slug}/dashboard/notifications?highlight=${item.id}`)
+        } else if (item.type === "document") {
+            router.push(`/t/${slug}/dashboard/official`)
         }
     }
 
@@ -178,6 +182,15 @@ export function PriorityFeed({ slug, userId, tenantId }: { slug: string; userId:
                         router.push(`/t/${slug}/dashboard/announcements/${item.id}`)
                     }}>
                         View Details
+                    </Button>
+                )
+            case "document":
+                return (
+                    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={(e) => {
+                        e.stopPropagation()
+                        router.push(`/t/${slug}/dashboard/official`)
+                    }}>
+                        Read Document
                     </Button>
                 )
             case "exchange_request":
@@ -375,6 +388,7 @@ export function PriorityFeed({ slug, userId, tenantId }: { slug: string; userId:
                                         {item.type === "event" && <Calendar className="w-3.5 h-3.5" />}
                                         {item.type === "check_in" && <MapPin className="w-3.5 h-3.5" />}
                                         {item.type === "listing" && <Star className="w-3.5 h-3.5" />}
+                                        {item.type === "document" && <FileText className="w-3.5 h-3.5" />}
                                         {item.type.includes("exchange") && <Package className="w-3.5 h-3.5" />}
                                     </div>
                                 )}

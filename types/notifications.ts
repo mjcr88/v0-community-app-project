@@ -44,8 +44,11 @@ export type NotificationType =
   | 'request_admin_reply'
   | 'announcement_published'
   | 'announcement_updated'
+  | 'document_published'
+  | 'document_updated'
   // Mentions (future)
   | 'mention'
+  | 'system_alert'
 
 // Base notification interface
 export interface Notification {
@@ -76,6 +79,7 @@ export interface Notification {
   check_in_id: string | null
   resident_request_id: string | null // Added for request notifications
   announcement_id: string | null
+  document_id: string | null
 
   // Context
   actor_id: string | null
@@ -123,6 +127,12 @@ export interface NotificationWithExchangeTransaction extends NotificationWithExc
     lender_id?: string
     borrower_id?: string
   } | null
+  document?: {
+    id: string
+    title: string
+    category: string
+    document_type: string
+  } | null
 }
 
 // Full notification with all possible relations
@@ -151,6 +161,7 @@ export interface CreateNotificationData {
   check_in_id?: string | null
   resident_request_id?: string | null // Added for request notifications
   announcement_id?: string | null
+  document_id?: string | null
   actor_id?: string | null
   action_url?: string | null
   metadata?: Record<string, any> | null

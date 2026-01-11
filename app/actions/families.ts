@@ -420,8 +420,19 @@ export async function requestAccountAccess(
             return { success: false, error: "Only the primary contact or admin can request access for family members" }
         }
 
-        // Create the request using service role to bypass RLS
+        // Save the requested email to the passive user account so admin can see it
         const serviceClient = createServiceRoleClient()
+        const { error: updateError } = await serviceClient
+            .from("users")
+            .update({ email: email })
+            .eq("id", passiveMemberId)
+
+        if (updateError) {
+            console.error("Error saving email to passive user:", updateError)
+            return { success: false, error: updateError.message }
+        }
+
+        // Create the request for admin review
         const { data: request, error: requestError } = await serviceClient
             .from("resident_requests")
             .insert({

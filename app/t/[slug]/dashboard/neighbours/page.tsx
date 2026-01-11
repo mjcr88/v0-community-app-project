@@ -142,14 +142,20 @@ export default async function NeighboursPage({ params }: { params: Promise<{ slu
     .eq("tenant_id", currentResident.tenant_id)
     .order("name")
 
+  // Get neighbor lists
+  const { getNeighborLists } = await import("@/app/actions/neighbor-lists")
+  const { data: neighborLists } = await getNeighborLists(currentResident.tenant_id)
+
   return (
     <NeighboursPageClient
       residents={residents || []}
       families={families || []}
       neighborhoods={neighborhoods || []}
       allInterests={allInterests || []}
+      neighborLists={neighborLists || []}
       tenantSlug={slug}
       currentUserFamilyId={currentResident.family_unit_id || null}
+      currentTenantId={currentResident.tenant_id}
     />
   )
 }

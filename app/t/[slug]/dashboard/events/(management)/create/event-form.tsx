@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { createEvent, saveEventImages } from "@/app/actions/events"
-import { Calendar, Loader2, MapPin, Users, ChevronLeft, ChevronRight } from "lucide-react"
+import { Calendar, Loader2, MapPin, Users, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useRioFeedback } from "@/components/feedback/rio-feedback-provider"
 import { NeighborhoodMultiSelect } from "@/components/event-forms/neighborhood-multi-select"
@@ -75,6 +75,14 @@ export function EventForm({ tenantSlug, tenantId, categories, initialLocation }:
     requires_rsvp: false,
     rsvp_deadline: "",
     max_attendees: "",
+    // Recurrence State
+    is_recurring: false,
+    recurrence_frequency: "weekly" as "daily" | "weekly" | "monthly",
+    recurrence_interval: "1",
+    recurrence_end_type: "count" as "count" | "date",
+    recurrence_count: "4",
+    recurrence_until: "",
+    rsvp_offset_hours: "24",
   })
 
   const handleCustomLocationNameChange = useCallback((name: string) => {
@@ -179,6 +187,15 @@ export function EventForm({ tenantSlug, tenantId, categories, initialLocation }:
         custom_location_name: formData.location_type === "custom" ? formData.custom_location_name : null,
         custom_location_coordinates: formData.location_type === "custom" ? formData.custom_location_coordinates : null,
         custom_location_type: formData.location_type === "custom" ? (formData.custom_location_type === "marker" ? "pin" : formData.custom_location_type) : null,
+        recurrence: formData.is_recurring
+          ? {
+            frequency: formData.recurrence_frequency,
+            interval: parseInt(formData.recurrence_interval) || 1,
+            count: formData.recurrence_end_type === "count" ? parseInt(formData.recurrence_count) : undefined,
+            until: formData.recurrence_end_type === "date" ? formData.recurrence_until : undefined,
+            rsvp_offset_hours: formData.requires_rsvp ? parseInt(formData.rsvp_offset_hours) : undefined,
+          }
+          : null,
       })
 
       if (result.success) {
@@ -232,12 +249,12 @@ export function EventForm({ tenantSlug, tenantId, categories, initialLocation }:
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5" />
-                  Event Details
+                  <RefreshCw className="h-5 w-5" />
+                  Basic Info & Photos
                 </CardTitle>
-                <CardDescription>Basic information about your event</CardDescription>
+                <CardDescription>Tell us about your event</CardDescription>
               </div>
-              <Badge variant="outline">Step 1 of 3</Badge>
+              <Badge variant="outline">Step 1 of 4</Badge>
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -294,6 +311,67 @@ export function EventForm({ tenantSlug, tenantId, categories, initialLocation }:
               </Select>
             </div>
 
+            {/* Event Type */}
+            <div className="space-y-3">
+              <Label>
+                Event Type <span className="text-destructive">*</span>
+              </Label>
+              <RadioGroup
+                value={formData.event_type}
+                onValueChange={(value) =>
+                  setFormData({
+                    ...formData,
+                    event_type: value as "resident" | "official",
+                  })
+                }
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="resident" id="resident" />
+                  <Label htmlFor="resident" className="font-normal cursor-pointer">
+                    Resident-Created
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="official" id="official" />
+                  <Label htmlFor="official" className="font-normal cursor-pointer">
+                    Official Community Event
+                  </Label>
+                </div>
+              </RadioGroup>
+              <p className="text-xs text-muted-foreground">Official events are managed by community administrators</p>
+            </div>
+
+            {/* PhotoManager component for image uploads */}
+            <div className="pt-4 border-t">
+              <PhotoManager
+                photos={photos}
+                heroPhoto={heroPhoto}
+                onPhotosChange={setPhotos}
+                onHeroPhotoChange={setHeroPhoto}
+                maxPhotos={10}
+                entityType="event"
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Step 2: Scheduling & RSVP */}
+      {currentStep === 2 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  When & RSVP
+                </CardTitle>
+                <CardDescription>Set the date, time, and attendance options</CardDescription>
+              </div>
+              <Badge variant="outline">Step 2 of 4</Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
             {/* Date and Time */}
             <div className="space-y-4">
               <div className="space-y-2">
@@ -362,46 +440,113 @@ export function EventForm({ tenantSlug, tenantId, categories, initialLocation }:
               </Label>
             </div>
 
-            {/* Event Type */}
-            <div className="space-y-3">
-              <Label>
-                Event Type <span className="text-destructive">*</span>
-              </Label>
-              <RadioGroup
-                value={formData.event_type}
-                onValueChange={(value) =>
-                  setFormData({
-                    ...formData,
-                    event_type: value as "resident" | "official",
-                  })
-                }
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="resident" id="resident" />
-                  <Label htmlFor="resident" className="font-normal cursor-pointer">
-                    Resident-Created
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="official" id="official" />
-                  <Label htmlFor="official" className="font-normal cursor-pointer">
-                    Official Community Event
-                  </Label>
-                </div>
-              </RadioGroup>
-              <p className="text-xs text-muted-foreground">Official events are managed by community administrators</p>
-            </div>
+            {/* Recurrence Section */}
+            <div className="space-y-4 pt-4 border-t">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="is_recurring"
+                  checked={formData.is_recurring}
+                  onCheckedChange={(checked) => {
+                    setFormData({
+                      ...formData,
+                      is_recurring: checked === true,
+                    })
+                  }}
+                />
+                <Label htmlFor="is_recurring" className="text-sm font-semibold cursor-pointer flex items-center gap-2">
+                  <RefreshCw className="h-4 w-4 text-primary" />
+                  Repeat this event
+                </Label>
+              </div>
 
-            {/* PhotoManager component for image uploads */}
-            <div className="pt-4 border-t">
-              <PhotoManager
-                photos={photos}
-                heroPhoto={heroPhoto}
-                onPhotosChange={setPhotos}
-                onHeroPhotoChange={setHeroPhoto}
-                maxPhotos={10}
-                entityType="event"
-              />
+              {formData.is_recurring && (
+                <div className="space-y-4 pl-6 border-l-2 animate-in fade-in slide-in-from-left-2 duration-300">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Frequency</Label>
+                      <Select
+                        value={formData.recurrence_frequency}
+                        onValueChange={(value: "daily" | "weekly" | "monthly") =>
+                          setFormData({ ...formData, recurrence_frequency: value })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="daily">Daily</SelectItem>
+                          <SelectItem value="weekly">Weekly</SelectItem>
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Interval (Every X {formData.recurrence_frequency === 'daily' ? 'days' : formData.recurrence_frequency === 'weekly' ? 'weeks' : 'months'})</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={formData.recurrence_interval}
+                        onChange={(e) => setFormData({ ...formData, recurrence_interval: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label>End condition</Label>
+                    <RadioGroup
+                      value={formData.recurrence_end_type}
+                      onValueChange={(value: "count" | "date") =>
+                        setFormData({ ...formData, recurrence_end_type: value })
+                      }
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="count" id="end_count" />
+                        <Label htmlFor="end_count" className="font-normal cursor-pointer w-24">
+                          After
+                        </Label>
+                        <Input
+                          type="number"
+                          min="2"
+                          max="12"
+                          className="w-20 h-8"
+                          disabled={formData.recurrence_end_type !== "count"}
+                          value={formData.recurrence_count}
+                          onChange={(e) => {
+                            let val = parseInt(e.target.value) || 0;
+                            if (val > 12) val = 12; // Enforce max 12
+                            setFormData({ ...formData, recurrence_count: val.toString() })
+                          }}
+                        />
+                        <span className="text-sm">occurrences (Max 12)</span>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="date" id="end_date" />
+                        <Label htmlFor="end_date" className="font-normal cursor-pointer w-24">
+                          On Date
+                        </Label>
+                        <div className={formData.recurrence_end_type !== "date" ? "opacity-50 pointer-events-none" : ""}>
+                          <DateTimePicker
+                            date={formData.recurrence_until ? new Date(formData.recurrence_until) : undefined}
+                            setDate={(date) => {
+                              if (date) {
+                                setFormData({
+                                  ...formData,
+                                  recurrence_until: format(date, 'yyyy-MM-dd'),
+                                })
+                              } else {
+                                setFormData({ ...formData, recurrence_until: '' })
+                              }
+                            }}
+                            placeholder="Pick end date"
+                            showTime={false}
+                          />
+                        </div>
+                      </div>
+                    </RadioGroup>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* RSVP Settings Section */}
@@ -433,22 +578,45 @@ export function EventForm({ tenantSlug, tenantId, categories, initialLocation }:
                 <div className="space-y-4 pl-6 border-l-2 animate-in fade-in slide-in-from-left-2 duration-300">
                   <div className="space-y-2">
                     <Label htmlFor="rsvp_deadline">RSVP Deadline</Label>
-                    <DateTimePicker
-                      date={formData.rsvp_deadline ? new Date(formData.rsvp_deadline) : undefined}
-                      setDate={(date) => {
-                        if (date) {
-                          setFormData({
-                            ...formData,
-                            rsvp_deadline: format(date, "yyyy-MM-dd'T'HH:mm"),
-                          })
-                        } else {
-                          setFormData({ ...formData, rsvp_deadline: "" })
-                        }
-                      }}
-                      placeholder="Pick RSVP deadline"
-                      showTime={true}
-                    />
-                    <p className="text-xs text-muted-foreground">Optional: Last date to RSVP</p>
+                    {formData.is_recurring ? (
+                      <div className="space-y-1">
+                        <Select
+                          value={formData.rsvp_offset_hours}
+                          onValueChange={(value) => setFormData({ ...formData, rsvp_offset_hours: value })}
+                        >
+                          <SelectTrigger id="rsvp_deadline">
+                            <SelectValue placeholder="Select deadline relative to event" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1">1 hour before event start</SelectItem>
+                            <SelectItem value="24">24 hours (1 day) before event start</SelectItem>
+                            <SelectItem value="48">48 hours (2 days) before event start</SelectItem>
+                            <SelectItem value="72">72 hours (3 days) before event start</SelectItem>
+                            <SelectItem value="168">1 week before event start</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground">Deadline will be calculated relative to each event instance.</p>
+                      </div>
+                    ) : (
+                      <>
+                        <DateTimePicker
+                          date={formData.rsvp_deadline ? new Date(formData.rsvp_deadline) : undefined}
+                          setDate={(date) => {
+                            if (date) {
+                              setFormData({
+                                ...formData,
+                                rsvp_deadline: format(date, "yyyy-MM-dd'T'HH:mm"),
+                              })
+                            } else {
+                              setFormData({ ...formData, rsvp_deadline: "" })
+                            }
+                          }}
+                          placeholder="Pick RSVP deadline"
+                          showTime={true}
+                        />
+                        <p className="text-xs text-muted-foreground">Optional: Last date to RSVP</p>
+                      </>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -470,8 +638,8 @@ export function EventForm({ tenantSlug, tenantId, categories, initialLocation }:
         </Card>
       )}
 
-      {/* Step 2: Event Location */}
-      {currentStep === 2 && (
+      {/* Step 3: Event Location */}
+      {currentStep === 3 && (
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -482,7 +650,7 @@ export function EventForm({ tenantSlug, tenantId, categories, initialLocation }:
                 </CardTitle>
                 <CardDescription>Where will this event take place?</CardDescription>
               </div>
-              <Badge variant="outline">Step 2 of 3</Badge>
+              <Badge variant="outline">Step 3 of 4</Badge>
             </div>
           </CardHeader>
           <CardContent>
@@ -513,8 +681,8 @@ export function EventForm({ tenantSlug, tenantId, categories, initialLocation }:
         </Card>
       )}
 
-      {/* Step 3: Who is Invited */}
-      {currentStep === 3 && (
+      {/* Step 4: Who is Invited */}
+      {currentStep === 4 && (
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -525,7 +693,7 @@ export function EventForm({ tenantSlug, tenantId, categories, initialLocation }:
                 </CardTitle>
                 <CardDescription>Control who can see and attend this event</CardDescription>
               </div>
-              <Badge variant="outline">Step 3 of 3</Badge>
+              <Badge variant="outline">Step 4 of 4</Badge>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -625,7 +793,7 @@ export function EventForm({ tenantSlug, tenantId, categories, initialLocation }:
           )}
         </div>
 
-        {currentStep < 3 ? (
+        {currentStep < 4 ? (
           <Button
             type="button"
             onClick={() => setCurrentStep(currentStep + 1)}

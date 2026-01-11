@@ -45,6 +45,9 @@ type Tenant = {
   exchange_enabled?: boolean
   requests_enabled?: boolean
   announcements_enabled?: boolean
+  documents_enabled?: boolean
+  neighbor_lists_enabled?: boolean
+  reservations_enabled?: boolean
 }
 
 type Feature = {
@@ -74,6 +77,12 @@ const FEATURES: Feature[] = [
     label: "Family Units",
     description: "Allow grouping residents into family units",
     table: "family_units",
+  },
+  {
+    key: "neighbor_lists",
+    label: "Neighbor Lists",
+    description: "Allow residents to create custom lists of neighbors",
+    table: "neighbor_lists",
   },
   {
     key: "pets",
@@ -124,6 +133,12 @@ const FEATURES: Feature[] = [
     table: "check_ins",
   },
   {
+    key: "reservations",
+    label: "Reservations",
+    description: "Enable facility reservations for residents",
+    table: "reservations",
+  },
+  {
     key: "exchange",
     label: "Exchange Directory",
     description: "Enable community exchange for sharing tools, services, food, rides, and rentals",
@@ -140,6 +155,12 @@ const FEATURES: Feature[] = [
     label: "Announcements",
     description: "Enable community announcements for important updates, events, and news",
     table: "announcements",
+  },
+  {
+    key: "documents",
+    label: "Document Library",
+    description: "Enable official document library for community regulations, HOA documents, and resources",
+    table: "documents",
   },
 ]
 
@@ -175,6 +196,7 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
     map: true,
     events: false,
     checkins: false,
+    reservations: false,
     exchange: false,
     requests: true,
     announcements: true,
@@ -205,9 +227,11 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
     map?: boolean
     events?: boolean
     checkins?: boolean
+    reservations?: boolean
     exchange?: boolean
     requests?: boolean
     announcements?: boolean
+    documents?: boolean
     location_types?: {
       facility?: boolean
       lot?: boolean
@@ -226,9 +250,11 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
     ...tenant.features,
     events: tenant.events_enabled ?? false,
     checkins: tenant.checkins_enabled ?? false,
+    reservations: tenant.reservations_enabled ?? false,
     exchange: tenant.exchange_enabled ?? false,
     requests: tenant.requests_enabled ?? true,
     announcements: tenant.announcements_enabled ?? true,
+    documents: tenant.documents_enabled ?? true,
     location_types: {
       ...defaultFeatures.location_types,
       ...(tenant.features?.location_types || {}),
@@ -360,7 +386,7 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
     setLoading(true)
 
     try {
-      const { events, checkins, exchange, requests, announcements, ...otherFeatures } = features
+      const { events, checkins, exchange, requests, announcements, documents, reservations, ...otherFeatures } = features
 
       const wasEventsEnabled = tenant.events_enabled ?? false
       const willEnableEvents = !wasEventsEnabled && (events ?? false)
@@ -378,6 +404,8 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
           exchange_enabled: exchange ?? false,
           requests_enabled: requests ?? true,
           announcements_enabled: announcements ?? true,
+          documents_enabled: documents ?? true,
+          reservations_enabled: reservations ?? false,
         })
         .eq("id", tenant.id)
 
@@ -474,7 +502,7 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
 
         <div className="space-y-4 pt-4 border-t">
           <h3 className="text-sm font-semibold text-muted-foreground">Community Features</h3>
-          {FEATURES.filter((f) => ["pets", "interests", "skills", "events", "checkins", "exchange", "requests", "announcements"].includes(f.key)).map(
+          {FEATURES.filter((f) => ["pets", "interests", "skills", "events", "checkins", "exchange", "requests", "announcements", "documents", "neighbor_lists", "reservations"].includes(f.key)).map(
             (feature) => (
               <div key={feature.key} className="flex items-center justify-between space-x-4">
                 <div className="flex-1 space-y-1">
@@ -485,10 +513,7 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
                 </div>
                 <Switch
                   id={feature.key}
-                  checked={
-                    getFeatureValue(feature.key) &&
-                    (feature.key === "events" || feature.key === "checkins" || feature.key === "exchange" ? false : true)
-                  }
+                  checked={getFeatureValue(feature.key)}
                   onCheckedChange={(checked) => handleToggle(feature.key, checked)}
                 />
               </div>

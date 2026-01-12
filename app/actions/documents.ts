@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { z } from "zod"
+import { createNotification } from "./notifications"
 
 const DocumentSchema = z.object({
     title: z.string().min(1, "Title is required"),
@@ -99,6 +100,59 @@ export async function upsertDocument(formData: FormData, tenantId: string, slug:
             change_summary: validated.change_summary,
             changed_by: user.id
         })
+    }
+
+    // Trigger notifications if published
+    if (validated.status === "published" && resultId) {
+        try {
+            // Fetch all residents in the tenant
+            const { data: residents } = await supabase
+                .from("users")
+                .select("id")
+                .eq("tenant_id", tenantId)
+                .eq("role", "resident")
+                .neq("id", user.id) // Don't notify the person who created/updated it
+
+            console.log(`[upsertDocument] Found ${residents?.length || 0} residents to notify`)
+
+            if (residents && residents.length > 0) {
+                const notificationType = documentId ? "document_updated" : "document_published"
+                const title = documentId ? `Updated: ${validated.title}` : `New: ${validated.title}`
+                const message = validated.change_summary || validated.description || ""
+
+                await Promise.all(
+                    residents.map(resident =>
+                        createNotification({
+                            tenant_id: tenantId,
+                            recipient_id: resident.id,
+                            type: notificationType,
+                            title: title,
+                            message: message,
+                            document_id: resultId,
+                            actor_id: user.id
+                        })
+                    )
+                )
+                console.log(`[upsertDocument] Notifications triggered successfully`)
+            }
+
+            // Clear read status for everyone if this is an update so it reappears in feeds
+            if (documentId) {
+                const { error: clearError } = await supabase
+                    .from("document_reads")
+                    .delete()
+                    .eq("document_id", resultId)
+
+                if (clearError) {
+                    console.error("[upsertDocument] Error clearing document_reads:", clearError)
+                } else {
+                    console.log(`[upsertDocument] Cleared read status for document ${resultId}`)
+                }
+            }
+        } catch (notifyError) {
+            console.error("Error triggering document notifications:", notifyError)
+            // Don't fail the whole action if notification fails
+        }
     }
 
     revalidatePath(`/t/${slug}/admin/documents`)

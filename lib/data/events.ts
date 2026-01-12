@@ -30,6 +30,8 @@ export interface Event {
     cancelled_by: string | null
     cancelled_at: string | null
     cancellation_reason: string | null
+    parent_event_id: string | null
+    recurrence_rule: any | null
 }
 
 export interface EventWithRelations extends Event {
@@ -55,6 +57,7 @@ export interface EventWithRelations extends Event {
         rsvps: number
         flags?: number
     }
+    attendee_ids?: string[] // IDs of users who RSVP'd "yes"
 }
 
 export interface GetEventsOptions {
@@ -78,6 +81,7 @@ export interface GetEventsOptions {
     enrichWithUserRsvp?: boolean
     enrichWithSavedStatus?: boolean
     enrichWithFlagCount?: boolean
+    enrichWithAttendeeIds?: boolean // For social proof "X friends going"
 
     // Pagination
     limit?: number
@@ -105,6 +109,7 @@ export const getEvents = cache(async (
         enrichWithUserRsvp = false,
         enrichWithSavedStatus = false,
         enrichWithFlagCount = false,
+        enrichWithAttendeeIds = false,
         limit,
         offset,
     } = options
@@ -138,7 +143,9 @@ export const getEvents = cache(async (
     custom_location_type,
     cancelled_by,
     cancelled_at,
-    cancellation_reason
+    cancellation_reason,
+    parent_event_id,
+    recurrence_rule
   `
 
     if (enrichWithLocation) {
@@ -227,6 +234,7 @@ export const getEvents = cache(async (
     let userRsvpMap = new Map<string, string>()
     let savedSet = new Set<string>()
     let flagCountMap = new Map<string, number>()
+    let attendeeIdsMap = new Map<string, string[]>()
 
     if (requestingUserId && enrichWithUserRsvp) {
         const { data: rsvps } = await supabase
@@ -265,6 +273,22 @@ export const getEvents = cache(async (
         flagCounts.forEach((f) => flagCountMap.set(f.eventId, f.count))
     }
 
+    if (enrichWithAttendeeIds) {
+        const { data: attendees } = await supabase
+            .from("event_rsvps")
+            .select("event_id, user_id")
+            .eq("rsvp_status", "yes")
+            .in("event_id", eventIds)
+
+        if (attendees) {
+            attendees.forEach((a) => {
+                const existing = attendeeIdsMap.get(a.event_id) || []
+                existing.push(a.user_id)
+                attendeeIdsMap.set(a.event_id, existing)
+            })
+        }
+    }
+
     return events.map((event: any) => {
         const base: EventWithRelations = {
             id: event.id,
@@ -295,6 +319,8 @@ export const getEvents = cache(async (
             cancelled_by: event.cancelled_by,
             cancelled_at: event.cancelled_at,
             cancellation_reason: event.cancellation_reason,
+            parent_event_id: event.parent_event_id,
+            recurrence_rule: event.recurrence_rule,
         }
 
         if (enrichWithLocation && event.locations) {
@@ -330,6 +356,10 @@ export const getEvents = cache(async (
 
         if (enrichWithSavedStatus) {
             base.is_saved = savedSet.has(event.id)
+        }
+
+        if (enrichWithAttendeeIds) {
+            base.attendee_ids = attendeeIdsMap.get(event.id) || []
         }
 
         return base

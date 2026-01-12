@@ -16,12 +16,12 @@ export default async function OfficialPage({
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) redirect(`/t/${slug}/login`)
 
-    const { data: tenant } = await supabase.from("tenants").select("id, name, announcements_enabled").eq("slug", slug).single()
+    const { data: tenant } = await supabase.from("tenants").select("id, name, announcements_enabled, documents_enabled").eq("slug", slug).single()
     if (!tenant) redirect("/backoffice/login")
 
     // Fetch data in parallel
     const [docsResult, announcementsResult] = await Promise.all([
-        getDocuments(tenant.id),
+        tenant.documents_enabled !== false ? getDocuments(tenant.id) : Promise.resolve({ success: true, data: [] }),
         tenant.announcements_enabled !== false ? getAnnouncements(tenant.id, user.id) : Promise.resolve({ success: true, data: [] })
     ])
 
@@ -37,6 +37,7 @@ export default async function OfficialPage({
                 userId={user.id}
                 tenantId={tenant.id}
                 announcementsEnabled={tenant.announcements_enabled !== false}
+                documentsEnabled={tenant.documents_enabled !== false}
             />
         </div>
     )

@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { Megaphone, Calendar, MapPin, Package, AlertCircle, Map } from "lucide-react"
+import { Megaphone, Calendar, MapPin, Package, AlertCircle, Map, Clock } from "lucide-react"
 import { AnimatePresence, motion } from "framer-motion"
 
 interface DashboardSectionsProps {
@@ -42,6 +42,7 @@ export function DashboardSections({
     checkins,
     listings,
     requests,
+    reservations,
     map
 }: {
     announcements: React.ReactNode
@@ -49,19 +50,21 @@ export function DashboardSections({
     checkins: React.ReactNode
     listings: React.ReactNode
     requests: React.ReactNode
+    reservations: React.ReactNode // Added reservations
     map: React.ReactNode
 }) {
     const [activeSection, setActiveSection] = useState<string | null>(null)
     const contentRef = useRef<HTMLDivElement>(null)
 
     const sections = [
-        { id: "announcements", label: "Community Announcements", icon: Megaphone },
-        { id: "events", label: "My Upcoming Events", icon: Calendar },
-        { id: "checkins", label: "Live Check-ins", icon: MapPin },
-        { id: "listings", label: "My Listings & Transactions", icon: Package },
-        { id: "requests", label: "My Active Requests", icon: AlertCircle },
-        { id: "map", label: "Our Neighborhood", icon: Map },
-    ]
+        { id: "announcements", label: "Community Announcements", icon: Megaphone, content: announcements },
+        { id: "events", label: "My Upcoming Events", icon: Calendar, content: events },
+        { id: "checkins", label: "Live Check-ins", icon: MapPin, content: checkins },
+        { id: "reservations", label: "My Reservations", icon: Clock, content: reservations },
+        { id: "listings", label: "My Listings & Transactions", icon: Package, content: listings },
+        { id: "requests", label: "My Active Requests", icon: AlertCircle, content: requests },
+        { id: "map", label: "Our Neighborhood", icon: Map, content: map },
+    ].filter(section => section.content !== null && section.content !== undefined)
 
     // Auto-scroll to content when section becomes active
     useEffect(() => {
@@ -81,6 +84,7 @@ export function DashboardSections({
             case "announcements": return announcements
             case "events": return events
             case "checkins": return checkins
+            case "reservations": return reservations // Added reservations
             case "listings": return listings
             case "requests": return requests
             case "map": return map
@@ -88,9 +92,21 @@ export function DashboardSections({
         }
     }
 
+    // Dynamic grid columns based on number of visible sections to fill space
+    const gridColsClass = {
+        4: "lg:grid-cols-4",
+        5: "lg:grid-cols-5",
+        6: "lg:grid-cols-6",
+        7: "lg:grid-cols-7",
+    }[sections.length] || "lg:grid-cols-7"
+
     return (
         <div className={cn("space-y-6", activeSection === "map" && "h-screen min-h-screen flex flex-col")}>
-            <div className={cn("grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3", activeSection === "map" && "shrink-0")}>
+            <div className={cn(
+                "grid grid-cols-2 md:grid-cols-4 gap-3",
+                gridColsClass,
+                activeSection === "map" && "shrink-0"
+            )}>
                 {sections.map((section) => (
                     <SectionTrigger
                         key={section.id}

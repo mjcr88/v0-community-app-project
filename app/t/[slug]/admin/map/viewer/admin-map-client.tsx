@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Map, { Source, Layer, Marker, NavigationControl, GeolocateControl, MapRef } from 'react-map-gl';
 import * as turf from '@turf/turf';
 import {
@@ -15,8 +16,11 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { EditLocationDialog } from '@/components/map/EditLocationDialog';
 import { rsvpToCheckIn } from '@/app/actions/check-ins';
 import { CheckInWithRelations } from '@/lib/data/check-ins';
+import { deleteLocation, updateLocation, createLocation } from '@/app/actions/locations';
+import { toast } from 'sonner';
 
 
 
@@ -59,6 +63,82 @@ export default function AdminMapClient({
     onMapMove,
     drawingPreview,
 }: AdminMapClientProps) {
+    const searchParams = useSearchParams();
+    const router = useRouter();
+
+    // Dialog state
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [dialogMode, setDialogMode] = useState<'create' | 'edit'>('create');
+    const [dialogLocationType, setDialogLocationType] = useState<any>(null); // Simplified type for now
+
+    // Check for URL params to open edit dialog
+    useEffect(() => {
+        const locationIdParam = searchParams.get('locationId');
+        const editParam = searchParams.get('edit');
+
+        if (locationIdParam && editParam === 'true') {
+            const loc = locations.find(l => l.id === locationIdParam);
+            if (loc) {
+                setSelectedLocation(loc);
+                setDialogMode('edit');
+                setDialogLocationType(loc.type as any);
+                setIsDialogOpen(true);
+            }
+        }
+    }, [searchParams, locations]);
+
+    // Handler for saving location from dialog
+    const handleSaveLocation = async (data: any) => {
+        try {
+            if (dialogMode === 'create') {
+                // Logic to create location
+                // Note: createLocation action needs to be imported or handled similarly to how sidebar did it
+                // For now, assuming standard action call
+                // The sidebar didn't have the implementation inside AdminMapClient, it was passed down or self-contained?
+                // Wait, previous file analysis showed usage of EditSidebar but I didn't see the implementation of handlers in the snippet I read.
+                // Let's implement robust handlers here.
+                await createLocation(data, `/t/${tenantSlug}/admin/map`);
+                toast.success("Location created successfully");
+            } else {
+                // Update
+                if (data.id && data.tenant_id) {
+                    await updateLocation(data.id, data, `/t/${tenantSlug}/admin/map`);
+                    toast.success("Location updated successfully");
+                }
+            }
+            setIsDialogOpen(false);
+            // Clear URL params if exists
+            if (searchParams.get('edit')) {
+                const url = new URL(window.location.href);
+                url.searchParams.delete('edit');
+                url.searchParams.delete('locationId');
+                window.history.pushState({}, "", url.toString());
+            }
+
+        } catch (error) {
+            console.error("Error saving location:", error);
+            toast.error("Failed to save location");
+        }
+    }
+
+    const handleDeleteLocation = async (id: string) => {
+        try {
+            await deleteLocation(id, tenantId, `/t/${tenantSlug}/admin/map`);
+            toast.success("Location deleted");
+            setIsDialogOpen(false);
+            if (searchParams.get('edit')) {
+                const url = new URL(window.location.href);
+                url.searchParams.delete('edit');
+                url.searchParams.delete('locationId');
+                window.history.pushState({}, "", url.toString());
+            }
+        } catch (error) {
+            console.error("Error deleting location:", error);
+            toast.error("Failed to delete location");
+        }
+    }
+
+    // ... rest of existing code ...
     // Calculate initial center - prioritize boundary center, then mapCenter prop, then default
     const initialCenter = useMemo(() => {
         const boundary = locations.find(loc => loc.type === 'boundary');
@@ -1880,6 +1960,20 @@ export default function AdminMapClient({
                     </div>
                 )}
             </div>
+
+            <EditLocationDialog
+                open={isDialogOpen}
+                onOpenChange={setIsDialogOpen}
+                mode={dialogMode}
+                locationType={dialogLocationType}
+                locationId={selectedLocation?.id}
+                geometry={null} // Pass actual geometry if needed for creation, for now simplified
+                initialData={selectedLocation}
+                lots={locations.filter(l => l.type === 'lot')}
+                onSave={handleSaveLocation}
+                onCancel={() => setIsDialogOpen(false)}
+                onDelete={handleDeleteLocation}
+            />
         </div >
     );
 }

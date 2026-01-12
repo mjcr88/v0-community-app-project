@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Search, Users, MapPin, Lightbulb, Wrench, Home } from "lucide-react"
+import { Search, Users, MapPin, Lightbulb, Wrench, Home, Plus } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
@@ -15,6 +15,15 @@ import { ResidentCard } from "@/components/directory/ResidentCard"
 import { FamilyCard } from "@/components/directory/FamilyCard"
 import { DirectoryEmptyState } from "@/components/directory/DirectoryEmptyState"
 import { MultiSelect } from "@/components/ui/multi-select"
+import { ListCard } from "@/components/directory/ListCard"
+import { ListDetailModal } from "@/components/directory/ListDetailModal"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { EmojiPicker } from "@/components/ui/emoji-picker"
+import { Switch } from "@/components/ui/switch"
+import { Textarea } from "@/components/ui/textarea"
+import { toast } from "sonner"
+import { useRouter } from "next/navigation"
+import { createNeighborList } from "@/app/actions/neighbor-lists"
 
 interface ResidentWithRelations {
     id: string
@@ -34,8 +43,10 @@ interface NeighboursPageClientProps {
     families: FamilyUnitWithRelations[]
     neighborhoods: Array<{ id: string; name: string }>
     allInterests: Array<{ id: string; name: string }>
+    neighborLists: any[]
     tenantSlug: string
     currentUserFamilyId: string | null
+    currentTenantId: string
 }
 
 type FilterSection = "neighborhood" | "lot" | "interests" | "skills" | null
@@ -47,11 +58,54 @@ export function NeighboursPageClient({
     families,
     neighborhoods,
     allInterests,
+    neighborLists,
     tenantSlug,
     currentUserFamilyId,
+    currentTenantId,
 }: NeighboursPageClientProps) {
-    const [activeTab, setActiveTab] = useState<"residents" | "families">("residents")
+    const router = useRouter()
+    const [activeTab, setActiveTab] = useState<"residents" | "families" | "lists">("residents")
     const [search, setSearch] = useState("")
+
+    // List Creation State
+    const [createListOpen, setCreateListOpen] = useState(false)
+    const [newListLoading, setNewListLoading] = useState(false)
+    const [newListName, setNewListName] = useState("")
+    const [newListEmoji, setNewListEmoji] = useState("📝")
+    const [newListDesc, setNewListDesc] = useState("")
+    const [newListShared, setNewListShared] = useState(false)
+
+    // List Detail State
+    const [selectedList, setSelectedList] = useState<any>(null)
+
+    const onCreateList = async () => {
+        if (!newListName.trim()) return
+        setNewListLoading(true)
+        try {
+            const res = await createNeighborList(currentTenantId, {
+                name: newListName,
+                emoji: newListEmoji,
+                description: newListDesc,
+                is_shared: newListShared
+            })
+            if (res.success) {
+                toast.success("List created")
+                setCreateListOpen(false)
+                setNewListName("")
+                setNewListDesc("")
+                setNewListShared(false)
+                router.refresh()
+            } else {
+                toast.error("Failed to create list")
+            }
+        } catch (e) {
+            console.error(e)
+            toast.error("Error creating list")
+        } finally {
+            setNewListLoading(false)
+        }
+    }
+
     const [activeFilter, setActiveFilter] = useState<FilterSection>(null)
     const [residentPage, setResidentPage] = useState(1)
     const [familyPage, setFamilyPage] = useState(1)
@@ -147,6 +201,13 @@ export function NeighboursPageClient({
         })
     }, [families, search, selectedNeighborhoods])
 
+    // Filter lists
+    const filteredLists = useMemo(() => {
+        return neighborLists.filter((list) =>
+            list.name.toLowerCase().includes(search.toLowerCase())
+        )
+    }, [neighborLists, search])
+
     // Paginate results
     const paginatedResidents = filteredResidents.slice(0, residentPage * RESIDENTS_PER_PAGE)
     const paginatedFamilies = filteredFamilies.slice(0, familyPage * RESIDENTS_PER_PAGE)
@@ -178,17 +239,70 @@ export function NeighboursPageClient({
 
     return (
         <div className="space-y-6 max-w-7xl mx-auto pb-12">
+            {/* List Detail Modal */}
+            {selectedList && (
+                <ListDetailModal
+                    list={selectedList}
+                    open={!!selectedList}
+                    onOpenChange={(open) => !open && setSelectedList(null)}
+                    allResidents={residents}
+                />
+            )}
+
+            {/* Create List Dialog */}
+            <Dialog open={createListOpen} onOpenChange={setCreateListOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Create New List</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-2">
+                        <div className="flex gap-4">
+                            <EmojiPicker selectedEmoji={newListEmoji} onEmojiSelect={setNewListEmoji} />
+                            <Input
+                                placeholder="List Name"
+                                value={newListName}
+                                onChange={e => setNewListName(e.target.value)}
+                            />
+                        </div>
+                        <Textarea
+                            placeholder="Description (optional)"
+                            value={newListDesc}
+                            onChange={e => setNewListDesc(e.target.value)}
+                        />
+                        <div className="flex items-center space-x-2">
+                            <Label htmlFor="new-shared">Share with family</Label>
+                            <Switch id="new-shared" checked={newListShared} onCheckedChange={setNewListShared} />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setCreateListOpen(false)}>Cancel</Button>
+                        <Button onClick={onCreateList} disabled={newListLoading || !newListName.trim()}>
+                            {newListLoading ? "Creating..." : "Create List"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+
             {/* Header */}
-            <div className="space-y-2">
-                <h1 className="text-3xl font-bold tracking-tight">Neighbours</h1>
-                <p className="text-muted-foreground">Connect with other residents in your community</p>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="space-y-2">
+                    <h1 className="text-3xl font-bold tracking-tight">Neighbours</h1>
+                    <p className="text-muted-foreground">Connect with other residents in your community</p>
+                </div>
+                {activeTab === "lists" && (
+                    <Button onClick={() => setCreateListOpen(true)} className="md:self-start">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Create List
+                    </Button>
+                )}
             </div>
 
             {/* Search Bar */}
             <div className="relative w-full max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                    placeholder="Search by name, lot, interest, skill..."
+                    placeholder="Search..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="pl-9 bg-background/50 border-border/50 focus:bg-background transition-colors"
@@ -196,7 +310,7 @@ export function NeighboursPageClient({
             </div>
 
             {/* Tabs */}
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "residents" | "families")} className="w-full">
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
                 <TabsList className="bg-muted/30 p-1 rounded-full h-auto inline-flex">
                     <TabsTrigger
                         value="residents"
@@ -236,6 +350,27 @@ export function NeighboursPageClient({
                                     )}
                                 >
                                     {filteredFamilies.length}
+                                </Badge>
+                            )}
+                        </span>
+                    </TabsTrigger>
+                    <TabsTrigger
+                        value="lists"
+                        className="rounded-full px-6 py-2 border border-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all"
+                    >
+                        <span className="flex items-center gap-2">
+                            My Lists
+                            {filteredLists.length > 0 && (
+                                <Badge
+                                    variant="secondary"
+                                    className={cn(
+                                        "px-1.5 py-0.5 text-[10px] h-auto min-w-[1.25rem] justify-center",
+                                        activeTab === "lists"
+                                            ? "bg-primary-foreground text-primary hover:bg-primary-foreground/90"
+                                            : "bg-primary text-primary-foreground hover:bg-primary/90"
+                                    )}
+                                >
+                                    {filteredLists.length}
                                 </Badge>
                             )}
                         </span>
@@ -405,8 +540,8 @@ export function NeighboursPageClient({
                 </div>
             )}
 
-            {/* Content Grid */}
-            {activeTab === "residents" ? (
+            {/* Content Grid - Residents */}
+            {activeTab === "residents" && (
                 <div className="space-y-6">
                     {/* Results Header */}
                     <div className="flex items-center gap-3">
@@ -434,6 +569,8 @@ export function NeighboursPageClient({
                                                 resident={resident}
                                                 tenantSlug={tenantSlug}
                                                 currentUserFamilyId={currentUserFamilyId}
+                                                neighborLists={neighborLists}
+                                                tenantId={currentTenantId}
                                             />
                                         </motion.div>
                                     ))}
@@ -460,7 +597,10 @@ export function NeighboursPageClient({
                         />
                     )}
                 </div>
-            ) : (
+            )}
+
+            {/* Content Grid - Families */}
+            {activeTab === "families" && (
                 <div className="space-y-6">
                     {/* Results Header */}
                     <div className="flex items-center gap-3">
@@ -512,6 +652,47 @@ export function NeighboursPageClient({
                             onClearFilters={clearAllFilters}
                             onClearSearch={() => setSearch("")}
                         />
+                    )}
+                </div>
+            )}
+
+            {/* Content Grid - Lists */}
+            {activeTab === "lists" && (
+                <div className="space-y-6">
+                    <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-3 flex-1">
+                            <div className="h-px flex-1 bg-border"></div>
+                            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                                {filteredLists.length} {filteredLists.length === 1 ? "List" : "Lists"}
+                            </h2>
+                            <div className="h-px flex-1 bg-border"></div>
+                        </div>
+                    </div>
+
+                    {filteredLists.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {filteredLists.map((list) => (
+                                <div key={list.id} onClick={() => setSelectedList(list)}>
+                                    <ListCard
+                                        list={list}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="flex flex-col items-center justify-center py-12 text-center">
+                            <div className="bg-muted/50 p-4 rounded-full mb-4">
+                                <Users className="h-8 w-8 text-muted-foreground" />
+                            </div>
+                            <h3 className="text-lg font-semibold">No lists found</h3>
+                            <p className="text-muted-foreground max-w-sm mt-2 mb-6">
+                                Create lists to organize neighbors for events, announcements, or just to keep track of friends.
+                            </p>
+                            <Button onClick={() => setCreateListOpen(true)}>
+                                <Plus className="h-4 w-4 mr-2" />
+                                Create your first list
+                            </Button>
+                        </div>
                     )}
                 </div>
             )}

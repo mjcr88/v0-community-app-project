@@ -10,9 +10,13 @@ interface OfficialTabsProps {
     userId: string
     tenantId: string
     announcementsEnabled: boolean
+    documentsEnabled: boolean
 }
 
-export function OfficialTabs({ announcements, documents, slug, userId, tenantId, announcementsEnabled }: OfficialTabsProps) {
+export function OfficialTabs({ announcements, documents, slug, userId, tenantId, announcementsEnabled, documentsEnabled }: OfficialTabsProps) {
+    // Determine default tab based on what's enabled
+    const defaultTab = announcementsEnabled ? "announcements" : (documentsEnabled ? "documents" : "announcements")
+
     return (
         <div className="space-y-8">
             {/* Top Level Header */}
@@ -23,7 +27,7 @@ export function OfficialTabs({ announcements, documents, slug, userId, tenantId,
                 </div>
             </div>
 
-            <Tabs defaultValue={announcementsEnabled ? "announcements" : "documents"} className="space-y-8">
+            <Tabs defaultValue={defaultTab} className="space-y-8">
                 {/* Main section tabs - Styled as pills/buttons below header */}
                 <TabsList className="bg-muted/30 p-1 rounded-lg h-auto inline-flex w-full md:w-auto">
                     {announcementsEnabled && (
@@ -35,13 +39,15 @@ export function OfficialTabs({ announcements, documents, slug, userId, tenantId,
                             Announcements
                         </TabsTrigger>
                     )}
-                    <TabsTrigger
-                        value="documents"
-                        className="gap-2 px-6 py-2.5 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all flex-1 md:flex-none"
-                    >
-                        <FileText className="h-4 w-4" />
-                        Documents
-                    </TabsTrigger>
+                    {documentsEnabled && (
+                        <TabsTrigger
+                            value="documents"
+                            className="gap-2 px-6 py-2.5 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all flex-1 md:flex-none"
+                        >
+                            <FileText className="h-4 w-4" />
+                            Documents
+                        </TabsTrigger>
+                    )}
                 </TabsList>
 
                 {announcementsEnabled && (
@@ -55,14 +61,16 @@ export function OfficialTabs({ announcements, documents, slug, userId, tenantId,
                     </TabsContent>
                 )}
 
-                <TabsContent value="documents" className="mt-0">
-                    <DocumentListClient
-                        documents={documents}
-                        slug={slug}
-                        userId={userId}
-                        tenantId={tenantId}
-                    />
-                </TabsContent>
+                {documentsEnabled && (
+                    <TabsContent value="documents" className="mt-0">
+                        <DocumentListClient
+                            documents={documents}
+                            slug={slug}
+                            userId={userId}
+                            tenantId={tenantId}
+                        />
+                    </TabsContent>
+                )}
             </Tabs>
         </div>
     )

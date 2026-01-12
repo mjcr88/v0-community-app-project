@@ -68,6 +68,12 @@ export async function getNotifications(tenantId: string, filters?: NotificationF
           duration_minutes,
           location_id,
           custom_location_name
+        ),
+        document:documents!document_id(
+          id,
+          title,
+          category,
+          document_type
         )
       `,
       )
@@ -273,6 +279,7 @@ export async function createNotification(data: CreateNotificationData) {
       exchange_listing_id: data.exchange_listing_id || null,
       event_id: data.event_id || null,
       check_in_id: data.check_in_id || null,
+      document_id: data.document_id || null,
       actor_id: data.actor_id || null,
       action_url: data.action_url || null,
       metadata: data.metadata || null,

@@ -8,6 +8,9 @@ import { MyListingsAndTransactionsWidget } from "@/components/exchange/my-listin
 import { getMyTransactions } from "@/app/actions/exchange-transactions"
 import { getMyRequests } from "@/app/actions/resident-requests"
 import { MyRequestsWidget } from "@/components/requests/my-requests-widget"
+
+import { MyReservationsWidget } from "@/components/reservations/MyReservationsWidget" // Added import
+import { getUserReservations } from "@/app/actions/reservations" // Added import
 import { AnnouncementsWidget } from "@/components/dashboard/announcements-widget"
 import { PriorityFeed } from "@/components/ecovilla/dashboard/PriorityFeed"
 import { StatsGrid } from "@/components/dashboard/StatsGrid"
@@ -138,6 +141,7 @@ export default async function ResidentDashboardPage({ params }: { params: Promis
   }
   const mergedFeatures = { ...defaultFeatures, ...(tenant?.features || {}) }
   const mapEnabled = mergedFeatures.map === true
+  const reservationsEnabled = tenant?.reservations_enabled === true
 
   let lotLocationId: string | undefined
   if (mapEnabled && resident.lot_id) {
@@ -160,6 +164,7 @@ export default async function ResidentDashboardPage({ params }: { params: Promis
   let exchangeNeighborhoods: any[] = []
   let userTransactions: any[] = []
   let myRequests: any[] = []
+  let myReservations: any[] = [] // Added myReservations
 
   if (exchangeEnabled) {
     userListings = await getCachedUserListings(user.id, resident.tenant_id)
@@ -170,6 +175,10 @@ export default async function ResidentDashboardPage({ params }: { params: Promis
 
   if (requestsEnabled && resident.tenant_id) {
     myRequests = await getMyRequests(resident.tenant_id)
+  }
+
+  if (reservationsEnabled) {
+    myReservations = await getUserReservations()
   }
 
   return (
@@ -237,6 +246,14 @@ export default async function ResidentDashboardPage({ params }: { params: Promis
             ) : (
               <div className="p-4 text-center text-muted-foreground">Check-ins are disabled for this community.</div>
             )
+          }
+          reservations={
+            reservationsEnabled ? (
+              <MyReservationsWidget
+                reservations={myReservations}
+                tenantSlug={slug}
+              />
+            ) : null
           }
           listings={
             exchangeEnabled ? (

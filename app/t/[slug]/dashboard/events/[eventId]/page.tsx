@@ -551,6 +551,8 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
             maxAttendees={event.max_attendees}
             userId={user?.id || null}
             eventStatus={event.status as "draft" | "published" | "cancelled"}
+            parentEventId={event.parent_event_id}
+            recurrenceRule={event.recurrence_rule}
           />
 
           {/* Attendees Section */}

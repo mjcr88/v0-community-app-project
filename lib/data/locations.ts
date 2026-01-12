@@ -86,6 +86,7 @@ export interface BaseLocation {
   created_at: string
   updated_at: string
   created_by: string | null
+  is_reservable?: boolean // Added for reservation system
 }
 
 // Location with optional enriched relations
@@ -166,9 +167,11 @@ export const getLocations = cache(async (
     accessibility_features,
     rules,
     status,
+    status,
     created_at,
     updated_at,
-    created_by
+    created_by,
+    is_reservable
   `
 
   // Add neighborhood if requested
@@ -243,6 +246,7 @@ export const getLocations = cache(async (
       created_at: loc.created_at,
       updated_at: loc.updated_at,
       created_by: loc.created_by || null,
+      is_reservable: loc.is_reservable || false,
     }
 
     // Add enriched data if available

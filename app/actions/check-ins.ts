@@ -297,16 +297,30 @@ export const getActiveCheckIns = cache(async (tenantId: string) => {
 
       // 3. Private check-ins: visible if invited
       if (checkIn.visibility_scope === "private") {
+        console.log(`[v0] Debug Private Check-in ${checkIn.id}:`, {
+          invitesCount: checkIn.invites?.length,
+          userID: user.id,
+          userFamilyID: userData?.family_unit_id
+        })
+
         if (checkIn.invites && checkIn.invites.length > 0) {
           // Check if user is directly invited
           const isDirectlyInvited = checkIn.invites.some((invite) => invite.invitee_id === user.id)
-          if (isDirectlyInvited) return true
+          if (isDirectlyInvited) {
+            console.log(`[v0] User ${user.id} is directly invited to ${checkIn.id}`)
+            return true
+          }
 
           // Check if user's family is invited
           if (userData && userData.family_unit_id) {
             const isFamilyInvited = checkIn.invites.some((invite) => invite.family_unit_id === userData!.family_unit_id)
-            if (isFamilyInvited) return true
+            if (isFamilyInvited) {
+              console.log(`[v0] User family ${userData.family_unit_id} is invited to ${checkIn.id}`)
+              return true
+            }
           }
+        } else {
+          console.log(`[v0] Private Check-in ${checkIn.id} has NO invites`)
         }
         return false
       }
@@ -320,6 +334,7 @@ export const getActiveCheckIns = cache(async (tenantId: string) => {
     console.log("[v0] getActiveCheckIns - After filtering:", {
       initialCount: checkIns.length,
       visibleCount: visibleCheckIns.length,
+      user: user.id
     })
 
     const checkInsWithUserData = visibleCheckIns.map((checkIn) => {

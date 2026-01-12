@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
-import { Search, Filter, X, CheckCheck, Bell, BellOff, Inbox, Archive } from 'lucide-react'
+import { Search, Filter, X, CheckCheck, Bell, BellOff, Inbox, Archive, FileText } from 'lucide-react'
 import { NotificationCard } from "@/components/notifications/notification-card"
 import { ExchangeNotificationCard } from "@/components/notifications/exchange-notification-card"
 import { EventNotificationCard } from "@/components/notifications/event-notification-card"
@@ -84,6 +84,7 @@ export function NotificationPageClient({
                 if (selectedTypes.includes("event") && n.type.startsWith("event_")) matchesType = true
                 if (selectedTypes.includes("checkin") && n.type.startsWith("checkin_")) matchesType = true
                 if (selectedTypes.includes("announcement") && n.type.startsWith("announcement")) matchesType = true
+                if (selectedTypes.includes("document") && n.type.startsWith("document_")) matchesType = true
                 if (selectedTypes.includes("system") && !n.type.includes("_")) matchesType = true // Fallback for simple types
 
                 if (!matchesType) return false
@@ -144,6 +145,7 @@ export function NotificationPageClient({
         { value: "exchange", label: "Exchange", icon: "🔄" },
         { value: "event", label: "Events", icon: "📅" },
         { value: "announcement", label: "Announcements", icon: "📢" },
+        { value: "document", label: "Documents", icon: "📄" },
         { value: "checkin", label: "Check-ins", icon: "📍" },
     ]
 

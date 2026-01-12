@@ -10,6 +10,7 @@ import { LocationBadge } from "@/components/events/location-badge"
 import { RioImage } from "@/components/library/rio-image"
 import { PulsatingButton } from "@/components/library/pulsating-button"
 import { EnhancedEventCard } from "@/components/events/enhanced-event-card"
+import { FriendsGoingBadge } from "@/components/events/friends-going-badge"
 
 interface Event {
   id: string
@@ -52,6 +53,7 @@ interface Event {
   custom_location_name?: string | null
   flag_count?: number
   status?: "draft" | "published" | "cancelled"
+  attendee_ids?: string[]
 }
 
 import { RioEmptyState } from "@/components/exchange/rio-empty-state"
@@ -65,6 +67,7 @@ export function EventsList({
   userId,
   tenantId,
   emptyStateVariant = "no-upcoming",
+  friendIds = [],
 }: {
   events: Event[]
   slug: string
@@ -72,6 +75,7 @@ export function EventsList({
   userId: string
   tenantId: string
   emptyStateVariant?: "no-matches" | "no-upcoming" | "no-past" | "no-rsvp" | "no-listings"
+  friendIds?: string[]
 }) {
   const hasEvents = events.length > 0
 
@@ -161,80 +165,89 @@ export function EventsList({
             isPriority={isPriority}
             isCancelled={isCancelled}
           >
-            <Link href={`/t/${slug}/dashboard/events/${event.id}`} className="block h-full">
-              <CardHeader>
-                <div className="flex items-start justify-between gap-2">
-                  <CardTitle className="line-clamp-2 text-balance">{event.title}</CardTitle>
-                  {event.event_categories?.icon && (
-                    <span className="text-2xl flex-shrink-0 transition-transform hover:scale-110">
-                      {event.event_categories.icon}
-                    </span>
+            <div className="flex flex-col h-full">
+              <Link href={`/t/${slug}/dashboard/events/${event.id}`} className="flex-1 block">
+                <CardHeader>
+                  <div className="flex items-start justify-between gap-2">
+                    <CardTitle className="line-clamp-2 text-balance">{event.title}</CardTitle>
+                    {event.event_categories?.icon && (
+                      <span className="text-2xl flex-shrink-0 transition-transform hover:scale-110">
+                        {event.event_categories.icon}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <CardDescription className="line-clamp-1">
+                      {event.event_categories?.name || "Uncategorized"}
+                    </CardDescription>
+                    {isCancelled && (
+                      <Badge variant="destructive" className="text-xs badge-enter">
+                        Cancelled
+                      </Badge>
+                    )}
+                    {eventIsPast && !isCancelled && (
+                      <Badge variant="outline" className="text-xs badge-enter">
+                        Past Event
+                      </Badge>
+                    )}
+                    {event.flag_count !== undefined && event.flag_count > 0 && (
+                      <Badge variant="destructive" className="text-xs gap-1 badge-enter">
+                        <Flag className="h-3 w-3" />
+                        {event.flag_count}
+                      </Badge>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3 pb-2">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <span className="line-clamp-1">{displayDate}</span>
+                  </div>
+                  {event.description && (
+                    <p className="text-sm text-muted-foreground line-clamp-2 text-pretty">{event.description.replace(/(<([^>]+)>)/gi, '').trim()}</p>
                   )}
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <CardDescription className="line-clamp-1">
-                    {event.event_categories?.name || "Uncategorized"}
-                  </CardDescription>
-                  {isCancelled && (
-                    <Badge variant="destructive" className="text-xs badge-enter">
-                      Cancelled
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant="secondary" className="capitalize">
+                      {event.event_type === "resident" ? "Resident" : "Official"}
                     </Badge>
-                  )}
-                  {eventIsPast && !isCancelled && (
-                    <Badge variant="outline" className="text-xs badge-enter">
-                      Past Event
-                    </Badge>
-                  )}
-                  {event.flag_count !== undefined && event.flag_count > 0 && (
-                    <Badge variant="destructive" className="text-xs gap-1 badge-enter">
-                      <Flag className="h-3 w-3" />
-                      {event.flag_count}
-                    </Badge>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                  <span className="line-clamp-1">{displayDate}</span>
-                </div>
-                {event.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-2 text-pretty">{event.description.replace(/(<([^>]+)>)/gi, '').trim()}</p>
-                )}
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Badge variant="secondary" className="capitalize">
-                    {event.event_type === "resident" ? "Resident" : "Official"}
-                  </Badge>
-                  {event.is_all_day && (
-                    <Badge variant="outline" className="text-xs">
-                      All Day
-                    </Badge>
-                  )}
-                  {event.visibility_scope === "neighborhood" && event.event_neighborhoods && event.event_neighborhoods.length > 0 && (
-                    <>
-                      {event.event_neighborhoods.map((en: any) => (
-                        <Badge key={en.id} variant="secondary" className="text-xs">
-                          <Users className="h-3 w-3 mr-1" />
-                          {en.neighborhoods?.name || "Neighborhood"}
-                        </Badge>
-                      ))}
-                    </>
-                  )}
-                  {event.visibility_scope === "private" && (
-                    <Badge variant="outline" className="text-xs gap-1">
-                      <Lock className="h-3 w-3" />
-                      Private
-                    </Badge>
-                  )}
-                  <LocationBadge
-                    locationType={event.location_type || null}
-                    locationName={event.location?.name}
-                    customLocationName={event.custom_location_name}
-                  />
-                </div>
+                    {event.is_all_day && (
+                      <Badge variant="outline" className="text-xs">
+                        All Day
+                      </Badge>
+                    )}
+                    {event.visibility_scope === "neighborhood" && event.event_neighborhoods && event.event_neighborhoods.length > 0 && (
+                      <>
+                        {event.event_neighborhoods.map((en: any) => (
+                          <Badge key={en.id} variant="secondary" className="text-xs">
+                            <Users className="h-3 w-3 mr-1" />
+                            {en.neighborhoods?.name || "Neighborhood"}
+                          </Badge>
+                        ))}
+                      </>
+                    )}
+                    {event.visibility_scope === "private" && (
+                      <Badge variant="outline" className="text-xs gap-1">
+                        <Lock className="h-3 w-3" />
+                        Private
+                      </Badge>
+                    )}
+                    <LocationBadge
+                      locationType={event.location_type || null}
+                      locationName={event.location?.name}
+                      customLocationName={event.custom_location_name}
+                    />
+                    {friendIds && friendIds.length > 0 && event.attendee_ids && event.attendee_ids.length > 0 && (
+                      <FriendsGoingBadge
+                        attendeeIds={event.attendee_ids}
+                        friendIds={friendIds}
+                      />
+                    )}
+                  </div>
+                </CardContent>
+              </Link>
 
-                {/* Organizer Info and Actions */}
-                <div className="flex items-center justify-between gap-3 border-t pt-4 mt-auto flex-wrap">
+              <div className="p-6 pt-0 mt-auto">
+                <div className="flex items-center justify-between gap-3 border-t pt-4 flex-wrap">
                   <div className="flex items-center gap-2 min-w-0 flex-shrink">
                     <Avatar className="h-6 w-6 flex-shrink-0">
                       <AvatarImage src={event.creator?.profile_picture_url || undefined} alt={creatorName} />
@@ -254,8 +267,8 @@ export function EventsList({
                     rsvpDeadline={event.rsvp_deadline}
                   />
                 </div>
-              </CardContent>
-            </Link>
+              </div>
+            </div>
           </EnhancedEventCard>
         )
       })}

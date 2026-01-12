@@ -99,6 +99,7 @@ export default async function EventsPage({
   // Build lookup maps for O(1) access
   const attendingCountMap = new Map<string, number>()
   const userRsvpMap = new Map<string, string>()
+  const attendeeIdsMap = new Map<string, string[]>() // For "X friends going"
   const savedEventsSet = new Set<string>(savedEvents?.map((s) => s.event_id) || [])
   const flagCountMap = new Map<string, number>()
   flagCountResults.forEach(({ eventId, count }) => {
@@ -106,14 +107,36 @@ export default async function EventsPage({
   })
 
   allRsvps?.forEach((rsvp) => {
-    // Count attending
+    // Count attending and collect attendee IDs
     if (rsvp.rsvp_status === "yes") {
       attendingCountMap.set(rsvp.event_id, (attendingCountMap.get(rsvp.event_id) || 0) + 1)
+      const existingIds = attendeeIdsMap.get(rsvp.event_id) || []
+      existingIds.push(rsvp.user_id)
+      attendeeIdsMap.set(rsvp.event_id, existingIds)
     }
     // Track user's RSVP
     if (rsvp.user_id === user.id) {
       userRsvpMap.set(rsvp.event_id, rsvp.rsvp_status)
     }
+  })
+
+  // Fetch user's neighbor list member IDs for "X friends going"
+  const { data: neighborLists } = await supabase
+    .from("neighbor_lists")
+    .select(`
+      id,
+      members:neighbor_list_members(neighbor_id)
+    `)
+    .eq("owner_id", user.id)
+    .eq("tenant_id", resident.tenant_id)
+
+  const friendIds: string[] = []
+  neighborLists?.forEach((list) => {
+    list.members?.forEach((m: { neighbor_id: string }) => {
+      if (m.neighbor_id && !friendIds.includes(m.neighbor_id)) {
+        friendIds.push(m.neighbor_id)
+      }
+    })
   })
 
   // Map the data efficiently
@@ -123,6 +146,7 @@ export default async function EventsPage({
     user_rsvp_status: userRsvpMap.get(event.id) || null,
     is_saved: savedEventsSet.has(event.id),
     flag_count: flagCountMap.get(event.id) || 0,
+    attendee_ids: attendeeIdsMap.get(event.id) || [],
   }))
 
   // Filter out "Test" category
@@ -150,6 +174,7 @@ export default async function EventsPage({
         slug={slug}
         userId={user.id}
         tenantId={resident.tenant_id}
+        friendIds={friendIds}
       />
     </div>
   )

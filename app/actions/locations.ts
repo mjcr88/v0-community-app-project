@@ -165,6 +165,7 @@ export async function updateLocation(
     website?: string | null
     capacity?: number | null
     rules?: string | null
+    is_reservable?: boolean
   },
   path?: string
 ) {

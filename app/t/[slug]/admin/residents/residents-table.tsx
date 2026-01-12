@@ -77,7 +77,7 @@ type CombinedEntity = {
   phone?: string | null
   species?: string
   created_at: string
-  status?: "created" | "invited" | "active"
+  status?: "passive" | "created" | "invited" | "active"
   complaints?: { active: number; total: number }
 }
 
@@ -107,9 +107,10 @@ export function ResidentsTable({
   const [deleteDialogEntity, setDeleteDialogEntity] = useState<CombinedEntity | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
 
-  const getResidentStatus = (resident: Resident): "created" | "invited" | "active" => {
+  const getResidentStatus = (resident: Resident): "passive" | "created" | "invited" | "active" => {
     if (resident.onboarding_completed) return "active"
     if (resident.invited_at) return "invited"
+    if (!resident.email) return "passive"
     return "created"
   }
 
@@ -271,14 +272,15 @@ export function ResidentsTable({
     return familyUnits.some((fu) => fu.primary_contact_id === residentId)
   }
 
-  const renderStatusBadge = (status: "created" | "invited" | "active") => {
+  const renderStatusBadge = (status: "passive" | "created" | "invited" | "active") => {
     const variants = {
-      created: { label: "Created", variant: "secondary" as const },
-      invited: { label: "Invited", variant: "outline" as const },
-      active: { label: "Active", variant: "default" as const },
+      passive: { label: "Passive", variant: "secondary" as const, className: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200" },
+      created: { label: "Created", variant: "secondary" as const, className: "" },
+      invited: { label: "Invited", variant: "outline" as const, className: "" },
+      active: { label: "Active", variant: "default" as const, className: "" },
     }
-    const { label, variant } = variants[status]
-    return <Badge variant={variant}>{label}</Badge>
+    const { label, variant, className } = variants[status]
+    return <Badge variant={variant} className={className}>{label}</Badge>
   }
 
   return (

@@ -11,6 +11,15 @@ import { createBrowserClient } from "@/lib/supabase/client"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import Link from "next/link"
 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
+import { ReservationForm } from "@/components/reservations/ReservationForm"
+
 interface LocationInfoCardProps {
   location: {
     id: string
@@ -34,6 +43,7 @@ interface LocationInfoCardProps {
     path_surface?: string | null
     path_length?: string | null
     elevation_gain?: string | null
+    is_reservable?: boolean // Added for reservation system
   }
   onClose: () => void
   minimal?: boolean // Added minimal prop
@@ -80,6 +90,7 @@ export function LocationInfoCard({
     type: location.type,
     lot_id: location.lot_id,
     neighborhood_id: location.neighborhood_id,
+    is_reservable: location.is_reservable,
   })
 
   const [neighborhood, setNeighborhood] = useState<{ id: string; name: string } | null>(null)
@@ -89,6 +100,8 @@ export function LocationInfoCard({
   const [pets, setPets] = useState<Pet[]>([])
   const [tenantSlug, setTenantSlug] = useState<string>(propTenantSlug || "")
   const [loading, setLoading] = useState(true)
+  const [isReservationOpen, setIsReservationOpen] = useState(false)
+  const [reservationsEnabled, setReservationsEnabled] = useState(false)
 
   useEffect(() => {
     console.log("[v0] LocationInfoCard useEffect triggered for location:", location.id)
@@ -109,12 +122,20 @@ export function LocationInfoCard({
         if (userData.user) {
           const { data: user } = await supabase.from("users").select("tenant_id").eq("id", userData.user.id).single()
           if (user?.tenant_id) {
-            const { data: tenant } = await supabase.from("tenants").select("slug").eq("id", user.tenant_id).single()
+            const { data: tenant } = await supabase.from("tenants").select("slug, reservations_enabled").eq("id", user.tenant_id).single()
             if (tenant) {
               console.log("[v0] Tenant slug set:", tenant.slug)
               setTenantSlug(tenant.slug)
+              setReservationsEnabled(tenant.reservations_enabled ?? false)
             }
           }
+        }
+      } else {
+        // If slug is provided, we should probably fetch the tenant config for it if we don't have it passed down
+        // For now, let's assume if slug is passed, the caller might need to pass feature flags, or we fetch
+        const { data: tenant } = await supabase.from("tenants").select("reservations_enabled").eq("slug", propTenantSlug).single()
+        if (tenant) {
+          setReservationsEnabled(tenant.reservations_enabled ?? false)
         }
       }
 
@@ -333,6 +354,33 @@ export function LocationInfoCard({
           </Button>
         </CardHeader>
         <CardContent className={`${spacing} overflow-y-auto flex-1 px-0 pb-0`}>
+          {location.type === "facility" && location.is_reservable && reservationsEnabled && (
+            <div className="mb-4">
+              <Button className="w-full" size="sm" variant="secondary" onClick={() => setIsReservationOpen(true)}>
+                <Calendar className="h-4 w-4 mr-2" />
+                Reserve Facility
+              </Button>
+            </div>
+          )}
+
+          {/* Linked Dialog for Embedded Variant */}
+          <Dialog open={isReservationOpen} onOpenChange={setIsReservationOpen}>
+            <DialogContent className="sm:max-w-[425px]" aria-describedby={undefined}>
+              <DialogHeader>
+                <DialogTitle>Reserve {location.name}</DialogTitle>
+                <DialogDescription>
+                  Fill out the form below to reserve this facility.
+                </DialogDescription>
+              </DialogHeader>
+              <ReservationForm
+                locationId={location.id}
+                tenantSlug={propTenantSlug || tenantSlug}
+                onSuccess={() => setIsReservationOpen(false)}
+                onCancel={() => setIsReservationOpen(false)}
+              />
+            </DialogContent>
+          </Dialog>
+
           {location.photos && location.photos.length > 0 && (
             <div className="relative w-full rounded-lg overflow-hidden border bg-muted cursor-pointer group -mt-1 mb-3">
               <img
@@ -566,12 +614,37 @@ export function LocationInfoCard({
         <Button asChild className="w-full mt-3" size="sm" variant="default">
           <Link
             href={`/t/${tenantSlug || propTenantSlug}/dashboard/locations/${location.id}${eventCount && eventCount > 0 ? "#events" : ""}`}
+            className="flex items-center justify-center p-2"
           >
             <ExternalLink className="h-4 w-4 mr-2" />
             {eventCount && eventCount > 0 ? "View Events & Details" : "View Full Details"}
           </Link>
         </Button>
+
+        {location.type === "facility" && location.is_reservable && reservationsEnabled && (
+          <Button className="w-full mt-2" size="sm" variant="secondary" onClick={() => setIsReservationOpen(true)}>
+            <Calendar className="h-4 w-4 mr-2" />
+            Reserve Facility
+          </Button>
+        )}
       </CardHeader>
+      <Dialog open={isReservationOpen} onOpenChange={setIsReservationOpen}>
+        <DialogContent className="sm:max-w-[425px]" aria-describedby={undefined}>
+          <DialogHeader>
+            <DialogTitle>Reserve {location.name}</DialogTitle>
+            <DialogDescription>
+              Fill out the form below to reserve this facility.
+            </DialogDescription>
+          </DialogHeader>
+          <ReservationForm
+            locationId={location.id}
+            tenantSlug={tenantSlug}
+            onSuccess={() => setIsReservationOpen(false)}
+            onCancel={() => setIsReservationOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
       <CardContent className={`${spacing} overflow-y-auto flex-1`}>
         {location.photos && location.photos.length > 0 && (
           <div className="relative w-full rounded-lg overflow-hidden border bg-muted cursor-pointer group -mt-1 mb-3">
@@ -768,6 +841,6 @@ export function LocationInfoCard({
           </div>
         )}
       </CardContent>
-    </Card>
+    </Card >
   )
 }

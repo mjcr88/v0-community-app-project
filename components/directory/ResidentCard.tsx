@@ -8,23 +8,28 @@ import { Eye, EyeOff, MapPin, Home } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { filterPrivateData } from "@/lib/privacy-utils"
 
+import { AddToListDropdown } from "./AddToListDropdown"
+
 interface ResidentCardProps {
     resident: any
     tenantSlug: string
     currentUserFamilyId: string | null
+    neighborLists?: any[]
+    tenantId?: string
 }
 
-export function ResidentCard({ resident, tenantSlug, currentUserFamilyId }: ResidentCardProps) {
+export function ResidentCard({ resident, tenantSlug, currentUserFamilyId, neighborLists = [], tenantId }: ResidentCardProps) {
     const router = useRouter()
 
     const privacySettings = Array.isArray(resident.user_privacy_settings)
         ? resident.user_privacy_settings[0]
         : resident.user_privacy_settings
 
+    // ... (existing logic) ...
     const isFamily = resident.family_unit_id === currentUserFamilyId
     const filteredData = filterPrivateData(resident, privacySettings, isFamily)
 
-    // Count hidden fields
+    // ... (existing logic) ...
     const hiddenFieldsCount = [
         !filteredData.show_email,
         !filteredData.show_phone,
@@ -35,8 +40,6 @@ export function ResidentCard({ resident, tenantSlug, currentUserFamilyId }: Resi
     ].filter(Boolean).length
 
     const showPrivacyBadge = hiddenFieldsCount > 0 && !isFamily
-
-    // Get initials for avatar fallback
     const initials = `${resident.first_name?.[0] || ""}${resident.last_name?.[0] || ""}`.toUpperCase()
 
     return (
@@ -44,12 +47,13 @@ export function ResidentCard({ resident, tenantSlug, currentUserFamilyId }: Resi
             className="hover:shadow-md transition-all duration-200 cursor-pointer relative overflow-hidden group"
             onClick={() => router.push(`/t/${tenantSlug}/dashboard/neighbours/${resident.id}`)}
         >
-            {showPrivacyBadge && (
-                <div className="absolute top-3 right-3 z-10">
+            <div className="absolute top-2 right-2 flex gap-1 z-20" onClick={(e) => e.stopPropagation()}>
+                {/* Privacy Badge */}
+                {showPrivacyBadge && (
                     <TooltipProvider>
                         <Tooltip>
-                            <TooltipTrigger>
-                                <Badge variant="secondary" className="gap-1">
+                            <TooltipTrigger asChild>
+                                <Badge variant="secondary" className="gap-1 h-8">
                                     <EyeOff className="h-3 w-3" />
                                     {hiddenFieldsCount}
                                 </Badge>
@@ -59,12 +63,12 @@ export function ResidentCard({ resident, tenantSlug, currentUserFamilyId }: Resi
                             </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
-                </div>
-            )}
+                )}
+            </div>
 
             <CardContent className="p-4">
                 <div className="flex gap-4 items-center">
-                    {/* Avatar */}
+                    {/* (Rest of content) */}
                     <Avatar className="h-16 w-16 flex-shrink-0">
                         <AvatarImage
                             src={filteredData.show_profile_picture ? resident.profile_picture_url : undefined}
@@ -75,14 +79,11 @@ export function ResidentCard({ resident, tenantSlug, currentUserFamilyId }: Resi
                         </AvatarFallback>
                     </Avatar>
 
-                    {/* Content */}
                     <div className="flex-1 min-w-0 space-y-2">
-                        {/* Name */}
                         <h3 className="font-semibold text-base truncate">
                             {resident.first_name} {resident.last_name}
                         </h3>
 
-                        {/* Location - Only show if not private */}
                         {filteredData.show_neighborhood && (resident.lots?.neighborhoods?.name || resident.lots?.lot_number) && (
                             <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                                 {resident.lots?.neighborhoods?.name && (
@@ -100,7 +101,6 @@ export function ResidentCard({ resident, tenantSlug, currentUserFamilyId }: Resi
                             </div>
                         )}
 
-                        {/* Family - Always render to maintain consistent height */}
                         <div className="text-xs text-muted-foreground truncate min-h-[1.25rem]">
                             {filteredData.show_family && resident.family_units?.name ? (
                                 resident.family_units.name
@@ -108,6 +108,18 @@ export function ResidentCard({ resident, tenantSlug, currentUserFamilyId }: Resi
                                 <span className="opacity-0">-</span>
                             )}
                         </div>
+                    </div>
+
+                    {/* Add to List Button - Aligned with Avatar */}
+                    <div onClick={(e) => e.stopPropagation()}>
+                        {tenantId && (
+                            <AddToListDropdown
+                                neighborId={resident.id}
+                                tenantId={tenantId}
+                                lists={neighborLists}
+                                variant="ghost"
+                            />
+                        )}
                     </div>
                 </div>
             </CardContent>

@@ -14,6 +14,8 @@ import { LocationCheckinsSection } from "./location-checkins-section"
 import { LocationExchangeSection } from "./location-exchange-section"
 import { FacilityDetailsSection } from "./facility-details-section"
 import { PhotoGallerySection } from "./photo-gallery-section"
+import { ReserveLocationButton } from "@/components/reservations/ReserveLocationButton"
+import { UpcomingReservationsSection } from "@/components/reservations/UpcomingReservationsSection" // Added import
 import { getEventsByLocation } from "@/app/actions/events"
 import { getCheckInsByLocation } from "@/app/actions/check-ins"
 import { getExchangeListingsByLocation, getExchangeCategories } from "@/app/actions/exchange-listings"
@@ -107,13 +109,14 @@ export default async function LocationDetailsPage({ params }: { params: Promise<
 
   const { data: tenant } = await supabase
     .from("tenants")
-    .select("events_enabled, checkins_enabled, exchange_enabled")
+    .select("events_enabled, checkins_enabled, exchange_enabled, reservations_enabled")
     .eq("id", currentUser.tenant_id)
     .single()
 
   const eventsEnabled = tenant?.events_enabled === true
   const checkinsEnabled = tenant?.checkins_enabled === true
   const exchangeEnabled = tenant?.exchange_enabled === true
+  const reservationsEnabled = tenant?.reservations_enabled === true
 
   let locationEvents: any[] = []
   if (eventsEnabled) {
@@ -142,7 +145,7 @@ export default async function LocationDetailsPage({ params }: { params: Promise<
 
   if (exchangeEnabled) {
     locationListings = await getExchangeListingsByLocation(location.id, currentUser.tenant_id)
-    categories = await getExchangeCategories(currentUser.tenant_id)
+    categories = await getExchangeCategories()
 
     const { data: neighborhoodsData } = await supabase
       .from("neighborhoods")
@@ -281,6 +284,19 @@ export default async function LocationDetailsPage({ params }: { params: Promise<
         </div>
       </div>
 
+      {/* Mobile Reserve Button (below title block) */}
+      {location.type === "facility" && location.is_reservable && reservationsEnabled && (
+        <div className="md:hidden mt-4">
+          <ReserveLocationButton
+            locationId={location.id}
+            locationName={location.name}
+            tenantSlug={slug}
+            className="w-full"
+            variant="secondary"
+          />
+        </div>
+      )}
+
       {/* Hero Image - Display hero photo */}
       {mainPhoto && (
         <div className="relative w-full rounded-xl overflow-hidden border bg-muted h-[200px] md:h-[300px]">
@@ -297,10 +313,22 @@ export default async function LocationDetailsPage({ params }: { params: Promise<
               Featured Photo
             </Badge>
           )}
+
+          {/* Desktop Reserve Button (prominent on banner) */}
+          {location.type === "facility" && location.is_reservable && reservationsEnabled && (
+            <div className="hidden md:block absolute top-4 right-4 z-10">
+              <ReserveLocationButton
+                locationId={location.id}
+                locationName={location.name}
+                tenantSlug={slug}
+                size="default"
+                className="bg-white/90 text-primary hover:bg-white shadow-md border-0 text-sm font-semibold"
+              />
+            </div>
+          )}
         </div>
       )}
 
-      {/* Description */}
       {location.description && (
         <Card>
           <CardHeader>
@@ -313,17 +341,25 @@ export default async function LocationDetailsPage({ params }: { params: Promise<
       )}
 
       {/* Facility Details */}
-      {location.type === "facility" &&
+      {
+        location.type === "facility" &&
         (location.capacity ||
           location.max_occupancy ||
           location.hours ||
           location.amenities?.length ||
           location.parking_spaces !== null ||
           location.accessibility_features ||
-          location.rules) && <FacilityDetailsSection location={location} />}
+          location.rules) && <FacilityDetailsSection location={location} />
+      }
+
+      {/* Upcoming Reservations */}
+      {location.type === "facility" && location.is_reservable && reservationsEnabled && (
+        <UpcomingReservationsSection locationId={location.id} />
+      )}
 
       {/* Walking Path Details */}
-      {location.type === "walking_path" &&
+      {
+        location.type === "walking_path" &&
         (location.path_difficulty || location.path_surface || location.path_length || location.elevation_gain) && (
           <Card>
             <CardHeader>
@@ -362,203 +398,218 @@ export default async function LocationDetailsPage({ params }: { params: Promise<
               )}
             </CardContent>
           </Card>
-        )}
+        )
+      }
 
       {/* Neighborhood */}
-      {(neighborhood || lot) && (
-        <Card className="hidden md:block">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold flex items-center gap-2">
-              <MapPin className="h-5 w-5" />
-              Neighborhood
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {neighborhood && (
-              <div className="flex items-center gap-3 p-3 rounded-xl border bg-card text-card-foreground shadow-sm">
-                <div className="p-2 rounded-full bg-purple-500/10 text-purple-500">
-                  <MapPin className="h-4 w-4" />
-                </div>
-                <div className="text-left">
-                  <h4 className="font-semibold text-sm text-purple-600 dark:text-purple-400">{neighborhood.name}</h4>
-                </div>
-              </div>
-            )}
-
-            {lot && (
-              <div className="flex items-center gap-3 p-3 rounded-xl border bg-card text-card-foreground shadow-sm">
-                <div className="p-2 rounded-full bg-blue-500/10 text-blue-500">
-                  <Home className="h-4 w-4" />
-                </div>
-                <div className="text-left">
-                  <h4 className="font-semibold text-sm text-blue-600 dark:text-blue-400">Lot #{lot.lot_number}</h4>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Residents */}
-      {residents.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-              <Users className="h-5 w-5" />
-              Residents ({residents.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {familyUnit && (
-                <Link
-                  href={`/t/${slug}/dashboard/families/${familyUnit.id}`}
-                  className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 transition-colors"
-                >
-                  <Avatar className="h-14 w-14">
-                    <AvatarImage src={familyUnit.profile_picture_url || undefined} alt={familyUnit.name} />
-                    <AvatarFallback className="bg-amber-200 text-amber-900 font-semibold">
-                      {familyUnit.name
-                        ?.split(" ")
-                        .map((n) => n[0])
-                        .join("")
-                        .substring(0, 2)
-                        .toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <p className="text-base font-semibold text-amber-900">{familyUnit.name}</p>
-                    <p className="text-sm text-amber-700">
-                      {residents.length} member{residents.length !== 1 ? "s" : ""}
-                    </p>
-                    <p className="text-sm text-amber-600 mt-1">View family profile →</p>
+      {
+        (neighborhood || lot) && (
+          <Card className="hidden md:block">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <MapPin className="h-5 w-5" />
+                Neighborhood
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {neighborhood && (
+                <div className="flex items-center gap-3 p-3 rounded-xl border bg-card text-card-foreground shadow-sm">
+                  <div className="p-2 rounded-full bg-purple-500/10 text-purple-500">
+                    <MapPin className="h-4 w-4" />
                   </div>
-                </Link>
+                  <div className="text-left">
+                    <h4 className="font-semibold text-sm text-purple-600 dark:text-purple-400">{neighborhood.name}</h4>
+                  </div>
+                </div>
               )}
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                {residents.map((resident: any) => (
+              {lot && (
+                <div className="flex items-center gap-3 p-3 rounded-xl border bg-card text-card-foreground shadow-sm">
+                  <div className="p-2 rounded-full bg-blue-500/10 text-blue-500">
+                    <Home className="h-4 w-4" />
+                  </div>
+                  <div className="text-left">
+                    <h4 className="font-semibold text-sm text-blue-600 dark:text-blue-400">Lot #{lot.lot_number}</h4>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )
+      }
+
+      {/* Residents */}
+      {
+        residents.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                <Users className="h-5 w-5" />
+                Residents ({residents.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {familyUnit && (
                   <Link
-                    key={resident.id}
-                    href={`/t/${slug}/dashboard/neighbours/${resident.id}`}
-                    className="flex items-center gap-3 p-3 border rounded-lg hover:bg-accent transition-colors"
+                    href={`/t/${slug}/dashboard/families/${familyUnit.id}`}
+                    className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 transition-colors"
                   >
-                    <Avatar className="h-12 w-12">
-                      <AvatarImage src={resident.profile_picture_url || undefined} alt={resident.first_name} />
-                      <AvatarFallback className="bg-primary/10 text-primary">
-                        {resident.first_name?.[0]}
-                        {resident.last_name?.[0]}
+                    <Avatar className="h-14 w-14">
+                      <AvatarImage src={familyUnit.profile_picture_url || undefined} alt={familyUnit.name} />
+                      <AvatarFallback className="bg-amber-200 text-amber-900 font-semibold">
+                        {familyUnit.name
+                          ?.split(" ")
+                          .map((n: string) => n[0])
+                          .join("")
+                          .substring(0, 2)
+                          .toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">
-                        {resident.first_name} {resident.last_name}
+                    <div className="flex-1">
+                      <p className="text-base font-semibold text-amber-900">{familyUnit.name}</p>
+                      <p className="text-sm text-amber-700">
+                        {residents.length} member{residents.length !== 1 ? "s" : ""}
                       </p>
-                      <p className="text-sm text-muted-foreground">View profile →</p>
+                      <p className="text-sm text-amber-600 mt-1">View family profile →</p>
                     </div>
                   </Link>
-                ))}
+                )}
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {residents.map((resident: any) => (
+                    <Link
+                      key={resident.id}
+                      href={`/t/${slug}/dashboard/neighbours/${resident.id}`}
+                      className="flex items-center gap-3 p-3 border rounded-lg hover:bg-accent transition-colors"
+                    >
+                      <Avatar className="h-12 w-12">
+                        <AvatarImage src={resident.profile_picture_url || undefined} alt={resident.first_name} />
+                        <AvatarFallback className="bg-primary/10 text-primary">
+                          {resident.first_name?.[0]}
+                          {resident.last_name?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">
+                          {resident.first_name} {resident.last_name}
+                        </p>
+                        <p className="text-sm text-muted-foreground">View profile →</p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            </CardContent>
+          </Card>
+        )
+      }
 
       {/* Pets */}
-      {pets.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-              <PawPrint className="h-5 w-5" />
-              Family Pets ({pets.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {pets.map((pet: any) => {
-                const petInitials = pet.name
-                  .split(" ")
-                  .map((word: string) => word[0])
-                  .join("")
-                  .toUpperCase()
-                  .slice(0, 2)
+      {
+        pets.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                <PawPrint className="h-5 w-5" />
+                Family Pets ({pets.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {pets.map((pet: any) => {
+                  const petInitials = pet.name
+                    .split(" ")
+                    .map((word: string) => word[0])
+                    .join("")
+                    .toUpperCase()
+                    .slice(0, 2)
 
-                return (
-                  <div key={pet.id} className="flex items-center gap-3 p-3 border rounded-lg">
-                    <Avatar className="h-12 w-12">
-                      <AvatarImage src={pet.profile_picture_url || "/placeholder.svg"} alt={pet.name} />
-                      <AvatarFallback className="bg-pink-100 text-pink-700">{petInitials}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold truncate">{pet.name}</p>
-                      <p className="text-sm text-muted-foreground truncate">
-                        {pet.species}
-                        {pet.breed && ` • ${pet.breed}`}
-                      </p>
+                  return (
+                    <div key={pet.id} className="flex items-center gap-3 p-3 border rounded-lg">
+                      <Avatar className="h-12 w-12">
+                        <AvatarImage src={pet.profile_picture_url || "/placeholder.svg"} alt={pet.name} />
+                        <AvatarFallback className="bg-pink-100 text-pink-700">{petInitials}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold truncate">{pet.name}</p>
+                        <p className="text-sm text-muted-foreground truncate">
+                          {pet.species}
+                          {pet.breed && ` • ${pet.breed}`}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                )
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                  )
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )
+      }
 
       {/* Events Section */}
-      {eventsEnabled && locationEvents.length > 0 && (
-        <div id="events">
-          <LocationEventsSection
-            events={locationEvents}
-            slug={slug}
-            userId={user.id}
-            tenantId={currentUser.tenant_id}
-            locationName={location.name}
-            locationId={location.id}
-            canCreateEvents={canCreateEvents}
-          />
-        </div>
-      )}
+      {
+        eventsEnabled && locationEvents.length > 0 && (
+          <div id="events">
+            <LocationEventsSection
+              events={locationEvents}
+              slug={slug}
+              userId={user.id}
+              tenantId={currentUser.tenant_id}
+              locationName={location.name}
+              locationId={location.id}
+              canCreateEvents={canCreateEvents}
+            />
+          </div>
+        )
+      }
 
       {/* Check-ins Section */}
-      {checkinsEnabled && locationCheckIns.length > 0 && (
-        <div id="checkins">
-          <LocationCheckinsSection
-            checkIns={locationCheckIns}
-            slug={slug}
-            locationId={location.id}
-            locationName={location.name}
-            tenantId={currentUser.tenant_id}
-            canCreateCheckIns={canCreateCheckIns}
-          />
-        </div>
-      )}
+      {
+        checkinsEnabled && locationCheckIns.length > 0 && (
+          <div id="checkins">
+            <LocationCheckinsSection
+              checkIns={locationCheckIns}
+              slug={slug}
+              locationId={location.id}
+              locationName={location.name}
+              tenantId={currentUser.tenant_id}
+              canCreateCheckIns={canCreateCheckIns}
+            />
+          </div>
+        )
+      }
 
       {/* Exchange Section */}
-      {exchangeEnabled && locationListings.length > 0 && (
-        <div id="exchange">
-          <LocationExchangeSection
-            listings={locationListings}
-            slug={slug}
-            userId={user.id}
-            tenantId={currentUser.tenant_id}
-            locationName={location.name}
-            locationId={location.id}
-            canCreateListings={canCreateListings}
-            categories={categories}
-            neighborhoods={neighborhoods}
-            locations={locations}
-          />
-        </div>
-      )}
+      {
+        exchangeEnabled && locationListings.length > 0 && (
+          <div id="exchange">
+            <LocationExchangeSection
+              listings={locationListings}
+              slug={slug}
+              userId={user.id}
+              tenantId={currentUser.tenant_id}
+              locationName={location.name}
+              locationId={location.id}
+              canCreateListings={canCreateListings}
+              categories={categories}
+              neighborhoods={neighborhoods}
+              locations={locations}
+            />
+          </div>
+        )
+      }
 
       {/* Photo Gallery */}
-      {galleryPhotos.length > 1 && (
-        <PhotoGallerySection
-          photos={galleryPhotos}
-          heroPhoto={location.hero_photo}
-          locationName={location.name}
-        />
-      )}
-    </div>
+      {
+        galleryPhotos.length > 1 && (
+          <PhotoGallerySection
+            photos={galleryPhotos}
+            heroPhoto={location.hero_photo}
+            locationName={location.name}
+          />
+        )
+      }
+    </div >
   )
 }

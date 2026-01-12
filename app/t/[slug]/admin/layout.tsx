@@ -21,18 +21,16 @@ import {
   User,
   Settings,
   FileText,
+  Warehouse, // Added for Facilities
+  CalendarCheck,
 } from 'lucide-react'
 import Link from "next/link"
 import { UserAvatarMenu } from "@/components/user-avatar-menu"
 
-export default async function TenantAdminLayout({
-  children,
-  params,
-}: {
-  children: React.ReactNode
-  params: Promise<{ slug: string }>
-}) {
-  const { slug } = await params
+import { cache } from 'react'
+
+// Cache the data fetching to prevent duplicate requests
+const getAdminLayoutData = cache(async (slug: string) => {
   const supabase = await createClient()
 
   // Check authentication
@@ -40,38 +38,26 @@ export default async function TenantAdminLayout({
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) {
-    redirect(`/t/${slug}/login`)
-  }
+  if (!user) return { user: null, redirect: `/t/${slug}/login` }
 
-  const { data: userData, error: userError } = await supabase
+  const { data: userData } = await supabase
     .from("users")
     .select("role, tenant_id, first_name, last_name, email, profile_picture_url")
     .eq("id", user.id)
     .maybeSingle()
 
-  if (userError) {
-    console.error("[v0] Error fetching user data:", userError)
-    redirect(`/t/${slug}/login`)
-  }
+  const { data: tenant } = await supabase.from("tenants").select("*").eq("slug", slug).single()
+
+  if (!tenant) return { user, redirect: "/backoffice/login" }
 
   const isSuperAdmin = userData?.role === "super_admin"
-
-  const { data: tenant, error: tenantError } = await supabase.from("tenants").select("*").eq("slug", slug).single()
-
-  if (tenantError || !tenant) {
-    console.error("[v0] Error fetching tenant:", tenantError)
-    redirect("/backoffice/login")
-  }
-
   const isTenantAdminRole = userData?.role === "tenant_admin" && userData?.tenant_id === tenant.id
 
   let isTenantAdmin = false
   let residentData = null
 
   if (isSuperAdmin) {
-    // Super admin can access any tenant
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("users")
       .select(`
         id,
@@ -85,13 +71,9 @@ export default async function TenantAdminLayout({
       .eq("id", user.id)
       .maybeSingle()
 
-    if (error) {
-      console.error("[v0] Error fetching super admin data:", error)
-      redirect(`/t/${slug}/login`)
-    }
-
     residentData = data
     isTenantAdmin = true
+
   } else if (isTenantAdminRole) {
     isTenantAdmin = true
     residentData = {
@@ -99,11 +81,10 @@ export default async function TenantAdminLayout({
       first_name: userData.first_name,
       last_name: userData.last_name,
       email: userData.email,
-      profile_picture_url: userData.profile_picture_url,
+      profile_picture_url: userData?.profile_picture_url,
     }
   } else {
-    // Check if they're a resident with is_tenant_admin flag
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("users")
       .select(`
         id,
@@ -123,20 +104,39 @@ export default async function TenantAdminLayout({
       .eq("id", user.id)
       .maybeSingle()
 
-    if (error) {
-      console.error("[v0] Error fetching resident data:", error)
-      redirect(`/t/${slug}/login`)
-    }
-
     residentData = data
-
     const residentTenantId = data?.lots?.neighborhoods?.tenant_id
     isTenantAdmin = data?.is_tenant_admin === true && residentTenantId === tenant.id
-
-    if (!isTenantAdmin) {
-      redirect(`/t/${slug}/login`)
-    }
   }
+
+  return {
+    user,
+    userData,
+    tenant,
+    isSuperAdmin,
+    isTenantAdminRole,
+    isTenantAdmin,
+    residentData,
+    redirect: !isTenantAdmin ? `/t/${slug}/login` : null
+  }
+})
+
+export default async function TenantAdminLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode
+  params: Promise<{ slug: string }>
+}) {
+  const { slug } = await params
+
+  const data = await getAdminLayoutData(slug)
+
+  if (data.redirect) {
+    redirect(data.redirect)
+  }
+
+  const { user, userData, tenant, isSuperAdmin, isTenantAdminRole, residentData } = data
 
   const defaultFeatures = {
     neighborhoods: true,
@@ -165,6 +165,7 @@ export default async function TenantAdminLayout({
     announcements_enabled?: boolean
     location_types?: Record<string, boolean>
   }
+
 
   console.log("[v0] Tenant features from DB (layout):", tenant?.features)
   console.log("[v0] Merged features (layout):", features)
@@ -221,6 +222,24 @@ export default async function TenantAdminLayout({
                       <Link href={`/t/${slug}/admin/neighborhoods`}>
                         <MapPin />
                         <span>Neighborhoods</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <Link href={`/t/${slug}/admin/facilities`}>
+                      <Warehouse />
+                      <span>Facilities</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                {tenant.reservations_enabled && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link href={`/t/${slug}/admin/reservations`}>
+                        <CalendarCheck />
+                        <span>Reservations</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

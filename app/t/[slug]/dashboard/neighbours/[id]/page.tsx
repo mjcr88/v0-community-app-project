@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
-import { MapPin, Calendar, Phone, Mail, Globe, Languages, Lightbulb, Wrench, Users, ArrowLeft, CheckCircle2, Star, PawPrint, EyeOff } from 'lucide-react'
+import { MapPin, Calendar, Phone, Mail, Globe, Languages, Lightbulb, Wrench, Users, ArrowLeft, CheckCircle2, Star, PawPrint, EyeOff, Plus } from 'lucide-react'
 import Link from "next/link"
 import { filterPrivateData } from "@/lib/privacy-utils"
 import { MapPreviewWidget } from "@/components/map/map-preview-widget"
@@ -13,6 +13,7 @@ import { ResidentExchangeListings } from "@/components/profile/resident-exchange
 import { getExchangeListingsByUser, getExchangeCategories } from "@/app/actions/exchange-listings"
 import { getNeighborhoods } from "@/app/actions/neighborhoods"
 import { getLocations } from "@/app/actions/locations"
+import { getNeighborLists } from "@/app/actions/neighbor-lists"
 
 import { ProfileBanner } from "@/components/directory/ProfileBanner"
 import { AboutSection } from "@/components/directory/AboutSection"
@@ -21,6 +22,7 @@ import { FamilyMemberCard } from "@/components/directory/FamilyMemberCard"
 import { ExchangeListingCard } from "@/components/directory/ExchangeListingCard"
 import { PhotoGallerySection } from "@/components/directory/PhotoGallerySection"
 import { CollapsibleSection } from "@/components/directory/CollapsibleSection"
+import { AddToListDropdown } from "@/components/directory/AddToListDropdown"
 
 export default async function PublicProfilePage({
   params,
@@ -49,6 +51,10 @@ export default async function PublicProfilePage({
   if (!currentResident) {
     redirect(`/t/${slug}/login`)
   }
+
+  // Fetch neighbor lists
+  const neighborListsResult = await getNeighborLists(currentResident.tenant_id)
+  const neighborLists = neighborListsResult.success ? neighborListsResult.data : []
 
   console.log("[v0] Viewing profile - Current resident:", {
     id: currentResident.id,
@@ -271,12 +277,13 @@ export default async function PublicProfilePage({
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
-        <div>
+        <div className="flex-1">
           <h1 className="text-2xl font-bold tracking-tight">Resident Profile</h1>
           <p className="text-muted-foreground text-sm">View and connect with your neighbor</p>
         </div>
       </div>
 
+      {/* Profile Banner */}
       {/* Profile Banner */}
       <ProfileBanner
         bannerUrl={resident.banner_image_url}
@@ -286,6 +293,18 @@ export default async function PublicProfilePage({
         lotNumber={filteredResident.show_neighborhood ? resident.lots?.lot_number : undefined}
         journeyStage={filteredResident.show_journey_stage ? (filteredResident.journey_stage || undefined) : undefined}
         initials={initials}
+        action={
+          <AddToListDropdown
+            neighborId={resident.id}
+            tenantId={currentResident.tenant_id}
+            lists={neighborLists as any}
+            trigger={
+              <Button variant="secondary" size="icon" className="h-8 w-8 rounded-full shadow-md bg-white/20 hover:bg-white/40 border-0 text-white backdrop-blur-sm">
+                <Plus className="h-4 w-4" />
+              </Button>
+            }
+          />
+        }
       />
 
       {/* Two Column Grid */}

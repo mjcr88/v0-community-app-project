@@ -43,7 +43,13 @@ interface LocationInfoCardProps {
     path_surface?: string | null
     path_length?: string | null
     elevation_gain?: string | null
-    is_reservable?: boolean // Added for reservation system
+    is_reservable?: boolean
+    // Pre-enriched data from getLocations
+    residents?: Resident[]
+    family_units?: FamilyUnit[]
+    pets?: Pet[]
+    neighborhood?: { id: string; name: string } | null
+    lot?: { id: string; lot_number: string } | null
   }
   onClose: () => void
   minimal?: boolean // Added minimal prop
@@ -106,11 +112,24 @@ export function LocationInfoCard({
   useEffect(() => {
     console.log("[v0] LocationInfoCard useEffect triggered for location:", location.id)
 
-    setNeighborhood(null)
-    setLot(null)
-    setResidents([])
-    setFamilyUnit(null)
-    setPets([])
+    // Use pre-enriched data from props if available
+    if ((location as any).neighborhood) {
+      setNeighborhood((location as any).neighborhood)
+    }
+    if ((location as any).lot) {
+      setLot((location as any).lot)
+    }
+    if ((location as any).residents && (location as any).residents.length > 0) {
+      setResidents((location as any).residents)
+      // Extract family unit from pre-enriched residents
+      const resident = (location as any).residents.find((r: any) => r.family_unit_id)
+      if (resident && (location as any).family_units && (location as any).family_units.length > 0) {
+        setFamilyUnit((location as any).family_units[0])
+      }
+    }
+    if ((location as any).pets) {
+      setPets((location as any).pets)
+    }
 
     const fetchRelatedData = async () => {
       setLoading(true)

@@ -68,11 +68,11 @@ export function MyReservationsWidget({ reservations: initialReservations, tenant
             <div className="text-center py-8 border rounded-xl bg-card">
                 <Calendar className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
                 <p className="text-sm text-muted-foreground mb-4">No upcoming reservations</p>
-                <div className="flex items-center justify-center gap-2">
-                    <Button asChild variant="outline" size="sm">
-                        <Link href={`/t/${tenantSlug}/dashboard/map`}>Browse Facilities</Link>
-                    </Button>
-                </div>
+                <Button asChild>
+                    <Link href={`/t/${tenantSlug}/dashboard/community-map`}>
+                        Browse Facilities
+                    </Link>
+                </Button>
             </div>
         )
     }
@@ -89,10 +89,10 @@ export function MyReservationsWidget({ reservations: initialReservations, tenant
                 </div>
                 <div className="flex gap-2">
                     <Button asChild variant="ghost" size="sm" className="flex-1 md:flex-none">
-                        <Link href={`/t/${tenantSlug}/dashboard/map`}>View Map</Link>
+                        <Link href={`/t/${tenantSlug}/dashboard/community-map`}>View Map</Link>
                     </Button>
                     <Button asChild size="sm" className="flex-1 md:flex-none">
-                        <Link href={`/t/${tenantSlug}/dashboard/map`}>
+                        <Link href={`/t/${tenantSlug}/dashboard/community-map`}>
                             <Plus className="h-4 w-4 mr-2" />
                             <span className="hidden sm:inline">New Reservation</span>
                             <span className="sm:hidden">Create</span>

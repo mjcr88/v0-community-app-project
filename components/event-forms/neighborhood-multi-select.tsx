@@ -18,14 +18,20 @@ type NeighborhoodMultiSelectProps = {
   tenantId: string
   selectedNeighborhoodIds: string[]
   onChange: (ids: string[]) => void
+  initialNeighborhoods?: Neighborhood[]
 }
 
-export function NeighborhoodMultiSelect({ tenantId, selectedNeighborhoodIds, onChange }: NeighborhoodMultiSelectProps) {
-  const [neighborhoods, setNeighborhoods] = useState<Neighborhood[]>([])
+export function NeighborhoodMultiSelect({ tenantId, selectedNeighborhoodIds, onChange, initialNeighborhoods = [] }: NeighborhoodMultiSelectProps) {
+  const [neighborhoods, setNeighborhoods] = useState<Neighborhood[]>(initialNeighborhoods)
   const [searchTerm, setSearchTerm] = useState("")
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
+    if (initialNeighborhoods.length > 0) {
+      setIsLoading(false)
+      return
+    }
+
     async function fetchNeighborhoods() {
       setIsLoading(true)
       const result = await getNeighborhoods(tenantId)
@@ -35,7 +41,7 @@ export function NeighborhoodMultiSelect({ tenantId, selectedNeighborhoodIds, onC
       setIsLoading(false)
     }
     fetchNeighborhoods()
-  }, [tenantId])
+  }, [tenantId, initialNeighborhoods])
 
   const filteredNeighborhoods = neighborhoods.filter((n) => n.name.toLowerCase().includes(searchTerm.toLowerCase()))
 

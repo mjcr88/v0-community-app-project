@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { DashboardAnalytics } from "@/lib/analytics"
 
 interface CollapsibleMobileSectionProps {
     title: string
@@ -35,7 +36,11 @@ export function CollapsibleMobileSection({ title, children, defaultOpen = true }
     return (
         <div className="space-y-3">
             <button
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={() => {
+                    const newValue = !isOpen
+                    setIsOpen(newValue)
+                    DashboardAnalytics.mobileSectionToggled(title, newValue)
+                }}
                 className="flex items-center justify-between w-full text-left"
             >
                 <h3 className="text-lg font-semibold">{title}</h3>

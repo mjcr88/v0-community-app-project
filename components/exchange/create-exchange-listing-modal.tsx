@@ -20,11 +20,11 @@ import { useRouter } from 'next/navigation'
 import type { ExchangePricingType, ExchangeCondition } from "@/types/exchange"
 import { StepProgress } from "./create-listing-steps/step-progress"
 import { StepNavigation } from "./create-listing-steps/step-navigation"
-import { Step1Category } from "./create-listing-steps/step-1-category"
-import { Step2BasicInfo } from "./create-listing-steps/step-2-basic-info"
-import { Step3PricingVisibility } from "./create-listing-steps/step-3-pricing-visibility"
-import { Step4Location } from "./create-listing-steps/step-4-location"
-import { Step5Review } from "./create-listing-steps/step-5-review"
+import { Step1BasicInfo } from "./create-listing-steps/step-1-basic-info"
+import { Step2PricingVisibility } from "./create-listing-steps/step-2-pricing-visibility"
+import { Step3Location } from "./create-listing-steps/step-3-location"
+import { Step4Review } from "./create-listing-steps/step-4-review"
+import { MarketplaceAnalytics, NavigationAnalytics, ErrorAnalytics } from "@/lib/analytics"
 
 interface CreateExchangeListingModalProps {
   open: boolean
@@ -90,15 +90,16 @@ export function CreateExchangeListingModal({
   useEffect(() => {
     if (!open) {
       setCurrentStep(1)
+    } else {
+      NavigationAnalytics.modalOpened('create_exchange_listing')
     }
   }, [open])
 
   const steps = [
-    { number: 1, title: "Category" },
-    { number: 2, title: "Basic Information" },
-    { number: 3, title: "Pricing & Visibility" },
-    { number: 4, title: "Location" },
-    { number: 5, title: "Review & Publish" },
+    { number: 1, title: "Basic Information" },
+    { number: 2, title: "Pricing & Visibility" },
+    { number: 3, title: "Location" },
+    { number: 4, title: "Review & Publish" },
   ]
 
   const hasUnsavedChanges = useCallback(() => {
@@ -167,10 +168,8 @@ export function CreateExchangeListingModal({
   const validateStep = (step: number): boolean => {
     switch (step) {
       case 1:
-        return formData.category_id !== ""
+        return formData.title.trim().length >= 3 && formData.category_id !== ""
       case 2:
-        return formData.title.trim().length >= 3
-      case 3:
         // Validate pricing
         if (formData.pricing_type === "fixed_price") {
           const priceNum = parseFloat(formData.price)
@@ -183,10 +182,10 @@ export function CreateExchangeListingModal({
           return formData.neighborhood_ids.length > 0
         }
         return true
-      case 4:
+      case 3:
         // Location is optional, always valid
         return true
-      case 5:
+      case 4:
         return true
       default:
         return false
@@ -196,7 +195,7 @@ export function CreateExchangeListingModal({
   const canProceed = validateStep(currentStep)
 
   const handleNext = () => {
-    if (canProceed && currentStep < 5) {
+    if (canProceed && currentStep < 4) {
       setCurrentStep(prev => prev + 1)
     }
   }
@@ -238,6 +237,13 @@ export function CreateExchangeListingModal({
       const result = await createExchangeListing(tenantSlug, tenantId, listingData)
 
       if (result.success) {
+        MarketplaceAnalytics.listingCreated({
+          category_id: formData.category_id,
+          category_name: categories.find(c => c.id === formData.category_id)?.name || 'unknown',
+          pricing_type: formData.pricing_type,
+          visibility: formData.visibility_scope,
+          has_photos: formData.photos.length > 0,
+        })
         showFeedback({
           title: publishNow ? "Listing Published!" : "Draft Saved",
           description: publishNow
@@ -250,6 +256,7 @@ export function CreateExchangeListingModal({
         onOpenChange(false)
         router.refresh()
       } else {
+        ErrorAnalytics.actionFailed('create_listing', result.error || "Failed to create listing")
         showFeedback({
           title: "Couldn't create listing",
           description: result.error || "Something went wrong. Please try again.",
@@ -258,7 +265,7 @@ export function CreateExchangeListingModal({
         })
       }
     } catch (error) {
-      console.error("Error creating listing:", error)
+      ErrorAnalytics.actionFailed('create_listing', error instanceof Error ? error.message : "Unexpected error")
       showFeedback({
         title: "Something went wrong",
         description: "An unexpected error occurred. Please try again.",
@@ -312,39 +319,31 @@ export function CreateExchangeListingModal({
 
           <div className="min-h-[400px]">
             {currentStep === 1 && (
-              <Step1Category
-                formData={formData}
-                categories={categories}
-                onUpdate={updateFormData}
-                onNext={handleNext}
-              />
-            )}
-            {currentStep === 2 && (
-              <Step2BasicInfo
+              <Step1BasicInfo
                 formData={formData}
                 categories={categories}
                 tenantId={tenantId}
                 onUpdate={updateFormData}
               />
             )}
-            {currentStep === 3 && (
-              <Step3PricingVisibility
+            {currentStep === 2 && (
+              <Step2PricingVisibility
                 formData={formData}
                 categories={categories}
                 neighborhoods={neighborhoods}
                 onUpdate={updateFormData}
               />
             )}
-            {currentStep === 4 && (
-              <Step4Location
+            {currentStep === 3 && (
+              <Step3Location
                 formData={formData}
                 tenantId={tenantId}
                 initialLocation={initialLocation}
                 onUpdate={updateFormData}
               />
             )}
-            {currentStep === 5 && (
-              <Step5Review
+            {currentStep === 4 && (
+              <Step4Review
                 formData={formData}
                 categories={categories}
                 neighborhoods={neighborhoods}
@@ -355,7 +354,7 @@ export function CreateExchangeListingModal({
 
           <StepNavigation
             currentStep={currentStep}
-            totalSteps={5}
+            totalSteps={4}
             canProceed={canProceed}
             onBack={handleBack}
             onNext={handleNext}

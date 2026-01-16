@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { IdentityStep } from "./steps/identity-step"
 import { ContactStep } from "./steps/contact-step"
@@ -12,6 +12,7 @@ import { SkillsStep } from "./steps/skills-step"
 import { CompleteStep } from "./steps/complete-step"
 import { updateBasicInfo, updateContactInfo, updateJourney, updateInterests, updateSkills, completeOnboarding } from "@/app/actions/onboarding"
 import { useToast } from "@/hooks/use-toast"
+import { TourAnalytics, ProfileAnalytics } from "@/lib/analytics"
 
 const STEPS = [
     { id: "identity", title: "Identity", description: "Who are you?" },
@@ -34,7 +35,14 @@ export function ProfileWizard({ userId, initialData, availableInterests = [], av
     const [currentStep, setCurrentStep] = useState(0)
     const [direction, setDirection] = useState(0)
     const router = useRouter()
+    const searchParams = useSearchParams()
     const { toast } = useToast()
+
+    // Track tour start (user entering the profile wizard)
+    useEffect(() => {
+        const source = searchParams?.get('source') || undefined
+        TourAnalytics.profileTourStarted(source)
+    }, [searchParams])
 
     // Emit step changes to parent
     useEffect(() => {
@@ -68,6 +76,7 @@ export function ProfileWizard({ userId, initialData, availableInterests = [], av
                     birthCountry: stepData.birthCountry,
                     currentCountry: stepData.currentCountry
                 })
+                ProfileAnalytics.updated(['first_name', 'last_name', 'about', 'birthday', 'location'])
             } else if (currentStepId === "contact") {
                 await updateContactInfo(userId, {
                     email: stepData.email,
@@ -75,6 +84,7 @@ export function ProfileWizard({ userId, initialData, availableInterests = [], av
                     languages: stepData.languages,
                     preferredLanguage: stepData.preferredLanguage
                 })
+                ProfileAnalytics.updated(['email', 'phone', 'languages'])
             } else if (currentStepId === "journey") {
                 await updateJourney(userId, {
                     journeyStage: stepData.journeyStage,
@@ -82,13 +92,21 @@ export function ProfileWizard({ userId, initialData, availableInterests = [], av
                     constructionStartDate: stepData.constructionStartDate,
                     constructionEndDate: stepData.constructionEndDate
                 })
+                ProfileAnalytics.updated(['journey_stage', 'move_dates'])
+            } else if (currentStepId === "household") {
+                // HouseholdStep saves data directly, but we track the milestone here
+                ProfileAnalytics.updated(['household_info'])
             } else if (currentStepId === "roots") {
                 await updateInterests(userId, stepData.interests || [])
+                ProfileAnalytics.updated(['interests'])
             } else if (currentStepId === "skills") {
                 // stepData.skills is already in the format [{ id, openToRequests }]
                 await updateSkills(userId, stepData.skills || [])
+                ProfileAnalytics.updated(['skills'])
             } else if (currentStepId === "complete") {
                 await completeOnboarding(userId)
+                const source = searchParams?.get('source') || undefined
+                TourAnalytics.profileTourCompleted(source)
                 router.push(`/t/${initialData.tenantSlug}/dashboard`)
                 return
             }

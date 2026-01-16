@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label"
 import { AlertTriangle, Ban } from "lucide-react"
 import { cancelEvent } from "@/app/actions/events"
 import { toast } from "sonner"
+import { EventsAnalytics, ErrorAnalytics } from "@/lib/analytics"
 
 interface CancelEventDialogProps {
   eventId: string
@@ -51,6 +52,7 @@ export function CancelEventDialog({ eventId, tenantSlug, eventTitle, triggerSize
       const result = await cancelEvent(eventId, tenantSlug, reason)
 
       if (result.success) {
+        EventsAnalytics.cancelled(eventId)
         toast.success("Event has been cancelled", {
           duration: 5000,
         })

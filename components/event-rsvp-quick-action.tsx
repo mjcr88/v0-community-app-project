@@ -7,6 +7,7 @@ import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "@/hooks/use-toast"
 import { NumberTicker } from "@/components/library/number-ticker"
+import { EventsAnalytics } from "@/lib/analytics"
 
 interface EventRsvpQuickActionProps {
   eventId: string
@@ -53,6 +54,7 @@ export function EventRsvpQuickAction({
       const result = await rsvpToEvent(eventId, tenantId, status)
       if (result.success) {
         setLocalRsvpStatus(status)
+        EventsAnalytics.rsvp(eventId, status)
         router.refresh()
         toast({
           title: "RSVP updated",
@@ -74,6 +76,7 @@ export function EventRsvpQuickAction({
         const result = await unsaveEvent(eventId, tenantId)
         if (result.success) {
           setLocalIsSaved(false)
+          EventsAnalytics.unsaved(eventId)
           router.refresh()
           toast({
             title: "Event removed",
@@ -84,6 +87,7 @@ export function EventRsvpQuickAction({
         const result = await saveEvent(eventId, tenantId)
         if (result.success) {
           setLocalIsSaved(true)
+          EventsAnalytics.saved(eventId)
           router.refresh()
           toast({
             title: "Event saved",
@@ -101,6 +105,7 @@ export function EventRsvpQuickAction({
         variant="ghost"
         size="sm"
         onClick={(e) => {
+          e.preventDefault()
           e.stopPropagation()
           handleSave()
         }}
@@ -118,6 +123,7 @@ export function EventRsvpQuickAction({
             variant={localRsvpStatus === "yes" ? "default" : "ghost"}
             size="sm"
             onClick={(e) => {
+              e.preventDefault()
               e.stopPropagation()
               handleRsvp("yes")
             }}

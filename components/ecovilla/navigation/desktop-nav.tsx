@@ -37,6 +37,7 @@ import {
 } from "@/components/library/popover"
 import { cn } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
+import { NavigationAnalytics } from "@/lib/analytics"
 
 interface DesktopNavProps {
     tenantSlug: string
@@ -223,6 +224,7 @@ export function DesktopNav({
                                             <TooltipTrigger asChild>
                                                 <Link
                                                     href={item.href}
+                                                    onClick={() => NavigationAnalytics.sidebarClicked(item.label)}
                                                     className={cn(
                                                         "relative flex items-center justify-center w-10 h-10 rounded-lg transition-all duration-200",
                                                         isActive
@@ -244,6 +246,7 @@ export function DesktopNav({
                                         <Link
                                             key={item.href}
                                             href={item.href}
+                                            onClick={() => NavigationAnalytics.sidebarClicked(item.label)}
                                             className={cn(
                                                 "flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200",
                                                 isActive

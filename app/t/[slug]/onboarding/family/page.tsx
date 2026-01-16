@@ -40,10 +40,10 @@ export default async function FamilyPage({ params }: { params: Promise<{ slug: s
   } else {
     const { data: residentData, error: residentError } = await supabase
       .from("users")
-      .select("id, family_unit_id, lot_id, first_name, last_name, email")
+      .select("id, first_name, last_name, profile_picture_url, tenant_id, family_unit_id, lot_id, email")
       .eq("id", user.id)
       .eq("tenant_id", tenant.id)
-      .eq("role", "resident")
+      .in("role", ["resident", "tenant_admin"])
       .single()
 
     console.log("[v0] Resident query result:", { residentData, residentError })

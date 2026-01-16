@@ -11,6 +11,7 @@ import { Loader2, Plus, Check, Search } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 import { createClient } from "@/lib/supabase/client"
 import { Badge } from "@/components/ui/badge"
+import { OnboardingAnalytics } from "@/lib/analytics"
 
 interface SkillsFormProps {
   tenant: {
@@ -129,6 +130,7 @@ export function SkillsForm({ tenant, resident, skills, residentSkills, isSuperAd
       }
 
       console.log("[v0] Skills saved successfully")
+      OnboardingAnalytics.stepCompleted(5, 'skills')
       router.push(`/t/${tenant.slug}/onboarding/complete`)
     } catch (error) {
       console.error("[v0] Error updating skills:", error)
@@ -138,6 +140,7 @@ export function SkillsForm({ tenant, resident, skills, residentSkills, isSuperAd
   }
 
   const handleSkip = () => {
+    OnboardingAnalytics.skipped(5)
     router.push(`/t/${tenant.slug}/onboarding/complete`)
   }
 

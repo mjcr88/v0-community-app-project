@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
 import { createBorrowRequest } from "@/app/actions/exchange-listings"
 import { DateTimePicker } from "@/components/ui/date-time-picker"
+import { MarketplaceAnalytics, ErrorAnalytics } from "@/lib/analytics"
 
 const createBorrowRequestSchema = (requiresReturnDate: boolean) => z.object({
   quantity: z.coerce.number().min(1, "Quantity must be at least 1"),
@@ -159,11 +160,13 @@ export function RequestBorrowDialog({
     })
 
     if (result.success) {
+      MarketplaceAnalytics.borrowRequested(listingId, data.quantity)
       toast.success("Request sent!")
       reset()
       onOpenChange(false)
       onSuccess?.()
     } else {
+      ErrorAnalytics.actionFailed('request_borrow', result.error || "Failed to send request")
       toast.error(result.error || "Failed to send request")
     }
 

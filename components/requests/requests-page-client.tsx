@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Search, Filter, X, ChevronDown, Wrench, HelpCircle, AlertTriangle, Shield, MoreHorizontal } from 'lucide-react'
 import { RequestCard } from "@/components/requests/request-card"
 import { RioEmptyState } from "@/components/exchange/rio-empty-state"
+import { RequestsFilterCards, type RequestFilterSectionType } from "@/components/requests/requests-filter-cards"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { motion, AnimatePresence } from "framer-motion"
@@ -47,7 +48,7 @@ export function RequestsPageClient({ requests, tenantSlug }: RequestsPageClientP
     const [selectedTypes, setSelectedTypes] = useState<RequestType[]>([])
     const [selectedStatuses, setSelectedStatuses] = useState<RequestStatus[]>(['pending', 'in_progress'])
     const [selectedPriorities, setSelectedPriorities] = useState<RequestPriority[]>([])
-    const [activeFilter, setActiveFilter] = useState<"types" | "status" | "priority" | null>(null)
+    const [activeFilter, setActiveFilter] = useState<RequestFilterSectionType>(null)
 
     const filteredRequests = useMemo(() => {
         return requests.filter((request) => {
@@ -110,11 +111,7 @@ export function RequestsPageClient({ requests, tenantSlug }: RequestsPageClientP
         selectedStatuses.length > 0 ||
         selectedPriorities.length > 0
 
-    const filterSections = [
-        { id: "types" as const, label: "Type", icon: Filter },
-        { id: "status" as const, label: "Status", icon: AlertTriangle },
-        { id: "priority" as const, label: "Priority", icon: Shield },
-    ]
+
 
     return (
         <div className="space-y-8 mt-8">
@@ -132,23 +129,10 @@ export function RequestsPageClient({ requests, tenantSlug }: RequestsPageClientP
                 </div>
 
                 {/* Filter Cards */}
-                <div className="grid grid-cols-3 gap-3">
-                    {filterSections.map((section) => (
-                        <button
-                            key={section.id}
-                            onClick={() => setActiveFilter(activeFilter === section.id ? null : section.id)}
-                            className={cn(
-                                "flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-200 h-20 w-full hover:shadow-md",
-                                activeFilter === section.id
-                                    ? "bg-primary/10 border-primary text-primary ring-1 ring-primary shadow-sm"
-                                    : "bg-card border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                            )}
-                        >
-                            <section.icon className={cn("w-5 h-5 mb-1.5", activeFilter === section.id ? "text-primary" : "text-muted-foreground")} />
-                            <span className="text-xs font-medium text-center leading-tight">{section.label}</span>
-                        </button>
-                    ))}
-                </div>
+                <RequestsFilterCards
+                    activeFilter={activeFilter}
+                    onFilterChange={setActiveFilter}
+                />
 
                 {/* Active Filter Chips */}
                 {

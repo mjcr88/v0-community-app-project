@@ -37,7 +37,7 @@ export default async function CompletePage({ params }: { params: Promise<{ slug:
       .select("id, first_name, last_name")
       .eq("id", user.id)
       .eq("tenant_id", tenant.id)
-      .eq("role", "resident")
+      .in("role", ["resident", "tenant_admin"])
       .single()
 
     resident = residentData

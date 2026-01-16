@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation"
 import { createServerClient } from "@/lib/supabase/server"
+import NextImage from "next/image"
 import { SignupForm } from "./signup-form"
 import { validateInviteToken } from "./validate-invite-action"
 
@@ -58,8 +59,24 @@ export default async function InvitePage({
   // The resident will create their auth account during signup
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-forest-50 to-sky-50 p-4">
-      <SignupForm tenant={tenant} resident={resident} token={token} />
+    <div className="flex min-h-[100dvh] flex-col lg:grid lg:grid-cols-2 bg-background">
+      {/* Left Panel: Signup Form */}
+      <div className="flex flex-1 flex-col items-center justify-center p-8 bg-earth-cloud/30 w-full overflow-y-auto">
+        <SignupForm tenant={tenant} resident={resident} token={token} />
+      </div>
+
+      {/* Right Side - Hero/Brand */}
+      <div className="hidden lg:block relative h-full overflow-hidden bg-forest-deep">
+        <NextImage
+          src="/login.png"
+          alt="Community Hero"
+          fill
+          className="object-cover object-center saturate-150 brightness-90"
+          priority
+        />
+        {/* Overlay */}
+        <div className="absolute inset-0 bg-forest-canopy/20 mix-blend-overlay" />
+      </div>
     </div>
   )
 }

@@ -21,6 +21,7 @@ import { ResidentPetSelector } from "./resident-pet-selector"
 import { StepProgress } from "@/components/exchange/create-listing-steps/step-progress"
 import { cn } from "@/lib/utils"
 import type { RequestType, RequestPriority } from "@/types/requests"
+import { RequestsAnalytics, ErrorAnalytics } from "@/lib/analytics"
 
 interface CreateRequestModalProps {
   open: boolean
@@ -127,6 +128,11 @@ export function CreateRequestModal({
       const result = await createResidentRequest(tenantId, tenantSlug, requestData)
 
       if (result.success) {
+        RequestsAnalytics.submitted({
+          type: formData.request_type as 'maintenance' | 'safety' | 'general',
+          type_label: requestTypes.find(t => t.value === formData.request_type)?.title || 'Unknown',
+          priority: formData.priority
+        })
         showFeedback({
           title: "Request Submitted",
           description: "Your request has been sent to the community administration. We'll get back to you soon.",

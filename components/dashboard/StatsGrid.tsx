@@ -5,6 +5,7 @@ import useSWR from "swr"
 import { StatCard, StatConfig } from "./StatCard"
 import { EditStatModal, AvailableStat } from "./EditStatModal"
 import { Settings2 } from "lucide-react"
+import { DashboardAnalytics } from "@/lib/analytics"
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
@@ -29,10 +30,16 @@ export function StatsGrid() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ stats: selectedStats, scope }),
             })
+            DashboardAnalytics.statsSaved(selectedStats, scope)
             mutate() // Refresh data
         } catch (error) {
             console.error("Failed to save stats", error)
         }
+    }
+
+    const handleOpenModal = () => {
+        DashboardAnalytics.statsModalOpened()
+        setIsEditModalOpen(true)
     }
 
     if (isLoading) {
@@ -65,7 +72,7 @@ export function StatsGrid() {
                             key={stat.id}
                             stat={stat}
                             isEditing={true}
-                            onEdit={() => setIsEditModalOpen(true)}
+                            onEdit={handleOpenModal}
                         />
                     ))}
                 {/* Fill empty slots if less than 4 selected */}
@@ -73,7 +80,7 @@ export function StatsGrid() {
                     <div
                         key={`empty-${i}`}
                         className="h-full min-h-[100px] md:min-h-[120px] rounded-xl border-2 border-dashed border-muted-foreground/20 flex items-center justify-center cursor-pointer hover:border-primary/50 hover:bg-accent/5 transition-all"
-                        onClick={() => setIsEditModalOpen(true)}
+                        onClick={handleOpenModal}
                     >
                         <div className="text-center">
                             <Settings2 className="h-6 w-6 mx-auto text-muted-foreground mb-2" />

@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Spinner } from "@/components/ui/spinner"
 import { createAuthUserAction } from "./create-auth-user-action"
 import { createBrowserClient } from "@/lib/supabase/client"
+import NextImage from "next/image"
 
 interface SignupFormProps {
   tenant: {
@@ -101,61 +102,81 @@ export function SignupForm({ tenant, resident, token }: SignupFormProps) {
   const displayName = [resident.first_name, resident.last_name].filter(Boolean).join(" ") || resident.email
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-bold">Welcome to {tenant.name}</CardTitle>
-        <CardDescription>Create your password to complete registration</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
+    <div className="w-full max-w-md space-y-8 py-8 px-4 sm:px-0">
+      <div className="flex flex-col items-center space-y-6 text-center">
+        {/* Rio Bird Logo */}
+        <div className="relative w-32 h-32 mb-2 animate-in fade-in zoom-in duration-700">
+          <NextImage
+            src="/rio-parrot.png"
+            alt="Rio Bird"
+            fill
+            className="object-contain"
+            priority
+          />
+        </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="name">Name</Label>
-            <Input id="name" value={displayName} disabled className="bg-muted" />
-          </div>
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight text-forest-deep">
+            Welcome to {tenant.name}
+          </h1>
+          <p className="text-mist-gray text-lg">
+            Create your password to complete registration
+          </p>
+        </div>
+      </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" value={resident.email} disabled className="bg-muted" />
-          </div>
+      <Card className="border-border/40 shadow-xl bg-white/80 backdrop-blur-sm">
+        <CardContent className="pt-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
 
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="At least 8 characters"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={8}
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="name">Name</Label>
+              <Input id="name" value={displayName} disabled className="bg-muted" />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Confirm Password</Label>
-            <Input
-              id="confirmPassword"
-              type="password"
-              placeholder="Re-enter your password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-              minLength={8}
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" type="email" value={resident.email} disabled className="bg-muted" />
+            </div>
 
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading && <Spinner className="mr-2" />}
-            {loading ? "Creating Account..." : "Create Account"}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="At least 8 characters"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={8}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                placeholder="Re-enter your password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                minLength={8}
+              />
+            </div>
+
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading && <Spinner className="mr-2" />}
+              {loading ? "Creating Account..." : "Create Account"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   )
 }

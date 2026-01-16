@@ -19,6 +19,7 @@ import type { NotificationFull } from "@/types/notifications"
 import { RioEmptyState } from "@/components/exchange/rio-empty-state"
 import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/lib/utils"
+import { NotificationsAnalytics, DashboardAnalytics, NavigationAnalytics } from "@/lib/analytics"
 
 interface NotificationPageClientProps {
     tenantSlug: string
@@ -112,6 +113,7 @@ export function NotificationPageClient({
         const result = await markAllAsRead(tenantId, tenantSlug)
         if (result.success) {
             toast.success("All notifications marked as read")
+            NotificationsAnalytics.allMarkedRead(unreadCount)
             mutate()
         } else {
             toast.error(result.error || "Failed to mark all as read")
@@ -119,12 +121,14 @@ export function NotificationPageClient({
     }
 
     const handleStatusToggle = (status: string) => {
+        NavigationAnalytics.filterApplied('notification_status', status)
         setSelectedStatuses((prev) =>
             prev.includes(status) ? prev.filter((s) => s !== status) : [...prev, status]
         )
     }
 
     const handleTypeToggle = (type: string) => {
+        NavigationAnalytics.filterApplied('notification_type', type)
         setSelectedTypes((prev) =>
             prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
         )
@@ -168,6 +172,11 @@ export function NotificationPageClient({
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="pl-9 h-11 bg-card border-border shadow-sm focus-visible:ring-2 focus-visible:ring-ring"
+                        onBlur={() => {
+                            if (searchQuery.length > 2) {
+                                NavigationAnalytics.searchUsed(searchQuery.length, filteredNotifications.length, 'notifications')
+                            }
+                        }}
                     />
                 </div>
 
@@ -179,7 +188,11 @@ export function NotificationPageClient({
                     ].map((section) => (
                         <button
                             key={section.id}
-                            onClick={() => setActiveFilter(activeFilter === section.id ? null : section.id)}
+                            onClick={() => {
+                                const isActive = activeFilter === section.id
+                                DashboardAnalytics.filterCardClicked('notifications', section.id, isActive)
+                                setActiveFilter(isActive ? null : section.id)
+                            }}
                             className={cn(
                                 "flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-200 h-20 w-full hover:shadow-md",
                                 activeFilter === section.id

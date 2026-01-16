@@ -1,6 +1,21 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 
+// Helper to strip HTML tags for preview text
+function stripHtml(html: string | null | undefined): string {
+    if (!html) return ""
+    return html
+        .replace(/<[^>]*>/g, '') // Remove HTML tags
+        .replace(/&nbsp;/g, ' ')  // Replace non-breaking spaces
+        .replace(/&amp;/g, '&')   // Decode common entities
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/\s+/g, ' ')     // Normalize whitespace
+        .trim()
+}
+
 // Priority Scores from PRD
 const SCORES = {
     announcement: 100,
@@ -67,7 +82,7 @@ export async function GET() {
                 type: "announcement",
                 id: announcement.id,
                 title: announcement.title,
-                description: announcement.description?.substring(0, 100) + "...",
+                description: stripHtml(announcement.description)?.substring(0, 100) + "...",
                 urgency: announcement.priority === 'urgent' ? 'high' : 'medium',
                 timestamp: announcement.published_at,
                 priority: SCORES.announcement,
@@ -100,7 +115,7 @@ export async function GET() {
                 type: "document",
                 id: doc.id,
                 title: doc.title,
-                description: doc.description?.substring(0, 100) + "...",
+                description: stripHtml(doc.description)?.substring(0, 100) + "...",
                 urgency: doc.is_featured ? 'high' : 'medium',
                 timestamp: doc.updated_at,
                 priority: SCORES.document,

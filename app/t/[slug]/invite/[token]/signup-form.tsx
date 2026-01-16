@@ -71,26 +71,8 @@ export function SignupForm({ tenant, resident, token }: SignupFormProps) {
 
       console.log("[v0] Auth user created successfully:", authResult.user.id)
 
-      const supabase = createBrowserClient()
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: resident.email,
-        password: password,
-      })
-
-      if (signInError) {
-        console.error("[v0] Auto-login error:", signInError)
-        throw new Error("Account created but auto-login failed. Please login manually.")
-      }
-
-      console.log("[v0] User auto-logged in successfully")
-
-      const redirectPath = tenant.features?.onboarding
-        ? `/t/${tenant.slug}/onboarding/welcome`
-        : `/t/${tenant.slug}/dashboard`
-
-      console.log("[v0] Redirecting to:", redirectPath)
-      router.push(redirectPath)
-      router.refresh()
+      // Redirect to login page - user can now log in with their new password
+      router.push(`/t/${tenant.slug}/login?registered=true`)
     } catch (err: any) {
       console.error("[v0] Signup error details:", err.message)
       setError(err.message || "An error occurred during signup")
@@ -141,7 +123,13 @@ export function SignupForm({ tenant, resident, token }: SignupFormProps) {
 
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" value={resident.email} disabled className="bg-muted" />
+              <Input
+                id="email"
+                type="email"
+                value={resident.email || "Email not set"}
+                disabled
+                className="bg-muted"
+              />
             </div>
 
             <div className="space-y-2">

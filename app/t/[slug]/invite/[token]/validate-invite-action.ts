@@ -81,6 +81,25 @@ export async function validateInviteToken(token: string, tenantId: string) {
     }
   }
 
+  // Validate that resident has a valid email
+  if (!resident.email || resident.email.trim() === "") {
+    return {
+      success: false,
+      error: "Resident email is missing. Please contact your administrator to update your email address.",
+      resident: null,
+    }
+  }
+
+  // Basic email format validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(resident.email)) {
+    return {
+      success: false,
+      error: "Invalid email format. Please contact your administrator to update your email address.",
+      resident: null,
+    }
+  }
+
   return {
     success: true,
     error: null,

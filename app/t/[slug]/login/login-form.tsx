@@ -115,7 +115,7 @@ export function TenantLoginForm({ tenant }: TenantLoginFormProps) {
 
       const { data: residentData, error: residentError } = await supabase
         .from("users")
-        .select("id, is_tenant_admin, tenant_id, onboarding_completed")
+        .select("id, is_tenant_admin, tenant_id")
         .eq("id", authData.user.id)
         .eq("role", "resident")
         .eq("tenant_id", tenant.id)
@@ -131,12 +131,10 @@ export function TenantLoginForm({ tenant }: TenantLoginFormProps) {
         tenant_slug: tenant.slug,
         role: residentData.is_tenant_admin ? 'tenant_admin' : 'resident',
         email: authData.user.email,
-        onboarding_completed: residentData.onboarding_completed,
       })
 
-      if (!residentData.onboarding_completed) {
-        router.push(`/t/${tenant.slug}/onboarding/welcome`)
-      } else if (residentData.is_tenant_admin) {
+      // Always redirect to dashboard (no onboarding check)
+      if (residentData.is_tenant_admin) {
         router.push(`/t/${tenant.slug}/admin/dashboard`)
       } else {
         router.push(`/t/${tenant.slug}/dashboard`)

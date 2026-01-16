@@ -34,17 +34,16 @@ export default async function TenantLoginPage({
   if (user && !authError) {
     const { data: userData } = await supabase
       .from("users")
-      .select("role, is_tenant_admin, onboarding_completed")
+      .select("role, is_tenant_admin")
       .eq("id", user.id)
       .single()
 
     if (userData) {
       if (userData.role === "super_admin" || userData.is_tenant_admin) {
         redirect(`/t/${slug}/admin/dashboard`)
-      } else if (userData.onboarding_completed) {
-        redirect(`/t/${slug}/dashboard`)
       } else {
-        redirect(`/t/${slug}/onboarding`)
+        // Always redirect residents to dashboard (no onboarding check)
+        redirect(`/t/${slug}/dashboard`)
       }
     }
   }

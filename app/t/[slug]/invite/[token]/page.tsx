@@ -27,7 +27,7 @@ export default async function InvitePage({
     redirect("/backoffice/login")
   }
 
-  // Check if already logged in
+  // Check if already logged in - redirect based on role
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -35,7 +35,18 @@ export default async function InvitePage({
   console.log("[v0] Current user:", user?.id || "none")
 
   if (user) {
-    redirect(`/t/${slug}/admin/dashboard`)
+    // Check user role to determine redirect destination
+    const { data: userData } = await supabase
+      .from("users")
+      .select("role, is_tenant_admin")
+      .eq("id", user.id)
+      .single()
+
+    if (userData?.role === "super_admin" || userData?.is_tenant_admin) {
+      redirect(`/t/${slug}/admin/dashboard`)
+    } else {
+      redirect(`/t/${slug}/dashboard`)
+    }
   }
 
   const validationResult = await validateInviteToken(token, tenant.id)
@@ -59,23 +70,27 @@ export default async function InvitePage({
   // The resident will create their auth account during signup
 
   return (
-    <div className="flex min-h-[100dvh] flex-col lg:grid lg:grid-cols-2 bg-background">
-      {/* Left Panel: Signup Form */}
-      <div className="flex flex-1 flex-col items-center justify-center p-8 bg-earth-cloud/30 w-full overflow-y-auto">
-        <SignupForm tenant={tenant} resident={resident} token={token} />
+    <div className="min-h-screen flex">
+      {/* Left side - Rio Image */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-forest-50 to-sky-50 items-center justify-center p-12">
+        <div className="max-w-md text-center">
+          <img
+            src="/rio/parrot.png"
+            alt="Rio - Your Community Guide"
+            className="w-80 h-auto mx-auto mb-8"
+          />
+          <h2 className="text-2xl font-bold text-forest-800 mb-4">
+            Welcome to {tenant.name}!
+          </h2>
+          <p className="text-forest-600">
+            Set up your password to join your community and connect with your neighbors.
+          </p>
+        </div>
       </div>
 
-      {/* Right Side - Hero/Brand */}
-      <div className="hidden lg:block relative h-full overflow-hidden bg-forest-deep">
-        <NextImage
-          src="/login.png"
-          alt="Community Hero"
-          fill
-          className="object-cover object-center saturate-150 brightness-90"
-          priority
-        />
-        {/* Overlay */}
-        <div className="absolute inset-0 bg-forest-canopy/20 mix-blend-overlay" />
+      {/* Right side - Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center bg-background p-4 sm:p-8">
+        <SignupForm tenant={tenant} resident={resident} token={token} />
       </div>
     </div>
   )

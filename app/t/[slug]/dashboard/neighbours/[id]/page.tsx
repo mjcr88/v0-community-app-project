@@ -254,7 +254,7 @@ export default async function PublicProfilePage({
   if (exchangeEnabled) {
     residentListings = await getExchangeListingsByUser(resident.id, currentResident.tenant_id)
 
-    const categoriesData = await getExchangeCategories()
+    const categoriesData = await getExchangeCategories(currentResident.tenant_id)
     categories = categoriesData || []
 
     const neighborhoodsResult = await getNeighborhoods(currentResident.tenant_id)

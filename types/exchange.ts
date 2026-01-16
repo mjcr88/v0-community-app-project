@@ -15,7 +15,7 @@ export type ExchangeListingStatus = 'draft' | 'published' | 'paused' | 'cancelle
 export type ExchangePricingType = 'free' | 'fixed_price' | 'pay_what_you_want' | 'negotiable'
 
 // Exchange item condition
-export type ExchangeCondition = 'new' | 'slightly_used' | 'used' | 'slightly_damaged' | 'maintenance'
+export type ExchangeCondition = 'new' | 'like_new' | 'good' | 'fair' | 'poor' | 'slightly_used' | 'used' | 'slightly_damaged' | 'maintenance'
 
 // Exchange visibility scope
 export type ExchangeVisibilityScope = 'community' | 'neighborhood'

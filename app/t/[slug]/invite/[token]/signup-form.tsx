@@ -85,27 +85,6 @@ export function SignupForm({ tenant, resident, token }: SignupFormProps) {
 
   return (
     <div className="w-full max-w-md space-y-8 py-8 px-4 sm:px-0">
-      <div className="flex flex-col items-center space-y-6 text-center">
-        {/* Rio Bird Logo */}
-        <div className="relative w-32 h-32 mb-2 animate-in fade-in zoom-in duration-700">
-          <NextImage
-            src="/rio-parrot.png"
-            alt="Rio Bird"
-            fill
-            className="object-contain"
-            priority
-          />
-        </div>
-
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight text-forest-deep">
-            Welcome to {tenant.name}
-          </h1>
-          <p className="text-mist-gray text-lg">
-            Create your password to complete registration
-          </p>
-        </div>
-      </div>
 
       <Card className="border-border/40 shadow-xl bg-white/80 backdrop-blur-sm">
         <CardContent className="pt-6">

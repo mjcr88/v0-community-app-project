@@ -87,8 +87,8 @@ export async function getExchangeListingById(listingId: string, tenantId: string
   }
 }
 
-export async function getExchangeCategories() {
-  return getExchangeCategoriesFromLib()
+export async function getExchangeCategories(tenantId: string) {
+  return getExchangeCategoriesFromLib(tenantId)
 }
 
 export async function createExchangeListing(

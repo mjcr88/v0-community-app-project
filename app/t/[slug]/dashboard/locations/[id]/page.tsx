@@ -145,7 +145,7 @@ export default async function LocationDetailsPage({ params }: { params: Promise<
 
   if (exchangeEnabled) {
     locationListings = await getExchangeListingsByLocation(location.id, currentUser.tenant_id)
-    categories = await getExchangeCategories()
+    categories = await getExchangeCategories(currentUser.tenant_id)
 
     const { data: neighborhoodsData } = await supabase
       .from("neighborhoods")

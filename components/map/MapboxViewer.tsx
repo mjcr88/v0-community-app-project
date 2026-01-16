@@ -23,6 +23,7 @@ import {
     DropdownMenuLabel,
     DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
+import { LocationInfoCard } from "./location-info-card"
 
 interface CheckIn {
     id: string
@@ -1865,163 +1866,14 @@ export function MapboxFullViewer({
                                     </>
                                 ) : (
                                     /* Regular Location Card */
-                                    <>
-                                        {/* Header */}
-                                        <div className="flex items-start justify-between mb-4">
-                                            <div>
-                                                <h2 className="font-semibold text-2xl mb-2">
-                                                    {(selectedLocation as any).name || (selectedLocation as any).title || "Location"}
-                                                </h2>
-                                                <Badge variant="secondary" className="capitalize">
-                                                    {((selectedLocation as any).type || (selectedLocation as any).activity_type || "Location").replace("_", " ")}
-                                                </Badge>
-                                            </div>
-                                            <button
-                                                onClick={() => setSelectedLocation(null)}
-                                                className="text-gray-400 hover:text-gray-600 transition-colors p-2"
-                                                title="Close"
-                                            >
-                                                <X className="h-6 w-6" />
-                                            </button>
-                                        </div>
-
-                                        {/* Hero Photo */}
-                                        {((selectedLocation as any).hero_photo ||
-                                            ((selectedLocation as any).photos && (selectedLocation as any).photos.length > 0)) && (
-                                                <div className="mb-4 rounded-lg overflow-hidden">
-                                                    <img
-                                                        src={(selectedLocation as any).hero_photo || (selectedLocation as any).photos[0]}
-                                                        alt={(selectedLocation as any).name}
-                                                        className="w-full h-48 object-cover"
-                                                    />
-                                                </div>
-                                            )}
-                                    </>
+                                    <LocationInfoCard
+                                        location={selectedLocation as any}
+                                        onClose={() => setSelectedLocation(null)}
+                                        tenantSlug={tenantSlug}
+                                        variant="embedded"
+                                    />
                                 )}
 
-                                {/* Resident Info (for lots) */}
-                                {(selectedLocation as any).type === "lot" && (selectedLocation as any).residents && (selectedLocation as any).residents.length > 0 && (
-                                    <div className="mb-6">
-                                        <h3 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wider">Residents</h3>
-                                        <div className="space-y-3">
-                                            {(selectedLocation as any).residents.map((resident: any) => (
-                                                <div key={resident.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent">
-                                                    {resident.profile_picture_url ? (
-                                                        <img
-                                                            src={resident.profile_picture_url}
-                                                            alt={`${resident.first_name} ${resident.last_name}`}
-                                                            className="w-10 h-10 rounded-full object-cover border border-border"
-                                                        />
-                                                    ) : (
-                                                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium border border-primary/20">
-                                                            {resident.first_name[0]}
-                                                            {resident.last_name[0]}
-                                                        </div>
-                                                    )}
-                                                    <div>
-                                                        <div className="font-medium text-foreground">
-                                                            {resident.first_name} {resident.last_name}
-                                                        </div>
-                                                        <div className="text-xs text-muted-foreground">Resident</div>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Description */}
-                                {(selectedLocation as any).description && !(selectedLocation as any).activity_type && (
-                                    <div className="mb-6">
-                                        <h3 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wider">About</h3>
-                                        <p className="text-foreground leading-relaxed">{(selectedLocation as any).description}</p>
-                                    </div>
-                                )}
-
-                                {/* Neighborhood / Type / Hours */}
-                                <div className="grid grid-cols-2 gap-3 mb-4">
-                                    {(selectedLocation as any).neighborhood && (
-                                        <div className="bg-accent rounded-lg p-3">
-                                            <div className="text-xs text-muted-foreground mb-1">Neighborhood</div>
-                                            <div className="font-medium text-foreground">
-                                                {(selectedLocation as any).neighborhood.name}
-                                            </div>
-                                        </div>
-                                    )}
-                                    {(selectedLocation as any).type && (
-                                        <div className="bg-accent rounded-lg p-3">
-                                            <div className="text-xs text-muted-foreground mb-1">Type</div>
-                                            <div className="font-medium capitalize text-foreground">
-                                                {(selectedLocation as any).type.replace(/_/g, " ")}
-                                            </div>
-                                        </div>
-                                    )}
-                                    {(selectedLocation as any).facility_hours && (
-                                        <div className="col-span-2 bg-accent rounded-lg p-3">
-                                            <div className="text-xs text-muted-foreground mb-1">Hours</div>
-                                            <div className="font-medium text-foreground">
-                                                {(selectedLocation as any).facility_hours}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Lot-specific info */}
-                                {(selectedLocation as any).type === "lot" && (
-                                    <>
-                                    </>
-                                )}
-
-                                {/* Facility: Capacity, Parking */}
-                                {(selectedLocation as any).type === "facility" && (
-                                    <>
-                                        {(selectedLocation as any).capacity && (
-                                            <div className="bg-accent p-3 rounded-lg">
-                                                <div className="text-xs text-muted-foreground mb-1">Capacity</div>
-                                                <div className="font-medium text-foreground">{(selectedLocation as any).capacity} people</div>
-                                            </div>
-                                        )}
-                                        {(selectedLocation as any).accessibility_features &&
-                                            Array.isArray((selectedLocation as any).accessibility_features) && (selectedLocation as any).accessibility_features.length > 0 && (
-                                                <div className="col-span-2 bg-accent p-3 rounded-lg">
-                                                    <span className="text-xs text-muted-foreground mb-1 block">Accessibility</span>
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {(selectedLocation as any).accessibility_features.map((feature: string) => (
-                                                            <Badge key={feature} variant="outline" className="text-xs bg-card">
-                                                                {feature.replace("_", " ")}
-                                                            </Badge>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-                                    </>
-                                )}
-
-                                {(selectedLocation as any).amenities && (selectedLocation as any).amenities.length > 0 && (
-                                    <div className="col-span-2 mt-4">
-                                        <span className="text-sm font-medium text-muted-foreground block mb-2">Amenities</span>
-                                        <div className="flex flex-wrap gap-1">
-                                            {(selectedLocation as any).amenities.map((amenity: string, idx: number) => (
-                                                <Badge key={idx} variant="outline">
-                                                    {amenity}
-                                                </Badge>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-
-
-                                {!(selectedLocation as any).activity_type && (
-                                    <div className="mt-auto pt-4 border-t">
-                                        <Button
-                                            className="w-full mt-4"
-                                            onClick={() => router.push(`/t/${tenantSlug}/dashboard/locations/${selectedLocation.id}`)}
-                                        >
-                                            View Full Details
-                                        </Button>
-                                    </div>
-                                )}
                             </div>
                         )}
 

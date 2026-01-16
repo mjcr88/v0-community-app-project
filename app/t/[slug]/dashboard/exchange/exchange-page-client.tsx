@@ -234,7 +234,7 @@ export function ExchangePageClient({
 
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+    <div className="space-y-6">
       {/* Search and Filters */}
       <div className="space-y-4">
         {/* Search Bar */}

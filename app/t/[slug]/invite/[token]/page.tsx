@@ -26,7 +26,7 @@ export default async function InvitePage({
     redirect("/backoffice/login")
   }
 
-  // Check if already logged in
+  // Check if already logged in - redirect based on role
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -34,7 +34,18 @@ export default async function InvitePage({
   console.log("[v0] Current user:", user?.id || "none")
 
   if (user) {
-    redirect(`/t/${slug}/admin/dashboard`)
+    // Check user role to determine redirect destination
+    const { data: userData } = await supabase
+      .from("users")
+      .select("role, is_tenant_admin")
+      .eq("id", user.id)
+      .single()
+
+    if (userData?.role === "super_admin" || userData?.is_tenant_admin) {
+      redirect(`/t/${slug}/admin/dashboard`)
+    } else {
+      redirect(`/t/${slug}/dashboard`)
+    }
   }
 
   const validationResult = await validateInviteToken(token, tenant.id)

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { sanitizeHtml } from "@/lib/sanitize-html"
 import { Card } from "@/components/library/card"
 import { Badge } from "@/components/library/badge"
 import { Button } from "@/components/ui/button"
@@ -420,7 +421,7 @@ export function PriorityFeed({ slug, userId, tenantId }: { slug: string; userId:
 
                         <div
                             className="text-xs text-muted-foreground line-clamp-1"
-                            dangerouslySetInnerHTML={{ __html: item.description }}
+                            dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.description) }}
                         />
 
                         {item.type === "check_in" && item.location && (

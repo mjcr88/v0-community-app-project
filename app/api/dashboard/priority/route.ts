@@ -1,25 +1,9 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 
-// Helper to strip HTML tags for preview text
-function stripHtml(html: string | null | undefined): string {
-    if (!html) return ""
-    return html
-        .replace(/<[^>]*>/g, '') // Remove HTML tags
-        .replace(/&nbsp;/g, ' ')  // Replace non-breaking spaces
-        .replace(/&amp;/g, '&')   // Decode common entities
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"')
-        .replace(/&#39;/g, "'")
-        .replace(/\s+/g, ' ')     // Normalize whitespace
-        .trim()
-}
-
 // Priority Scores from PRD
 const SCORES = {
     announcement: 100,
-    document: 95,
     check_in: 90,
     due_listing: 85,
     listing_pickup: 80,
@@ -56,71 +40,39 @@ export async function GET() {
         const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString()
 
         // ---------------------------------------------------------
-        // 1. Announcements (Score: 100) - All Published & Unread
+        // 1. Announcements (Score: 100) - Only Unread Published
         // ---------------------------------------------------------
-        const { data: readData } = await supabase
-            .from("announcement_reads")
-            .select("announcement_id")
-            .eq("user_id", user.id)
-
-        const readIds = readData?.map(r => r.announcement_id) || []
-
-        let announcementsQuery = supabase
+        const { data: announcements } = await supabase
             .from("announcements")
             .select("id, title, description, published_at, priority")
             .eq("tenant_id", resident.tenant_id)
             .eq("status", "published")
             .order("published_at", { ascending: false })
-            .limit(20)
+            .limit(10) // Fetch more since we'll filter some out
 
-        const { data: rawAnnouncements } = await announcementsQuery
+        // Get read announcements for this user
+        let readAnnouncementIds: Set<string> = new Set()
+        if (announcements && announcements.length > 0) {
+            const { data: readAnnouncements } = await supabase
+                .from("announcement_reads")
+                .select("announcement_id")
+                .eq("user_id", user.id)
+                .in("announcement_id", announcements.map(a => a.id))
 
-        const announcements = rawAnnouncements?.filter(a => !readIds.includes(a.id)).slice(0, 5) || []
+            readAnnouncementIds = new Set(readAnnouncements?.map(r => r.announcement_id) || [])
+        }
 
-        announcements?.forEach(announcement => {
+        // Only include unread announcements
+        announcements?.filter(a => !readAnnouncementIds.has(a.id)).slice(0, 5).forEach(announcement => {
             priorityItems.push({
                 type: "announcement",
                 id: announcement.id,
                 title: announcement.title,
-                description: stripHtml(announcement.description)?.substring(0, 100) + "...",
+                description: announcement.description?.substring(0, 100) + "...",
                 urgency: announcement.priority === 'urgent' ? 'high' : 'medium',
                 timestamp: announcement.published_at,
                 priority: SCORES.announcement,
                 score: SCORES.announcement + (announcement.priority === 'urgent' ? 5 : 0)
-            })
-        })
-
-        // ---------------------------------------------------------
-        // 1B. Documents (Score: 95) - Published & Unread
-        // ---------------------------------------------------------
-        const { data: readDocData } = await supabase
-            .from("document_reads")
-            .select("document_id")
-            .eq("user_id", user.id)
-
-        const readDocIds = readDocData?.map(r => r.document_id) || []
-
-        const { data: rawDocuments } = await supabase
-            .from("documents")
-            .select("id, title, description, updated_at, is_featured, category")
-            .eq("tenant_id", resident.tenant_id)
-            .eq("status", "published")
-            .order("updated_at", { ascending: false })
-            .limit(10)
-
-        const documents = rawDocuments?.filter(d => !readDocIds.includes(d.id)).slice(0, 5) || []
-
-        documents?.forEach(doc => {
-            priorityItems.push({
-                type: "document",
-                id: doc.id,
-                title: doc.title,
-                description: stripHtml(doc.description)?.substring(0, 100) + "...",
-                urgency: doc.is_featured ? 'high' : 'medium',
-                timestamp: doc.updated_at,
-                priority: SCORES.document,
-                score: SCORES.document + (doc.is_featured ? 5 : 0),
-                metadata: { category: doc.category }
             })
         })
 
@@ -204,40 +156,20 @@ export async function GET() {
                 start_time,
                 duration_minutes,
                 location_id,
-                visibility_scope,
                 locations ( name ),
                 creator:users!created_by(
                     id,
                     first_name,
                     last_name,
                     profile_picture_url
-                ),
-                check_in_rsvps(user_id, rsvp_status),
-                check_in_invites(invitee_id, family_unit_id)
+                )
             `)
             .eq("tenant_id", resident.tenant_id)
             .eq("status", "active")
             .order("start_time", { ascending: false })
-            .limit(10) // Increased limit since we filter post-fetch
+            .limit(5)
 
         checkIns?.forEach(checkIn => {
-            // Visibility Check
-            let isVisible = false
-            if (checkIn.visibility_scope === 'community') isVisible = true
-            // @ts-ignore
-            else if (checkIn.creator?.id === user.id) isVisible = true
-            else if (checkIn.visibility_scope === 'private') {
-                // @ts-ignore
-                const invites = checkIn.check_in_invites || []
-                if (invites.some((i: any) => i.invitee_id === user.id)) isVisible = true
-                // Note: We'd need family_unit_id of current user to check family invites fully, 
-                // but for now direct invite check is better than nothing or leaking all.
-                // Ideally we fetch user's family_unit_id at the start.
-            }
-            // Neighborhood logic omitted for brevity/complexity in this tailored feed
-
-            if (!isVisible) return
-
             const startTime = new Date(checkIn.start_time)
             const endTime = new Date(startTime.getTime() + checkIn.duration_minutes * 60000)
 
@@ -250,15 +182,6 @@ export async function GET() {
                 // @ts-ignore
                 const creatorAvatar = checkIn.creator?.profile_picture_url
 
-                // Get User RSVP
-                // @ts-ignore
-                const rsvps = checkIn.check_in_rsvps || []
-                // @ts-ignore
-                const userRsvp = rsvps.find((r: any) => r.user_id === user.id)
-                const rsvpStatus = userRsvp ?
-                    (userRsvp.rsvp_status === 'yes' ? 'going' : userRsvp.rsvp_status === 'no' ? 'not_going' : userRsvp.rsvp_status)
-                    : null
-
                 priorityItems.push({
                     type: "check_in",
                     id: checkIn.id,
@@ -267,11 +190,11 @@ export async function GET() {
                     urgency: "medium",
                     timestamp: checkIn.start_time,
                     priority: SCORES.check_in,
-                    score: SCORES.check_in + (rsvpStatus === 'going' ? 10 : 0),
+                    score: SCORES.check_in,
                     location: locationName,
                     creator_avatar: creatorAvatar,
                     end_time: endTime.toISOString(),
-                    rsvp_status: rsvpStatus
+                    rsvp_status: null // Check-ins can have RSVP in the future
                 })
             }
         })
@@ -292,10 +215,10 @@ export async function GET() {
             .eq("status", "requested")
 
         requests?.forEach(req => {
-            const borrowerData = Array.isArray(req.borrower) ? req.borrower[0] : req.borrower
-            const borrowerName = borrowerData ? `${borrowerData.first_name} ${borrowerData.last_name}` : "Neighbor"
-            const listingData = Array.isArray(req.listing) ? req.listing[0] : req.listing
-            const listingTitle = listingData?.title || "Item"
+            // @ts-ignore
+            const borrowerName = req.borrower ? `${req.borrower.first_name} ${req.borrower.last_name}` : "Neighbor"
+            // @ts-ignore
+            const listingTitle = req.listing?.title || "Item"
 
             priorityItems.push({
                 type: "exchange_request",
@@ -325,6 +248,8 @@ export async function GET() {
             .eq("status", "confirmed")
 
         confirmed?.forEach(tx => {
+            // @ts-ignore
+            const listingTitle = tx.listing?.title || "Item"
             const isLender = tx.lender_id === user.id
 
             // Handle potential array response from Supabase for joined relations
@@ -335,8 +260,6 @@ export async function GET() {
 
             const otherParty = isLender ? borrowerData : lenderData
             const otherName = otherParty ? `${otherParty.first_name} ${otherParty.last_name}` : "Neighbor"
-            const listingData = Array.isArray(tx.listing) ? tx.listing[0] : tx.listing
-            const listingTitle = listingData?.title || "Item"
 
             priorityItems.push({
                 type: "exchange_confirmed",
@@ -370,10 +293,10 @@ export async function GET() {
         lenderDueTransactions?.forEach(tx => {
             const dueDate = new Date(tx.expected_return_date)
             const isOverdue = dueDate < now
-            const borrowerData = Array.isArray(tx.borrower) ? tx.borrower[0] : tx.borrower
-            const borrowerName = borrowerData ? `${borrowerData.first_name} ${borrowerData.last_name}` : "Borrower"
-            const listingData = Array.isArray(tx.listing) ? tx.listing[0] : tx.listing
-            const listingTitle = listingData?.title || "Item"
+            // @ts-ignore
+            const borrowerName = tx.borrower ? `${tx.borrower.first_name} ${tx.borrower.last_name}` : "Borrower"
+            // @ts-ignore
+            const listingTitle = tx.listing?.title || "Item"
 
             priorityItems.push({
                 type: "exchange_return_due",
@@ -412,24 +335,21 @@ export async function GET() {
         }
         console.log('[Priority Feed] Found', borrowerDueTransactions?.length || 0, 'borrowed items due soon')
         if (borrowerDueTransactions && borrowerDueTransactions.length > 0) {
-            console.log('[Priority Feed] Borrowed items:', borrowerDueTransactions.map(tx => {
-                const l = Array.isArray(tx.listing) ? tx.listing[0] : tx.listing
-                return {
-                    id: tx.id,
-                    listing: l?.title,
-                    status: tx.status,
-                    due: tx.expected_return_date
-                }
-            }))
+            console.log('[Priority Feed] Borrowed items:', borrowerDueTransactions.map(tx => ({
+                id: tx.id,
+                listing: tx.listing?.title,
+                status: tx.status,
+                due: tx.expected_return_date
+            })))
         }
 
         borrowerDueTransactions?.forEach(tx => {
             const dueDate = new Date(tx.expected_return_date)
             const isOverdue = dueDate < now
-            const lenderData = Array.isArray(tx.lender) ? tx.lender[0] : tx.lender
-            const lenderName = lenderData ? `${lenderData.first_name} ${lenderData.last_name}` : "Lender"
-            const listingData = Array.isArray(tx.listing) ? tx.listing[0] : tx.listing
-            const listingTitle = listingData?.title || "Item"
+            // @ts-ignore
+            const lenderName = tx.lender ? `${tx.lender.first_name} ${tx.lender.last_name}` : "Lender"
+            // @ts-ignore
+            const listingTitle = tx.listing?.title || "Item"
 
             priorityItems.push({
                 type: "exchange_return_due",
@@ -477,7 +397,7 @@ export async function GET() {
                 return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
             }
 
-            // 4. Announcements and Documents last, by updated date (newest first)
+            // 4. Announcements last, by created date (newest first)
             return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
         })
 

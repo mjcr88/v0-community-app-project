@@ -17,4 +17,4 @@ CREATE INDEX IF NOT EXISTS idx_exchange_categories_tenant_id ON exchange_categor
 COMMENT ON TABLE exchange_categories IS 'Hard-coded categories for exchange listings';
 
 -- Seed default categories (will be added per tenant when feature is enabled)
--- Categories: Tools & Equipment, Food & Produce, Services & Skills, Rides & Carpooling, House sitting & Rentals
+-- Categories: Tools & Equipment, Food & Produce, Household items, Services & Skills, Rides & Carpooling, House sitting & Rentals

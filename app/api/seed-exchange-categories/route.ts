@@ -40,6 +40,10 @@ export async function POST(request: Request) {
         description: "Share homegrown fruits, vegetables, baked goods, and meals",
       },
       {
+        name: "Household items",
+        description: "Share furniture, decor, appliances, and other household goods",
+      },
+      {
         name: "Services & Skills",
         description: "Offer tutoring, repairs, pet sitting, and other services",
       },

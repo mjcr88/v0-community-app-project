@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { sanitizeHtml } from "@/lib/sanitize-html"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -103,7 +104,7 @@ export function FacilityDetailsSection({ location }: FacilityDetailsSectionProps
                                 <h4 className="text-sm font-semibold mb-3">Rules & Guidelines</h4>
                                 <div
                                     className="prose prose-sm max-w-none text-sm text-muted-foreground"
-                                    dangerouslySetInnerHTML={{ __html: location.rules }}
+                                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(location.rules) }}
                                 />
                             </div>
                         )}

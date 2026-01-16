@@ -266,9 +266,10 @@ export function EditExchangeListingModal({
 
   const selectedCategory = categories.find(c => c.id === formData.category_id)
   const isToolsEquipment = selectedCategory?.name === "Tools & Equipment"
+  const isHouseholdItems = selectedCategory?.name === "Household items"
   const isFoodProduce = selectedCategory?.name === "Food & Produce"
   const showPricing = selectedCategory && !isToolsEquipment
-  const showCondition = isToolsEquipment
+  const showCondition = isToolsEquipment || isHouseholdItems
   const showQuantity = isToolsEquipment || isFoodProduce
 
   const toggleNeighborhood = (neighborhoodId: string) => {

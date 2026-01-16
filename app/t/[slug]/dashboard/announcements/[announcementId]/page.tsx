@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
+import { sanitizeHtml } from "@/lib/sanitize-html"
 import { redirect, notFound } from 'next/navigation'
 import { getAnnouncementById } from "@/app/actions/announcements"
 import { ArrowLeft, MapPin, Calendar, Clock, User } from 'lucide-react'
@@ -204,7 +205,7 @@ export default async function AnnouncementDetailPage({ params }: AnnouncementDet
 
         {/* Content Body */}
         <article className="prose prose-lg prose-neutral dark:prose-invert max-w-none">
-          <div dangerouslySetInnerHTML={{ __html: announcement.description }} />
+          <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(announcement.description) }} />
         </article>
 
         {/* Footer / Meta */}

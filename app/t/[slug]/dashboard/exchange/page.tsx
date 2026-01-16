@@ -69,33 +69,38 @@ export default async function ExchangePage({ params }: { params: Promise<{ slug:
   const isAdmin = userData.is_tenant_admin || userData.role === "super_admin" || userData.role === "tenant_admin"
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Exchange Directory</h2>
-          <p className="text-muted-foreground">Share, borrow, and trade within your community</p>
-        </div>
-        {userData.onboarding_completed && (
-          <CreateExchangeListingButton
-            tenantSlug={slug}
-            tenantId={userData.tenant_id}
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-6xl mx-auto space-y-8">
+          <div className="flex items-center justify-between gap-4 mb-1">
+            <div className="space-y-1">
+              <h1 className="text-3xl font-bold tracking-tight">Exchange Directory</h1>
+              <p className="text-muted-foreground text-lg hidden md:block">
+                Share, borrow, and trade within your community
+              </p>
+            </div>
+
+            <CreateExchangeListingButton
+              tenantSlug={slug}
+              tenantId={userData.tenant_id}
+              categories={categories}
+              neighborhoods={neighborhoods}
+            />
+          </div>
+
+          <ExchangePageClient
+            listings={mappedListings}
             categories={categories}
             neighborhoods={neighborhoods}
+            locations={locations}
+            tenantId={userData.tenant_id}
+            tenantSlug={slug}
+            userId={user.id}
+            userRole={userData.role}
+            isAdmin={isAdmin}
           />
-        )}
+        </div>
       </div>
-
-      <ExchangePageClient
-        listings={mappedListings}
-        categories={categories}
-        neighborhoods={neighborhoods}
-        locations={locations}
-        tenantId={userData.tenant_id}
-        tenantSlug={slug}
-        userId={user.id}
-        userRole={userData.role}
-        isAdmin={isAdmin}
-      />
     </div>
   )
 }

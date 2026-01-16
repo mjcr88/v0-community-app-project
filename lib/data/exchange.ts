@@ -298,12 +298,13 @@ export async function getExchangeListingById(
     return listings.find((l) => l.id === listingId) || null
 }
 
-export async function getExchangeCategories() {
+export async function getExchangeCategories(tenantId: string) {
     const supabase = await createServerClient()
 
     const { data: categories, error } = await supabase
         .from("exchange_categories")
         .select("*")
+        .eq("tenant_id", tenantId)
         .order("name")
 
     if (error) {

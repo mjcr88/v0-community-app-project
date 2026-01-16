@@ -8,7 +8,7 @@ import { ExchangePageClient } from "./exchange-page-client"
 import { cache } from 'react'
 
 const getCachedExchangeCategories = cache(async (tenantId: string) => {
-  return await getExchangeCategories()
+  return await getExchangeCategories(tenantId)
 })
 
 const getCachedNeighborhoods = cache(async (tenantId: string) => {

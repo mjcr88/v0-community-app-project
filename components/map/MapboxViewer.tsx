@@ -891,6 +891,7 @@ export function MapboxFullViewer({
                         maxPitch={85}
                         dragRotate={true}
                         touchZoomRotate={true}
+                        preserveDrawingBuffer={true}
                     >
                         {/* Terrain Source - Always render */}
                         <Source

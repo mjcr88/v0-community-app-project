@@ -106,21 +106,78 @@ export async function updateInterests(userId: string, interestIds: string[]) {
     }
 }
 
-export async function updateSkills(userId: string, skills: { id: string; openToRequests: boolean }[]) {
+export async function updateSkills(userId: string, skills: { id: string; name?: string; openToRequests: boolean; isNew?: boolean }[]) {
     const supabase = await createClient()
 
-    // First, clear existing skills
+    // Get user's tenant_id
+    const { data: user, error: userError } = await supabase
+        .from("users")
+        .select("tenant_id")
+        .eq("id", userId)
+        .single()
+
+    if (userError || !user) throw new Error("User not found")
+
+    // First, clear existing user skills
     await supabase.from("user_skills").delete().eq("user_id", userId)
 
     if (skills.length > 0) {
-        const { error } = await supabase.from("user_skills").insert(
-            skills.map((s) => ({
-                user_id: userId,
-                skill_id: s.id,
-                open_to_requests: s.openToRequests,
-            }))
-        )
-        if (error) throw new Error(error.message)
+        const skillsToInsert = []
+
+        for (const skill of skills) {
+            if (skill.isNew && skill.name) {
+                // Check if skill already exists by name for this tenant (avoid duplicates)
+                const { data: existingSkill } = await supabase
+                    .from("skills")
+                    .select("id")
+                    .eq("tenant_id", user.tenant_id)
+                    .ilike("name", skill.name.trim())
+                    .single()
+
+                if (existingSkill) {
+                    skillsToInsert.push({
+                        user_id: userId,
+                        skill_id: existingSkill.id,
+                        open_to_requests: skill.openToRequests
+                    })
+                } else {
+                    // Create new skill
+                    const { data: newSkill, error: createError } = await supabase
+                        .from("skills")
+                        .insert({
+                            name: skill.name.trim(),
+                            tenant_id: user.tenant_id
+                        })
+                        .select()
+                        .single()
+
+                    if (createError) {
+                        console.error("Error creating skill:", createError)
+                        continue
+                    }
+
+                    if (newSkill) {
+                        skillsToInsert.push({
+                            user_id: userId,
+                            skill_id: newSkill.id,
+                            open_to_requests: skill.openToRequests
+                        })
+                    }
+                }
+            } else {
+                // Existing skill
+                skillsToInsert.push({
+                    user_id: userId,
+                    skill_id: skill.id,
+                    open_to_requests: skill.openToRequests,
+                })
+            }
+        }
+
+        if (skillsToInsert.length > 0) {
+            const { error } = await supabase.from("user_skills").insert(skillsToInsert)
+            if (error) throw new Error(error.message)
+        }
     }
 }
 

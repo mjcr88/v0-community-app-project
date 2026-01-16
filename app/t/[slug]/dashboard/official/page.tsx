@@ -6,10 +6,13 @@ import { OfficialTabs } from '@/components/dashboard/official-tabs'
 
 export default async function OfficialPage({
     params,
+    searchParams,
 }: {
     params: Promise<{ slug: string }>
+    searchParams: Promise<{ tab?: string }>
 }) {
     const { slug } = await params
+    const { tab } = await searchParams
     const supabase = await createClient()
 
     // Authentication check
@@ -38,6 +41,7 @@ export default async function OfficialPage({
                 tenantId={tenant.id}
                 announcementsEnabled={tenant.announcements_enabled !== false}
                 documentsEnabled={tenant.documents_enabled !== false}
+                defaultTab={tab}
             />
         </div>
     )

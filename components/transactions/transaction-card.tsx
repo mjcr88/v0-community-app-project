@@ -18,6 +18,7 @@ import { DeclineBorrowDialog } from "@/components/exchange/decline-borrow-dialog
 import { markItemPickedUp, markItemReturned, cancelTransaction, markTransactionCompleted } from "@/app/actions/exchange-transactions"
 import { confirmBorrowRequest, rejectBorrowRequest } from "@/app/actions/exchange-listings"
 import { toast } from "@/hooks/use-toast"
+import { MarketplaceAnalytics } from "@/lib/analytics"
 
 interface Transaction {
   id: string
@@ -120,7 +121,7 @@ export function TransactionCard({
     !isToday(new Date(returnDate))
 
   // Check if due soon (within 2 days)
-  const isDueSoon = 
+  const isDueSoon =
     requiresReturn &&
     returnDate &&
     transaction.status === "picked_up" &&
@@ -215,11 +216,14 @@ export function TransactionCard({
 
   const handlePickupConfirm = async () => {
     const result = await markItemPickedUp(transaction.id, userId, tenantId, tenantSlug)
-    
+
     if (result.success) {
+      if (!requiresReturn) {
+        MarketplaceAnalytics.transactionCompleted(transaction.id, 'service_completion')
+      }
       toast({
         title: requiresReturn ? "Pickup confirmed" : "Completion confirmed",
-        description: requiresReturn 
+        description: requiresReturn
           ? "The item has been marked as picked up"
           : "The service/appointment has been marked as complete",
       })
@@ -244,8 +248,9 @@ export function TransactionCard({
       tenantSlug,
       returnData
     )
-    
+
     if (result.success) {
+      MarketplaceAnalytics.transactionCompleted(transaction.id, 'item_return')
       toast({
         title: "Return recorded",
         description: "The item return has been documented",
@@ -267,7 +272,7 @@ export function TransactionCard({
       tenantSlug,
       cancelReason
     )
-    
+
     if (result.success) {
       toast({
         title: "Transaction cancelled",
@@ -289,7 +294,7 @@ export function TransactionCard({
       tenantId,
       tenantSlug
     )
-    
+
     if (result.success) {
       toast({
         title: "Transaction completed",
@@ -307,8 +312,9 @@ export function TransactionCard({
   const handleConfirmRequest = async (message?: string) => {
     setIsConfirming(true)
     const result = await confirmBorrowRequest(transaction.id, tenantSlug, tenantId, message)
-    
+
     if (result.success) {
+      MarketplaceAnalytics.transactionResponded(transaction.id, 'confirmed')
       toast({
         title: "Request confirmed",
         description: "The borrower has been notified",
@@ -326,8 +332,9 @@ export function TransactionCard({
   const handleDeclineRequest = async (message?: string) => {
     setIsDeclining(true)
     const result = await rejectBorrowRequest(transaction.id, tenantSlug, tenantId, message)
-    
+
     if (result.success) {
+      MarketplaceAnalytics.transactionResponded(transaction.id, 'rejected')
       toast({
         title: "Request declined",
         description: "The borrower has been notified",
@@ -509,17 +516,17 @@ export function TransactionCard({
               <div className="pt-2 space-y-2" onClick={(e) => e.stopPropagation()}>
                 {transaction.status === "requested" && role === "lender" && (
                   <div className="flex gap-2">
-                    <Button 
-                      variant="default" 
-                      size="sm" 
+                    <Button
+                      variant="default"
+                      size="sm"
                       className="flex-1"
                       onClick={() => setConfirmDialogOpen(true)}
                       disabled={isConfirming || isDeclining}
                     >
                       Confirm
                     </Button>
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       size="sm"
                       className="flex-1"
                       onClick={() => setDeclineDialogOpen(true)}
@@ -529,30 +536,30 @@ export function TransactionCard({
                     </Button>
                   </div>
                 )}
-                
+
                 {transaction.status === "requested" && role === "borrower" && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     className="w-full"
                     disabled
                   >
                     Waiting for lender response
                   </Button>
                 )}
-                
+
                 {transaction.status === "confirmed" && (
                   <div className="flex gap-2">
-                    <Button 
-                      variant="default" 
-                      size="sm" 
+                    <Button
+                      variant="default"
+                      size="sm"
                       className="flex-1"
                       onClick={() => setPickupDialogOpen(true)}
                     >
                       {requiresReturn ? "Mark as Picked Up" : "Confirm Completion"}
                     </Button>
-                    <Button 
-                      variant="ghost" 
+                    <Button
+                      variant="ghost"
                       size="sm"
                       onClick={() => setCancelDialogOpen(true)}
                     >
@@ -560,21 +567,21 @@ export function TransactionCard({
                     </Button>
                   </div>
                 )}
-                
+
                 {transaction.status === "picked_up" && role === "lender" && (
-                  <Button 
-                    variant="default" 
-                    size="sm" 
+                  <Button
+                    variant="default"
+                    size="sm"
                     className="w-full"
                     onClick={() => setReturnDialogOpen(true)}
                   >
                     Mark as Returned
                   </Button>
                 )}
-                
+
                 {transaction.status === "picked_up" && role === "borrower" && (
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     size="sm"
                     className="w-full"
                     disabled
@@ -582,11 +589,11 @@ export function TransactionCard({
                     Waiting for lender to confirm return
                   </Button>
                 )}
-                
+
                 {transaction.status === "completed" && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     className="w-full"
                   >
                     View Details

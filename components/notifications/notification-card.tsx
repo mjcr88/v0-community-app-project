@@ -11,6 +11,7 @@ import { formatDistanceToNow } from "date-fns"
 import { Archive, Check, X, Megaphone, Users, FileText } from 'lucide-react'
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
+import { NotificationsAnalytics } from "@/lib/analytics"
 
 interface NotificationCardProps {
   notification: NotificationFull
@@ -31,6 +32,7 @@ export function NotificationCard({ notification, tenantSlug, onUpdate }: Notific
   const handleMarkAsRead = async () => {
     const result = await markAsRead(notification.id, tenantSlug)
     if (result.success) {
+      NotificationsAnalytics.markedRead(notification.id)
       onUpdate?.()
     }
   }
@@ -38,6 +40,7 @@ export function NotificationCard({ notification, tenantSlug, onUpdate }: Notific
   const handleArchive = async () => {
     const result = await archiveNotification(notification.id, tenantSlug)
     if (result.success) {
+      NotificationsAnalytics.archived(notification.id)
       toast.success("Archived")
       onUpdate?.()
     } else {
@@ -47,6 +50,7 @@ export function NotificationCard({ notification, tenantSlug, onUpdate }: Notific
 
   // Auto-mark as read when card is clicked
   const handleCardClick = () => {
+    NotificationsAnalytics.clicked(notification.type)
     if (!notification.is_read) {
       handleMarkAsRead()
     }

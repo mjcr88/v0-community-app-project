@@ -1,9 +1,10 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Search, Filter } from "lucide-react"
 import { MapboxFullViewer } from "@/components/map/MapboxViewer"
 import { Input } from "@/components/ui/input"
+import { MapAnalytics } from "@/lib/analytics"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -50,6 +51,17 @@ export function CommunityMapClient({
             loc.type.toLowerCase().includes(query)
         ).slice(0, 5)
     }, [searchQuery, locations])
+
+    // Debounced search analytics
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (searchQuery.trim().length > 2) {
+                MapAnalytics.searched(searchQuery.length, filteredLocations.length)
+            }
+        }, 1500) // Debounce 1.5s
+
+        return () => clearTimeout(timer)
+    }, [searchQuery, filteredLocations.length])
 
     // Calculate type counts
     const typeCounts = useMemo(() => {

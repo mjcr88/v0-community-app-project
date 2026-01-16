@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo, useCallback, useEffect, useRef } from "react"
+import { useRouter } from "next/navigation"
 import Map, { Source, Layer, MapRef, Marker } from "react-map-gl"
 import * as turf from "@turf/turf"
 import { Search, X, Filter, Layers, Check, MapPin } from "lucide-react"
@@ -9,11 +10,11 @@ import "mapbox-gl/dist/mapbox-gl.css"
 import { rsvpToCheckIn } from "@/app/actions/check-ins"
 
 import { LocationWithRelations } from "@/lib/data/locations"
+import { MapAnalytics } from "@/lib/analytics"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { LocationInfoCard } from "./location-info-card"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -102,6 +103,7 @@ export function MapboxFullViewer({
     hideSidebar = false,
 }: MapboxFullViewerProps) {
     const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+    const router = useRouter()
 
     // Calculate initial center - prioritize boundary center, then mapCenter prop, then default
     const initialCenter = useMemo(() => {
@@ -141,8 +143,9 @@ export function MapboxFullViewer({
     const hasUserInteracted = useRef(false) // Track if user manually selected a location
     const [isFullscreen, setIsFullscreen] = useState(false)
 
-    // Debug logging
+    // Debug logging & Analytics
     useEffect(() => {
+        MapAnalytics.viewed()
         console.log("[MapboxFullViewer] Mounted")
         console.log("[MapboxFullViewer] Token:", mapboxToken ? "Present" : "Missing")
         console.log("[MapboxFullViewer] Locations:", locations.length)
@@ -153,11 +156,44 @@ export function MapboxFullViewer({
         })
     }, [locations, mapCenter, mapboxToken])
 
+    // Helper to check if a point is inside the community boundary
+    const checkIfInsideBoundary = useCallback((lat: number, lng: number) => {
+        const boundaryLoc = locations.find(l => l.type === 'boundary');
+        if (!boundaryLoc?.boundary_coordinates || boundaryLoc.boundary_coordinates.length < 3) return false;
+
+        try {
+            const coords = [...boundaryLoc.boundary_coordinates];
+            // Ensure closed polygon
+            if (coords[0][0] !== coords[coords.length - 1][0] || coords[0][1] !== coords[coords.length - 1][1]) {
+                coords.push(coords[0]);
+            }
+            // Turf expects [lng, lat]
+            const polygonCoords = coords.map(c => [c[1], c[0]]);
+            const boundaryPoly = turf.polygon([polygonCoords]);
+            const point = turf.point([lng, lat]);
+            return turf.booleanPointInPolygon(point, boundaryPoly);
+        } catch (e) {
+            console.error("Error checking boundary:", e);
+            return false;
+        }
+    }, [locations]);
+
     // Search state
     const [searchQuery, setSearchQuery] = useState("")
     const [searchResults, setSearchResults] = useState<LocationWithRelations[]>([])
     const [showSearchDropdown, setShowSearchDropdown] = useState(false)
     const [highlightedCategories, setHighlightedCategories] = useState<Set<string>>(externalHighlightedCategories || new Set())
+
+    // Debounced search analytics
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (searchQuery.trim().length > 2) {
+                MapAnalytics.searched(searchQuery.length, searchResults.length)
+            }
+        }, 1500) // Debounce 1.5s
+
+        return () => clearTimeout(timer)
+    }, [searchQuery, searchResults.length])
 
     // Collapsible panel state
     const [showLayersPanel, setShowLayersPanel] = useState(false)
@@ -789,6 +825,9 @@ export function MapboxFullViewer({
                         ref={mapRef}
                         interactiveLayerIds={["lots-fill", "facilities-fill", "paths-line", "paths-hit-area", "streets-line", "poi-label"]}
                         onClick={(e: any) => {
+                            const { lng, lat } = e.lngLat;
+                            const isInside = checkIfInsideBoundary(lat, lng);
+
                             if (e.features && e.features.length > 0) {
                                 const feature = e.features[0]
 
@@ -803,6 +842,7 @@ export function MapboxFullViewer({
                                     const locationId = feature.properties.id
                                     const location = locations.find((loc) => loc.id === locationId)
                                     if (location) {
+                                        MapAnalytics.locationClicked(locationId, location.type, isInside)
                                         // Call external callback if provided
                                         if (onLocationClick) {
                                             onLocationClick(locationId, location)
@@ -827,6 +867,7 @@ export function MapboxFullViewer({
                                     })
                                 }
                             } else {
+                                MapAnalytics.mapClicked(isInside, { lat, lng })
                                 setSelectedLocation(null)
                                 // Handle background click (for pin dropping)
                                 if (onMapClick) {
@@ -1004,6 +1045,10 @@ export function MapboxFullViewer({
                                     style={{ zIndex: isSelected ? 40 : 5 }}
                                     onClick={(e) => {
                                         e.originalEvent.stopPropagation();
+                                        // Check boundary status for marker
+                                        const isInside = checkIfInsideBoundary(location.coordinates!.lat, location.coordinates!.lng);
+                                        MapAnalytics.locationClicked(location.id, location.type, isInside)
+
                                         if (onLocationClick) {
                                             onLocationClick(location.id, location);
                                         }
@@ -1098,6 +1143,10 @@ export function MapboxFullViewer({
                                         style={{ zIndex: isSelected ? 40 : 5 }}
                                         onClick={(e) => {
                                             e.originalEvent.stopPropagation()
+                                            // Check boundary status for marker
+                                            const isInside = checkIfInsideBoundary(location.coordinates!.lat, location.coordinates!.lng);
+                                            MapAnalytics.locationClicked(location.id, location.type, isInside)
+
                                             if (onLocationClick) {
                                                 onLocationClick(location.id, location)
                                             }
@@ -1522,6 +1571,13 @@ export function MapboxFullViewer({
                                             className={`group relative cursor-pointer transition-all duration-300 ${isHighlighted ? 'scale-110' : ''}`}
                                             onClick={(e) => {
                                                 e.stopPropagation();
+                                                // Check boundary status for checkin
+                                                const lat = checkIn.displayCoords?.lat;
+                                                const lng = checkIn.displayCoords?.lng;
+                                                const isInside = lat && lng ? checkIfInsideBoundary(lat, lng) : false;
+
+                                                MapAnalytics.locationClicked(checkIn.id, 'checkin', isInside)
+
                                                 console.log('[Mapbox] Check-in clicked:', checkIn);
                                                 console.log('[Mapbox] Setting selectedLocation to:', checkIn);
                                                 hasUserInteracted.current = true
@@ -1809,13 +1865,162 @@ export function MapboxFullViewer({
                                     </>
                                 ) : (
                                     /* Regular Location Card */
-                                    <LocationInfoCard
-                                        location={selectedLocation as LocationWithRelations}
-                                        onClose={() => setSelectedLocation(null)}
-                                        tenantSlug={tenantSlug}
-                                        className="h-full max-h-none"
-                                        variant="embedded"
-                                    />
+                                    <>
+                                        {/* Header */}
+                                        <div className="flex items-start justify-between mb-4">
+                                            <div>
+                                                <h2 className="font-semibold text-2xl mb-2">
+                                                    {(selectedLocation as any).name || (selectedLocation as any).title || "Location"}
+                                                </h2>
+                                                <Badge variant="secondary" className="capitalize">
+                                                    {((selectedLocation as any).type || (selectedLocation as any).activity_type || "Location").replace("_", " ")}
+                                                </Badge>
+                                            </div>
+                                            <button
+                                                onClick={() => setSelectedLocation(null)}
+                                                className="text-gray-400 hover:text-gray-600 transition-colors p-2"
+                                                title="Close"
+                                            >
+                                                <X className="h-6 w-6" />
+                                            </button>
+                                        </div>
+
+                                        {/* Hero Photo */}
+                                        {((selectedLocation as any).hero_photo ||
+                                            ((selectedLocation as any).photos && (selectedLocation as any).photos.length > 0)) && (
+                                                <div className="mb-4 rounded-lg overflow-hidden">
+                                                    <img
+                                                        src={(selectedLocation as any).hero_photo || (selectedLocation as any).photos[0]}
+                                                        alt={(selectedLocation as any).name}
+                                                        className="w-full h-48 object-cover"
+                                                    />
+                                                </div>
+                                            )}
+                                    </>
+                                )}
+
+                                {/* Resident Info (for lots) */}
+                                {(selectedLocation as any).type === "lot" && (selectedLocation as any).residents && (selectedLocation as any).residents.length > 0 && (
+                                    <div className="mb-6">
+                                        <h3 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wider">Residents</h3>
+                                        <div className="space-y-3">
+                                            {(selectedLocation as any).residents.map((resident: any) => (
+                                                <div key={resident.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent">
+                                                    {resident.profile_picture_url ? (
+                                                        <img
+                                                            src={resident.profile_picture_url}
+                                                            alt={`${resident.first_name} ${resident.last_name}`}
+                                                            className="w-10 h-10 rounded-full object-cover border border-border"
+                                                        />
+                                                    ) : (
+                                                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium border border-primary/20">
+                                                            {resident.first_name[0]}
+                                                            {resident.last_name[0]}
+                                                        </div>
+                                                    )}
+                                                    <div>
+                                                        <div className="font-medium text-foreground">
+                                                            {resident.first_name} {resident.last_name}
+                                                        </div>
+                                                        <div className="text-xs text-muted-foreground">Resident</div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Description */}
+                                {(selectedLocation as any).description && !(selectedLocation as any).activity_type && (
+                                    <div className="mb-6">
+                                        <h3 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wider">About</h3>
+                                        <p className="text-foreground leading-relaxed">{(selectedLocation as any).description}</p>
+                                    </div>
+                                )}
+
+                                {/* Neighborhood / Type / Hours */}
+                                <div className="grid grid-cols-2 gap-3 mb-4">
+                                    {(selectedLocation as any).neighborhood && (
+                                        <div className="bg-accent rounded-lg p-3">
+                                            <div className="text-xs text-muted-foreground mb-1">Neighborhood</div>
+                                            <div className="font-medium text-foreground">
+                                                {(selectedLocation as any).neighborhood.name}
+                                            </div>
+                                        </div>
+                                    )}
+                                    {(selectedLocation as any).type && (
+                                        <div className="bg-accent rounded-lg p-3">
+                                            <div className="text-xs text-muted-foreground mb-1">Type</div>
+                                            <div className="font-medium capitalize text-foreground">
+                                                {(selectedLocation as any).type.replace(/_/g, " ")}
+                                            </div>
+                                        </div>
+                                    )}
+                                    {(selectedLocation as any).facility_hours && (
+                                        <div className="col-span-2 bg-accent rounded-lg p-3">
+                                            <div className="text-xs text-muted-foreground mb-1">Hours</div>
+                                            <div className="font-medium text-foreground">
+                                                {(selectedLocation as any).facility_hours}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Lot-specific info */}
+                                {(selectedLocation as any).type === "lot" && (
+                                    <>
+                                    </>
+                                )}
+
+                                {/* Facility: Capacity, Parking */}
+                                {(selectedLocation as any).type === "facility" && (
+                                    <>
+                                        {(selectedLocation as any).capacity && (
+                                            <div className="bg-accent p-3 rounded-lg">
+                                                <div className="text-xs text-muted-foreground mb-1">Capacity</div>
+                                                <div className="font-medium text-foreground">{(selectedLocation as any).capacity} people</div>
+                                            </div>
+                                        )}
+                                        {(selectedLocation as any).accessibility_features &&
+                                            Array.isArray((selectedLocation as any).accessibility_features) && (selectedLocation as any).accessibility_features.length > 0 && (
+                                                <div className="col-span-2 bg-accent p-3 rounded-lg">
+                                                    <span className="text-xs text-muted-foreground mb-1 block">Accessibility</span>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {(selectedLocation as any).accessibility_features.map((feature: string) => (
+                                                            <Badge key={feature} variant="outline" className="text-xs bg-card">
+                                                                {feature.replace("_", " ")}
+                                                            </Badge>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                    </>
+                                )}
+
+                                {(selectedLocation as any).amenities && (selectedLocation as any).amenities.length > 0 && (
+                                    <div className="col-span-2 mt-4">
+                                        <span className="text-sm font-medium text-muted-foreground block mb-2">Amenities</span>
+                                        <div className="flex flex-wrap gap-1">
+                                            {(selectedLocation as any).amenities.map((amenity: string, idx: number) => (
+                                                <Badge key={idx} variant="outline">
+                                                    {amenity}
+                                                </Badge>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+
+
+                                {!(selectedLocation as any).activity_type && (
+                                    <div className="mt-auto pt-4 border-t">
+                                        <Button
+                                            className="w-full mt-4"
+                                            onClick={() => router.push(`/t/${tenantSlug}/dashboard/locations/${selectedLocation.id}`)}
+                                        >
+                                            View Full Details
+                                        </Button>
+                                    </div>
                                 )}
                             </div>
                         )}

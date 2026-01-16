@@ -16,6 +16,7 @@ import { AnnouncementPriorityBadge } from "@/components/announcements/announceme
 import { UpdatedIndicator } from "@/components/announcements/updated-indicator"
 import { LocationBadge } from "@/components/events/location-badge"
 import { markAnnouncementAsRead } from "@/app/actions/announcements"
+import { AnnouncementsAnalytics } from "@/lib/analytics"
 import type { AnnouncementWithRelations } from "@/types/announcements"
 
 interface AnnouncementCardProps {
@@ -63,11 +64,19 @@ export function AnnouncementCard({ announcement, slug, onClick, onMarkAsRead }: 
                 onMarkAsRead(announcement.id)
             }
 
+            AnnouncementsAnalytics.markedRead(announcement.id)
             router.refresh()
         } catch (error) {
             console.error("Failed to mark as read", error)
             setIsMarkingRead(false)
             setOptimisticRead(false) // Revert on error
+        }
+    }
+
+    const handleCardClick = () => {
+        AnnouncementsAnalytics.viewed(announcement.id, announcement.priority)
+        if (onClick) {
+            onClick()
         }
     }
 
@@ -85,7 +94,7 @@ export function AnnouncementCard({ announcement, slug, onClick, onMarkAsRead }: 
                         ? "border-orange-200 bg-card dark:border-orange-900/50"
                         : "border-border/50 bg-card"
                 )}
-                onClick={onClick}
+                onClick={handleCardClick}
             >
                 {/* Priority Strip for Urgent items */}
                 {isUrgent && (

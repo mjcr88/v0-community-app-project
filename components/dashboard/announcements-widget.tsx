@@ -96,7 +96,7 @@ export function AnnouncementsWidget({ slug, tenantId, userId }: AnnouncementsWid
                 </div>
 
                 <p className="text-sm text-muted-foreground line-clamp-2">
-                  {announcement.description}
+                  {announcement.description.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')}
                 </p>
 
                 <div className="flex items-center gap-3 pt-2 mt-1">

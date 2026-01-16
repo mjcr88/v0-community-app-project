@@ -23,6 +23,7 @@ import { RequestBorrowDialog } from "./request-borrow-dialog"
 import { ListingFlagDetails } from "./listing-flag-details"
 import { RioConfirmationModal } from "@/components/feedback/rio-confirmation-modal"
 import { SharedPhotoGallery } from "@/components/shared/SharedPhotoGallery"
+import { MarketplaceAnalytics } from "@/lib/analytics"
 
 interface ExchangeListingDetailModalProps {
   listingId: string
@@ -34,6 +35,10 @@ interface ExchangeListingDetailModalProps {
   locations: any[]
   categories?: Array<{ id: string; name: string }>
   neighborhoods?: Array<{ id: string; name: string }>
+  initialListing?: any
+  initialFlagCount?: number
+  initialHasUserFlagged?: boolean
+  initialPendingRequest?: any
   open: boolean
   onOpenChange: (open: boolean) => void
 }
@@ -94,31 +99,36 @@ export function ExchangeListingDetailModal({
   locations,
   categories = [],
   neighborhoods = [],
+  initialListing,
+  initialFlagCount,
+  initialHasUserFlagged,
+  initialPendingRequest,
   open,
   onOpenChange,
 }: ExchangeListingDetailModalProps) {
-  const [listing, setListing] = useState<any>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null)
+  const [listing, setListing] = useState<any>(initialListing || null)
+  const [isLoading, setIsLoading] = useState(!initialListing)
+  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(initialListing?.hero_photo || initialListing?.photos?.[0] || null)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isPausing, setIsPausing] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isArchiving, setIsArchiving] = useState(false)
   const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false)
-  const [pendingRequest, setPendingRequest] = useState<any>(null)
+  const [pendingRequest, setPendingRequest] = useState<any>(initialPendingRequest || null)
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false)
-  const [flagCount, setFlagCount] = useState(0)
-  const [hasUserFlagged, setHasUserFlagged] = useState(false)
+  const [flagCount, setFlagCount] = useState(initialFlagCount || 0)
+  const [hasUserFlagged, setHasUserFlagged] = useState(initialHasUserFlagged || false)
   const [flagDetails, setFlagDetails] = useState<any[]>([])
   const router = useRouter()
   const { showFeedback } = useRioFeedback()
 
   useEffect(() => {
     if (open && listingId) {
-      loadListing()
-      loadFlagStatus()
-      if (userId) {
+      MarketplaceAnalytics.listingViewed(listingId)
+      if (!initialListing) loadListing()
+      if (initialFlagCount === undefined) loadFlagStatus()
+      if (userId && !initialPendingRequest) {
         loadPendingRequest()
       }
     }
@@ -191,6 +201,9 @@ export function ExchangeListingDetailModal({
     const result = await pauseExchangeListing(listingId, tenantSlug, tenantId)
 
     if (result.success) {
+      if (!result.is_available) {
+        MarketplaceAnalytics.listingPaused(listingId)
+      }
       showFeedback({
         title: result.is_available ? "Listing Resumed" : "Listing Paused",
         description: result.is_available ? "Your listing is now visible to others." : "Your listing is now hidden from others.",

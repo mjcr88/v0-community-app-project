@@ -40,7 +40,7 @@ export default async function JourneyPage({ params }: { params: Promise<{ slug: 
       .select("id, journey_stage, estimated_move_in_date")
       .eq("id", user.id)
       .eq("tenant_id", tenant.id)
-      .eq("role", "resident")
+      .in("role", ["resident", "tenant_admin"])
       .single()
 
     resident = residentData

@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { createClient } from "@/lib/supabase/client"
 import { Search, Check } from "lucide-react"
 import { Input } from "@/components/ui/input"
+import { OnboardingAnalytics } from "@/lib/analytics"
 
 interface InterestsFormProps {
   tenant: {
@@ -71,6 +72,7 @@ export function InterestsForm({ tenant, resident, interests, residentInterests, 
       }
 
       console.log("[v0] Interests saved successfully")
+      OnboardingAnalytics.stepCompleted(4, 'interests')
       router.push(`/t/${tenant.slug}/onboarding/skills`)
     } catch (error) {
       console.error("[v0] Error updating interests:", error)
@@ -80,6 +82,7 @@ export function InterestsForm({ tenant, resident, interests, residentInterests, 
   }
 
   const handleSkip = () => {
+    OnboardingAnalytics.skipped(4)
     router.push(`/t/${tenant.slug}/onboarding/skills`)
   }
 

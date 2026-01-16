@@ -68,6 +68,7 @@ export function EditResidentForm({
   const [inviteLoading, setInviteLoading] = useState(false)
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false)
   const [inviteUrl, setInviteUrl] = useState("")
+  const [inviteEnv, setInviteEnv] = useState<"dev" | "prod">("dev")
   const [formData, setFormData] = useState({
     lot_id: resident.lot_id,
     first_name: resident.first_name,
@@ -114,7 +115,10 @@ export function EditResidentForm({
       return
     }
 
-    const url = `${window.location.origin}/t/${slug}/invite/${inviteToken}`
+    const baseUrl = inviteEnv === "prod"
+      ? "https://v0-community-app-project.vercel.app"
+      : window.location.origin
+    const url = `${baseUrl}/t/${slug}/invite/${inviteToken}`
     setInviteUrl(url)
     setInviteDialogOpen(true)
 
@@ -299,10 +303,27 @@ export function EditResidentForm({
                     {resident.invited_at ? "Invitation sent" : "Send invitation to resident"}
                   </p>
                 </div>
-                <Button type="button" onClick={handleInvite} disabled={inviteLoading} variant="outline">
-                  <Mail className="mr-2 h-4 w-4" />
-                  {inviteLoading ? "Sending..." : resident.invited_at ? "Resend Invite" : "Send Invite"}
-                </Button>
+                <div className="flex flex-col items-end gap-2">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Label htmlFor="invite_env" className="text-xs text-muted-foreground">Environment:</Label>
+                    <Select
+                      value={inviteEnv}
+                      onValueChange={(value: "dev" | "prod") => setInviteEnv(value)}
+                    >
+                      <SelectTrigger className="h-8 w-[120px] text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="dev">Localhost (Dev)</SelectItem>
+                        <SelectItem value="prod">Vercel (Prod)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button type="button" onClick={handleInvite} disabled={inviteLoading} variant="outline">
+                    <Mail className="mr-2 h-4 w-4" />
+                    {inviteLoading ? "Sending..." : resident.invited_at ? "Resend Invite" : "Send Invite"}
+                  </Button>
+                </div>
               </div>
             </div>
           )}

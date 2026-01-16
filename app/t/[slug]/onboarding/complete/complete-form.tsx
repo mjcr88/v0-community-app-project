@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { CheckCircle2, Sparkles, Loader2 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
+import { OnboardingAnalytics } from "@/lib/analytics"
 
 interface CompleteFormProps {
   tenant: {
@@ -52,6 +53,7 @@ export function CompleteForm({ tenant, resident, isSuperAdmin }: CompleteFormPro
       }
 
       console.log("[v0] Onboarding marked as complete for resident:", resident.id)
+      OnboardingAnalytics.completed()
 
       window.location.href = `/t/${tenant.slug}/dashboard`
     } catch (error) {

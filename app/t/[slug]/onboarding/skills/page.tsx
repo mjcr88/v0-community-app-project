@@ -52,10 +52,10 @@ export default async function SkillsPage({ params }: { params: Promise<{ slug: s
   } else {
     const { data: residentData } = await supabase
       .from("users")
-      .select("id")
+      .select("id, first_name, last_name")
       .eq("id", user.id)
       .eq("tenant_id", tenant.id)
-      .eq("role", "resident")
+      .in("role", ["resident", "tenant_admin"])
       .single()
 
     resident = residentData

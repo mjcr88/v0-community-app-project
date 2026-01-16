@@ -27,6 +27,10 @@ export function IdentityStep({ onNext, initialData }: IdentityStepProps) {
     const [birthCountry, setBirthCountry] = useState(initialData?.birthCountry || "")
     const [currentCountry, setCurrentCountry] = useState(initialData?.currentCountry || "")
 
+    console.log('[IdentityStep] initialData:', initialData)
+    console.log('[IdentityStep] birthCountry state:', birthCountry)
+    console.log('[IdentityStep] currentCountry state:', currentCountry)
+
     const [isUploading, setIsUploading] = useState(false)
     const { toast } = useToast()
 

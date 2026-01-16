@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { rsvpToCheckIn } from "@/app/actions/check-ins"
 import { cn } from "@/lib/utils"
+import { CheckInAnalytics } from "@/lib/analytics"
 
 interface CheckInRsvpQuickActionProps {
     checkInId: string
@@ -56,6 +57,7 @@ export function CheckInRsvpQuickAction({
 
             if (result.success) {
                 setLocalRsvpStatus(newStatus)
+                CheckInAnalytics.rsvp(checkInId, newStatus)
                 router.refresh()
                 toast.success(newStatus === "yes" ? "You joined the check-in!" : "You left the check-in.")
             } else {

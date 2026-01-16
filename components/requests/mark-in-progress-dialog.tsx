@@ -17,6 +17,7 @@ import { Clock } from 'lucide-react'
 import { updateRequestStatus } from "@/app/actions/resident-requests"
 import { useRouter } from 'next/navigation'
 import { toast } from "sonner"
+import { RequestsAnalytics } from "@/lib/analytics"
 
 interface MarkInProgressDialogProps {
   requestIds: string[]
@@ -44,6 +45,7 @@ export function MarkInProgressDialog({
         for (const requestId of requestIds) {
           const result = await updateRequestStatus(requestId, tenantId, tenantSlug, 'in_progress')
           if (result.success) {
+            RequestsAnalytics.updated(requestId, 'in_progress')
             successCount++
           } else {
             failCount++
@@ -65,7 +67,7 @@ export function MarkInProgressDialog({
     })
   }
 
-  const title = requestIds.length === 1 && requestTitle 
+  const title = requestIds.length === 1 && requestTitle
     ? `Mark "${requestTitle}" as in progress?`
     : `Mark ${requestIds.length} request(s) as in progress?`
 

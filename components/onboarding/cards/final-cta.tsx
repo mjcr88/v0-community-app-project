@@ -14,7 +14,7 @@ export function FinalCTACard() {
     const handleStart = () => {
         // Navigate to profile onboarding
         if (slug) {
-            router.push(`/t/${slug}/onboarding/profile`)
+            router.push(`/t/${slug}/onboarding/profile?source=product_tour`)
         } else {
             console.error("No slug found")
         }

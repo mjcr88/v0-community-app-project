@@ -19,6 +19,7 @@ import { XCircle } from 'lucide-react'
 import { updateRequestStatus } from "@/app/actions/resident-requests"
 import { useRouter } from 'next/navigation'
 import { toast } from "sonner"
+import { RequestsAnalytics } from "@/lib/analytics"
 
 interface MarkRejectedDialogProps {
   requestIds: string[]
@@ -57,6 +58,7 @@ export function MarkRejectedDialog({
         for (const requestId of requestIds) {
           const result = await updateRequestStatus(requestId, tenantId, tenantSlug, 'rejected', reason)
           if (result.success) {
+            RequestsAnalytics.updated(requestId, 'rejected')
             successCount++
           } else {
             failCount++
@@ -79,7 +81,7 @@ export function MarkRejectedDialog({
     })
   }
 
-  const title = requestIds.length === 1 && requestTitle 
+  const title = requestIds.length === 1 && requestTitle
     ? `Reject "${requestTitle}"?`
     : `Reject ${requestIds.length} request(s)?`
 
@@ -115,8 +117,8 @@ export function MarkRejectedDialog({
         </div>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
-          <AlertDialogAction 
-            onClick={handleMarkRejected} 
+          <AlertDialogAction
+            onClick={handleMarkRejected}
             disabled={isPending || !reason.trim()}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >

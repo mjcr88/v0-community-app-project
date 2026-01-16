@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { Combobox } from "@/components/ui/combobox"
 import { COUNTRIES, LANGUAGES } from "@/lib/data/countries-languages"
 import { createClient } from "@/lib/supabase/client"
+import { OnboardingAnalytics } from "@/lib/analytics"
 
 const COUNTRY_CODES = [
   { value: "+1", label: "+1 (US/Canada)" },
@@ -129,6 +130,7 @@ export function ProfileForm({ tenant, resident, isSuperAdmin }: ProfileFormProps
       }
 
       console.log("[v0] Profile data saved successfully")
+      OnboardingAnalytics.stepCompleted(3, 'profile')
       router.push(`/t/${tenant.slug}/onboarding/interests`)
     } catch (error) {
       console.error("[v0] Error updating profile:", error)
@@ -138,6 +140,7 @@ export function ProfileForm({ tenant, resident, isSuperAdmin }: ProfileFormProps
   }
 
   const handleSkip = () => {
+    OnboardingAnalytics.skipped(3)
     router.push(`/t/${tenant.slug}/onboarding/interests`)
   }
 

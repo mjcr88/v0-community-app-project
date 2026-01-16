@@ -22,6 +22,7 @@ import { MapPreviewWidget } from "@/components/map/map-preview-widget"
 import { PhotoManager } from "@/components/photo-manager"
 import { MultiSelect } from "@/components/ui/multi-select"
 import { CollapsibleCard } from "@/components/ui/collapsible-card"
+import { ProfileAnalytics, ErrorAnalytics } from "@/lib/analytics"
 
 interface Resident {
   id: string
@@ -166,6 +167,9 @@ export function ProfileEditForm({
 
       if (userError) throw userError
 
+      if (formData.about !== resident.about) ProfileAnalytics.aboutUpdated('bio')
+      if (formData.journeyStage !== resident.journey_stage) ProfileAnalytics.aboutUpdated('journey')
+
       // Handle Interests
       const { error: deleteInterestsError } = await supabase.from("user_interests").delete().eq("user_id", resident.id)
       if (deleteInterestsError) console.error("Error deleting interests:", deleteInterestsError)
@@ -218,9 +222,11 @@ export function ProfileEditForm({
         title: "Success",
         description: "Profile updated successfully!",
       })
+      ProfileAnalytics.updated(['profile'])
       router.refresh()
     } catch (error) {
       console.error("Error updating profile:", error)
+      ErrorAnalytics.actionFailed('update_profile', error instanceof Error ? error.message : "Unknown error")
       toast({
         title: "Error",
         description: "Failed to update profile. Please try again.",
@@ -239,6 +245,7 @@ export function ProfileEditForm({
     // as they are "header" elements, but also update local state.
     const supabase = createClient()
     await supabase.from("users").update({ banner_image_url: url }).eq("id", resident.id)
+    ProfileAnalytics.bannerUploaded()
     router.refresh()
   }
 
@@ -249,12 +256,14 @@ export function ProfileEditForm({
       hero_photo: url,
       profile_picture_url: url
     }).eq("id", resident.id)
+    ProfileAnalytics.photoUploaded()
     router.refresh()
   }
 
   const addLanguage = (language: string) => {
     if (language && !formData.languages.includes(language)) {
       setFormData({ ...formData, languages: [...formData.languages, language], languageSearch: "" })
+      ProfileAnalytics.languageAdded(language)
     }
   }
 
@@ -267,6 +276,7 @@ export function ProfileEditForm({
     if (newSkillTrimmed) {
       // Check if skill already exists in selected skills
       if (!formData.skills.some(s => s.skill_name.toLowerCase() === newSkillTrimmed.toLowerCase())) {
+        ProfileAnalytics.skillAdded(newSkillTrimmed, false)
         setFormData({
           ...formData,
           skills: [...formData.skills, { skill_name: newSkillTrimmed, open_to_requests: false }],
@@ -281,6 +291,10 @@ export function ProfileEditForm({
       ...formData,
       skills: formData.skills.filter((_: any, i: number) => i !== index),
     })
+    const skillName = formData.skills[index]?.skill_name
+    if (skillName) {
+      ProfileAnalytics.skillRemoved(skillName)
+    }
   }
 
   const toggleSkillOpenToRequests = (index: number) => {
@@ -539,7 +553,20 @@ export function ProfileEditForm({
                 <MultiSelect
                   options={availableInterests.map(i => ({ value: i.id, label: i.name }))}
                   selected={formData.selectedInterests}
-                  onChange={(selected) => setFormData({ ...formData, selectedInterests: selected })}
+                  onChange={(selected) => {
+                    // Track analytics
+                    const added = selected.find(id => !formData.selectedInterests.includes(id))
+                    if (added) {
+                      const interest = availableInterests.find(i => i.id === added)
+                      if (interest) ProfileAnalytics.interestAdded(interest.name)
+                    }
+                    const removed = formData.selectedInterests.find(id => !selected.includes(id))
+                    if (removed) {
+                      const interest = availableInterests.find(i => i.id === removed)
+                      if (interest) ProfileAnalytics.interestRemoved(interest.name)
+                    }
+                    setFormData({ ...formData, selectedInterests: selected })
+                  }}
                   placeholder="Select interests..."
                   searchPlaceholder="Search interests..."
                   emptyMessage="No interests found."

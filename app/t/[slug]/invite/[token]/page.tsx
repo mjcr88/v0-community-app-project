@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation"
 import { createServerClient } from "@/lib/supabase/server"
+import NextImage from "next/image"
 import { SignupForm } from "./signup-form"
 import { validateInviteToken } from "./validate-invite-action"
 

@@ -11,6 +11,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Input } from "@/components/ui/input"
 import { Loader2 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
+import { OnboardingAnalytics } from "@/lib/analytics"
 
 interface JourneyFormProps {
   tenant: {
@@ -83,6 +84,7 @@ export function JourneyForm({ tenant, resident, isSuperAdmin }: JourneyFormProps
       }
 
       console.log("[v0] Journey data saved successfully")
+      OnboardingAnalytics.stepCompleted(2, 'journey')
       router.push(`/t/${tenant.slug}/onboarding/profile`)
     } catch (error) {
       console.error("[v0] Error updating journey:", error)
@@ -92,6 +94,7 @@ export function JourneyForm({ tenant, resident, isSuperAdmin }: JourneyFormProps
   }
 
   const handleSkip = () => {
+    OnboardingAnalytics.skipped(2)
     router.push(`/t/${tenant.slug}/onboarding/profile`)
   }
 

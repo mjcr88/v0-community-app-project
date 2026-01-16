@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { ProfileWizardModal } from "./profile-wizard-modal"
+import { TourAnalytics } from "@/lib/analytics"
 
 interface ProfileWizardWrapperProps {
     userId: string
@@ -34,6 +35,9 @@ export function ProfileWizardWrapper({
     }, [tenantSlug])
 
     const handleClose = () => {
+        // Track premature exit
+        TourAnalytics.profileTourSkipped(currentStep)
+
         // Navigate immediately to avoid showing the white card background
         const dashboardUrl = `/t/${tenantSlug}/dashboard`
         console.log('[ProfileWizard] Navigating to:', dashboardUrl)

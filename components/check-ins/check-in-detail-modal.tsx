@@ -16,6 +16,7 @@ import { getCheckInById, deleteCheckIn, extendCheckIn, endCheckInEarly } from "@
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { useRioFeedback } from "@/components/feedback/rio-feedback-provider"
+import { CheckInAnalytics, ErrorAnalytics } from "@/lib/analytics"
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { RioConfirmationModal } from "@/components/feedback/rio-confirmation-modal"
@@ -56,6 +57,7 @@ export function CheckInDetailModal({
 
   useEffect(() => {
     if (open && checkInId) {
+      CheckInAnalytics.viewed(checkInId)
       loadCheckIn()
     }
   }, [open, checkInId])
@@ -79,6 +81,7 @@ export function CheckInDetailModal({
     const result = await extendCheckIn(checkInId, tenantId, tenantSlug, additionalMinutes)
 
     if (result.success) {
+      CheckInAnalytics.extended(checkInId, additionalMinutes)
       showFeedback({
         title: "Check-in Extended",
         description: `You've added ${additionalMinutes} minutes to your check-in.`,
@@ -94,6 +97,7 @@ export function CheckInDetailModal({
         variant: "error",
         image: "/rio/rio_no_results_confused.png"
       })
+      ErrorAnalytics.actionFailed('extend_checkin', result.error || "Failed to extend check-in")
     }
 
     setIsExtending(false)
@@ -104,6 +108,7 @@ export function CheckInDetailModal({
     const result = await endCheckInEarly(checkInId, tenantId, tenantSlug)
 
     if (result.success) {
+      CheckInAnalytics.endedEarly(checkInId)
       showFeedback({
         title: "Check-in Ended",
         description: "Your check-in has been ended early.",
@@ -119,6 +124,7 @@ export function CheckInDetailModal({
         variant: "error",
         image: "/rio/rio_no_results_confused.png"
       })
+      ErrorAnalytics.actionFailed('end_checkin', result.error || "Failed to end check-in")
     }
 
     setIsEnding(false)
@@ -139,6 +145,7 @@ export function CheckInDetailModal({
         variant: "error",
         image: "/rio/rio_no_results_confused.png"
       })
+      ErrorAnalytics.actionFailed('delete_checkin', result.error || "Failed to delete check-in")
     }
 
     setIsDeleting(false)

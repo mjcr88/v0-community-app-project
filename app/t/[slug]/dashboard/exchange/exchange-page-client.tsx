@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Search, Filter, X, ArrowUpDown, Tag, DollarSign, Sparkles, CheckCircle2 } from 'lucide-react'
 import { ExchangeListingCard } from "@/components/exchange/exchange-listing-card"
 import { ExchangeListingDetailModal } from "@/components/exchange/exchange-listing-detail-modal"
+import { ExchangeFilterCards, type FilterSectionType } from "@/components/exchange/exchange-filter-cards"
 import { RioEmptyState } from "@/components/exchange/rio-empty-state"
 import { getCategoryEmoji } from "@/lib/exchange-category-emojis"
 import type { ExchangePricingType, ExchangeCondition } from "@/types/exchange"
@@ -63,7 +64,7 @@ interface Location {
   coordinates?: { lat: number; lng: number } | null
 }
 
-type FilterSection = "categories" | "price" | "condition" | "availability" | "sort" | null
+type FilterSection = FilterSectionType
 
 export function ExchangePageClient({
   listings,
@@ -230,13 +231,7 @@ export function ExchangePageClient({
     setIsDetailModalOpen(true)
   }
 
-  const filterSections = [
-    { id: "categories" as const, label: "Categories", icon: Tag },
-    { id: "price" as const, label: "Price", icon: DollarSign },
-    { id: "condition" as const, label: "Condition", icon: Sparkles },
-    { id: "availability" as const, label: "Availability", icon: CheckCircle2 },
-    { id: "sort" as const, label: "Sort", icon: ArrowUpDown },
-  ]
+
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
@@ -254,23 +249,10 @@ export function ExchangePageClient({
         </div>
 
         {/* Filter Cards */}
-        <div className="grid grid-cols-3 gap-3">
-          {filterSections.map((section) => (
-            <button
-              key={section.id}
-              onClick={() => setActiveFilter(activeFilter === section.id ? null : section.id)}
-              className={cn(
-                "flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-200 h-20 w-full hover:shadow-md",
-                activeFilter === section.id
-                  ? "bg-primary/10 border-primary text-primary ring-1 ring-primary shadow-sm"
-                  : "bg-card border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-              )}
-            >
-              <section.icon className={cn("w-5 h-5 mb-1.5", activeFilter === section.id ? "text-primary" : "text-muted-foreground")} />
-              <span className="text-xs font-medium text-center leading-tight">{section.label}</span>
-            </button>
-          ))}
-        </div>
+        <ExchangeFilterCards
+          activeFilter={activeFilter}
+          onFilterChange={setActiveFilter}
+        />
 
         {/* Active Filter Chips */}
         {hasActiveFilters && (

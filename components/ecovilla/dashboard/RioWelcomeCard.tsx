@@ -45,7 +45,7 @@ export function RioWelcomeCard({ slug }: { slug: string }) {
                             variant="outline"
                             className="bg-white/50 hover:bg-white border-orange-200 text-orange-900 shadow-sm gap-2"
                         >
-                            <Link href={`/t/${slug}/onboarding/profile`}>
+                            <Link href={`/t/${slug}/onboarding/profile?source=dashboard`}>
                                 Complete Profile
                             </Link>
                         </Button>

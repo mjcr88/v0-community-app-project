@@ -14,6 +14,7 @@ import { Alert, AlertDescription } from "@/components/library/alert"
 import { ShineBorder } from "@/components/library/shine-border"
 import { MagicCard } from "@/components/library/magic-card"
 import { cn } from "@/lib/utils"
+import { identifyUser, ErrorAnalytics } from "@/lib/analytics"
 
 interface TenantLoginFormProps {
   tenant: {
@@ -93,11 +94,21 @@ export function TenantLoginForm({ tenant }: TenantLoginFormProps) {
 
       // Super admins can access any tenant
       if (userData?.role === "super_admin") {
+        identifyUser(authData.user.id, {
+          tenant_slug: tenant.slug,
+          role: 'super_admin',
+          email: authData.user.email,
+        })
         router.push(`/t/${tenant.slug}/admin/dashboard`)
         return
       }
 
       if (userData?.role === "tenant_admin" && userData?.tenant_id === tenant.id) {
+        identifyUser(authData.user.id, {
+          tenant_slug: tenant.slug,
+          role: 'tenant_admin',
+          email: authData.user.email,
+        })
         router.push(`/t/${tenant.slug}/admin/dashboard`)
         return
       }
@@ -115,6 +126,13 @@ export function TenantLoginForm({ tenant }: TenantLoginFormProps) {
         throw new Error("You do not have access to this community")
       }
 
+      // Identify the user for analytics
+      identifyUser(authData.user.id, {
+        tenant_slug: tenant.slug,
+        role: residentData.is_tenant_admin ? 'tenant_admin' : 'resident',
+        email: authData.user.email,
+      })
+
       // Always redirect to dashboard (no onboarding check)
       if (residentData.is_tenant_admin) {
         router.push(`/t/${tenant.slug}/admin/dashboard`)
@@ -123,6 +141,7 @@ export function TenantLoginForm({ tenant }: TenantLoginFormProps) {
       }
     } catch (err: any) {
       console.error("[v0] Login error:", err.message)
+      ErrorAnalytics.actionFailed('login', err.message || "Unknown login error")
       setError(err.message || "An error occurred")
     } finally {
       setLoading(false)

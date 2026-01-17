@@ -33,15 +33,26 @@ export function NeighborhoodMultiSelect({ tenantId, selectedNeighborhoodIds, onC
     }
 
     async function fetchNeighborhoods() {
-      setIsLoading(true)
-      const result = await getNeighborhoods(tenantId)
-      if (result.success) {
-        setNeighborhoods(result.data)
+      if (!tenantId) {
+        setIsLoading(false)
+        return
       }
-      setIsLoading(false)
+
+      setIsLoading(true)
+      try {
+        const result = await getNeighborhoods(tenantId)
+        if (result.success) {
+          setNeighborhoods(result.data)
+        }
+      } catch (error) {
+        console.error("Error fetching neighborhoods:", error)
+      } finally {
+        setIsLoading(false)
+      }
     }
     fetchNeighborhoods()
-  }, [tenantId, initialNeighborhoods])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- initialNeighborhoods is intentionally excluded; it's only used for initial state
+  }, [tenantId])
 
   const filteredNeighborhoods = neighborhoods.filter((n) => n.name.toLowerCase().includes(searchTerm.toLowerCase()))
 

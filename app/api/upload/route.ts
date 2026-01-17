@@ -27,8 +27,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "File type not allowed" }, { status: 400 })
     }
 
-    // Validate file size (max 5MB)
-    const maxSize = 5 * 1024 * 1024 // 5MB
+    // Validate file size (max 10MB)
+    const maxSize = 10 * 1024 * 1024 // 10MB
     const sizeValidation = validateFileSize(file, maxSize)
     if (!sizeValidation.valid) {
       return NextResponse.json({ error: sizeValidation.error }, { status: 400 })

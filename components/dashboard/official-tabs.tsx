@@ -11,11 +11,12 @@ interface OfficialTabsProps {
     tenantId: string
     announcementsEnabled: boolean
     documentsEnabled: boolean
+    defaultTab?: string
 }
 
-export function OfficialTabs({ announcements, documents, slug, userId, tenantId, announcementsEnabled, documentsEnabled }: OfficialTabsProps) {
+export function OfficialTabs({ announcements, documents, slug, userId, tenantId, announcementsEnabled, documentsEnabled, defaultTab }: OfficialTabsProps) {
     // Determine default tab based on what's enabled
-    const defaultTab = announcementsEnabled ? "announcements" : (documentsEnabled ? "documents" : "announcements")
+    const initialTab = defaultTab || (announcementsEnabled ? "announcements" : (documentsEnabled ? "documents" : "announcements"))
 
     return (
         <div className="space-y-8">
@@ -27,7 +28,7 @@ export function OfficialTabs({ announcements, documents, slug, userId, tenantId,
                 </div>
             </div>
 
-            <Tabs defaultValue={defaultTab} className="space-y-8">
+            <Tabs defaultValue={initialTab} className="space-y-8">
                 {/* Main section tabs - Styled as pills/buttons below header */}
                 <TabsList className="bg-muted/30 p-1 rounded-lg h-auto inline-flex w-full md:w-auto">
                     {announcementsEnabled && (

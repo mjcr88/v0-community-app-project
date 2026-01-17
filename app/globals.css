@@ -363,6 +363,7 @@
     font-family: var(--font-sans);
     font-feature-settings: "rlig" 1, "calt" 1;
     touch-action: pan-x pan-y;
+    overflow-x: hidden;
   }
 
   /* Smooth scrolling (respects reduced motion) */

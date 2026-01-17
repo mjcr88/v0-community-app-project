@@ -90,10 +90,10 @@ export function HouseholdStep({ onNext, onBack, initialData }: HouseholdStepProp
         const file = e.target.files?.[0]
         if (!file) return
 
-        if (file.size > 5 * 1024 * 1024) {
+        if (file.size > 10 * 1024 * 1024) {
             toast({
                 title: "File too large",
-                description: "Image must be less than 5MB",
+                description: "Image must be less than 10MB",
                 variant: "destructive",
             })
             return

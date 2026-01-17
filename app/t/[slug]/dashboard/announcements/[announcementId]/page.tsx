@@ -70,7 +70,7 @@ export default async function AnnouncementDetailPage({ params }: AnnouncementDet
       {/* Top Navigation */}
       <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b">
         <div className="container max-w-3xl mx-auto px-4 h-14 flex items-center">
-          <Link href={`/t/${slug}/dashboard/announcements`}>
+          <Link href={`/t/${slug}/dashboard/official?tab=announcements`}>
             <Button variant="ghost" size="sm" className="gap-2 -ml-2 text-muted-foreground hover:text-foreground">
               <ArrowLeft className="h-4 w-4" />
               Back to Announcements

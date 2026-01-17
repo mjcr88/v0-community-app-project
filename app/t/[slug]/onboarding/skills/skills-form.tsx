@@ -177,7 +177,10 @@ export function SkillsForm({ tenant, resident, skills, residentSkills, isSuperAd
                   {showCreateOption && (
                     <button
                       type="button"
-                      onClick={() => handleCreateSkill(searchQuery)}
+                      onMouseDown={(e) => {
+                        e.preventDefault() // Prevent focus loss
+                        handleCreateSkill(searchQuery)
+                      }}
                       disabled={isAddingSkill}
                       className="w-full text-left px-3 py-2 hover:bg-accent transition-colors border-b flex items-center gap-2 bg-primary/5"
                     >
@@ -186,12 +189,13 @@ export function SkillsForm({ tenant, resident, skills, residentSkills, isSuperAd
                     </button>
                   )}
 
-                  {filteredSkills.length > 0 ? (
+                  {filteredSkills.length > 0 && (
                     filteredSkills.map((skill) => (
                       <button
                         key={skill.id}
                         type="button"
-                        onClick={() => {
+                        onMouseDown={(e) => {
+                          e.preventDefault() // Prevent focus loss
                           toggleSkill({ id: skill.id, name: skill.name })
                           setSearchQuery("")
                         }}
@@ -210,11 +214,12 @@ export function SkillsForm({ tenant, resident, skills, residentSkills, isSuperAd
                         )}
                       </button>
                     ))
-                  ) : !showCreateOption ? (
+                  )}
+                  {filteredSkills.length === 0 && !showCreateOption && (
                     <div className="px-3 py-2 text-sm text-muted-foreground">
                       {searchQuery ? `No skills found matching "${searchQuery}"` : "No more skills available"}
                     </div>
-                  ) : null}
+                  )}
                 </div>
               )}
             </div>

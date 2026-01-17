@@ -44,7 +44,7 @@ export default async function DocumentDetailPage({
         <div className="space-y-6 max-w-4xl mx-auto pb-12">
             <div className="flex items-center gap-2">
                 <Button variant="ghost" size="sm" asChild>
-                    <Link href={`/t/${slug}/dashboard/official`}>
+                    <Link href={`/t/${slug}/dashboard/official?tab=documents`}>
                         <ChevronLeft className="h-4 w-4 mr-1" />
                         Back to Documents
                     </Link>

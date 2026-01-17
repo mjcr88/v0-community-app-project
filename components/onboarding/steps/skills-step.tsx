@@ -16,7 +16,9 @@ interface SkillsStepProps {
 
 interface SkillSelection {
     id: string
+    name?: string
     openToRequests: boolean
+    isNew?: boolean
 }
 
 export function SkillsStep({ onNext, onBack, initialData, availableSkills = [] }: SkillsStepProps) {
@@ -47,13 +49,35 @@ export function SkillsStep({ onNext, onBack, initialData, availableSkills = [] }
         return () => document.removeEventListener("mousedown", handleClickOutside)
     }, [])
 
-    const toggleSkill = (skillId: string) => {
+    const toggleSkill = (skillId: string, skillName?: string) => {
         const exists = selected.find(s => s.id === skillId)
         if (exists) {
             setSelected(prev => prev.filter(s => s.id !== skillId))
         } else {
-            setSelected(prev => [...prev, { id: skillId, openToRequests: false }])
+            setSelected(prev => [...prev, { id: skillId, name: skillName, openToRequests: false }])
         }
+    }
+
+    const addCustomSkill = (name: string) => {
+        const trimmedName = name.trim();
+        if (!trimmedName) return;
+
+        // Generate a temporary ID for new skills
+        const tempId = `new:${trimmedName}`;
+
+        // Check if already selected
+        if (selected.some(s => s.id === tempId || s.name?.toLowerCase() === trimmedName.toLowerCase())) {
+            return;
+        }
+
+        setSelected(prev => [...prev, {
+            id: tempId,
+            name: trimmedName,
+            openToRequests: false,
+            isNew: true
+        }])
+        setSearchQuery("")
+        setShowDropdown(false)
     }
 
     const toggleOpenToRequests = (skillId: string) => {
@@ -75,8 +99,14 @@ export function SkillsStep({ onNext, onBack, initialData, availableSkills = [] }
         skill.name.toLowerCase().includes(searchQuery.toLowerCase())
     )
 
+    // Check if exact match exists in available skills
+    const exactMatch = filteredSkills.find(s => s.name.toLowerCase() === searchQuery.trim().toLowerCase())
+
     // Get selected skill objects for display
     const selectedSkills = selected.map(s => {
+        if (s.isNew) {
+            return { id: s.id, name: s.name || "", description: "Custom skill", openToRequests: s.openToRequests, isNew: true }
+        }
         const skill = availableSkills.find(sk => sk.id === s.id)
         return skill ? { ...skill, openToRequests: s.openToRequests } : null
     }).filter(Boolean)
@@ -109,13 +139,35 @@ export function SkillsStep({ onNext, onBack, initialData, availableSkills = [] }
                                     setShowDropdown(true)
                                 }}
                                 onFocus={() => setShowDropdown(true)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && searchQuery.trim() && !exactMatch) {
+                                        e.preventDefault()
+                                        addCustomSkill(searchQuery)
+                                    }
+                                }}
                                 className="pl-9 h-12"
                             />
                         </div>
 
                         {/* Dropdown */}
-                        {showDropdown && filteredSkills.length > 0 && (
+                        {showDropdown && (
                             <div className="absolute top-full left-0 right-0 mt-2 max-h-60 overflow-y-auto bg-popover border rounded-xl shadow-lg z-10">
+                                {searchQuery.trim() && !exactMatch && (
+                                    <button
+                                        type="button"
+                                        onMouseDown={(e) => {
+                                            e.preventDefault()
+                                            addCustomSkill(searchQuery)
+                                        }}
+                                        className="w-full px-4 py-3 text-left hover:bg-muted/50 transition-colors flex items-center gap-2 text-primary"
+                                    >
+                                        <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">
+                                            <Search className="h-3 w-3" />
+                                        </div>
+                                        <span className="font-medium">Create "{searchQuery}"</span>
+                                    </button>
+                                )}
+
                                 {filteredSkills.map((skill) => {
                                     const isSelected = selected.some(s => s.id === skill.id)
                                     return (
@@ -140,12 +192,12 @@ export function SkillsStep({ onNext, onBack, initialData, availableSkills = [] }
                                         </button>
                                     )
                                 })}
-                            </div>
-                        )}
 
-                        {showDropdown && searchQuery && filteredSkills.length === 0 && (
-                            <div className="absolute top-full left-0 right-0 mt-2 bg-popover border rounded-xl shadow-lg z-10 p-4 text-center text-sm text-muted-foreground">
-                                No skills found matching "{searchQuery}"
+                                {filteredSkills.length === 0 && !searchQuery && (
+                                    <div className="p-4 text-center text-sm text-muted-foreground">
+                                        Type to search or add skills
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>

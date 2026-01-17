@@ -67,7 +67,7 @@ export default async function PublicProfilePage({
           name
         )
       ),
-      family_units (
+      family_units:family_units!users_family_unit_id_fkey (
         name
       ),
       user_interests (

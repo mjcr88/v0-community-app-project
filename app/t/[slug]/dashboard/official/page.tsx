@@ -15,6 +15,10 @@ export default async function OfficialPage({
     const { tab } = await searchParams
     const supabase = await createClient()
 
+    // Validate tab
+    const validTabs = ["announcements", "documents"]
+    const activeTab = tab && validTabs.includes(tab) ? tab : "announcements"
+
     // Authentication check
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) redirect(`/t/${slug}/login`)
@@ -41,7 +45,7 @@ export default async function OfficialPage({
                 tenantId={tenant.id}
                 announcementsEnabled={tenant.announcements_enabled !== false}
                 documentsEnabled={tenant.documents_enabled !== false}
-                defaultTab={tab}
+                defaultTab={activeTab}
             />
         </div>
     )

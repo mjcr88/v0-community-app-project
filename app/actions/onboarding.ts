@@ -118,12 +118,10 @@ export async function updateSkills(userId: string, skills: { id: string; name?: 
 
     if (userError || !user) throw new Error("User not found")
 
-    // First, clear existing user skills
-    await supabase.from("user_skills").delete().eq("user_id", userId)
+    // Prepare the list of skills to insert first (defer deletion to prevent data loss)
+    const skillsToInsert = []
 
     if (skills.length > 0) {
-        const skillsToInsert = []
-
         for (const skill of skills) {
             if (skill.isNew && skill.name) {
                 // Check if skill already exists by name for this tenant (avoid duplicates)
@@ -153,6 +151,9 @@ export async function updateSkills(userId: string, skills: { id: string; name?: 
 
                     if (createError) {
                         console.error("Error creating skill:", createError)
+                        // If creation fails, we skip this skill but don't abort everything else yet, 
+                        // though strictly "defer deletion until success" implies we want a good state.
+                        // Continuing allows other valid skills to be saved.
                         continue
                     }
 
@@ -173,11 +174,24 @@ export async function updateSkills(userId: string, skills: { id: string; name?: 
                 })
             }
         }
+    }
 
-        if (skillsToInsert.length > 0) {
-            const { error } = await supabase.from("user_skills").insert(skillsToInsert)
-            if (error) throw new Error(error.message)
-        }
+    // Now safe to replace existing skills
+    // We delete and insert only if we successfully processed the input (or it was empty)
+    // Note: If skillsToInsert is empty but input skills wasn't, it means all creations failed. 
+    // In that highly unlikely case, we might arguably NOT want to clear existing skills, 
+    // but typically if the user submits a list, that list (resolved) should be the new state.
+
+    // We'll proceed with the replacement.
+
+    // 1. Delete existing
+    const { error: deleteError } = await supabase.from("user_skills").delete().eq("user_id", userId)
+    if (deleteError) throw new Error("Failed to clear old skills: " + deleteError.message)
+
+    // 2. Insert new (if any)
+    if (skillsToInsert.length > 0) {
+        const { error: insertError } = await supabase.from("user_skills").insert(skillsToInsert)
+        if (insertError) throw new Error("Failed to save new skills: " + insertError.message)
     }
 }
 

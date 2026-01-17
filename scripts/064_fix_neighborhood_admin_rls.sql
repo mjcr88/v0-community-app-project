@@ -7,6 +7,7 @@ RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER
 STABLE
+SET search_path = public, auth, pg_catalog
 AS $$
 DECLARE
   is_admin BOOLEAN;

@@ -51,6 +51,7 @@ export function NeighborhoodMultiSelect({ tenantId, selectedNeighborhoodIds, onC
       }
     }
     fetchNeighborhoods()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- initialNeighborhoods is intentionally excluded; it's only used for initial state
   }, [tenantId])
 
   const filteredNeighborhoods = neighborhoods.filter((n) => n.name.toLowerCase().includes(searchTerm.toLowerCase()))

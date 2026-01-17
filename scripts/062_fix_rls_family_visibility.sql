@@ -7,6 +7,7 @@ RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER
 STABLE
+SET search_path = public, auth, pg_catalog
 AS $$
 DECLARE
   viewer_role TEXT;
@@ -45,7 +46,10 @@ BEGIN
   END IF;
 
   -- 1. Family Check: Always allow viewing members of the same family
-  IF viewer_family_id IS NOT NULL AND viewer_family_id = target_family_id THEN
+  -- IMPORTANT: Must verify tenant match to prevent cross-tenant leakage
+  IF viewer_family_id IS NOT NULL 
+     AND viewer_family_id = target_family_id 
+     AND viewer_tenant_id = target_tenant_id THEN
     RETURN TRUE;
   END IF;
   

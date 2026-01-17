@@ -30,9 +30,7 @@ type NeighborList = {
   id: string
   name: string
   description: string | null
-  members: Array<{
-    user_id: string
-  }>
+  member_ids: string[]
 }
 
 type ResidentInviteSelectorProps = {
@@ -79,7 +77,7 @@ export function ResidentInviteSelector({
           id: list.id,
           name: list.name,
           description: list.description,
-          members: list.neighbor_list_members?.map((m: any) => ({ user_id: m.neighbor_id })) || []
+          member_ids: list.member_ids || []
         }))
         setLists(transformedLists)
       }
@@ -119,7 +117,7 @@ export function ResidentInviteSelector({
   }
 
   const handleListToggle = (list: NeighborList) => {
-    const memberIds = list.members.map(m => m.user_id)
+    const memberIds = list.member_ids
 
     // Check if all members are currently selected
     const allSelected = memberIds.every(id => selectedResidentIds.includes(id))
@@ -141,11 +139,11 @@ export function ResidentInviteSelector({
 
   // Helper to check if a list is fully selected, partially selected, or unselected
   const getListSelectionState = (list: NeighborList) => {
-    if (list.members.length === 0) return "none"
-    const memberIds = list.members.map(m => m.user_id)
+    if (list.member_ids.length === 0) return "none"
+    const memberIds = list.member_ids
     const selectedCount = memberIds.filter(id => selectedResidentIds.includes(id)).length
 
-    if (selectedCount === list.members.length) return "all"
+    if (selectedCount === list.member_ids.length) return "all"
     if (selectedCount > 0) return "some"
     return "none"
   }
@@ -186,16 +184,15 @@ export function ResidentInviteSelector({
                       checked={selectedResidentIds.includes(resident.id)}
                       onCheckedChange={() => handleResidentToggle(resident.id)}
                     />
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={resident.profile_picture_url || undefined} />
-                      <AvatarFallback>
-                        {resident.first_name[0]}
-                        {resident.last_name[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                    <Label htmlFor={`resident-${resident.id}`} className="flex-1 cursor-pointer font-normal">
-                      {resident.first_name} {resident.last_name}
-                    </Label>
+                    <div className="flex-1">
+                      <Label htmlFor={`resident-${resident.id}`} className="cursor-pointer font-normal flex items-center gap-2">
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={resident.profile_picture_url || ""} />
+                          <AvatarFallback>{resident.first_name[0]}</AvatarFallback>
+                        </Avatar>
+                        {resident.first_name} {resident.last_name}
+                      </Label>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -203,7 +200,7 @@ export function ResidentInviteSelector({
 
             {selectedResidentIds.length > 0 && (
               <p className="text-sm text-muted-foreground">
-                {selectedResidentIds.length} resident{selectedResidentIds.length !== 1 ? "s" : ""} invited
+                {selectedResidentIds.length} resident{selectedResidentIds.length !== 1 ? "s" : ""} selected
               </p>
             )}
           </TabsContent>
@@ -234,19 +231,15 @@ export function ResidentInviteSelector({
                       checked={selectedFamilyIds.includes(family.id)}
                       onCheckedChange={() => handleFamilyToggle(family.id)}
                     />
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={family.profile_picture_url || undefined} />
-                      <AvatarFallback>
-                        <Users className="h-4 w-4" />
-                      </AvatarFallback>
-                    </Avatar>
                     <div className="flex-1">
-                      <Label htmlFor={`family-${family.id}`} className="cursor-pointer font-normal block">
+                      <Label htmlFor={`family-${family.id}`} className="cursor-pointer font-normal flex items-center gap-2">
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={family.profile_picture_url || ""} />
+                          <AvatarFallback>{family.name[0]}</AvatarFallback>
+                        </Avatar>
                         {family.name}
+                        <span className="text-muted-foreground text-xs">({family.member_count} members)</span>
                       </Label>
-                      <p className="text-xs text-muted-foreground">
-                        {family.member_count} member{family.member_count !== 1 ? "s" : ""}
-                      </p>
                     </div>
                   </div>
                 ))}
@@ -255,7 +248,7 @@ export function ResidentInviteSelector({
 
             {selectedFamilyIds.length > 0 && (
               <p className="text-sm text-muted-foreground">
-                {selectedFamilyIds.length} famil{selectedFamilyIds.length !== 1 ? "ies" : "y"} invited
+                {selectedFamilyIds.length} famil{selectedFamilyIds.length !== 1 ? "ies" : "y"} selected
               </p>
             )}
           </TabsContent>
@@ -297,18 +290,15 @@ export function ResidentInviteSelector({
                         className={selectionState === "some" ? "opacity-50" : ""}
                       />
                       <div className="flex-1">
-                        <Label htmlFor={`list-${list.id}`} className="cursor-pointer font-normal block flex items-center gap-2">
+                        <Label htmlFor={`list-${list.id}`} className="cursor-pointer font-normal flex items-center gap-2">
                           <List className="h-4 w-4 text-muted-foreground" />
                           {list.name}
                         </Label>
                         <p className="text-xs text-muted-foreground">
-                          {list.members.length} members
+                          {list.member_ids.length} members
                           {selectionState === "some" && " (some selected)"}
                           {selectionState === "all" && " (all selected)"}
                         </p>
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        <Info className="h-4 w-4" />
                       </div>
                     </div>
                   )

@@ -1,14 +1,13 @@
--- Fix Neighborhood visibility RLS policy by using a SECURITY DEFINER function
--- This avoids potential recursion or complexity limits when policies reference users table repeatedly
+-- Fix Neighborhood RLS policies by using a SECURITY DEFINER function
+-- This avoids infinite recursion when residents query neighborhoods, which queries users, which queries lots, etc.
 
--- 1. Create a secure function to check resident status
--- SECURITY DEFINER means this runs with the privileges of the creator (postgres/admin),
--- bypassing RLS checks on the users table for this specific query.
+-- 1. Create a secure function to check tenant residency that doesn't trigger RLS loop
 CREATE OR REPLACE FUNCTION public.is_resident_of_tenant(check_tenant_id UUID)
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER
 STABLE
+SET search_path = public, auth, pg_catalog
 AS $$
 DECLARE
   is_auth_resident BOOLEAN;
@@ -25,12 +24,12 @@ BEGIN
 END;
 $$;
 
--- 2. Update the policy to use the secure function
--- NOTE: Using just 'neighborhoods' as some environments might be sensitive to schema prefix if search_path is weird,
--- but standard public.neighborhoods should work if the table exists.
-DROP POLICY IF EXISTS "residents_view_neighborhoods_in_tenant" ON neighborhoods;
+-- 2. Drop the problematic recursive policy
+DROP POLICY IF EXISTS "residents_view_neighborhoods_in_tenant" ON public.neighborhoods;
 
-CREATE POLICY "residents_view_neighborhoods_in_tenant" ON neighborhoods
+-- 3. Create the new policy using the secure function
+-- This policy allows residents to see all neighborhoods in their tenant
+CREATE POLICY "residents_view_neighborhoods_in_tenant" ON public.neighborhoods
   FOR SELECT
   USING (
     public.is_resident_of_tenant(tenant_id)

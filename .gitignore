@@ -28,6 +28,3 @@ next-env.d.ts
 
 *storybook.log
 storybook-static
-
-# Agent files
-.agent/

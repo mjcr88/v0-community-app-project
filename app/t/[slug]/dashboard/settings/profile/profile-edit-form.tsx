@@ -152,7 +152,7 @@ export function ProfileEditForm({
       if (formData.birthCountry !== resident.birth_country) updates.birth_country = formData.birthCountry || null
       if (formData.currentCountry !== resident.current_country) updates.current_country = formData.currentCountry || null
       // Array comparison for languages
-      const languagesChanged = JSON.stringify(formData.languages.sort()) !== JSON.stringify((resident.languages || []).sort())
+      const languagesChanged = JSON.stringify([...formData.languages].sort()) !== JSON.stringify([...(resident.languages || [])].sort())
       if (languagesChanged) updates.languages = formData.languages
 
       if (formData.preferredLanguage !== resident.preferred_language) updates.preferred_language = formData.preferredLanguage || null
@@ -163,7 +163,7 @@ export function ProfileEditForm({
       if (formData.estimatedConstructionEndDate !== resident.estimated_construction_end_date) updates.estimated_construction_end_date = formData.estimatedConstructionEndDate || null
 
       // Photo arrays
-      const photosChanged = JSON.stringify(formData.photos.sort()) !== JSON.stringify((resident.photos || []).sort())
+      const photosChanged = JSON.stringify([...formData.photos].sort()) !== JSON.stringify([...(resident.photos || [])].sort())
       if (photosChanged) updates.photos = formData.photos
 
       if (formData.heroPhoto !== resident.hero_photo) {
@@ -253,25 +253,13 @@ export function ProfileEditForm({
 
   const handleBannerChange = async (url: string | null) => {
     setFormData(prev => ({ ...prev, bannerImageUrl: url }))
-    // We don't save immediately here to allow batch saving with the form, 
-    // but EditableProfileBanner might expect immediate feedback. 
-    // The previous implementation saved immediately. Let's keep that for banner/profile photo 
-    // as they are "header" elements, but also update local state.
-    const supabase = createClient()
-    await supabase.from("users").update({ banner_image_url: url }).eq("id", resident.id)
-    ProfileAnalytics.bannerUploaded()
-    router.refresh()
+    // Defer DB update to handleSubmit for consistency
   }
 
   const handleProfilePhotoChange = async (url: string | null) => {
     setFormData(prev => ({ ...prev, heroPhoto: url }))
-    const supabase = createClient()
-    await supabase.from("users").update({
-      hero_photo: url,
-      profile_picture_url: url
-    }).eq("id", resident.id)
-    ProfileAnalytics.photoUploaded()
-    router.refresh()
+    // We defer the DB update to handleSubmit to avoid race conditions and double-writing.
+    // The user sees the optimistic update via local state.
   }
 
   const addLanguage = (language: string) => {

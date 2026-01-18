@@ -193,9 +193,15 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
             .select()
           if (membersError) throw membersError
 
+
           // If primary contact was set to "new", update family unit now if we just inserted them
           if (needsNewFamilyUnit && primaryContactChoice === "new" && insertedResidents?.length > 0) {
-            await supabase.from("family_units").update({ primary_contact_id: insertedResidents[0].id }).eq("id", targetFamilyUnitId)
+            const idx = Number(familyData.primary_contact_index)
+            // Fallback to 0 if idx is out of bounds (though valid form state shouldn't allow this)
+            const chosenResident = insertedResidents[idx] || insertedResidents[0]
+            if (chosenResident && chosenResident.id) {
+              await supabase.from("family_units").update({ primary_contact_id: chosenResident.id }).eq("id", targetFamilyUnitId)
+            }
           }
         }
 
@@ -491,23 +497,30 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Family Name Field - Conditional */}
-              {(familyData.members.length > 1 || familyData.pets.length > 0) && (
-                <div className="space-y-2 p-4 bg-muted/50 rounded-lg border">
-                  <Label htmlFor="family_name">
-                    Household / Family Name <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="family_name"
-                    placeholder="e.g., Smith Family"
-                    value={familyData.family_name}
-                    onChange={(e) => setFamilyData({ ...familyData, family_name: e.target.value })}
-                    required
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Required when adding multiple members or pets.
-                  </p>
-                </div>
-              )}
+              {/* Show if:
+                  1. Creating a brand new household (Standard Flow) AND multiple members/pets
+                  2. Adding to a lot but creating a NEW family unit (needsNewFamilyUnit)
+              */}
+              {((assignmentChoice === "" && (familyData.members.length > 1 || familyData.pets.length > 0)) ||
+                (assignmentChoice === "add_to_family" && needsNewFamilyUnit)) && (
+                  <div className="space-y-2 p-4 bg-muted/50 rounded-lg border">
+                    <Label htmlFor="family_name">
+                      Household / Family Name <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="family_name"
+                      placeholder="e.g., Smith Family"
+                      value={familyData.family_name}
+                      onChange={(e) => setFamilyData({ ...familyData, family_name: e.target.value })}
+                      required={assignmentChoice === "add_to_family" ? true : undefined}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {assignmentChoice === "add_to_family"
+                        ? "Name for the new family unit you are creating."
+                        : "Required when adding multiple members or pets."}
+                    </p>
+                  </div>
+                )}
 
               {/* Members List */}
               <div className="space-y-4">

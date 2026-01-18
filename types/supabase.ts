@@ -1936,6 +1936,7 @@ export type Database = {
                     image: string | null
                     is_primary_contact: boolean | null
                     last_name: string | null
+                    last_sign_in_at: string | null
                     lot_id: string | null
                     name: string | null
                     phone: string | null
@@ -1959,6 +1960,7 @@ export type Database = {
                     image?: string | null
                     is_primary_contact?: boolean | null
                     last_name?: string | null
+                    last_sign_in_at?: string | null
                     lot_id?: string | null
                     name?: string | null
                     phone?: string | null
@@ -1982,13 +1984,13 @@ export type Database = {
                     image?: string | null
                     is_primary_contact?: boolean | null
                     last_name?: string | null
+                    last_sign_in_at?: string | null
                     lot_id?: string | null
                     name?: string | null
                     phone?: string | null
                     photos?: string[] | null
                     profile_picture_url?: string | null
                     role?: string
-                    status?: string
                     tenant_id?: string | null
                     updated_at?: string
                 }
@@ -2064,12 +2066,12 @@ type PublicSchema = Database["public"]
 export type Tables<
     PublicTableNameOrOptions extends
     | keyof (PublicSchema["Tables"] & PublicSchema["Views"])
-    | { schema: keyof Database },
-    TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
+    | { schema: Exclude<keyof Database, "__InternalSupabase"> },
+    TableName extends PublicTableNameOrOptions extends { schema: Exclude<keyof Database, "__InternalSupabase"> }
     ? keyof (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
         Database[PublicTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
+> = PublicTableNameOrOptions extends { schema: Exclude<keyof Database, "__InternalSupabase"> }
     ? (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
         Database[PublicTableNameOrOptions["schema"]]["Views"])[TableName] extends {
             Row: infer R
@@ -2089,11 +2091,11 @@ export type Tables<
 export type TablesInsert<
     PublicTableNameOrOptions extends
     | keyof PublicSchema["Tables"]
-    | { schema: keyof Database },
-    TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
+    | { schema: Exclude<keyof Database, "__InternalSupabase"> },
+    TableName extends PublicTableNameOrOptions extends { schema: Exclude<keyof Database, "__InternalSupabase"> }
     ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
+> = PublicTableNameOrOptions extends { schema: Exclude<keyof Database, "__InternalSupabase"> }
     ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
         Insert: infer I
     }
@@ -2110,11 +2112,11 @@ export type TablesInsert<
 export type TablesUpdate<
     PublicTableNameOrOptions extends
     | keyof PublicSchema["Tables"]
-    | { schema: keyof Database },
-    TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
+    | { schema: Exclude<keyof Database, "__InternalSupabase"> },
+    TableName extends PublicTableNameOrOptions extends { schema: Exclude<keyof Database, "__InternalSupabase"> }
     ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
+> = PublicTableNameOrOptions extends { schema: Exclude<keyof Database, "__InternalSupabase"> }
     ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
         Update: infer U
     }
@@ -2131,13 +2133,13 @@ export type TablesUpdate<
 export type Enums<
     DefaultSchemaEnumNameOrOptions extends
     | keyof PublicSchema["Enums"]
-    | { schema: keyof Database },
+    | { schema: Exclude<keyof Database, "__InternalSupabase"> },
     EnumName extends DefaultSchemaEnumNameOrOptions extends {
-        schema: keyof Database
+        schema: Exclude<keyof Database, "__InternalSupabase">
     }
     ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
+> = DefaultSchemaEnumNameOrOptions extends { schema: Exclude<keyof Database, "__InternalSupabase"> }
     ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
     : DefaultSchemaEnumNameOrOptions extends keyof PublicSchema["Enums"]
     ? PublicSchema["Enums"][DefaultSchemaEnumNameOrOptions]
@@ -2146,13 +2148,13 @@ export type Enums<
 export type CompositeTypes<
     PublicCompositeTypeNameOrOptions extends
     | keyof PublicSchema["CompositeTypes"]
-    | { schema: keyof Database },
+    | { schema: Exclude<keyof Database, "__InternalSupabase"> },
     CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-        schema: keyof Database
+        schema: Exclude<keyof Database, "__InternalSupabase">
     }
     ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
-> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
+> = PublicCompositeTypeNameOrOptions extends { schema: Exclude<keyof Database, "__InternalSupabase"> }
     ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
     : PublicCompositeTypeNameOrOptions extends keyof PublicSchema["CompositeTypes"]
     ? PublicSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]

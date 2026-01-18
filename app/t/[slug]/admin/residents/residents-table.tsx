@@ -32,6 +32,7 @@ type Resident = {
   created_at: string
   invited_at: string | null
   onboarding_completed: boolean
+  last_sign_in_at: string | null
   lots: {
     id: string
     lot_number: string
@@ -77,7 +78,7 @@ type CombinedEntity = {
   phone?: string | null
   species?: string
   created_at: string
-  status?: "passive" | "created" | "invited" | "active"
+  status?: "passive" | "created" | "invited" | "active" | "inactive"
   complaints?: { active: number; total: number }
 }
 
@@ -107,7 +108,19 @@ export function ResidentsTable({
   const [deleteDialogEntity, setDeleteDialogEntity] = useState<CombinedEntity | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
 
-  const getResidentStatus = (resident: Resident): "passive" | "created" | "invited" | "active" => {
+  const getResidentStatus = (resident: Resident): "passive" | "created" | "invited" | "active" | "inactive" => {
+    // If they have signed in
+    if (resident.last_sign_in_at) {
+      const lastSignIn = new Date(resident.last_sign_in_at)
+      const daysSinceSignIn = (new Date().getTime() - lastSignIn.getTime()) / (1000 * 3600 * 24)
+
+      // If signed in within 30 days, they are active
+      if (daysSinceSignIn <= 30) return "active"
+
+      // If signed in more than 30 days ago, they are inactive
+      return "inactive"
+    }
+
     if (resident.onboarding_completed) return "active"
     if (resident.invited_at) return "invited"
     if (!resident.email) return "passive"
@@ -272,12 +285,13 @@ export function ResidentsTable({
     return familyUnits.some((fu) => fu.primary_contact_id === residentId)
   }
 
-  const renderStatusBadge = (status: "passive" | "created" | "invited" | "active") => {
+  const renderStatusBadge = (status: "passive" | "created" | "invited" | "active" | "inactive") => {
     const variants = {
       passive: { label: "Passive", variant: "secondary" as const, className: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200" },
       created: { label: "Created", variant: "secondary" as const, className: "" },
       invited: { label: "Invited", variant: "outline" as const, className: "" },
-      active: { label: "Active", variant: "default" as const, className: "" },
+      active: { label: "Active", variant: "default" as const, className: "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800" },
+      inactive: { label: "Inactive", variant: "secondary" as const, className: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400" },
     }
     const { label, variant, className } = variants[status]
     return <Badge variant={variant} className={className}>{label}</Badge>

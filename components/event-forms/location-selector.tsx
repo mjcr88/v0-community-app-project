@@ -29,6 +29,7 @@ interface LocationSelectorProps {
     type?: "marker" | "polygon" | null
     path?: Array<{ lat: number; lng: number }> | null
   }) => void
+  restrictToCommunity?: boolean
 }
 
 const locationTypeLabels: Record<string, string> = {
@@ -82,6 +83,7 @@ export function LocationSelector({
   onCommunityLocationChange,
   onCustomLocationNameChange,
   onCustomLocationChange,
+  restrictToCommunity = false,
 }: LocationSelectorProps) {
   const [locations, setLocations] = useState<LocationWithRelations[]>([])
   const [loading, setLoading] = useState(true)
@@ -132,6 +134,11 @@ export function LocationSelector({
 
   // Search Mapbox Places
   useEffect(() => {
+    if (restrictToCommunity) {
+      setMapboxResults([])
+      return
+    }
+
     if (!searchQuery.trim() || !mapboxToken) {
       setMapboxResults([])
       return
@@ -261,7 +268,7 @@ export function LocationSelector({
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
           <Input
             id="location-search"
-            placeholder="Search community or public places..."
+            placeholder={restrictToCommunity ? "Search community locations..." : "Search community or public places..."}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onFocus={() => {
@@ -307,7 +314,7 @@ export function LocationSelector({
               )}
 
               {/* Mapbox Results */}
-              {mapboxResults.length > 0 && (
+              {mapboxResults.length > 0 && !restrictToCommunity && (
                 <>
                   <div className="px-3 py-2 text-xs font-semibold text-muted-foreground bg-muted sticky top-0 border-t">
                     Public Places

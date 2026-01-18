@@ -608,7 +608,7 @@ export function FamilyManagementForm({
       <div className="grid gap-6 lg:grid-cols-2">
         {/* LEFT COLUMN: Family Profile */}
         <div className="space-y-6">
-          <CollapsibleCard title="Family Profile" description="Manage your family's public profile" icon={Home}>
+          <CollapsibleCard title="Household Profile" description="Manage your household's public profile" icon={Home}>
             <div className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="family-name">Family Name</Label>
@@ -640,7 +640,7 @@ export function FamilyManagementForm({
           </CollapsibleCard>
 
           {/* Family Photos */}
-          <CollapsibleCard title="Family Photos" description="Share photos of your family" icon={Camera} defaultOpen={false}>
+          <CollapsibleCard title="Household Photos" description="Share photos of your household" icon={Camera} defaultOpen={false}>
             <PhotoManager
               photos={familyProfile.photos}
               heroPhoto={familyProfile.heroPhoto}
@@ -908,7 +908,7 @@ export function FamilyManagementForm({
 
           {/* Pets */}
           {petsEnabled && (
-            <CollapsibleCard title="Pets" description="Manage family pets" icon={PawPrint}>
+            <CollapsibleCard title="Household Pets" description="Manage household pets" icon={PawPrint}>
               {!showAddPet && (
                 <div className="mb-4 flex justify-end">
                   <Button onClick={() => setShowAddPet(true)}>

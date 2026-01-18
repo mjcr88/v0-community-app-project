@@ -36,14 +36,11 @@ export const metadata: Metadata = {
   description: "Community management app for Rio residents",
   generator: "v0.app",
   icons: {
-    icon: [
-      { url: '/icon.png' },
-      { url: '/icon.png', sizes: '32x32', type: 'image/png' },
-    ],
+    icon: '/icon.png',
     apple: [
-      { url: '/apple-icon.png', sizes: '180x180', type: 'image/png' },
+      { url: '/apple-icon.png' },
     ],
-  }
+  },
 }
 
 export const viewport = {

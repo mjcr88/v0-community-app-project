@@ -40,31 +40,16 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
   const [selectedLotId, setSelectedLotId] = useState("")
   const [existingResidents, setExistingResidents] = useState<ExistingResident[]>([])
   const [assignmentChoice, setAssignmentChoice] = useState<"add_to_family" | "reassign" | "">("")
-  const [creationType, setCreationType] = useState<"single" | "family" | "">("")
-  const [entityType, setEntityType] = useState<"person" | "pet" | "">("")
 
   const [needsNewFamilyUnit, setNeedsNewFamilyUnit] = useState(false)
   const [newFamilyUnitName, setNewFamilyUnitName] = useState("")
   const [primaryContactChoice, setPrimaryContactChoice] = useState<"existing" | "new">("existing")
-
-  const [formData, setFormData] = useState({
-    first_name: "",
-    last_name: "",
-    email: "",
-    phone: "",
-  })
 
   const [familyData, setFamilyData] = useState({
     family_name: "",
     members: [{ first_name: "", last_name: "", email: "", phone: "" }],
     pets: [{ name: "", species: "", breed: "" }],
     primary_contact_index: 0,
-  })
-
-  const [petData, setPetData] = useState({
-    name: "",
-    species: "",
-    breed: "",
   })
 
   useEffect(() => {
@@ -86,7 +71,6 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
           setNewFamilyUnitName(existingFamilyUnit.family_units.name)
           setNeedsNewFamilyUnit(false)
         } else {
-          // No valid family unit exists, will need to create one
           setNeedsNewFamilyUnit(true)
         }
       } else {
@@ -103,7 +87,7 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
     if (existingResidents.length > 0) {
       setStep(2) // Go to assignment choice
     } else {
-      setStep(3) // Skip to creation type
+      setStep(3) // Straight to unified creation form associated with new lot
     }
   }
 
@@ -116,32 +100,19 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
       )
       if (!hasExistingFamilyUnit) {
         setNeedsNewFamilyUnit(true)
-        setStep(2.5) // New intermediate step
+        setStep(2.5) // New intermediate step to name the family unit
         return
       }
+      // If family unit exists, we just need to collect member info in Step 3
     }
 
+    // If reassign, we also go to Step 3 to collect new resident info
     setStep(3)
   }
 
   const handleFamilyUnitSetup = () => {
     if (!newFamilyUnitName) return
     setStep(3)
-  }
-
-  const handleCreationTypeChoice = () => {
-    if (!creationType) return
-
-    if (creationType === "single") {
-      setStep(4) // Go to entity type selection
-    } else {
-      setStep(5) // Go to family form
-    }
-  }
-
-  const handleEntityTypeChoice = () => {
-    if (!entityType) return
-    setStep(5) // Go to form
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -152,9 +123,9 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
 
     try {
       const { data: tenant } = await supabase.from("tenants").select("id").eq("slug", slug).single()
-
       if (!tenant) throw new Error("Tenant not found")
 
+      // Logic for Reassigning Lot (clearing previous residents)
       if (assignmentChoice === "reassign" && existingResidents.length > 0) {
         const { error: updateError } = await supabase
           .from("users")
@@ -163,63 +134,103 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
             "id",
             existingResidents.map((r) => r.id),
           )
-
         if (updateError) throw updateError
       }
 
-      if (assignmentChoice === "add_to_family" && needsNewFamilyUnit) {
-        // Create new family unit
-        const { data: familyUnit, error: familyError } = await supabase
-          .from("family_units")
-          .insert({
-            name: newFamilyUnitName,
-            tenant_id: tenant.id,
-          })
-          .select()
-          .single()
+      // Logic A: Adding to an EXISTING family unit (or one we just defined in step 2.5) on this lot
+      if (assignmentChoice === "add_to_family") {
+        let targetFamilyUnitId = existingResidents.find(r => r.family_unit_id)?.family_unit_id;
 
-        if (familyError) throw familyError
-
-        // Insert new resident
-        const { data: newResident, error: newResidentError } = await supabase
-          .from("users")
-          .insert([
-            {
-              lot_id: selectedLotId,
-              first_name: formData.first_name,
-              last_name: formData.last_name,
-              email: formData.email || null,
-              phone: formData.phone || null,
-              family_unit_id: familyUnit.id,
+        // If we created a name in step 2.5 because it didn't exist
+        if (needsNewFamilyUnit && !targetFamilyUnitId) {
+          const { data: familyUnit, error: familyError } = await supabase
+            .from("family_units")
+            .insert({
+              name: newFamilyUnitName,
               tenant_id: tenant.id,
-              role: "resident" as const,
-            },
-          ])
-          .select()
-          .single()
+            })
+            .select()
+            .single()
 
-        if (newResidentError) throw newResidentError
+          if (familyError) throw familyError
+          targetFamilyUnitId = familyUnit.id;
 
-        // Update existing residents to link to family unit
-        const { error: updateExistingError } = await supabase
-          .from("users")
-          .update({ family_unit_id: familyUnit.id })
-          .in(
-            "id",
-            existingResidents.map((r) => r.id),
-          )
+          // Link existing residents to this new family unit
+          const { error: updateExistingError } = await supabase
+            .from("users")
+            .update({ family_unit_id: familyUnit.id })
+            .in("id", existingResidents.map((r) => r.id))
 
-        if (updateExistingError) throw updateExistingError
+          if (updateExistingError) throw updateExistingError
 
-        // Set primary contact based on choice
-        const primaryContactId = primaryContactChoice === "new" ? newResident.id : existingResidents[0].id
+          // Set primary contact
+          const primaryContactId = primaryContactChoice === "existing" ? existingResidents[0].id : null // If 'new', we set it after creating new user
+          if (primaryContactId) {
+            await supabase.from("family_units").update({ primary_contact_id: primaryContactId }).eq("id", familyUnit.id)
+          }
+        }
 
-        await supabase.from("family_units").update({ primary_contact_id: primaryContactId }).eq("id", familyUnit.id)
-      } else if (creationType === "family") {
+        if (!targetFamilyUnitId) throw new Error("Target family unit ID could not be determined.");
+
+        // Insert New Members
+        const membersToInsert = familyData.members
+          .filter((m) => m.first_name && m.last_name)
+          .map((member) => ({
+            lot_id: selectedLotId,
+            first_name: member.first_name,
+            last_name: member.last_name,
+            email: member.email || null,
+            phone: member.phone || null,
+            family_unit_id: targetFamilyUnitId,
+            tenant_id: tenant.id,
+            role: "resident" as const,
+          }))
+
+        if (membersToInsert.length > 0) {
+          const { data: insertedResidents, error: membersError } = await supabase
+            .from("users")
+            .insert(membersToInsert)
+            .select()
+          if (membersError) throw membersError
+
+          // If primary contact was set to "new", update family unit now if we just inserted them
+          if (needsNewFamilyUnit && primaryContactChoice === "new" && insertedResidents?.length > 0) {
+            await supabase.from("family_units").update({ primary_contact_id: insertedResidents[0].id }).eq("id", targetFamilyUnitId)
+          }
+        }
+
+        // Insert Pets
+        const petsToInsert = familyData.pets
+          .filter((p) => p.name && p.species)
+          .map((pet) => ({
+            lot_id: selectedLotId,
+            name: pet.name,
+            species: pet.species,
+            breed: pet.breed || null,
+            family_unit_id: targetFamilyUnitId,
+          }))
+
+        if (petsToInsert.length > 0) {
+          const { error: petsError } = await supabase.from("pets").insert(petsToInsert)
+          if (petsError) throw petsError
+        }
+
+      } else {
+        // Logic B: Creating a NEW Household (Standard Flow)
+        // Check if we have multiple members or pets -> requires family unit name
+        const isMulti = familyData.members.length > 1 || familyData.pets.length > 0;
+        let finalFamilyName = familyData.family_name;
+
+        if (!finalFamilyName) {
+          if (isMulti) throw new Error("Family name is required for households with multiple members or pets.");
+          // Auto-generate for single person
+          finalFamilyName = `The ${familyData.members[0].last_name} Family`;
+        }
+
         const { data: familyUnit, error: familyError } = await supabase
           .from("family_units")
           .insert({
-            name: familyData.family_name,
+            name: finalFamilyName,
             tenant_id: tenant.id,
           })
           .select()
@@ -227,6 +238,7 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
 
         if (familyError) throw familyError
 
+        // Insert Members
         const membersToInsert = familyData.members
           .filter((m) => m.first_name && m.last_name)
           .map((member) => ({
@@ -240,21 +252,24 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
             role: "resident" as const,
           }))
 
+        let insertedUsersIds: string[] = [];
+
         if (membersToInsert.length > 0) {
           const { data: insertedResidents, error: membersError } = await supabase
             .from("users")
             .insert(membersToInsert)
             .select()
-
           if (membersError) throw membersError
-
-          if (insertedResidents && insertedResidents.length > 0) {
-            const primaryContactId = insertedResidents[familyData.primary_contact_index]?.id || insertedResidents[0].id
-
-            await supabase.from("family_units").update({ primary_contact_id: primaryContactId }).eq("id", familyUnit.id)
-          }
+          if (insertedResidents) insertedUsersIds = insertedResidents.map(u => u.id);
         }
 
+        // Set Primary Contact
+        if (insertedUsersIds.length > 0) {
+          const primaryId = insertedUsersIds[familyData.primary_contact_index] || insertedUsersIds[0];
+          await supabase.from("family_units").update({ primary_contact_id: primaryId }).eq("id", familyUnit.id)
+        }
+
+        // Insert Pets
         const petsToInsert = familyData.pets
           .filter((p) => p.name && p.species)
           .map((pet) => ({
@@ -269,28 +284,6 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
           const { error: petsError } = await supabase.from("pets").insert(petsToInsert)
           if (petsError) throw petsError
         }
-      } else {
-        const family_unit_id =
-          assignmentChoice === "add_to_family" &&
-          existingResidents[0]?.family_unit_id &&
-          existingResidents[0].family_unit_id !== ""
-            ? existingResidents[0].family_unit_id
-            : null
-
-        const { error } = await supabase.from("users").insert([
-          {
-            lot_id: selectedLotId,
-            first_name: formData.first_name,
-            last_name: formData.last_name,
-            email: formData.email || null,
-            phone: formData.phone || null,
-            family_unit_id,
-            tenant_id: tenant.id,
-            role: "resident" as const,
-          },
-        ])
-
-        if (error) throw error
       }
 
       setLoading(false)
@@ -309,13 +302,17 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
   }
 
   const removeFamilyMember = (index: number) => {
+    if (familyData.members.length === 1) return; // Prevent removing the last member
     setFamilyData({
       ...familyData,
       members: familyData.members.filter((_, i) => i !== index),
+      // Adjust primary contact index if necessary
+      primary_contact_index: familyData.primary_contact_index === index ? 0 : (familyData.primary_contact_index > index ? familyData.primary_contact_index - 1 : familyData.primary_contact_index)
     })
   }
 
   const addPet = () => {
+    // If we're adding the first pet, and we previously had 1 member (which is default), we might need to enforce family name logic essentially but the UI handles showing the field.
     setFamilyData({
       ...familyData,
       pets: [...familyData.pets, { name: "", species: "", breed: "" }],
@@ -472,386 +469,213 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
       )}
 
       {step === 3 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Step {existingResidents.length > 0 ? "3" : "2"}: Creation Type</CardTitle>
-            <CardDescription>Choose what you want to create</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <RadioGroup value={creationType} onValueChange={(v) => setCreationType(v as "single" | "family")}>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="single" id="single" />
-                <Label htmlFor="single">Single Resident or Pet</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="family" id="family" />
-                <Label htmlFor="family">Family Unit (Multiple Residents + Pets)</Label>
-              </div>
-            </RadioGroup>
-
-            <div className="flex gap-2 justify-between">
-              <Button variant="outline" onClick={() => setStep(existingResidents.length > 0 ? 2 : 1)}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
-              </Button>
-              <div className="flex gap-2">
-                <Button type="button" variant="outline" onClick={() => router.push(`/t/${slug}/admin/residents`)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleCreationTypeChoice} disabled={!creationType}>
-                  Continue
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {step === 4 && creationType === "single" && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Step {existingResidents.length > 0 ? "4" : "3"}: Entity Type</CardTitle>
-            <CardDescription>Choose between person or pet</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <RadioGroup value={entityType} onValueChange={(v) => setEntityType(v as "person" | "pet")}>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="person" id="person" />
-                <Label htmlFor="person">Person</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="pet" id="pet" />
-                <Label htmlFor="pet">Pet</Label>
-              </div>
-            </RadioGroup>
-
-            <div className="flex gap-2 justify-between">
-              <Button variant="outline" onClick={() => setStep(3)}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
-              </Button>
-              <div className="flex gap-2">
-                <Button type="button" variant="outline" onClick={() => router.push(`/t/${slug}/admin/residents`)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleEntityTypeChoice} disabled={!entityType}>
-                  Continue
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {step === 5 && (
         <form onSubmit={handleSubmit} className="space-y-6">
-          {creationType === "family" ? (
-            <>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Family Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="family_name">
-                      Family Name <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="family_name"
-                      placeholder="e.g., Smith Family"
-                      value={familyData.family_name}
-                      onChange={(e) => setFamilyData({ ...familyData, family_name: e.target.value })}
-                      required
-                    />
-                  </div>
-                </CardContent>
-              </Card>
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Resident Information</CardTitle>
+                <div className="flex gap-2">
+                  <Button type="button" size="sm" variant="outline" onClick={addPet}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Pet
+                  </Button>
+                  <Button type="button" size="sm" onClick={addFamilyMember}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Person
+                  </Button>
+                </div>
+              </div>
+              <CardDescription>
+                Add one or more residents to this lot. They will be grouped into a single household.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Family Name Field - Conditional */}
+              {(familyData.members.length > 1 || familyData.pets.length > 0) && (
+                <div className="space-y-2 p-4 bg-muted/50 rounded-lg border">
+                  <Label htmlFor="family_name">
+                    Household / Family Name <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="family_name"
+                    placeholder="e.g., Smith Family"
+                    value={familyData.family_name}
+                    onChange={(e) => setFamilyData({ ...familyData, family_name: e.target.value })}
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Required when adding multiple members or pets.
+                  </p>
+                </div>
+              )}
 
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle>Family Members</CardTitle>
-                    <Button type="button" size="sm" onClick={addFamilyMember}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Member
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {familyData.members.length > 1 && (
-                    <div className="space-y-2 p-4 bg-muted rounded-lg">
-                      <Label>Primary Contact *</Label>
-                      <RadioGroup
-                        value={familyData.primary_contact_index.toString()}
-                        onValueChange={(v) =>
-                          setFamilyData({ ...familyData, primary_contact_index: Number.parseInt(v) })
-                        }
-                      >
-                        {familyData.members.map((member, index) => (
-                          <div key={index} className="flex items-center space-x-2">
-                            <RadioGroupItem value={index.toString()} id={`primary-${index}`} />
-                            <Label htmlFor={`primary-${index}`} className="font-normal">
-                              {member.first_name && member.last_name
-                                ? `${member.first_name} ${member.last_name}`
-                                : `Member ${index + 1}`}
-                            </Label>
-                          </div>
-                        ))}
-                      </RadioGroup>
-                    </div>
-                  )}
-
-                  {familyData.members.map((member, index) => (
-                    <div key={index} className="space-y-4 p-4 border rounded-lg relative">
+              {/* Members List */}
+              <div className="space-y-4">
+                {familyData.members.map((member, index) => (
+                  <div key={index} className="space-y-4 p-4 border rounded-lg relative bg-card">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-sm font-medium text-muted-foreground">Person {index + 1}</h4>
                       {familyData.members.length > 1 && (
                         <Button
                           type="button"
                           variant="ghost"
-                          size="sm"
-                          className="absolute top-2 right-2"
+                          size="icon"
+                          className="h-6 w-6 text-muted-foreground hover:text-destructive"
                           onClick={() => removeFamilyMember(index)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       )}
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>First Name *</Label>
-                          <Input
-                            value={member.first_name}
-                            onChange={(e) => {
-                              const newMembers = [...familyData.members]
-                              newMembers[index].first_name = e.target.value
-                              setFamilyData({ ...familyData, members: newMembers })
-                            }}
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Last Name *</Label>
-                          <Input
-                            value={member.last_name}
-                            onChange={(e) => {
-                              const newMembers = [...familyData.members]
-                              newMembers[index].last_name = e.target.value
-                              setFamilyData({ ...familyData, members: newMembers })
-                            }}
-                            required
-                          />
-                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>First Name <span className="text-destructive">*</span></Label>
+                        <Input
+                          value={member.first_name}
+                          onChange={(e) => {
+                            const newMembers = [...familyData.members]
+                            newMembers[index].first_name = e.target.value
+                            setFamilyData({ ...familyData, members: newMembers })
+                          }}
+                          required
+                        />
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Last Name <span className="text-destructive">*</span></Label>
+                        <Input
+                          value={member.last_name}
+                          onChange={(e) => {
+                            const newMembers = [...familyData.members]
+                            newMembers[index].last_name = e.target.value
+                            setFamilyData({ ...familyData, members: newMembers })
+                          }}
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Email</Label>
+                        <Input
+                          type="email"
+                          value={member.email}
+                          onChange={(e) => {
+                            const newMembers = [...familyData.members]
+                            newMembers[index].email = e.target.value
+                            setFamilyData({ ...familyData, members: newMembers })
+                          }}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Phone</Label>
+                        <Input
+                          type="tel"
+                          value={member.phone}
+                          onChange={(e) => {
+                            const newMembers = [...familyData.members]
+                            newMembers[index].phone = e.target.value
+                            setFamilyData({ ...familyData, members: newMembers })
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Primary Contact Selection if multiple */}
+                    {familyData.members.length > 1 && (
+                      <div className="flex items-center space-x-2 mt-2">
+                        <RadioGroup
+                          value={familyData.primary_contact_index.toString()}
+                          onValueChange={(v) =>
+                            setFamilyData({ ...familyData, primary_contact_index: Number.parseInt(v) })
+                          }
+                        >
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value={index.toString()} id={`primary-${index}`} />
+                            <Label htmlFor={`primary-${index}`} className="text-xs font-normal">Set as Primary Contact</Label>
+                          </div>
+                        </RadioGroup>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Pets List */}
+              {familyData.pets.length > 0 && (
+                <div className="space-y-4 pt-4 border-t">
+                  <h3 className="text-lg font-medium">Pets</h3>
+                  {familyData.pets.map((pet, index) => (
+                    <div key={index} className="space-y-4 p-4 border rounded-lg relative bg-card">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-2 right-2 h-6 w-6 text-muted-foreground hover:text-destructive"
+                        onClick={() => removePet(index)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                      <div className="grid grid-cols-3 gap-4">
                         <div className="space-y-2">
-                          <Label>Email</Label>
+                          <Label>Name <span className="text-destructive">*</span></Label>
                           <Input
-                            type="email"
-                            value={member.email}
+                            value={pet.name}
                             onChange={(e) => {
-                              const newMembers = [...familyData.members]
-                              newMembers[index].email = e.target.value
-                              setFamilyData({ ...familyData, members: newMembers })
+                              const newPets = [...familyData.pets]
+                              newPets[index].name = e.target.value
+                              setFamilyData({ ...familyData, pets: newPets })
                             }}
+                            required
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label>Phone</Label>
+                          <Label>Species <span className="text-destructive">*</span></Label>
                           <Input
-                            type="tel"
-                            value={member.phone}
+                            placeholder="e.g., Dog"
+                            value={pet.species}
                             onChange={(e) => {
-                              const newMembers = [...familyData.members]
-                              newMembers[index].phone = e.target.value
-                              setFamilyData({ ...familyData, members: newMembers })
+                              const newPets = [...familyData.pets]
+                              newPets[index].species = e.target.value
+                              setFamilyData({ ...familyData, pets: newPets })
+                            }}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Breed</Label>
+                          <Input
+                            value={pet.breed}
+                            onChange={(e) => {
+                              const newPets = [...familyData.pets]
+                              newPets[index].breed = e.target.value
+                              setFamilyData({ ...familyData, pets: newPets })
                             }}
                           />
                         </div>
                       </div>
                     </div>
-                  ))}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle>Pets (Optional)</CardTitle>
-                    <Button type="button" size="sm" onClick={addPet}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Pet
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {familyData.pets.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No pets added yet. Click "Add Pet" to add one.</p>
-                  ) : (
-                    familyData.pets.map((pet, index) => (
-                      <div key={index} className="space-y-4 p-4 border rounded-lg relative">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="absolute top-2 right-2"
-                          onClick={() => removePet(index)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                        <div className="grid grid-cols-3 gap-4">
-                          <div className="space-y-2">
-                            <Label>Name</Label>
-                            <Input
-                              value={pet.name}
-                              onChange={(e) => {
-                                const newPets = [...familyData.pets]
-                                newPets[index].name = e.target.value
-                                setFamilyData({ ...familyData, pets: newPets })
-                              }}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Species</Label>
-                            <Input
-                              placeholder="e.g., Dog, Cat"
-                              value={pet.species}
-                              onChange={(e) => {
-                                const newPets = [...familyData.pets]
-                                newPets[index].species = e.target.value
-                                setFamilyData({ ...familyData, pets: newPets })
-                              }}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Breed</Label>
-                            <Input
-                              value={pet.breed}
-                              onChange={(e) => {
-                                const newPets = [...familyData.pets]
-                                newPets[index].breed = e.target.value
-                                setFamilyData({ ...familyData, pets: newPets })
-                              }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </CardContent>
-              </Card>
-            </>
-          ) : entityType === "pet" ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Pet Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="pet_name">
-                      Name <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="pet_name"
-                      value={petData.name}
-                      onChange={(e) => setPetData({ ...petData, name: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="pet_species">
-                      Species <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="pet_species"
-                      placeholder="e.g., Dog, Cat"
-                      value={petData.species}
-                      onChange={(e) => setPetData({ ...petData, species: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="pet_breed">Breed</Label>
-                    <Input
-                      id="pet_breed"
-                      value={petData.breed}
-                      onChange={(e) => setPetData({ ...petData, breed: e.target.value })}
-                    />
-                  </div>
+                  ))
+                  }
                 </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle>Resident Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="first_name">
-                      First Name <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="first_name"
-                      value={formData.first_name}
-                      onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="last_name">
-                      Last Name <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="last_name"
-                      value={formData.last_name}
-                      onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                      required
-                    />
-                  </div>
-                </div>
+              )}
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone</Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    />
-                  </div>
+              <div className="flex gap-2 justify-between pt-4">
+                <Button variant="outline" type="button" onClick={() => setStep(existingResidents.length > 0 ? 2 : 1)}>
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back
+                </Button>
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" onClick={() => router.push(`/t/${slug}/admin/residents`)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={loading}>
+                    {loading ? "Creating..." : "Create Household"}
+                  </Button>
                 </div>
-              </CardContent>
-            </Card>
-          )}
-
-          <div className="flex gap-2 justify-between">
-            <Button type="button" variant="outline" onClick={() => setStep(creationType === "single" ? 4 : 3)}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Button>
-            <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={() => router.push(`/t/${slug}/admin/residents`)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={loading}>
-                {loading
-                  ? "Creating..."
-                  : creationType === "family"
-                    ? "Create Family"
-                    : `Create ${entityType === "pet" ? "Pet" : "Resident"}`}
-              </Button>
-            </div>
-          </div>
+              </div>
+            </CardContent>
+          </Card>
         </form>
       )}
     </div>

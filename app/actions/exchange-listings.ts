@@ -130,9 +130,7 @@ export async function createExchangeListing(
       .eq("id", user.id)
       .single()
 
-    if (!resident || !resident.onboarding_completed) {
-      return { success: false, error: "Only verified residents can create listings" }
-    }
+
 
     if (!data.title || !data.title.trim()) {
       return { success: false, error: "Listing title is required" }

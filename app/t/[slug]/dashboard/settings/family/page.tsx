@@ -107,7 +107,7 @@ export default async function FamilySettingsPage({
   }
 
   return (
-    <SettingsLayout tenantSlug={slug} title="Family Settings" description="Manage your family unit and members">
+    <SettingsLayout tenantSlug={slug} title="Household Settings" description="Manage your household members">
       <FamilyManagementForm
         resident={resident}
         familyUnit={familyUnit}

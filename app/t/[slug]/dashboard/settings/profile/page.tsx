@@ -87,6 +87,7 @@ export default async function ProfileSettingsPage({
         tenantSlug={slug}
         locations={locations || []}
         userEmail={user.email || ""}
+        key={resident.updated_at}
       />
     </SettingsLayout>
   )

@@ -47,7 +47,6 @@ export const getResidents = cache(async (
     options: GetResidentsOptions = {},
 ): Promise<ResidentWithRelations[]> => {
     const {
-        status,
         role,
         familyUnitId,
         lotId,
@@ -71,27 +70,23 @@ export const getResidents = cache(async (
     lot_id,
     created_at,
     updated_at
-  `
+    `
 
     if (enrichWithFamily) {
         selectQuery += `,
-      family_units:family_unit_id(id, name)
-    `
+    family_units: family_unit_id(id, name)
+        `
     }
 
     if (enrichWithLot) {
         selectQuery += `,
-      lots:lot_id(id, lot_number, address)
+        lots: lot_id(id, lot_number, address)
     `
     }
 
     let query = supabase.from("users").select(selectQuery).eq("tenant_id", tenantId)
 
     // Apply filters
-    if (status && status.length > 0) {
-        query = query.in("status", status)
-    }
-
     if (role && role.length > 0) {
         query = query.in("role", role)
     } else {
@@ -136,7 +131,6 @@ export const getResidents = cache(async (
             last_name: resident.last_name,
             email: resident.email,
             profile_picture_url: resident.profile_picture_url,
-            status: resident.status,
             role: resident.role,
             tenant_id: resident.tenant_id,
             family_unit_id: resident.family_unit_id,

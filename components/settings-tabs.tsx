@@ -28,7 +28,7 @@ export function SettingsTabs({ tenantSlug }: SettingsTabsProps) {
           asChild
           className="rounded-full px-6 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all"
         >
-          <Link href={`/t/${tenantSlug}/dashboard/settings/family`}>Family</Link>
+          <Link href={`/t/${tenantSlug}/dashboard/settings/family`}>Household</Link>
         </TabsTrigger>
         <TabsTrigger
           value="privacy"

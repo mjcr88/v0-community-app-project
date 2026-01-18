@@ -51,6 +51,7 @@ export function Step4Location({
                             })
                         }
                     }}
+                    restrictToCommunity={true}
                 />
             </div>
         </div>

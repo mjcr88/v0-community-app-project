@@ -142,30 +142,44 @@ export function ProfileEditForm({
     try {
       const supabase = createClient()
 
-      const { error: userError } = await supabase
-        .from("users")
-        .update({
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-          phone: formData.phone,
-          birthday: formData.birthday || null,
-          birth_country: formData.birthCountry || null,
-          current_country: formData.currentCountry || null,
-          languages: formData.languages,
-          preferred_language: formData.preferredLanguage || null,
-          about: formData.about || null,
-          journey_stage: formData.journeyStage || null,
-          estimated_move_in_date: formData.estimatedMoveInDate || null,
-          estimated_construction_start_date: formData.estimatedConstructionStartDate || null,
-          estimated_construction_end_date: formData.estimatedConstructionEndDate || null,
-          photos: formData.photos,
-          hero_photo: formData.heroPhoto,
-          profile_picture_url: formData.heroPhoto, // Sync profile picture with hero photo
-          banner_image_url: formData.bannerImageUrl,
-        })
-        .eq("id", resident.id)
+      // Build update object with dirty checking
+      const updates: any = {}
 
-      if (userError) throw userError
+      if (formData.firstName !== resident.first_name) updates.first_name = formData.firstName
+      if (formData.lastName !== resident.last_name) updates.last_name = formData.lastName
+      if (formData.phone !== resident.phone) updates.phone = formData.phone
+      if (formData.birthday !== resident.birthday) updates.birthday = formData.birthday || null
+      if (formData.birthCountry !== resident.birth_country) updates.birth_country = formData.birthCountry || null
+      if (formData.currentCountry !== resident.current_country) updates.current_country = formData.currentCountry || null
+      // Array comparison for languages
+      const languagesChanged = JSON.stringify([...formData.languages].sort()) !== JSON.stringify([...(resident.languages || [])].sort())
+      if (languagesChanged) updates.languages = formData.languages
+
+      if (formData.preferredLanguage !== resident.preferred_language) updates.preferred_language = formData.preferredLanguage || null
+      if (formData.about !== resident.about) updates.about = formData.about || null
+      if (formData.journeyStage !== resident.journey_stage) updates.journey_stage = formData.journeyStage || null
+      if (formData.estimatedMoveInDate !== resident.estimated_move_in_date) updates.estimated_move_in_date = formData.estimatedMoveInDate || null
+      if (formData.estimatedConstructionStartDate !== resident.estimated_construction_start_date) updates.estimated_construction_start_date = formData.estimatedConstructionStartDate || null
+      if (formData.estimatedConstructionEndDate !== resident.estimated_construction_end_date) updates.estimated_construction_end_date = formData.estimatedConstructionEndDate || null
+
+      // Photo arrays
+      const photosChanged = JSON.stringify([...formData.photos].sort()) !== JSON.stringify([...(resident.photos || [])].sort())
+      if (photosChanged) updates.photos = formData.photos
+
+      if (formData.heroPhoto !== resident.hero_photo) {
+        updates.hero_photo = formData.heroPhoto
+        updates.profile_picture_url = formData.heroPhoto // Sync profile picture
+      }
+      if (formData.bannerImageUrl !== resident.banner_image_url) updates.banner_image_url = formData.bannerImageUrl
+
+      if (Object.keys(updates).length > 0) {
+        const { error: userError } = await supabase
+          .from("users")
+          .update(updates)
+          .eq("id", resident.id)
+
+        if (userError) throw userError
+      }
 
       if (formData.about !== resident.about) ProfileAnalytics.aboutUpdated('bio')
       if (formData.journeyStage !== resident.journey_stage) ProfileAnalytics.aboutUpdated('journey')
@@ -239,25 +253,13 @@ export function ProfileEditForm({
 
   const handleBannerChange = async (url: string | null) => {
     setFormData(prev => ({ ...prev, bannerImageUrl: url }))
-    // We don't save immediately here to allow batch saving with the form, 
-    // but EditableProfileBanner might expect immediate feedback. 
-    // The previous implementation saved immediately. Let's keep that for banner/profile photo 
-    // as they are "header" elements, but also update local state.
-    const supabase = createClient()
-    await supabase.from("users").update({ banner_image_url: url }).eq("id", resident.id)
-    ProfileAnalytics.bannerUploaded()
-    router.refresh()
+    // Defer DB update to handleSubmit for consistency
   }
 
   const handleProfilePhotoChange = async (url: string | null) => {
     setFormData(prev => ({ ...prev, heroPhoto: url }))
-    const supabase = createClient()
-    await supabase.from("users").update({
-      hero_photo: url,
-      profile_picture_url: url
-    }).eq("id", resident.id)
-    ProfileAnalytics.photoUploaded()
-    router.refresh()
+    // We defer the DB update to handleSubmit to avoid race conditions and double-writing.
+    // The user sees the optimistic update via local state.
   }
 
   const addLanguage = (language: string) => {
@@ -414,7 +416,7 @@ export function ProfileEditForm({
           </CollapsibleCard>
 
           {/* Personal Details */}
-          <CollapsibleCard title="Personal Details" description="Your birthday and pronouns" icon={User}>
+          <CollapsibleCard title="Personal Details" description="Your birthday and origin" icon={User}>
             <div className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">

@@ -112,6 +112,13 @@ export function LocationInfoCard({
   useEffect(() => {
     console.log("[v0] LocationInfoCard useEffect triggered for location:", location.id)
 
+    // Reset state before processing new location
+    setNeighborhood(null)
+    setLot(null)
+    setResidents([])
+    setFamilyUnit(null)
+    setPets([])
+
     // Use pre-enriched data from props if available
     if ((location as any).neighborhood) {
       setNeighborhood((location as any).neighborhood)

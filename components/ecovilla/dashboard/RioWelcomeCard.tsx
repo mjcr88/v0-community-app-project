@@ -24,7 +24,7 @@ export function RioWelcomeCard({ slug }: { slug: string }) {
                 {/* Desktop: Right side, 60% width */}
                 <div className="md:ml-auto space-y-2 md:space-y-4 z-10 flex-1 md:w-full md:max-w-[60%] order-2">
                     <div className="space-y-1.5 md:space-y-2 text-left">
-                        <p className="text-orange-800/80 text-sm leading-relaxed">
+                        <p className="text-orange-950 text-sm leading-relaxed font-medium">
                             I'm Rio, your community guide. I'll keep an eye out for important updates for you.
                         </p>
                     </div>
@@ -43,7 +43,7 @@ export function RioWelcomeCard({ slug }: { slug: string }) {
                             asChild
                             size="sm"
                             variant="outline"
-                            className="bg-white/50 hover:bg-white border-orange-200 text-orange-900 shadow-sm gap-2"
+                            className="bg-white/60 hover:bg-white border-orange-200 text-orange-950 hover:text-orange-950 shadow-sm gap-2"
                         >
                             <Link href={`/t/${slug}/onboarding/profile?source=dashboard`}>
                                 Complete Profile

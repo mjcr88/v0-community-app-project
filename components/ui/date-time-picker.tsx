@@ -33,7 +33,14 @@ export function DateTimePicker({
         }
 
         try {
-            const newDate = new Date(value)
+            let newDate: Date;
+            if (showTime) {
+                newDate = new Date(value)
+            } else {
+                // Parse as local date at 00:00 to avoid UTC shifting
+                newDate = parse(value, "yyyy-MM-dd", new Date())
+            }
+
             if (!isNaN(newDate.getTime())) {
                 setDate(newDate)
             }

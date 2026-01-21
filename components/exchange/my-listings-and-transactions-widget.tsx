@@ -341,7 +341,9 @@ export function MyListingsAndTransactionsWidget({
   function renderEmptyState(message: string) {
     return (
       <div className="text-center py-12 border-2 border-dashed rounded-xl">
-        <Package className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+        <div className="relative w-24 h-24 mx-auto mb-4">
+          <Image src="/rio/parrot.png" alt="Rio" fill className="object-contain" />
+        </div>
         <p className="text-sm text-muted-foreground">{message}</p>
       </div>
     )
@@ -350,7 +352,9 @@ export function MyListingsAndTransactionsWidget({
   if (listings.length === 0 && transactions.length === 0) {
     return (
       <div className="text-center py-12 border rounded-xl bg-card">
-        <Package className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+        <div className="relative w-24 h-24 mx-auto mb-4">
+          <Image src="/rio/parrot.png" alt="Rio" fill className="object-contain" />
+        </div>
         <h3 className="text-lg font-semibold mb-2">No Listings Yet</h3>
         <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
           You haven't created any listings yet. Start sharing items with your community!

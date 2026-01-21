@@ -215,7 +215,7 @@ export function PriorityFeed({ slug, userId, tenantId }: { slug: string; userId:
                     <div className="flex items-center gap-2">
                         <Button size="sm" className="h-7 text-xs px-3 bg-green-600 hover:bg-green-700 text-white" onClick={(e) => {
                             e.stopPropagation()
-                            router.push(`/t/${slug}/dashboard/exchange/transactions/${item.transaction_id}`)
+                            router.push(`/t/${slug}/dashboard/notifications?highlight=${item.transaction_id}`)
                         }}>
                             Confirm Pickup
                         </Button>
@@ -226,7 +226,7 @@ export function PriorityFeed({ slug, userId, tenantId }: { slug: string; userId:
                     <div className="flex items-center gap-2">
                         <Button size="sm" className="h-7 text-xs px-3 bg-orange-500 hover:bg-orange-600 text-white" onClick={(e) => {
                             e.stopPropagation()
-                            router.push(`/t/${slug}/dashboard/exchange/transactions/${item.transaction_id}`)
+                            router.push(`/t/${slug}/dashboard/notifications?highlight=${item.transaction_id}`)
                         }}>
                             Confirm Returned
                         </Button>

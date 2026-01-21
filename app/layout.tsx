@@ -36,9 +36,9 @@ export const metadata: Metadata = {
   description: "Community management app for Rio residents",
   generator: "v0.app",
   icons: {
-    icon: '/icon.png',
+    icon: '/icons/icon-192x192.png',
     apple: [
-      { url: '/apple-icon.png' },
+      { url: '/icons/icon-192x192.png' },
     ],
   },
 }

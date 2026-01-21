@@ -5,10 +5,11 @@ import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 
 interface DirectoryEmptyStateProps {
-    type: "residents" | "families"
+    type: "residents" | "families" | "lists"
     hasActiveFilters: boolean
     onClearFilters: () => void
     onClearSearch: () => void
+    children?: React.ReactNode
 }
 
 export function DirectoryEmptyState({
@@ -16,6 +17,7 @@ export function DirectoryEmptyState({
     hasActiveFilters,
     onClearFilters,
     onClearSearch,
+    children,
 }: DirectoryEmptyStateProps) {
     const content = {
         residents: {
@@ -30,14 +32,24 @@ export function DirectoryEmptyState({
         },
         families: {
             withFilters: {
-                title: "No families found",
+                title: "No households found",
                 description: "Try adjusting your filters. Río is still looking!",
             },
             withoutFilters: {
-                title: "No families yet",
-                description: "Family units will appear here once residents form families!",
+                title: "No households yet",
+                description: "Households will appear here once residents form them!",
             },
         },
+        lists: {
+            withFilters: {
+                title: "No lists found",
+                description: "Try adjusting your search. Río couldn't find any matching lists!",
+            },
+            withoutFilters: {
+                title: "No lists yet",
+                description: "Create lists to organize neighbors for events, announcements, or just to keep track of friends.",
+            },
+        }
     }
 
     const selected = hasActiveFilters
@@ -53,7 +65,7 @@ export function DirectoryEmptyState({
         >
             <div className="relative w-40 h-40 mb-2">
                 <Image
-                    src={hasActiveFilters ? "/rio/rio_searching_confused.png" : "/images/rio-general.png"}
+                    src={hasActiveFilters ? "/rio/rio_searching_confused.png" : "/rio/parrot.png"}
                     alt="Río the Macaw"
                     fill
                     className="object-contain"
@@ -76,6 +88,7 @@ export function DirectoryEmptyState({
                     </Button>
                 </div>
             )}
+            {children}
         </motion.div>
     )
 }

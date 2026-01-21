@@ -33,8 +33,15 @@ export async function GET(request: Request, context: { params: Promise<{ tenantI
           quantity,
           proposed_pickup_date,
           proposed_return_date,
+          proposed_return_date,
           borrower_message,
-          lender_message
+          lender_message,
+          status,
+          lender_id,
+          borrower_id,
+          expected_return_date,
+          actual_return_date,
+          return_condition
         ),
         event:events!event_id(
           id,

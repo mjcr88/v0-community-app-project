@@ -298,6 +298,21 @@ export async function markItemPickedUp(
       exchange_listing_id: transaction.listing_id,
     })
 
+    // If the actor is the lender, also create a confirmation notification for them
+    // This ensures they have a fresh notification at the top to eventually "Mark Returned"
+    if (userId === transaction.lender_id) {
+      await createNotification({
+        tenant_id: tenantId,
+        recipient_id: userId,
+        type: "exchange_picked_up",
+        title: "Pickup confirmed",
+        message: `You marked ${transaction.exchange_listings?.title} as picked up.`,
+        actor_id: userId,
+        exchange_transaction_id: transactionId,
+        exchange_listing_id: transaction.listing_id,
+      })
+    }
+
     if (transaction.expected_return_date) {
       const returnDate = new Date(transaction.expected_return_date)
       const now = new Date()

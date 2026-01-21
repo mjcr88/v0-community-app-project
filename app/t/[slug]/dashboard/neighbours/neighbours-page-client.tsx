@@ -311,19 +311,19 @@ export function NeighboursPageClient({
 
             {/* Tabs */}
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
-                <div className="w-full overflow-x-auto no-scrollbar pb-1">
-                    <TabsList className="bg-muted/30 p-1 rounded-full h-auto inline-flex min-w-fit">
+                <div className="w-full overflow-x-auto no-scrollbar pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
+                    <TabsList className="bg-muted/30 p-1 rounded-full h-auto flex w-full justify-between items-center sm:inline-flex sm:w-auto sm:min-w-fit pr-1">
                         <TabsTrigger
                             value="residents"
-                            className="rounded-full px-6 py-2 border border-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all"
+                            className="rounded-full flex-1 sm:flex-initial px-2 sm:px-6 py-2 border border-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all flex-shrink-0"
                         >
-                            <span className="flex items-center gap-2">
+                            <span className="flex items-center justify-center gap-2 text-xs sm:text-sm">
                                 Residents
                                 {filteredResidents.length > 0 && (
                                     <Badge
                                         variant="secondary"
                                         className={cn(
-                                            "px-1.5 py-0.5 text-[10px] h-auto min-w-[1.25rem] justify-center",
+                                            "px-1 py-0.5 sm:px-1.5 text-[9px] sm:text-[10px] h-auto min-w-[1rem] sm:min-w-[1.25rem] justify-center",
                                             activeTab === "residents"
                                                 ? "bg-primary-foreground text-primary hover:bg-primary-foreground/90"
                                                 : "bg-primary text-primary-foreground hover:bg-primary/90"
@@ -336,15 +336,15 @@ export function NeighboursPageClient({
                         </TabsTrigger>
                         <TabsTrigger
                             value="families"
-                            className="rounded-full px-6 py-2 border border-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all"
+                            className="rounded-full flex-1 sm:flex-initial px-2 sm:px-6 py-2 border border-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all flex-shrink-0"
                         >
-                            <span className="flex items-center gap-2">
-                                Families
+                            <span className="flex items-center justify-center gap-2 text-xs sm:text-sm">
+                                Households
                                 {filteredFamilies.length > 0 && (
                                     <Badge
                                         variant="secondary"
                                         className={cn(
-                                            "px-1.5 py-0.5 text-[10px] h-auto min-w-[1.25rem] justify-center",
+                                            "px-1 py-0.5 sm:px-1.5 text-[9px] sm:text-[10px] h-auto min-w-[1rem] sm:min-w-[1.25rem] justify-center",
                                             activeTab === "families"
                                                 ? "bg-primary-foreground text-primary hover:bg-primary-foreground/90"
                                                 : "bg-primary text-primary-foreground hover:bg-primary/90"
@@ -357,15 +357,15 @@ export function NeighboursPageClient({
                         </TabsTrigger>
                         <TabsTrigger
                             value="lists"
-                            className="rounded-full px-6 py-2 border border-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all"
+                            className="rounded-full flex-1 sm:flex-initial px-2 sm:px-6 py-2 border border-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all flex-shrink-0"
                         >
-                            <span className="flex items-center gap-2">
+                            <span className="flex items-center justify-center gap-2 text-xs sm:text-sm">
                                 My Lists
                                 {filteredLists.length > 0 && (
                                     <Badge
                                         variant="secondary"
                                         className={cn(
-                                            "px-1.5 py-0.5 text-[10px] h-auto min-w-[1.25rem] justify-center",
+                                            "px-1 py-0.5 sm:px-1.5 text-[9px] sm:text-[10px] h-auto min-w-[1rem] sm:min-w-[1.25rem] justify-center",
                                             activeTab === "lists"
                                                 ? "bg-primary-foreground text-primary hover:bg-primary-foreground/90"
                                                 : "bg-primary text-primary-foreground hover:bg-primary/90"
@@ -608,7 +608,7 @@ export function NeighboursPageClient({
                     <div className="flex items-center gap-3">
                         <div className="h-px flex-1 bg-border"></div>
                         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                            {filteredFamilies.length} {filteredFamilies.length === 1 ? "Family" : "Families"}
+                            {filteredFamilies.length} {filteredFamilies.length === 1 ? "Household" : "Households"}
                         </h2>
                         <div className="h-px flex-1 bg-border"></div>
                     </div>
@@ -682,19 +682,19 @@ export function NeighboursPageClient({
                             ))}
                         </div>
                     ) : (
-                        <div className="flex flex-col items-center justify-center py-12 text-center">
-                            <div className="bg-muted/50 p-4 rounded-full mb-4">
-                                <Users className="h-8 w-8 text-muted-foreground" />
-                            </div>
-                            <h3 className="text-lg font-semibold">No lists found</h3>
-                            <p className="text-muted-foreground max-w-sm mt-2 mb-6">
-                                Create lists to organize neighbors for events, announcements, or just to keep track of friends.
-                            </p>
-                            <Button onClick={() => setCreateListOpen(true)}>
-                                <Plus className="h-4 w-4 mr-2" />
-                                Create your first list
-                            </Button>
-                        </div>
+                        <DirectoryEmptyState
+                            type="lists"
+                            hasActiveFilters={search !== ""}
+                            onClearFilters={clearAllFilters}
+                            onClearSearch={() => setSearch("")}
+                        >
+                            {search === "" && (
+                                <Button onClick={() => setCreateListOpen(true)} className="mt-4">
+                                    <Plus className="h-4 w-4 mr-2" />
+                                    Create your first list
+                                </Button>
+                            )}
+                        </DirectoryEmptyState>
                     )}
                 </div>
             )}

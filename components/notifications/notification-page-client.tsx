@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -57,6 +58,52 @@ export function NotificationPageClient({
     )
 
     const activeNotifications = notifications || []
+
+    // URL Search Params for Highlighting
+    const searchParams = useSearchParams()
+    const highlightId = searchParams.get('highlight')
+
+    // Derived state for highlighting - checks if we need to adjust filters to show the highlighted item
+    useEffect(() => {
+        if (highlightId && notifications?.length) {
+            const target = notifications.find(n => n.id === highlightId || n.exchange_transaction_id === highlightId)
+
+            if (target) {
+                // Ensure the target is visible by adjusting filters if necessary
+                let newStatuses = [...selectedStatuses]
+                let filterChanged = false
+
+                // If target is read and we're not showing read, add 'read'
+                if (target.is_read && !selectedStatuses.includes('read')) {
+                    newStatuses.push('read')
+                    filterChanged = true
+                }
+
+                // If target is archived (unlikely but possible) and we're not showing archived
+                if (target.is_archived && !selectedStatuses.includes('archived')) {
+                    newStatuses.push('archived')
+                    filterChanged = true
+                }
+
+                if (filterChanged) {
+                    setSelectedStatuses(newStatuses)
+                }
+
+                // Smooth scroll after a slight delay to allow rendering
+                setTimeout(() => {
+                    const element = document.getElementById(`notification-${target.id}`)
+                    if (element) {
+                        element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                        element.classList.add('ring-2', 'ring-primary', 'ring-offset-2', 'border-primary')
+                        // Remove highlight after 3 seconds
+                        setTimeout(() => {
+                            element.classList.remove('ring-2', 'ring-primary', 'ring-offset-2', 'border-primary')
+                        }, 3000)
+                    }
+                }, 100)
+            }
+        }
+    }, [highlightId, notifications])
 
     // Derived state for counts
     const unreadCount = activeNotifications.filter((n) => !n.is_read && !n.is_archived).length

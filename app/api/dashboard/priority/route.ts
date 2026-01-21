@@ -244,7 +244,7 @@ export async function GET() {
                 lender:users!exchange_transactions_lender_id_fkey(first_name, last_name, profile_picture_url),
                 borrower:users!exchange_transactions_borrower_id_fkey(first_name, last_name, profile_picture_url)
             `)
-            .or(`lender_id.eq.${user.id},borrower_id.eq.${user.id}`)
+            .eq("lender_id", user.id)
             .eq("status", "confirmed")
 
         confirmed?.forEach(tx => {
@@ -264,8 +264,8 @@ export async function GET() {
             priorityItems.push({
                 type: "exchange_confirmed",
                 id: tx.id,
-                title: `Ready to exchange: ${listingTitle}`,
-                description: `With ${otherName}`,
+                title: `Ready for Pickup: ${listingTitle}`,
+                description: `${otherName} is ready to pick this up`,
                 urgency: "medium",
                 timestamp: tx.created_at,
                 priority: 80,
@@ -337,6 +337,7 @@ export async function GET() {
         if (borrowerDueTransactions && borrowerDueTransactions.length > 0) {
             console.log('[Priority Feed] Borrowed items:', borrowerDueTransactions.map(tx => ({
                 id: tx.id,
+                // @ts-ignore
                 listing: tx.listing?.title,
                 status: tx.status,
                 due: tx.expected_return_date

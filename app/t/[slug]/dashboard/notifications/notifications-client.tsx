@@ -11,6 +11,8 @@ import { toast } from "sonner"
 import useSWR from "swr"
 import type { NotificationFull } from "@/types/notifications"
 import { Bell, BellOff, CheckCheck, Archive, Inbox } from 'lucide-react'
+import { useSearchParams } from "next/navigation"
+import { useEffect } from "react"
 
 interface NotificationsClientProps {
   tenantSlug: string
@@ -86,6 +88,38 @@ export function NotificationsClient({
   const eventsCount = notifications?.filter((n) => n.type.startsWith("event_") && !n.is_archived).length || 0
   const checkinsCount = notifications?.filter((n) => n.type.startsWith("checkin_") && !n.is_archived).length || 0
 
+  const searchParams = useSearchParams()
+  const highlightId = searchParams.get('highlight')
+
+  // Effect to handle scrolling to highlighted notification
+  useEffect(() => {
+    if (highlightId && notifications?.length) {
+      // Check if the highlighted item is an exchange transaction
+      const isExchange = notifications.some(
+        n => n.type.startsWith('exchange_') && (n.exchange_transaction_id === highlightId || n.id === highlightId)
+      )
+
+      if (isExchange) {
+        setActiveTab("exchange")
+      }
+
+      // Small delay to ensure rendering
+      setTimeout(() => {
+        // Try finding by transaction ID or direct ID
+        const element = document.querySelector(`[data-transaction-id="${highlightId}"]`) ||
+          document.getElementById(`notification-${highlightId}`)
+
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          element.classList.add('ring-2', 'ring-primary', 'ring-offset-2', 'rounded-lg')
+          setTimeout(() => {
+            element.classList.remove('ring-2', 'ring-primary', 'ring-offset-2', 'rounded-lg')
+          }, 3000)
+        }
+      }, 500)
+    }
+  }, [highlightId, notifications])
+
   const handleMarkAllAsRead = async () => {
     const result = await markAllAsRead(tenantId, tenantSlug)
     if (result.success) {
@@ -112,13 +146,20 @@ export function NotificationsClient({
             </Badge>
           )}
         </div>
-        
+
         {unreadCount > 0 && (
           <Button variant="outline" size="sm" onClick={handleMarkAllAsRead}>
             <CheckCheck className="h-4 w-4 mr-2" />
             Mark All as Read
           </Button>
         )}
+      </div>
+
+      {/* DEBUG INFO - TO BE REMOVED */}
+      <div className="p-2 bg-slate-100 text-xs font-mono rounded border border-slate-300">
+        <strong>Debug:</strong> Total: {notifications?.length || 0} |
+        Exch: {notifications?.filter(n => n.type.startsWith('exchange_')).length} |
+        Types: {Array.from(new Set(notifications?.map(n => n.type))).join(', ')}
       </div>
 
       {/* Tabs for notification types */}
@@ -201,25 +242,34 @@ export function NotificationsClient({
         <TabsContent value="all" className="space-y-3">
           {filteredNotifications && filteredNotifications.length > 0 ? (
             filteredNotifications.map((notification) => {
+              const wrapperProps = {
+                key: notification.id,
+                id: `notification-${notification.id}`,
+                "data-transaction-id": notification.type.startsWith('exchange_') ? notification.exchange_transaction_id : undefined,
+                className: "transition-all duration-300"
+              }
+
               if (notification.type.startsWith('exchange_')) {
                 return (
-                  <ExchangeNotificationCard
-                    key={notification.id}
-                    notification={notification}
-                    tenantSlug={tenantSlug}
-                    userId={userId}
-                    onUpdate={mutate}
-                  />
+                  <div {...wrapperProps}>
+                    <ExchangeNotificationCard
+                      notification={notification}
+                      tenantSlug={tenantSlug}
+                      userId={userId}
+                      onUpdate={mutate}
+                    />
+                  </div>
                 )
               }
-              
+
               return (
-                <NotificationCard
-                  key={notification.id}
-                  notification={notification}
-                  tenantSlug={tenantSlug}
-                  onUpdate={mutate}
-                />
+                <div {...wrapperProps}>
+                  <NotificationCard
+                    notification={notification}
+                    tenantSlug={tenantSlug}
+                    onUpdate={mutate}
+                  />
+                </div>
               )
             })
           ) : (
@@ -234,25 +284,34 @@ export function NotificationsClient({
         <TabsContent value="exchange" className="space-y-3">
           {filteredNotifications && filteredNotifications.length > 0 ? (
             filteredNotifications.map((notification) => {
+              const wrapperProps = {
+                key: notification.id,
+                id: `notification-${notification.id}`,
+                "data-transaction-id": notification.type.startsWith('exchange_') ? notification.exchange_transaction_id : undefined,
+                className: "transition-all duration-300"
+              }
+
               if (notification.type.startsWith('exchange_')) {
                 return (
-                  <ExchangeNotificationCard
-                    key={notification.id}
-                    notification={notification}
-                    tenantSlug={tenantSlug}
-                    userId={userId}
-                    onUpdate={mutate}
-                  />
+                  <div {...wrapperProps}>
+                    <ExchangeNotificationCard
+                      notification={notification}
+                      tenantSlug={tenantSlug}
+                      userId={userId}
+                      onUpdate={mutate}
+                    />
+                  </div>
                 )
               }
-              
+
               return (
-                <NotificationCard
-                  key={notification.id}
-                  notification={notification}
-                  tenantSlug={tenantSlug}
-                  onUpdate={mutate}
-                />
+                <div {...wrapperProps}>
+                  <NotificationCard
+                    notification={notification}
+                    tenantSlug={tenantSlug}
+                    onUpdate={mutate}
+                  />
+                </div>
               )
             })
           ) : (

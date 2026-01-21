@@ -449,6 +449,7 @@ export function MapboxFullViewer({
                     id: lot.id,
                     name: lot.name,
                     neighborhood: lot.neighborhood?.name,
+                    occupancy: (lot.residents && lot.residents.length > 0) ? "occupied" : "vacant",
                 },
             }))
 
@@ -926,8 +927,18 @@ export function MapboxFullViewer({
                                     id="lots-fill"
                                     type="fill"
                                     paint={{
-                                        "fill-color": "#86B25C",
-                                        "fill-opacity": 0.3,
+                                        "fill-color": [
+                                            "match",
+                                            ["get", "occupancy"],
+                                            "occupied", "#F59E0B", // Warm Amber for occupied
+                                            "#86B25C" // Standard Green for vacant
+                                        ],
+                                        "fill-opacity": [
+                                            "match",
+                                            ["get", "occupancy"],
+                                            "occupied", 0.5, // Slightly more opaque for occupied to enhance glow
+                                            0.3
+                                        ],
                                     }}
                                 />
 
@@ -969,9 +980,9 @@ export function MapboxFullViewer({
                                         "text-anchor": "center",
                                     }}
                                     paint={{
-                                        "text-color": "#059669",
+                                        "text-color": "#111827", // Gray-900 for sharp contrast
                                         "text-halo-color": "#FFFFFF",
-                                        "text-halo-width": 1.5,
+                                        "text-halo-width": 2, // Thicker halo to separate from background
                                     }}
                                 />
                             </Source>

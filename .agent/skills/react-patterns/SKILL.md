@@ -1,0 +1,194 @@
+---
+name: react-patterns
+description: Modern React patterns and principles. Hooks, composition, TypeScript best practices. For performance, see react-best-practices.
+allowed-tools: Read, Write, Edit, Glob, Grep
+---
+
+# React Patterns
+
+> Principles for building production-ready React applications.
+
+---
+
+## 1. Component Design Principles
+
+### Component Types
+
+| Type | Use | State |
+|------|-----|-------|
+| **Server** | Data fetching, static | None (Default in Next.js) |
+| **Client** | Interactivity | useState, effects |
+| **Presentational** | UI display | Props only |
+| **Container** | Logic/state | Heavy state |
+
+### Design Rules
+
+- One responsibility per component
+- Props down, events up
+- Composition over inheritance
+- Prefer small, focused components
+
+---
+
+## 2. Hook Patterns
+
+### When to Extract Hooks
+
+| Pattern | Extract When |
+|---------|-------------|
+| **useLocalStorage** | Same storage logic needed |
+| **useDebounce** | Multiple debounced values |
+| **useFetch** | Repeated fetch patterns |
+| **useForm** | Complex form state |
+
+### Hook Rules
+
+- Hooks at top level only
+- Same order every render
+- Custom hooks start with "use"
+- Clean up effects on unmount
+
+---
+
+## 3. State Management Selection
+
+| Complexity | Solution |
+|------------|----------|
+| Simple | useState, useReducer |
+| Shared local | Context |
+| Server state | React Query, SWR |
+| Complex global | Zustand, Redux Toolkit |
+
+### State Placement
+
+| Scope | Where |
+|-------|-------|
+| Single component | useState |
+| Parent-child | Lift state up |
+| Subtree | Context |
+| App-wide | Global store |
+
+---
+
+## 4. React 19 Patterns
+
+### New Hooks
+
+| Hook | Purpose |
+|------|---------|
+| **useActionState** | Form submission state |
+| **useOptimistic** | Optimistic UI updates |
+| **use** | Read resources in render |
+
+### Compiler Benefits
+
+- Automatic memoization
+- Less manual useMemo/useCallback
+- Focus on pure components
+
+---
+
+## 5. Composition Patterns
+
+### Compound Components
+
+- Parent provides context
+- Children consume context
+- Flexible slot-based composition
+- Example: Tabs, Accordion, Dropdown
+
+### Render Props vs Hooks
+
+| Use Case | Prefer |
+|----------|--------|
+| Reusable logic | Custom hook |
+| Render flexibility | Render props |
+| Cross-cutting | Higher-order component |
+
+---
+
+## 6. Performance Principles
+
+### Performance Principles
+
+> **CRITICAL: For comprehensive performance rules, strict do/don't examples, and optimization guides, you MUST refer to `@[skills/react-best-practices]`.**
+
+This section is intentionally minimal to avoid duplication. The `react-best-practices` skill contains the authoritative Vercel Engineering guidelines for:
+1. Eliminating Waterfalls
+2. Bundle Size Optimization
+3. Server-Side Performance
+4. Re-render Optimization
+
+**General Rule:** If in doubt about performance, consult `react-best-practices`.
+
+---
+
+## 7. Error Handling
+
+### Error Boundary Usage
+
+| Scope | Placement |
+|-------|-----------|
+| App-wide | Root level |
+| Feature | Route/feature level |
+| Component | Around risky component |
+
+### Error Recovery
+
+- Show fallback UI
+- Log error
+- Offer retry option
+- Preserve user data
+
+---
+
+## 8. TypeScript Patterns
+
+### Props Typing
+
+| Pattern | Use |
+|---------|-----|
+| Interface | Component props |
+| Type | Unions, complex |
+| Generic | Reusable components |
+
+### Common Types
+
+| Need | Type |
+|------|------|
+| Children | ReactNode |
+| Event handler | MouseEventHandler |
+| Ref | RefObject<Element> |
+
+---
+
+## 9. Testing Principles
+
+| Level | Focus |
+|-------|-------|
+| Unit | Pure functions, hooks |
+| Integration | Component behavior |
+| E2E | User flows |
+
+### Test Priorities
+
+- User-visible behavior
+- Edge cases
+- Error states
+- Accessibility
+
+---
+
+## 10. Anti-Patterns
+
+| ❌ Don't | ✅ Do |
+|----------|-------|
+| Prop drilling deep | Use context |
+| Giant components | Split smaller |
+| useEffect for everything | Server components |
+| Premature optimization | Profile first |
+| Index as key | Stable unique ID |
+
+---
+
+> **Remember:** React is about composition. Build small, combine thoughtfully.

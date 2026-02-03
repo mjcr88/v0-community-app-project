@@ -45,6 +45,7 @@
 
 ### 1. [Infra] Supabase DEV Environment (#76)
 *   **Owner:** `devops-engineer`
+*   **Worklog:** [log_2026-02-03_supabase-dev-env.md](../../04_logs/log_2026-02-03_supabase-dev-env.md)
 *   **Goal:** Configure existing project to separate Dev and Prod data.
 *   **Implementation Steps:**
     1.  **Configure Existing Project:** Link local dev to project `ehovmoszgwchjtozsfjw` (v0-community-dev).
@@ -54,7 +55,7 @@
     3.  **Run Migrations:** Sync `ehovmoszgwchjtozsfjw` DB with Prod Schema.
 *   **Acceptance Criteria:**
     - [x] Localhost connects to `v0-community-dev`.
-    - [ ] Vercel Preview deployments connect to `v0-community-dev`. (Pending Vercel Config)
+    - [-] Vercel Preview deployments connect to `v0-community-dev`. (Skipped: Local-only workflow)
     - [x] Vercel Production connects to `v0-community-prod`. (Implicit)
 
 ### 2. [Security] PII Leak Prevention (#75)

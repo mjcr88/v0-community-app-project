@@ -1,6 +1,6 @@
 ---
 name: nextjs-best-practices
-description: Next.js App Router principles. Server Components, data fetching, routing patterns. For performance, see react-best-practices.
+description: Next.js App Router principles. Server Components, data fetching, routing patterns.
 allowed-tools: Read, Write, Edit, Glob, Grep
 ---
 
@@ -109,9 +109,7 @@ Does it need...?
 
 ### Bundle Optimization
 
-> **For deep dive on Bundle Size, see `@[skills/react-best-practices]` Section 2.**
-
-- Dynamic imports for heavy components (`next/dynamic`)
+- Dynamic imports for heavy components
 - Route-based code splitting (automatic)
 - Analyze with bundle analyzer
 
@@ -138,8 +136,6 @@ Does it need...?
 ## 7. Caching Strategy
 
 ### Cache Layers
-
-> **For React.cache() and LRU patterns, see `@[skills/react-best-practices]` Section 3.**
 
 | Layer | Control |
 |-------|---------|

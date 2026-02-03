@@ -1,6 +1,6 @@
 ---
 name: react-patterns
-description: Modern React patterns and principles. Hooks, composition, TypeScript best practices. For performance, see react-best-practices.
+description: Modern React patterns and principles. Hooks, composition, performance, TypeScript best practices.
 allowed-tools: Read, Write, Edit, Glob, Grep
 ---
 
@@ -16,7 +16,7 @@ allowed-tools: Read, Write, Edit, Glob, Grep
 
 | Type | Use | State |
 |------|-----|-------|
-| **Server** | Data fetching, static | None (Default in Next.js) |
+| **Server** | Data fetching, static | None |
 | **Client** | Interactivity | useState, effects |
 | **Presentational** | UI display | Props only |
 | **Container** | Logic/state | Heavy state |
@@ -109,17 +109,21 @@ allowed-tools: Read, Write, Edit, Glob, Grep
 
 ## 6. Performance Principles
 
-### Performance Principles
+### When to Optimize
 
-> **CRITICAL: For comprehensive performance rules, strict do/don't examples, and optimization guides, you MUST refer to `@[skills/react-best-practices]`.**
+| Signal | Action |
+|--------|--------|
+| Slow renders | Profile first |
+| Large lists | Virtualize |
+| Expensive calc | useMemo |
+| Stable callbacks | useCallback |
 
-This section is intentionally minimal to avoid duplication. The `react-best-practices` skill contains the authoritative Vercel Engineering guidelines for:
-1. Eliminating Waterfalls
-2. Bundle Size Optimization
-3. Server-Side Performance
-4. Re-render Optimization
+### Optimization Order
 
-**General Rule:** If in doubt about performance, consult `react-best-practices`.
+1. Check if actually slow
+2. Profile with DevTools
+3. Identify bottleneck
+4. Apply targeted fix
 
 ---
 

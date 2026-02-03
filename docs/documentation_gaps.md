@@ -1,0 +1,42 @@
+# Documentation Gaps
+
+- **2026-01-24**: `docs/07-product/03_prds/prd.md` is empty. The project lacks a central Product Requirements Document, which makes it difficult to validate alignment of new features like "Event Filtering" against broader goals.
+- **2026-01-26**: Missing `docs/02-technical/domains/locations.md` (Domain Architecture for Locations).
+- **2026-01-26**: Critical: `supabase/migrations` directory missing. Cannot verify RLS policies against code.
+- **2026-01-26**: `docs/02-technical/api` is empty. Missing `api-reference.md`.
+- **2026-01-26**: `docs/02-technical/schema/tables/locations.md` is missing. Needed to document `facility_type` and logic.
+
+- **2026-01-26**: Missing API Documentation for `app/actions/events.ts` (specifically `rsvpToEvent` server action and series support).
+- **2026-01-30**: Missing `docs/02-technical/infrastructure/supabase-cli.md` (Dev Environment Setup).
+- **2026-01-30**: Missing `docs/02-technical/infrastructure/github-actions.md` (CI/CD Pipeline).
+- **2026-01-30**: Missing `docs/01-manuals/dev-guide.md` updates for Schema Change Workflow.
+- **2026-01-26**: Missing `docs/01-manuals/resident-guide` updates for "Series RSVP" user workflows.
+- **2026-01-26**: Missing Resident Guide section for "Communicating with Admins regarding requests" (Resident Reply feature).
+- **2026-01-26**: Missing Admin Guide section for "Resident Conversations" (Request management).
+- **2026-01-26**: Missing `request_comments` table documentation in `docs/02-technical/schema/`.
+- **2026-01-26**: Missing Analytics event specification for `request_comment_added`.
+- **2026-01-27**: Missing schema documentation for `lots` table (Schema & RLS). [Review Item 151884757]
+- **2026-01-27**: Missing resident guide section for "Home Showcase" features. [Review Item 151884757]
+- **2026-01-27**: Missing 'Link Account' security documentation in 'docs/02-technical/architecture/domains/identity.md'. [Review Item 151893279]
+- 2026-01-27: Missing API docs for '/api/auth/callback'. [Review Item 151893279]
+- 2026-01-27: Missing specific session management and timeout specifications in `docs/02-technical/architecture/domains/identity.md`. [Brainstorm Item: Auto Logout]
+- 2026-01-27: Missing UI/UX specification for the "Override and Create New Family" confirmation flow in `docs/03-design/`. [Brainstorm Item: Admin Family Selection]
+- 2026-01-28: Missing authentication and password recovery documentation in `docs/02-technical/architecture/domains/identity.md`.
+- 2026-01-28: Missing Admin Guide section for "Handling Password Reset Requests".
+- 2026-01-28: Missing Resident Guide section for "Lost Password Recovery Flow".
+- 2026-01-28: Missing documentation for `exchange` module schema and flows in `docs/02-technical`.
+- 2026-01-28: Missing user guide section for "Requesting Items" in `docs/01-manuals/resident-guide`.
+- 2026-01-29: Missing `docs/02-technical/schema/tables/password_resets.md` (Proposed private table).
+- 2026-01-29: Missing `docs/02-technical/flows/auth/password-reset.md` (Auth Flow).
+- 2026-01-29: Missing process in `docs/01-manuals/admin-guide` for handling reset requests.
+- **2026-01-29**: Missing Security Documentation for `app/t/[slug]/dashboard/neighbours/page.tsx` payload security. [Review Item 69]
+- **2026-01-29**: **Critical Security Gap**: Server actions/pages are sending raw PII (emails/phones) to the client component `NeighboursPageClient`, relying on client-side privacy filtering. This violates "Backend-First" security.
+- **2026-01-29**: Missing "Backend-First" Privacy Standard documentation. [Review Item 153123500]
+- **2026-01-29**: Missing Neighbors Page payload specification. [Review Item 153123500]
+
+- **2026-01-29**: Missing `docs/01-manuals/resident-guide/login.md` covering specific login policies (Remember Me, Timeout). [Review Item 152467764]
+- **2026-01-29**: Missing `docs/01-manuals/resident-guide` updates for "Check-in Comments".
+- **2026-01-29**: Missing table validation for `comments` in `docs/02-technical/schema/tables/`.
+- **2026-01-29**: Missing RLS Policy documentation for `comments` in `docs/02-technical/schema/policies/`.
+- **2026-01-29**: Missing `comment_posted` definition in `docs/02-technical/analytics/analytics-events.md`.
+- **2026-01-29**: Missing API documentation for `postComment` in `docs/02-technical/api/api-reference.md`.

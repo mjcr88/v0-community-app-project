@@ -1,0 +1,4503 @@
+42f7d36|2026-01-20|feat: Alpha Cohort Reliability & UI Fixes (COMAPP-26)|Addressed multiple issues for the Alpha Cohort release, focusing on Reliability, Map Interactions, and UI Readability.
+
+Features & Improvements:
+- Occupancy Indicators (COMAPP-31/32): Implemented 'Living Glow' on the map. Occupied lots now pulse with a warm amber glow (#F59E0B), while vacant lots remain green.
+- Map Readability (COMAPP-29): Updated lot labels to Dark Gray (#111827) with a distinctive white halo for legibility on Satellite.
+- Rio Dashboard (COMAPP-24): Enhanced contrast for Rio's welcome message and fixed 'Complete Profile' button hover state. Re-eanbled Rio image.
+
+Fixes:
+- Notifications (COMAPP-27): Fixed broken transaction action flow and redirects. Added 'Pickup Confirmed' notification for Latest-on-Top sorting.
+- Map Interaction (COMAPP-28/30): Fixed stale resident data on lot selection.
+- PWA Icons (COMAPP-14): Corrected icon paths in layout.tsx.
+- Date Picker (COMAPP-32/37): Fixed timezone snapping bug in RequestBorrowDialog.
+- Directory (COMAPP-23): Renamed 'Families' to 'Households' and fixed mobile tab overflow.
+
+Jira References:
+COMAPP-14, COMAPP-23, COMAPP-24, COMAPP-27, COMAPP-28, COMAPP-29, COMAPP-30, COMAPP-31, COMAPP-32, COMAPP-37
+
+8d30417|2026-01-18|fix: address code review feedback (admin flow logic, profile form mutations)|
+dcd132b|2026-01-18|feat: refine admin resident flow, update UI to Household, and implement smart resident status|
+bfceee7|2026-01-17|Merge pull request #33 from mjcr88/fix/email-case-insensitivity-revert|Fix(Auth): Signup Trigger Logic
+
+Context: Invited users were getting "Database error" when setting passwords.
+Change: Reverted handle_new_user logic to "Delete placeholder -> Insert new user" (stable) while preserving case-insensitive email matching.
+Fix(UI): Restore Neighbor Lists in Forms
+
+Context: The "List" selection option disappeared from Event/Check-in forms.
+Change: Updated ResidentInviteSelector to restore the "Lists" tab, fetch lists from server, and handle list-based selection.
+Fix(Performance): Neighborhood Selection Loading
+
+Context: "Neighborhood Only" selection was stuck loading indefinitely due to a client-side infinite render loop.
+Change: Fixed NeighborhoodMultiSelect dependency array to prevent infinite re-fetching.
+Fix(Security): Neighborhood RLS Recursion
+
+Context: Admin policies on neighborhoods caused database recursion/locking.
+Change: Replaced admin policies with SECURITY DEFINER functions (scripts/064_fix_neighborhood_admin_rls.sql) to isolate RLS checks.
+Also: Fixed resident visibility RLS (scripts/062..., scripts/063...).
+
+Component Fixes:
+
+Updated ResidentInviteSelector to correctly use member_ids (array of strings) from the server response, resolving the "undefined map" issue.
+Cleaned up the UI nitpicks (removed redundant class, fixed icon).
+Added ESLint disable comment to NeighborhoodMultiSelect.
+Database Fixes:
+
+Migration 061 (User Deduplication): Changed logic to UPDATE the existing user record instead of DELETE+INSERT. This ensures Foreign Key constraints (documents, changelogs) remain intact. Added LIMIT 1 for determinism.
+Security Hardening: Added explicit search_path = public, auth, pg_catalog to all SECURITY DEFINER functions in scripts 061, 062, 063, and 064.
+
+557f41a|2026-01-17|fix: address PR reviews|- Fix NeighborList type and data mapping in ResidentInviteSelector
+
+- Use UPDATE instead of DELETE+INSERT in user deduplication (migration 061)
+
+- Harden SECURITY DEFINER functions with explicit search_path
+
+- Ensure deterministic user lookup with LIMIT 1
+
+cc09aa9|2026-01-17|fix: resolve neighborhood loading infinite loop and RLS recursion|- Fix client-side infinite render loop in NeighborhoodMultiSelect
+
+- Fix neighborhood admin/resident RLS policies to prevent recursion
+
+- Restore Neighbor List selection tab in ResidentInviteSelector
+
+- Add migration scripts 062-064
+
+4a0dbf9|2026-01-17|fix(auth): revert user ID merge logic to delete-first while keeping case-insensitivity|
+6b63645|2026-01-16|Merge pull request #32 from mjcr88/fix/alpha-feedback-1|fix(alpha): Batch 2 Feedback - Skills, Map, Uploads, Nav
+947059c|2026-01-16|refactor: improve safety in skills update, user merge, and nav validation|- onboarding.ts: Deferred deletion of old skills until new skills are resolved
+
+- official/page.tsx: Added validation for 'tab' parameter
+
+- 061_sql: Rewrote user merge logic to migrate FKs before deletion
+
+ba9fd3d|2026-01-16|fix(alpha): batch 2 fixes - skills, map, uploads, nav|- Allowed custom skills creation in Onboarding & Profile Wizard
+
+- Fixed 3D Map rendering on Windows (preserveDrawingBuffer)
+
+- Improved Pet Upload error message for size limit
+
+- Fixed 'Back to Announcements' 404 and improved Official section tab navigation
+
+677b85f|2026-01-16|fix(neighbours): resolve ambiguous relation causing 404 on profile|
+947f763|2026-01-16|fix(alpha): solve horizontal scroll and pet upload size limit|
+980084b|2026-01-16|Merge pull request #31 from mjcr88/fix/map-sidebar-resident-design|Restore Map Sidebar and Fix UI Regressions
+1d14609|2026-01-16|fix(exchange): filter exchange categories by tenantId for multi-tenancy|
+5aee733|2026-01-16|fix: restore map sidebar functionality and fix UI regressions on invite and exchange pages|
+c7f8ca0|2026-01-16|Merge pull request #30 from mjcr88/feat/pr23-pr24-consolidation|feat: Consolidate PRs #23 and #24 - Analytics, Security, Household Items
+738a620|2026-01-16|merge: Resolve conflicts with main|
+0b36698|2026-01-16|fix(deps): Add react-icons dependency|
+edc67e1|2026-01-16|fix: Resolve build errors|- Update CreateExchangeListingModal to use correct 5-step wizard imports
+- Add dompurify dependency for HTML sanitization
+- Fix Step1Category props
+
+de73c37|2026-01-16|chore: Trigger rebuild|
+ac902bc|2026-01-16|fix: Update pnpm-lock.yaml to match package.json|
+f4f017f|2026-01-16|feat: PR #23 - PostHog analytics, app icons, Storybook stories|From PR #23:
+- Added comprehensive PostHog analytics tracking:
+  - OnboardingAnalytics, TourAnalytics, ProfileAnalytics
+  - EventsAnalytics, MarketplaceAnalytics, CheckInAnalytics
+  - MapAnalytics, RequestsAnalytics, DashboardAnalytics
+  - NavigationAnalytics, ThemeAnalytics, ErrorAnalytics
+- Added PostHogProvider for automatic page view tracking
+- Added app icons (bird logo as favicon and apple-icon)
+- Added 20+ Storybook stories for components
+- Moved 50+ unused components to components/_deprecated/
+- Storybook configuration updates
+
+91d6efe|2026-01-16|Merge pull request #29 from mjcr88/fix/invite-page-and-remove-onboarding|refactor: Improve invite page UX and remove onboarding flow
+654ba3d|2026-01-16|security: Update Next.js to 16.0.10 and add undici 6.21.0|Critical security updates:
+- CVE-2025-55182: Critical RCE via unsafe deserialization
+- AIKIDO-2025-10869: Critical RCE in React Server Components
+- GHSA-mwv6-3258-q52c: High severity DoS via CPU exhaustion
+- CVE-2025-55184: High severity DoS via infinite loop
+- CVE-2025-55183: Medium severity source code disclosure
+- undici: Fixes memory leak CVE
+
+a818c67|2026-01-16|feat: PR #24 - Household items category, security fixes, and bug fixes|From PR #24:
+- Added Household items exchange category with 5-step wizard
+- Added DOMPurify XSS prevention (lib/sanitize-html.ts)
+- Added timing attack prevention in validate-invite-action
+- Added new carousel component with swipe gestures
+- Fixed announcement HTML display in widgets
+- Updated storybook-static assets
+
+Note: Package security updates (Next.js, undici) will be applied separately
+
+34d3eec|2026-01-16|fix: Add email validation and role-based redirect for invite page|- validateInviteToken now verifies resident.email is non-empty and valid format
+- Returns descriptive error if email is missing or invalid
+- Logged-in users on invite page now redirect based on role (admin vs resident)
+- Prevents 'Email not set' from being submitted to createAuthUserAction
+
+3dfa31c|2026-01-16|refactor: Improve invite page UX and remove onboarding flow|- Added 50/50 split layout on invite page with Rio parrot image
+- Fixed email field to show user's stored email with fallback
+- Removed auto-login after signup - users now redirected to login page
+- Removed onboarding redirect from login flow - residents go directly to dashboard
+- Fixed redirect loop between login and onboarding pages
+
+9e37216|2026-01-16|fix: Strip HTML from announcement/document previews in priority feed|- Added stripHtml helper to clean HTML tags from rich text content
+- Prevents malformed HTML rendering in dashboard preview cards
+- Decodes common HTML entities for proper display
+
+aae36b3|2026-01-16|Merge pull request #28 from mjcr88/fix/map-sidebar-lot-residents|fix: Use pre-enriched data in LocationInfoCard for lot residents
+9126132|2026-01-16|Merge pull request #27 from mjcr88/feat/fixes-neighbor-lists-reservations|fix: Update MyReservationsWidget URLs and button styling
+528f6e7|2026-01-15|fix: Use pre-enriched data in LocationInfoCard for lot residents|- Fixed map sidebar not showing family/residents for lots
+- Component now uses pre-enriched data from getLocations props when available
+- Falls back to client-side fetch only when enriched data is missing
+
+d3f7a36|2026-01-15|fix: Use pre-enriched data in LocationInfoCard for lot residents|- Fixed map sidebar not showing family/residents for lots
+- Component now uses pre-enriched data from getLocations props when available
+- Falls back to client-side fetch only when enriched data is missing
+
+99ce852|2026-01-15|fix: Update MyReservationsWidget URLs and button styling|- Changed all facility links from /dashboard/map to /dashboard/community-map
+- Updated empty state button to use primary styling (matching other widgets)
+
+2376cf5|2026-01-12|Merge pull request #26 from mjcr88/feat/fixes-neighbor-lists-reservations|feat: Complete Units 4, 5, & 6 (Exchange, Reservations, Recurring Events)
+This PR implements three major feature units, significantly expanding the community features.
+## Unit 4: Community Exchange
+*   **Marketplace**: Full implementation of the Listings system (Buy/Sell/Free).
+*   **Transactions**: Added transaction lifecycle management (offer -> accept -> complete).
+*   **Dashboard**: Added generic and personalized Exchange widgets to the main dashboard.
+## Unit 5: Reservation System
+*   **Facility Management**: Admin interface to create and configure facilities (e.g., Pools, Clubhouses) with specific rules and capacities.
+*   **Booking Logic**: Robust reservation system with availability checking, slot management, and conflict prevention.
+*   **Admin Controls**: Dedicated "Reservations" page for admins to view all bookings and force-cancel with reasons.
+*   **Feature Flagging**: The entire module is toggleable per-tenant via the Backoffice, controlling sidebar visibility and access.
+## Unit 6: Recurring Events & Advanced RSVP
+*   **Recurring Events**:
+    *   Support for Daily, Weekly, and Monthly recurrence patterns.
+    *   "Generation" logic handles creating individual instances while linking them to a parent series.
+*   **Event Form Refactor**: Split the complex creation flow into a clean 4-step wizard (Info > Schedule > Location > Visibility).
+*   **Series RSVP**:
+    *   New modal allowing users to RSVP to "This Event Only" or "This and All Future Events".
+    *   Backend propagation logic to apply RSVPs to future instances.
+*   **Relative Deadlines**: Added dynamic RSVP deadlines (e.g., "24 hours before start") specifically for recurring series.
+## Refinements & Fixes
+*   **Neighbor Lists**: Added functionality for residents to create custom lists of neighbors.
+*   **UX Improvements**:
+    *   Prevented navigation to Event Details when clicking quick RSVP actions on cards.
+    *   Filtered out "Declined" events from the resident's main event list view.
+c0266b4|2026-01-11|feat: Complete Units 4, 5, & 6 (Exchange, Reservations, Recurring Events)|- Unit 4 (Exchange): Marketplace listings, transactions, and dashboard widgets.
+- Unit 5 (Reservations): Facility management, admin controls, reservation logic, and feature flags.
+- Unit 6 (Recurring Events): Series creation, relative RSVP deadlines, and scope-based RSVPs.
+- Neighbor Lists: added custom user lists functionality.
+- Logic: Unified checking/priority algorithms and refactored event forms.
+
+68438fb|2026-01-10|Merge pull request #25 from mjcr88/feat/alpha-launch-features|feat: Alpha Launch - Units 0, 1, 2, 3, 9, 10 Complete
+1b5f15e|2026-01-10|feat: Alpha Launch - Units 0, 1, 2, 3, 9, 10 Complete|## Unit 0: i18n Infrastructure
+- Created lib/i18n/ with EN/ES JSON translation files
+- Added LanguageProvider context with useTranslation() hook
+- Added language toggle to navigation hamburger menu
+- Language preference persists in localStorage
+- Performance fix: Moved LanguageProvider to client-side DashboardLayoutClient
+
+## Unit 1: Fix Facility Details
+- Fixed FacilityFields.tsx to save all location attributes
+- Improved map preview UI with LocationInfoCard component
+- Added embedded variant to LocationInfoCard for sidebar integration
+- Fixed priority feed to exclude read announcements
+
+## Unit 2: Supabase Storage + Document Library
+- Migrated uploads from Vercel Blob to Supabase Storage
+- Created Official section combining Announcements + Documents
+- Admin document management with TipTap rich text editor
+- PDF upload/download support with category filtering
+- Created document_reads table for view tracking
+
+## Unit 3: Family Member Creation
+- Made users.email nullable for passive members
+- Created createFamilyMember server action with service role client
+- Added Create New Member tab with avatar upload
+- Implemented Request App Access for passive members
+- Fixed lot_id assignment to always use primary contact lot
+
+## Unit 9: RLS Policy Fixes
+- Created residents_insert_family_members policy
+- Added residents_same_tenant_read policy for directory visibility
+- Set search_path=public on SECURITY DEFINER functions
+
+## Unit 10: Family Management UI Polish
+- Added RLS DELETE policy for pets
+- Fixed relationship dropdown alignment
+- Added avatar upload for passive members
+
+## PostgREST FK Ambiguity Fix
+- Fixed PGRST201 error by using explicit FK names in queries
+
+c303edb|2025-12-08|Merge pull request #22 from mjcr88/minor-fixes-prep-alpha|Minor bug fixes and UI improvements to support alpha testing
+
+Includes fixes for:
+
+Admin Family Create 'Unauthorized' error
+Admin Family Create Foreign Key violation
+Profile Wizard UI refinements (sticky header, scroll reset)
+General cleanup for alpha testing
+8299d74|2025-12-08|fix: upgrade next.js and react to patch CVE-2025-66478|
+27bf53e|2025-12-08|chore: update pnpm-lock.yaml to fix Vercel build|
+a538847|2025-12-08|minor fixes in prep for alpha testing|
+ba9a3a3|2025-12-05|Merge pull request #21 from mjcr88/mobile-optimization|Mobile optimization & UserJot Integration
+190f266|2025-12-05|End to end mobile optimization & Userjot integration|
+615da13|2025-12-03|config: bind dev server to 0.0.0.0 for mobile access|
+0da4bb9|2025-12-03|Fix: Update pnpm-lock.yaml|
+c81dcb3|2025-12-03|Fix: Add missing dependency @radix-ui/react-visually-hidden|
+af50795|2025-12-03|Implemented app tour & profile onboarding flows, added Rio state images, fixed dashboard stats|
+30c3935|2025-11-29|Add missing framer-motion dependency|
+80367bd|2025-11-29|Fix pnpm-lock.yaml sync issue|
+6922836|2025-11-29|Redesign of all user facing screens and full migration from Google Maps to Mapbox, including cleanup of old map files|
+92a317c|2025-11-23|Merge pull request #20 from mjcr88/feature/wp4-screen-redesign|Feature/wp4 screen redesign
+Dashboard redesign, stats card customization, priority feedb logic. 
+16682c9|2025-11-23|fix(build): add missing stats-config file required by dashboard API|
+7822769|2025-11-23|fix(dashboard): resolve priority feed schema issues and improve UX|Critical Fixes:
+- Fix events query to use start_date/end_date instead of start_time/end_time
+- Fix events RSVP column from status to rsvp_status
+- Fix transactions to use lender_id instead of seller_id across all queries
+- Update FK references to use proper constraint names
+
+UX Improvements:
+- Change save icon from Bookmark to Heart (fills red when saved)
+- Add RSVP icons (✓ ? ✕) to check-in cards
+- Remove action buttons from transaction cards (notification only)
+- Fix stats label truncation by removing truncate class
+- Add min-h-[88px] for uniform card heights
+- Add pt-4 top padding before first card
+
+Impact:
+- Events now appear in priority feed (e.g., Bday party)
+- Borrowed items now visible to borrowers (e.g., Return Soon: New ladder)
+- Check-ins have proper RSVP functionality
+- Transaction workflow correctly shows notifications without action buttons
+- All cards have consistent height and spacing
+
+Files changed:
+- app/api/dashboard/priority/route.ts
+- components/ecovilla/dashboard/PriorityFeed.tsx
+- components/dashboard/StatCard.tsx
+
+9538ee8|2025-11-20|Merge pull request #18 from mjcr88/feature/wp2-design-tokens|WP3 Design Specification, Component Library, Tone of voice, redesign of login & navs
+9720162|2025-11-20|feat(wp3b): refine login page and navigation components|- Login Page: Swap layout (Form Left/Image Right), polish MagicCard effect with brand colors/rounded edges.
+- Desktop Nav: Rename 'MY' to 'PERSONAL', remove 'Check-ins', clean up User Popover.
+- Mobile Nav: Sync naming/removal, implement hide-on-scroll behavior for top bar.
+- Fix: Resolve build errors and improve component styling.
+
+662664b|2025-11-20|Merge pull request #17 from mjcr88/feature/wp1-tech-debt-elimination|WP1 Tech Debt Elimination - Branch Summary Report
+Status: ✅ Complete Branch: feature/wp1-tech-debt-elimination (Recommended for Merge) Date: November 20, 2025
+
+1. Overview
+This branch successfully executed the WP1 Tech Debt Elimination plan, transforming the application's foundation from a rapid prototype to a scalable, secure, and performant production-ready system. The work focused on code quality, API architecture, security hardening, and performance optimization.
+
+2. Key Achievements
+🏗️ Architecture & Code Quality (Refactoring)
+Standardized Data Layer: Refactored 
+
+lib/data
+ to use consistent patterns, removing circular dependencies and improving type safety.
+Type Definitions: Consolidated and cleaned up TypeScript interfaces in types/ directory.
+Next.js 15 Compatibility: Updated all API routes and Page components to handle asynchronous params and searchParams correctly.
+🔌 API v1 Infrastructure
+Scalable Architecture: Established a versioned API structure at /api/v1/.
+Middleware: Implemented robust middleware for:
+Authentication: Verifies Supabase session.
+Tenant Isolation: Enforces strict data segregation.
+RBAC: Role-Based Access Control for super_admin, tenant_admin, and 
+
+resident
+.
+Standardized Responses: Created utilities for consistent success/error responses and pagination.
+🔒 Security Hardening
+Rate Limiting: Integrated @upstash/ratelimit to protect API endpoints from abuse.
+Input Validation: Implemented Zod schemas for runtime validation of critical entities (
+
+events
+, residents, 
+
+locations
+, exchange).
+File Upload Security: Created 
+
+lib/upload-security.ts
+ to enforce strict file type and size limits.
+RLS Audit: Audited Row Level Security policies and identified/fixed potential gaps.
+⚡ Performance Optimization
+Database Indexes: Added missing performance indexes for foreign keys and frequently filtered columns (Script: 
+
+055_add_performance_indexes.sql
+).
+Image Optimization: Migrated <img> tags to next/image for automatic resizing and format optimization.
+Bundle Size: Implemented lazy loading for heavy components (e.g., Google Maps) to improve initial load time.
+3. Files & Scope
+Files Modified/Created: ~50+ files
+New Modules: lib/api/, lib/validation/, app/api/v1/
+Migration Scripts: scripts/WP1/
+4. Recommendations
+Merge to Main
+Recommendation: MERGE IMMEDIATELY This branch establishes the new baseline for the application. Merging it now is critical to:
+
+Prevent Drift: Ensure all future work (especially WP2 Design System) builds upon the clean, refactored codebase.
+Enable WP2: The Design System work will rely on the stable types and components established here.
+Future Work (Post-Merge)
+Expand Zod Coverage: Add schemas for remaining entities (pets, family_units, etc.) as needed.
+Frontend Integration: Gradually update frontend components to consume the new api/v1 endpoints instead of Server Actions where appropriate (hybrid approach).
+Signed off by: Antigravity (AI Agent)
+930779d|2025-11-20|fix: Add missing @upstash dependencies for rate limiting|
+a2a0fc5|2025-11-20|feat: Complete WP1 Phase 4 - Security & Performance|
+a20885f|2025-11-20|WP1 Phase 3 Part 2: API v1 Architecture (Infrastructure + Endpoints)|
+9d3185a|2025-11-20|feat(wp1): Complete Phase 2-3A - Data Layer & Refactoring|Phase 2: Data Layer Foundation
+- Created 7 lib/data modules (residents, events, families, exchange, check-ins, requests, locations)
+- Centralized all database queries with clean separation
+- Added missing Location type properties (12 fields)
+
+Phase 3A: Server Actions & API Refactoring
+- Refactored 6 server actions/routes to use lib/data
+- Fixed 6 SQL column errors (type, images→photos, icon, recurrence_rule, color)
+- Fixed date comparison bugs (start_date vs start_time columns)
+
+Event System Enhancements
+- Implemented past events toggle with client-side filtering
+- Default view shows upcoming events (configurable)
+- Fixed event sorting and date range filtering
+- Fixed upcoming events widget to show community events
+
+UI Component Architecture
+- Extracted location photo gallery to client component
+- Fixed Server Component onClick handler errors
+- Fixed custom event location map pin rendering
+- Improved component separation (server/client)
+
+Next.js 15 Compatibility
+- Updated 7 files to properly await params
+- Removed revalidatePath from render cycle
+- Fixed all Next.js 15 warnings
+
+Critical Functions Restored
+- Restored createExchangeListing (145 lines)
+- Fixed Location type interface completeness
+
+Testing & Verification
+- All core features tested and working
+- Zero SQL errors, zero critical runtime errors
+- Photo upload configured with Vercel Blob
+- Comprehensive manual testing completed
+
+Files modified: 19 (1 new, 18 updated)
+
+Refs: WP1 Phase 2-3A complete
+
+aa5f091|2025-11-19|WP1 Phase 2: Implemented data layer (residents, events, families, exchange, check-ins)|
+f185621|2025-11-19|WP1 Day 1: DB migration fixes, RLS audit scripts, and bug fixes (Hydration, Toggles)|
+daafe25|2025-11-18|Merge pull request #15 from mjcr88/v12-branch|v12 branch:
+
+- Finalized exchange workflows & notifications
+- Entire resident request forms and admin moderation
+- Entire admin announcement features
+0fac74b|2025-11-19|feat: update cron schedule for archive announcements|Change archive announcements cron job to daily at midnight.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+b49c498|2025-11-19|feat: add announcements feature toggle to backoffice|Implement toggle for enabling/disabling announcements per tenant.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+d1d57b8|2025-11-19|feat: implement auto-archive system for announcements|Add cron job to archive expired announcements and update configuration.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+8bbab23|2025-11-19|feat: add debug logging to notification API routes|Improve auth flow tracing and error identification.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+05a35cb|2025-11-19|fix: store announcement ID in notification metadata|Update notification function to use metadata field for announcement ID.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+b0b31f4|2025-11-19|fix: correct notification sending logic|Rewrite query and filtering for targeted notifications
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+1469203|2025-11-18|fix: show recent announcements regardless of read status|Add debug logs and update API logic to return 5 most recent.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+54d3a9b|2025-11-18|fix: resolve announcement scope issues|Fix API, detail page, and admin scope logic for correct display
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+90fd50b|2025-11-18|fix: resolve multiple Phase 3 issues|Fix 406 error in residents query, update dashboard widget, correct description positioning, fix neighborhood badge display, and resolve scope field mismatch.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+90f62f2|2025-11-18|fix: resolve Phase 3 dashboard issues|Correct column names, fix location and scope display, and wire client component.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+aef5459|2025-11-18|refactor: reorganize announcements routes with management group|Update route structure to prevent routing conflicts.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+9d34703|2025-11-18|fix: remove UUID validation guard for static route|Trust Next.js routing for static over dynamic routes.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+69b274f|2025-11-18|fix: add UUID validation guard for dynamic route|Prevent dynamic route from intercepting static routes.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+fda017d|2025-11-18|fix: correct column names in API route and widget|Update API route to use `announcement_type` and `description`.
+Rebuild query logic and fix widget field names.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+6613072|2025-11-18|feat: implement Phase 3 hybrid announcements system|Add dashboard widget, announcements page, and API route for unread announcements.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+f2f8918|2025-11-18|fix: pass tenantId to dialogs and components|Correct missing tenantId props in detail page and edit form.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+cbe3b86|2025-11-18|fix: correct location and date bugs in announcements|Fix category column to type and update prop names in UpdatedIndicator.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+7c7e5b6|2025-11-18|fix: correct parameter order in updateAnnouncement function|Fix parameter order in edit form and update function signature.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+bc79859|2025-11-18|fix: correct prop names in edit form for LocationSelector|Update edit form to use correct prop names for LocationSelector.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+076715b|2025-11-18|fix: correct locations query column name|Update edit page query to use `type` instead of `category`
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+fffa2ce|2025-11-18|fix: fix creator display and implement admin announcement features|Fix creator display and complete admin announcement details, edit, and actions.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+a4807c4|2025-11-18|feat: implement announcement creation form and page|Add form with radio toggle, location mapping, image upload, date picker, and validation
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+150ff63|2025-11-18|feat: implement admin announcements table and page|Add filtering, search, and tabbed interface for announcements.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+3e67c7e|2025-11-18|feat: add core UI components for announcements|Create AnnouncementTypeIcon, AnnouncementPriorityBadge, and UpdatedIndicator.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+b9ddea1|2025-11-18|feat: complete server actions for announcements|Add missing data fetching functions for admin and residents.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+927d0aa|2025-11-18|fix: resolve high priority issues in announcements|Fixed location display, location constraint, delete/archive redirect, and table navigation performance.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+0806700|2025-11-18|fix: remove unnecessary route guard for create/edit|Static routes now correctly prioritized over dynamic routes.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+fd75696|2025-11-18|fix: add guard to prevent routing conflict for static routes|Prevent dynamic route from intercepting static routes like
+/admin/announcements/create.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+1ac3c12|2025-11-18|fix: resolve slow loading and layout issues in admin detail page|Optimize data fetching and add community-wide option in edit form.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+f82e9c4|2025-11-18|feat: complete Phase 2 with Admin Detail and Edit Announcement Pages|Implement Admin Detail and Edit Announcement Pages with full functionality.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+5a0bce8|2025-11-18|fix: add null checks to getInitials function|Handle null values to prevent crashes in avatar display.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+8912e78|2025-11-18|fix: resolve dropdown import issue|Clear Git sync cache and verify import resolution.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+218dbe7|2025-11-18|feat: add debug logging for admin announcements page|Improve error handling and logging to identify page failures.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+f43462f|2025-11-18|fix: add missing DropdownMenuTrigger import|Resolve import error for table header dropdowns.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+33b43c0|2025-11-18|fix: correct form submission to server action|Align form parameters with server action signature.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+d3e7cc2|2025-11-18|feat: enhance announcement form with full feature set|Add neighborhoods, photo manager, location selector, auto-archive date, and event linking placeholder
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+d6ffbee|2025-11-18|feat: add announcement create page and fix auth pattern|Create announcement form and page with tenant admin auth check.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+a8ede6d|2025-11-18|feat: implement admin announcement management UI|Add admin announcement management with tabbed interface, table, and action dialogs.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+f9933d7|2025-11-18|fix: add placeholder pages for announcements views|Create pages to resolve navigation link issues and prevent infinite loops.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+5fc74ef|2025-11-18|feat: implement Phase 1 - Announcements|Add database schema, types, actions, notifications, toggle, and navigation
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+53944a9|2025-11-18|feat: implement feature toggle for Resident Requests|Add SQL migration, toggle function, UI integration, and conditional rendering.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+a293589|2025-11-18|feat: implement complaint tracking and filters in Resident Requests|Add complaint counters and filters to admin residents and requests tables.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+6e4e76d|2025-11-18|fix: enhance pet profile clickability and remove request ID|Fix minor UI issues and streamline admin detail page.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+5e433a2|2025-11-18|fix: enhance complaint detail and admin request pages|Display tagged residents/pets, clickable profiles, and remove email/phone from detail pages. Make table rows clickable and fetch resident/pet data.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+9336cf4|2025-11-18|feat: implement UI improvements for request management|Reduce icon sizes, add clickable creator profiles, add Active/Resolved tabs, hide resolved requests for residents, remove email/phone from details
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+4ca31b3|2025-11-18|feat: implement Admin Request Management|Add comprehensive admin interface for managing resident requests
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+c705986|2025-11-18|feat: add RLS policy for community request visibility|Allow residents to view public maintenance/safety requests from others.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+369727d|2025-11-18|fix: resolve requests issues and enhance table display|Add debug logging, update table columns, rename tabs, and fetch user profile data.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+d820fbe|2025-11-18|feat: implement Phase 2 for request management|Add anonymous indicators, new tabs, and active request dashboard widget.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+e30ab2c|2025-11-18|fix: implement critical bug fixes for request tracking|Add new columns and update RLS policies; fix pets query; update types and actions; track anonymous creators; add dynamic priority descriptions; create new requests function.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+e9dc12a|2025-11-17|feat: refactor resident/pet selector to use server actions|Add `getPets` function and update component to fetch data via server actions.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+bfd8fb0|2025-11-17|feat: add ResidentPetSelector and update complaint form|Create ResidentPetSelector and update complaint modal with dynamic placeholders and optional location.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+e075434|2025-11-17|feat: add Requests section to navigation|Add Requests menu item to resident and admin navigation sidebars.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+57a0023|2025-11-17|feat: implement resident request creation flow|Add request type icons, badges, modal, listing, and detail pages
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+3551ff3|2025-11-17|feat: implement Resident Requests Database & Server Actions|Add SQL migration, TypeScript types, and server actions for resident requests.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+d4a77c1|2025-11-17|fix: resolve toast issue in dialog components|Fix toast execution context in three dialog components
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+ca628f0|2025-11-17|fix: simplify unflag action and restore View button|Remove listing update, add View button, and improve toast.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+ca38d18|2025-11-17|fix: resolve admin table button and dialog issues|Remove duplicates, update dialogs, add feedback toasts, fix bulk actions.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+99f1ebf|2025-11-17|feat: implement admin table dialog components|Add ClearFlagDialog, ArchiveListingsDialog, and DeleteListingsDialog for admin actions.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+67852d1|2025-11-17|feat: initialize project with duplicated files and updated structure|Add new files and update project structure for better organization.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+51b2b18|2025-11-17|fix: fix syntax error in exchange-listings.ts|Remove duplicate closing brace to resolve parse error.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+ddc24dd|2025-11-15|Merge pull request #13 from mjcr88/v10-branch|feat: Sprint 6 - Exchange listings management & dashboard performance
+
+- Add full CRUD for exchange listings (edit, pause, delete, publish)
+- Create EditExchangeListingModal with pre-population and validation
+- Add MyExchangeListingsWidget with tabbed interface to dashboard
+- Implement collapsible dashboard sections
+- Add lazy loading for map, check-ins, and events (SWR + API routes)
+- Wrap expensive queries with React cache() to prevent rate limiting
+- Fix category/photo pre-population bugs in edit modal
+- Optimize dashboard: 40-50% faster initial load, MVP ready
+8aaaba1|2025-11-16|fix: fix JSX parsing error in modal|Add missing </AlertDialogDescription> tag to resolve build error
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+4019ac3|2025-11-16|feat: cache all dashboard queries to prevent rate limiting|Wrap expensive queries in cache to reduce duplicate requests.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+50b0010|2025-11-16|fix: improve SWR error handling to prevent login redirects|Handle network errors gracefully in SWR to stop auth cascades
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+7fc5a9a|2025-11-16|fix: correct events API route schema|Remove non-existent `color` field and fix date/time fields.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+615816e|2025-11-16|feat: resolve rate limiting with client-side lazy loading|Move check-ins and events widgets to lazy load data with SWR.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+96012b5|2025-11-16|feat: deduplicate queries with React cache|Wrap `getLocations`, `getUpcomingEvents`, and `getActiveCheckIns` to prevent rate limiting.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+5115fd6|2025-11-16|feat: add collapsible sections with lazy-loaded map|Prevent expensive queries and improve dashboard performance
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+1535b41|2025-11-16|feat: cache getLocations function to prevent multiple renders|Wrap getLocations at source to deduplicate calls across the app.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+e8ff048|2025-11-16|feat: add React cache to prevent rate limiting|Wrap expensive queries in cache() to deduplicate requests.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+1c55099|2025-11-16|fix: resolve tenant_id error and add delete button|Fix missing tenantSlug in pauseExchangeListing and confirm delete button in widget and modal.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+660ddaa|2025-11-16|fix: remove invalid filter from exchange_categories query|Update query to exclude non-existent `is_active` filter.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+2dee5df|2025-11-16|feat: add MyExchangeListingsWidget and integrate into dashboard|Create tabbed widget for listing management and integrate into dashboard.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+e6411fe|2025-11-16|feat: fix photo display and category pre-population|Initialize photos with hero_photo and extract category ID from nested object.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+49d8d0d|2025-11-16|feat: add debug logs for photo loading and category pre-population|Add comprehensive logs to track photo loading and category state.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+30fb54d|2025-11-16|fix: pass categories/neighborhoods props to detail modal|Ensure correct data flow for modal functionality.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+cfa5526|2025-11-16|fix: resolve category dropdown issue in edit modal|Unique field IDs, removed required attribute, and added debug logs
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+fb906ef|2025-11-16|feat: add EditExchangeListingModal and management buttons|Implement edit modal and listing management features with confirmation dialogs.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+feab4b8|2025-11-16|feat: implement Sprint 6 server actions|Add getUserListings, updateExchangeListing, pauseExchangeListing, publishDraftListing, deleteExchangeListing with auth, auth, and safety checks
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+63469fa|2025-11-14|fix: handle array-of-arrays in path coordinates parsing|Fix parsing issue for array-of-arrays format in path coordinates.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+9f5dddd|2025-11-14|fix: update facility location map display|Fetch path and boundary coordinates and handle all coordinate types.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+6d3197f|2025-11-14|fix: investigate missing coordinates for "Espavel Common Area"|Create SQL script to check for duplicate location records
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+d3c99bb|2025-11-14|feat: add SQL script to debug location coordinates|Create script to query database for location data and listing info.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+48836b8|2025-11-14|fix: resolve null coordinates for community locations|Use locations array to fetch coordinates for proper map display.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+cb8c859|2025-11-14|fix: handle null coordinates in exchange listing|Fix query to handle null coordinates and show map only when valid.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+8fd7af8|2025-11-14|fix: resolve null coordinates for community locations|Use coordinates from allLocations array instead of listing.location.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+6080e60|2025-11-14|feat: add debug logging and fix coordinate parsing|Implement robust coordinate parsing and detailed debug logging.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+30dd849|2025-11-14|fix: prevent null listing error in modal|Add null checks and loading state to avoid accessing null properties
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+5a65e13|2025-11-14|feat: fetch locations server-side and pass to modal|Move location fetch to server component and pass data to modal.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+bae2720|2025-11-14|fix: correct map display in exchange listing detail modal|Fetch and pass all tenant locations to GoogleMapViewer and
+highlight listing location with context.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+b267a27|2025-11-14|fix: resolve map and button display issues|Parse coordinates before map check and add debug logs for button conditions.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+6600933|2025-11-14|fix: resolve location map and borrow button issues|Fix coordinate parsing and reposition borrow button for visibility.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+b654298|2025-11-14|feat: implement full exchange listing detail modal|Add listing detail modal with gallery, pricing, map, and creator info
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+d90fcfb|2025-11-14|refactor: full-width search bar above filters|Restructure layout for better user experience.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+71855fa|2025-11-14|feat: implement client component for search and filters|Convert exchange page to client component with real-time search and filtering
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+5d9db0f|2025-11-14|fix: correct unsaved changes warning in modal|Ensure warning triggers on all close attempts when changes exist.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+038a220|2025-11-14|feat: add unsaved changes warning for modal|Implement confirmation dialog for unsaved changes and form reset.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+54f6e3e|2025-11-14|fix: resolve custom location and PhotoManager issues|Add lat/lng to query and update PhotoManager state management.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+f9bc941|2025-11-14|feat: add image upload to exchange listings|Implement photo upload support with database migration, PhotoManager integration, and hero photo display.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+ce1019e|2025-11-14|fix: resolve refresh and check-ins issues|Replaced hard reload with smoother page refresh, fixed infinite loop in GoogleMapViewer, and re-added automatic data updates.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+033ca9d|2025-11-14|fix: resolve multiple issues in listing creation|Add missing callback, auto-refresh, clean debug logs, and fix prop mismatches
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+203a632|2025-11-14|fix: resolve GoogleMapViewer infinite loop|Remove duplicate useEffect and stabilize check-ins prop.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+e571025|2025-11-14|fix: resolve infinite loop in exchange modal|Move data fetching to parent component to prevent re-renders.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+52d22a0|2025-11-14|feat: add debug logs for tenant_id null error|Add logging to check if tenantId is null when listing is created.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+20697f4|2025-11-14|feat: reintegrate LocationSelector with router.refresh() removed|Add LocationSelector with memoized callbacks and state fields.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+d79ec3a|2025-11-14|fix: remove router.refresh() to stop infinite render loop|Eliminate router.refresh() causing modal re-render crash.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+ce7c678|2025-11-14|fix: remove LocationSelector and simplify location input|Eliminate infinite loop by removing LocationSelector and using simple text input.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+f0b2b5f|2025-11-14|fix: remove revalidatePath to stop infinite loop|Prevent auto-refresh causing re-render cascade in LocationSelector.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+6a02e1e|2025-11-14|feat: add LocationSelector with debugging and memoization|Implement LocationSelector with extensive debugging and memoization.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+bd7f67e|2025-11-14|fix: resolve tenant_id constraint in neighborhood associations|Include tenant_id in neighborhood insertions to fix constraint violations
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+2c49f78|2025-11-14|feat: add visibility scope to exchange listings|Implement community-wide and neighborhood-only visibility options
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+376ce2e|2025-11-14|fix: resolve Sprint 3B display issues and plan for Sprint 3C|Fix display issues and outline detailed implementation plan for next sprint.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+2202540|2025-11-14|fix: remove LocationSelector and fix broken references|Temporarily replace LocationSelector with text input; fix validation logic.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+484d62b|2025-11-14|fix: resolve infinite re-render loop|Remove redundant `router.refresh()` and add memoization to prevent re-renders.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+c7f4323|2025-11-14|fix: resolve maximum update length error in createExchangeListing|Return only listing ID to prevent size limit exceedance.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+7f72de9|2025-11-14|feat: fix display issues and implement Sprint 3C|Fix price and quantity display; add location & visibility to listings
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+072a9a2|2025-11-14|fix: resolve condition check constraint violation|Only include `condition` when it has a valid value.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+7e789cc|2025-11-14|fix: resolve orange line issue and update field visibility rules|Fix `ExchangeCategoryBadge` prop and adjust field rules for pricing, condition, and quantity.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+6a2eaa9|2025-11-14|feat: add pricing, condition, and quantity to listing form|Include dynamic fields for pricing, condition, and quantity.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+526e902|2025-11-14|feat: show drafts to creators and add draft badge|Update listing fetch to include drafts for creators; add "Draft" badge.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+11037e6|2025-11-14|fix: make description column nullable in database|Align UI with database schema for optional description.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+2f18fab|2025-11-14|fix: resolve status badge mismatch with database statuses|Map 'published' to "Available" and handle `is_available` field for proper badge display.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+7491ca7|2025-11-14|fix: simplify RLS policy for onboarding|Remove complex `onboarding_completed` check to resolve 403 errors.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+37f0cf1|2025-11-14|fix: correct RLS policy table check for onboarding_completed|Fix RLS policy to check `onboarding_completed` in `users` table.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+db6db69|2025-11-14|feat: implement exchange listing creation flow|Replicate check-in modal patterns for listing creation and display
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+491a09f|2025-11-14|feat: build and update Exchange feature for Sprint 2|Add exchange browse page, badge components, server actions, and conditional navigation.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+9341c80|2025-11-14|fix: add DROP POLICY IF EXISTS for idempotency|Ensure RLS script can be re-run without errors.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+21a7463|2025-11-14|fix: update RLS policy and API route for category seeding|Allow super_admin access and add proper authentication checks.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+1185b55|2025-11-14|feat: establish Exchange Directory foundation|Create database foundation, tenant features, and supporting files.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+05cae61|2025-11-14|feat: initialize project with duplicated files and updated structure|#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+a429c58|2025-11-14|Merge pull request #11 from mjcr88/v09-branch|v09 branch: Check in Feature
+
+SPRINT 1: Database Foundation
+SPRINT 2: Feature Flag
+SPRINT 3: Server Actions & Utilities
+SPRINT 4: Core UI Components
+SPRINT 5: Create Check-in Form
+SPRINT 6: Check-in Detail Modal
+SPRINT 7: Dashboard Quick Action
+SPRINT 8: Dashboard Live Check-ins Widget
+SPRINT 9: RSVP Functionality
+SPRINT 10: Expiration & Auto-Cleanup
+SPRINT 11: Map Integration - Markers
+SPRINT 12: Map Info Cards
+SPRINT 14: Location Pages Integration
+f01a5fb|2025-11-13|fix: resolve GoogleMapViewer re-renders and check-in visibility|Fix data flow from Dashboard to GoogleMapViewer to prevent re-renders and show check-ins.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+7a73e37|2025-11-13|fix: fix check-in expiration filtering and add buffer|Add 5-minute buffer and enhanced logging for correct expiration checks.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+d7fd4fa|2025-11-13|fix: prevent GoogleMapViewer re-initialization on mount|Use server-provided initialCheckIns prop instead of client-side fetch
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+27e3625|2025-11-13|fix: resolve Google Maps API error post-check-in|Prevent LiveCheckInsWidget from immediate client-side fetch
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+2a7b611|2025-11-13|fix: update "pin" to "marker" and fix import path|Change "pin" to "marker" in three files and correct import path.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+a3ec238|2025-11-13|fix: update form to send "marker" instead of "pin"|Correct type mismatch in custom location check-ins to match database constraint.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+5886702|2025-11-13|fix: disable boundary clicks in drawing mode|Prevent boundary polygons from intercepting map clicks in drawing mode
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+0d0c37c|2025-11-13|fix: enhance marker drop click handler logging and fix|Add debug logs and fix event handler for marker placement.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+29aa25d|2025-11-13|feat: add debug logging for check-in marker drop|Add comprehensive logs to trace check-in creation flow.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+e30dd90|2025-11-13|feat: implement Sprint 14 with check-ins functionality|Add server action, component, and badge for active check-ins.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+03bad04|2025-11-13|fix: resolve caching and marker distribution issues|Fix LiveCheckInsWidget caching and improve marker distribution.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+1c65913|2025-11-13|feat: implement marker distribution in location boundaries|Intelligently distribute markers within boundaries and paths, with stable positions and clustering logic.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+0881469|2025-11-13|fix: resolve avatar field and add marker clustering|Fix avatar field issue and implement zoom-based marker clustering.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+24460b1|2025-11-13|fix: resolve marker floating issue on map|Remove automatic offset and log zoom level for better marker positioning.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+7ec4157|2025-11-13|fix: reduce marker offset for stable zoom behavior|Lower offset to minimize visual drift at any zoom level.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+c1ba3e6|2025-11-13|feat: implement database-level check-in expiration|Move expiration filtering to PostgreSQL for performance gains.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+62cb8b4|2025-11-13|fix: resolve check-ins and modal issues|Filter expired check-ins, fix modal loading, add initials fallback
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+6d0cd7a|2025-11-13|fix: resolve Map constructor naming collision|Rename variable to avoid conflict with imported Map component.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+c965d7b|2025-11-13|fix: rename coordinateMap to avoid naming conflict|Resolve "Map is not a constructor" error and shadowing issue.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+cbd4e69|2025-11-13|fix: improve marker positioning and typo fix|Filter expired check-ins, calculate marker center, offset overlaps; fix typo in component name.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+82e4671|2025-11-13|fix: replace OverlayView with AdvancedMarker in map component|Correct marker component and fix import path for AdvancedMarker.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+78b123e|2025-11-13|feat: client-side check-ins and profile picture markers|Move check-ins fetching to client side and add profile picture markers
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+b67009d|2025-11-13|fix: serialize check-ins for server-client data transfer|Ensure check-ins are JSON-serializable for proper transfer.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+f8b001b|2025-11-13|fix: correct import path and add debug logs for check-ins|Fix incorrect import and add detailed debug logs for check-in markers.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+258302e|2025-11-13|feat: add debug logging for check-ins data flow|Trace data flow from database to map rendering for better debugging.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+9c32e69|2025-11-13|feat: fix check-in markers with null coordinates|Add utility to calculate center from boundary/path coords and update location query.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+d8d9936|2025-11-13|feat: add SQL investigation scripts for data analysis|Create 4 SQL scripts to check locations schema, specific location, join query, and coordinates.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+8035e55|2025-11-13|fix: remove non-existent avatar_url from queries|Update queries to select correct profile_picture_url field.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+c5b4a9b|2025-11-13|fix: resolve field name mismatches and add debug logs|Fix field name mismatches and add debug logs for location data.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+7fc15a7|2025-11-13|feat: add profile picture markers and debug logs for check-ins|Implement profile picture markers for check-ins and add debug logs to track data flow.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+122d784|2025-11-13|feat: add check-in markers to community map|Implement green markers for active check-ins with attendee count and detail modal.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+312e117|2025-11-13|feat: add check-in detail modal with RSVP and controls|Create modal for check-in details, RSVP, and management.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+d7b1e83|2025-11-13|feat: add CheckInsCountWidget and LiveCheckInsWidget|Create new dashboard widgets for check-ins with filtering and live updates.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+e6301f1|2025-11-13|fix: resolve location type mismatch in check-ins|Update form to match database location type constraints.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+43e9b8c|2025-11-13|fix: resolve RLS recursion in check-ins|Remove circular dependencies in RLS policies and add `created_by` columns.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+8f20a27|2025-11-13|fix: correct icon rendering in check-in modal|Store Lucide icons as components and update `getActivityIcon` to return them.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+b3e20be|2025-11-13|fix: resolve infinite recursion in check-ins RLS policies|Split complex policy into separate ones to avoid circular references.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+c4424b2|2025-11-13|fix: correct CreateCheckInModal usage and add debug logs|Create wrapper button for modal and log feature flag value.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+0b0914a|2025-11-13|fix: trigger modal with button instead of component|Correct rendering of check-in button to trigger modal.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+2e7d620|2025-11-13|feat: add "Create Check-in" button to dashboard Quick Actions|Add conditional "Create Check-in" button based on feature flag.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+2a8928c|2025-11-13|feat: create check-in form with specific adaptations|Build CreateCheckInModal following event form structure with duration, start time offset, activity selector, and reuse existing components.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+91b109d|2025-11-13|feat: add Sprint 4 check-in components|Create CheckInTimeBadge, CheckInLocationDisplay, and CheckInCard UI components.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+78c8031|2025-11-13|feat: add CheckInActivityBadge component|Create activity badge with icon and label following existing pattern.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+2da4655|2025-11-13|feat: implement check-ins backend following established patterns|Create check-in activities, expiration utilities, and CRUD server actions
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+6ca4e4b|2025-11-13|fix: correct feature toggle persistence issue|Form now reads `events_enabled` and `checkins_enabled` for proper toggle state.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+49157dc|2025-11-13|feat: add check-ins feature flag|Add toggleable check-ins feature in backoffice, default off, with validation.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+7cdc1f1|2025-11-13|fix: correct RLS policy join for neighborhood visibility|Fix RLS policy to use correct join path: users → lots → neighborhoods.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+a6a5c02|2025-11-13|feat: create SQL migrations for check-ins database foundation|Add 5 tables and RLS policies for check-ins feature.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+c9c2280|2025-11-13|feat: add initial project files and templates|Add basic project structure with templates for various files.
+Create initial files for app, backoffice, and admin sections.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+1657b84|2025-11-13|Merge pull request #10 from mjcr88/v08-branch|v08 branch: Completed Event feature scope, across v06, v07 (commit from main) and v08 we covered:
+
+Sprint 1: Database Foundation & Feature Flag
+Sprint 2: Admin Event Categories Management
+Sprint 3: Basic Event Creation (Community Scope Only)
+Sprint 4: Event Detail Page & Basic Info Display
+Sprint 5: Calendar View & Dashboard Widgets
+Sprint 6: RSVP System (Basic)
+Sprint 7: Family Member RSVP & Saved Events
+Sprint 8: Visibility Scopes (Neighborhood & Private)
+Sprint 9: Event Locations (Community Locations)
+Sprint 10: Custom Temporary Event Locations
+Sprint 11: Multi-Image Upload with Hero Selection
+Sprint 12: Admin Moderation - Event Table & Viewing
+Sprint 13: Resident Event Flagging
+Sprint 14: Admin Event Cancellation
+Sprint 15: Location Integration
+Sprint 17: Edit Event Flow
+We parked, for later design work and improvements:
+
+Sprint 16: Filters, Search & Polish
+Sprint 18: Multi-Step Event Creation Form
+f986cc9|2025-11-13|fix: add missing "use client" directives to client components|Add "use client" directives to components using React hooks.
+Fix Vercel build errors by enabling client-side rendering.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+35bc43e|2025-11-13|feat: implement Sprint 16 missing fields|Add `hide_creator_contact`, `additional_notes`, and `external_url` fields to create and edit forms with proper validation.
+Integrate fields into event detail page with conditional display logic.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+4cc58d6|2025-11-13|fix: pass tenant slug to location info card|Pass correct tenant slug to LocationInfoCard in map components.
+Fix tenantSlug issue in google-map-editor.tsx.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+66987fa|2025-11-13|fix: prevent multiple Supabase client instances|Fix intermittent errors due to multiple Supabase client instances.
+Ensure singleton pattern in `lib/supabase/server.ts` for long-term solution.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+052cba7|2025-11-13|fix: prevent multiple Supabase client instances|Fix intermittent errors caused by concurrent Supabase sessions.
+Implement Supabase client singleton pattern to ensure auth state consistency.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+bfdf2b0|2025-11-13|feat: implement Phase 3 event counts|Add event count badges to location info cards and lazy load event counts on map click.
+Update "View Full Details" button to "View Events & Details" with #events anchor.
+Configure Google Maps API Key restrictions for security.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+1a2790c|2025-11-13|feat: pre-fill event form with location data|Read locationId from URL search params and fetch location data server-side.
+Pass location data to EventForm component and pre-populate form state.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+ff21f77|2025-11-13|feat: convert location detail page to server component|Remove "use client" to enable server-side data fetching.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+6afe4e4|2025-11-13|feat: convert location detail page to server component|Remove "use client" to enable server-side data fetching.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+cc9fd00|2025-11-13|feat: implement Phase 2 location events|Add `LocationEventsSection` component with toggleable views and event creation checks. Update location detail page to fetch and display events with permission checks.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+d53ba36|2025-11-13|feat: implement Phase 2 location events|Add `LocationEventsSection` component with toggleable views and event creation checks. Update location detail page to fetch and display events with permission checks.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+53bef47|2025-11-13|feat: add server actions for event location queries|Implement `getEventsByLocation` and `getLocationEventCount` for upcoming published events.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+e3f8653|2025-11-13|fix: correct import and restore events.ts file|Fix wrong import path and rewrite corrupted events.ts with proper structure.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+80a7eb1|2025-11-13|fix: add await to all createServerClient calls|Resolve undefined errors by awaiting async function calls.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+8e957d7|2025-11-13|fix: initialize Supabase client in getEvent function|Add createServerClient() to resolve undefined error.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+77d1bc1|2025-11-13|fix: remove use client directive from location detail page|Fix cookies() API error and ensure server-rendered page.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+672338b|2025-11-13|fix: remove "use client" from location detail page|Make location detail page a server component for proper API use.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+0fdf45a|2025-11-13|fix: initialize Supabase client in getUpcomingEvents|Add createServerClient() to resolve undefined Supabase error
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+eb8d03c|2025-11-13|fix: remove "use client" for proper server component|Ensure location detail page uses server-side API without client directive.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+ca27777|2025-11-13|feat: implement Sprint 15 Phase 1 & 2|Add server actions for location events and new LocationEventsSection component
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+cf4d153|2025-11-13|fix: handle missing users in event cancellation query|Use `.maybeSingle()` to avoid 406 errors and show "Admin" if user is not found
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+893d52d|2025-11-13|fix: resolve "null null" display in event cancellation details|Check for null names, default to role, avoid redundant text.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+6213c69|2025-11-13|fix: restore visibility of cancelled events and implement Phase 3|Include cancelled events in queries and UI updates; add cancellation badges, styling, and RSVP disabling.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+ba0a5b4|2025-11-13|feat: add cancelled_by column to events table|Create migration and update server action for cancel event functionality
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+7488da7|2025-11-13|fix: convert event detail page to server component|Remove "use client" to enable server-side API usage.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+56899e6|2025-11-13|fix: convert event detail page to server component|Remove "use client" to enable server-side API usage.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+d2be8d6|2025-11-13|fix: resolve cookies API error in server component|Convert page to server component and move uncancel logic to client component.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+d09c913|2025-11-13|fix: resolve cookies API error in server component|Convert page to server component and move uncancel logic to client component.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+a55af59|2025-11-13|feat: implement admin event cancellation and uncancellation|Add cancelEvent server action and CancelEventDialog component with admin-only uncancel feature.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+f5b5a4b|2025-11-13|fix: use RPC for flag counts to avoid caching issues|Replace direct SELECTs with RPC function for accurate counts.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+f8f13ca|2025-11-13|fix: fix flag badge display across event views|Add conditional rendering for flag badges and remove duplicates.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+c7496ce|2025-11-13|fix: resolve Map constructor naming conflict|Rename lucide-react Map import to MapIcon to prevent conflicts.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+df2ae7c|2025-11-13|feat: add flag indicators to event display components|Implement flag indicators in EventsList, EventsCalendar, and UpcomingEventsWidget
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+d07f2d5|2025-11-13|feat: implement admin flag dismissal|Add `dismissEventFlag` server action and update EventFlagDetails component
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+69e4590|2025-11-12|feat: add admin flag details section|Create server action and component for admin flag management.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+f9e6784|2025-11-12|feat: remove duplicate UI and add accurate flag counts|Fix badge duplication and integrate flag button; add RPC for real-time counts.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+eb6f730|2025-11-12|feat: add optimistic UI updates for flagging system|Immediately update flag count and disable button for instant feedback.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+8766a36|2025-11-12|fix: resolve flag data refresh and stale query issues|Implement proper flag data refresh and ensure queries reflect latest data.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+e4537e1|2025-11-12|feat: implement flag fixes with tenant_id and UI improvements|Add tenant_id to flag queries, delay flag insert, improve badge rendering, force dialog re-render, and switch to window.reload() for refresh.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+a95ef47|2025-11-12|feat: add tenant_id to event_flags migration|Create migration script to add tenant_id, backfill, index, and verify
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+97cdb8c|2025-11-12|fix: remove tenant_id from event_flags insert|Correct database schema alignment for flagEvent function.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+c17bc14|2025-11-12|fix: enhance flagging system with proper debug and state management|Add `tenant_id` to flag insert, prevent duplicate flags, refresh flag count, and disable button post-flag.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+09341c7|2025-11-12|fix: improve flag dialog and server action|Fix flag refresh, duplicate check, and rate limiting
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+06763f0|2025-11-12|fix: prevent duplicate flag error on event flagging|Ensure flag status check before insertion to avoid database violations.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+f01ab42|2025-11-12|feat: implement event flagging feature|Add flag dialog, server action, and integrate into event detail page
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+ce6a10c|2025-11-12|feat: debug and fix flagging system issues|Add debug logs to trace flag count data flow and reduce rate limiting.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+677a2e7|2025-11-12|fix: resolve all event flagging issues|Fix duplicate flag errors, reduce cache calls, add visible flag indicators, and implement warning banners.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+4fbff84|2025-11-12|fix: resolve all flagging issues|Fix duplicate flag error, eliminate "community not found" post-flagging, display flag counts, and update calendar view.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+f77819f|2025-11-12|fix: resolve all flagging issues|Fix race condition, remove stray "0" badges, add calendar view flags
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+beb321c|2025-11-12|fix: resolve event flagging issues|Fix duplicate flag error and update flag counter display
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+9da8f7e|2025-11-12|fix: resolve flagging and caching issues|Fix rate limit, flag counter, and cache revalidation for event flagging.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+cf8a018|2025-11-12|feat: support multiple flags per event with full visibility|Enhance flagging system for better admin and resident insights
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+ae433f8|2025-11-12|feat: implement resident event flagging with admin capabilities|Add flag dialog, server action, and admin flags section.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+6d78cb2|2025-11-12|feat: fix delete bug and add column filters|Fix delete bug and add column-based filtering and flagged column.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+219cb9b|2025-11-12|feat: add advanced filtering and bulk actions|Implement comprehensive filters and bulk operations for admin events.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+ff141e3|2025-11-12|fix: allow admins full access to dashboard routes|Remove redirect blocking admins from event detail pages.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+cebe970|2025-11-12|feat: allow tenant admins to view event details|Modify dashboard layout to enable admin access to event pages.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+f5f2ffb|2025-11-12|fix: add debug logs and separate location column for admin events|Add debug logs to event detail page and create dedicated location column in admin table.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+d92a66b|2025-11-12|fix: resolve admin event access and add location data|Update visibility filter for tenant admins; add location info to admin events table.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+712fb84|2025-11-12|feat: add search and fix "View Event" navigation|Add comprehensive search bar and fix redirect bug for event view.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+c360fc4|2025-11-12|feat: add admin events page with navigation update|Implement admin events page with table display and update navigation.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+5882688|2025-11-12|fix: resolve event list cache race condition|Clear cache before navigation and enhance cache revalidation.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+0c9faf5|2025-11-12|feat: implement and polish image gallery for event details|Add image gallery with error handling, loading states, and lightbox
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+ce44337|2025-11-12|feat: integrate PhotoManager for event image uploads|Add PhotoManager to create and edit event forms for image uploads.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+0f579d8|2025-11-12|feat: add server actions for event image management|Implement `saveEventImages` and `getEventImages` with auth checks and RLS.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+be6e411|2025-11-12|fix: correct Link import in google-map-viewer|Fix named import issue for Link in Next.js component.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+f9b087e|2025-11-12|fix: improve place click behavior in map viewer|Fix info card display for public and custom locations and fix truncated file issue.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+71a0d25|2025-11-12|fix: resolve map click and event visibility issues|Fix map click on satellite view and add click handler for custom pins.
+Ensure new events default to "published" status for list view.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+c2ab472|2025-11-12|feat: enable Google Maps native info cards|Remove custom info card and show all community locations
+Enable clickable icons for native info window on public places
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+adeacee|2025-11-12|feat: add clickable custom Google locations with "Open in Maps" link|Implement clickable markers and custom info card for custom locations.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+3b6e201|2025-11-12|feat: add GooglePlacesAutocomplete and enhance place click detection|Create new autocomplete component and improve place click detection.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+6c81814|2025-11-12|feat: fix map center and place name, add admin settings|Update map center calculation, enhance place name auto-fill, add admin UI for map settings.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+9ef68f4|2025-11-12|fix: resolve event location issues|Update map center calculation, pre-populate edit form, and stabilize custom location handlers.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+e4c1dc2|2025-11-12|feat: initialize project with migration docs and code files|Add .gitignore, migration checklist, guide, README, and various action/API/UI files.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+1cc825e|2025-11-12|fix: implement Sprint 10 fixes for location handling|Fix location type mismatch, enable POI auto-fill, add map preview for custom locations
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+df06a22|2025-11-10|Merge pull request #8 from mjcr88/v06-branch|v06 branch: Initial event structure in database, RLS policies, feature flag, admin event categorization management, basic event table and event creation form.
+f55660d|2025-11-10|fix: resolve routing conflict for create event page|Restructure routes to avoid dynamic route interference.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+08fdee3|2025-11-10|fix: handle static route "new" before UUID validation|Prevent routing errors by returning `null` for static route "new".
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+fa22b0a|2025-11-10|feat: add debug logging for event detail page|Add detailed logs to trace component invocation, params, validations, and query results.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+5afa143|2025-11-10|feat: add UUID validation for event detail page|Prevent PostgreSQL errors with invalid event IDs and route to create event page.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+1c44179|2025-11-10|fix: correct event detail page database queries and formatting|Update Supabase query and add helper function for date/time formatting
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+1a71c77|2025-11-10|fix: resolve route conflict for create event page|Return null for reserved paths to allow Next.js routing.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+cc50281|2025-11-10|fix: add UUID validation before database query|Prevent invalid UUID errors and route non-UUID paths to static page.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+90bfc52|2025-11-10|fix: remove UUID validation for event routing|Let database handle invalid UUIDs naturally for routing.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+6621238|2025-11-10|fix: resolve routing conflict for /events/new|Convert event detail page to server component for proper routing.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+bb91328|2025-11-10|fix: resolve routing conflict for /events/new|Convert event detail page to server component for proper routing.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+111eadf|2025-11-10|fix: prioritize static route over dynamic in Next.js App Router|Ensure "/events/new" uses static route instead of dynamic.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+4202476|2025-11-10|fix: resolve route conflict with UUID validation|Add UUID validation to prevent reserved paths from being treated as event IDs.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+48afa34|2025-11-10|fix: resolve route conflict with UUID validation|Add UUID validation to prevent reserved paths from being treated as event IDs.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+041594a|2025-11-10|fix: resolve routing conflict in Next.js App Router|Remove check to let static routes take precedence over dynamic routes.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+bda26e1|2025-11-10|fix: resolve routing conflict in Next.js App Router|Remove check to let static routes take precedence over dynamic routes.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+76c773e|2025-11-10|fix: resolve dynamic route conflict for "new" and "edit"|Add check to prevent reserved paths from being treated as event IDs.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+9f1a13e|2025-11-10|fix: resolve dynamic route conflict with reserved paths|Check for "new" and "edit" in dynamic route to prevent routing issues.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+ce5580a|2025-11-10|feat: implement event edit and delete functionality|Add event edit page, update/delete actions, and permission checks.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+41c184f|2025-11-10|feat: enhance event detail page with comprehensive updates|Add status badges, event type indicators, and improved layout
+Include edit, delete, and share functionalities for event creators
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+31f4f76|2025-11-10|feat: enhance event detail page with comprehensive updates|Add status badges, type indicators, and formatted dates; add action buttons and share link; improve mobile layout.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+933aae1|2025-11-10|feat: display creator info on event cards|Add creator avatar and name to event preview cards with immediate updates.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+2b09a59|2025-11-10|fix: resolve ambiguous query for events table|Specify relationship name to resolve join ambiguity and fix events display.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+d1c77cc|2025-11-10|feat: add debug logging to events list page|Add comprehensive logs to trace query issues and diagnose root cause.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+25db0fc|2025-11-10|feat: enhance event creation UX with toast notifications and fixes|Fix event query, add success toast, delay navigation, and fix cache invalidation.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+26d3eac|2025-11-10|fix: complete event system fixes and auto-seeding|Fix RLS recursion, seed categories, fix category display, and enable auto-seeding.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+0b7a9b9|2025-11-10|fix: correct RLS policy reference in event invites|Fix SQL error in "Event creators can manage invites" policy.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+f41e3b2|2025-11-10|fix: resolve event issues and improve form logic|Fix infinite recursion in RLS policies, set end date defaults, and correct category display.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+b5eacac|2025-11-10|fix: resolve event creation schema and category issues|Fix database schema and event type mismatch; correct category display.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+6657f3d|2025-11-10|fix: resolve routing conflict for event creation|Moved create route from `/create` to `/new` to avoid dynamic `[eventId]` conflict.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+5f263fa|2025-11-10|feat: implement basic event creation for residents|Add "Events" menu, create event form, list, and detail pages
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+a3c47f8|2025-11-10|fix: enhance event category form functionality|Improve cancel navigation, form reset, and deletion refresh.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+abc4eaa|2025-11-10|fix: update RLS policies to check role column|Replace RLS policy check with role column for tenant admins.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+b08de0d|2025-11-10|feat: add debugging for RLS policy insert issue|Add console logs to identify tenant admin status and data mismatch.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+2b771f4|2025-11-10|fix: remove events check to resolve recursion|Skip events check in delete action to fix circular RLS policy dependency.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+a91d766|2025-11-10|fix: resolve category delete query error|Switch to `maybeSingle()` for graceful error handling
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+b79fefe|2025-11-10|fix: handle graceful delete category error|Add try-catch for events table query to handle non-existence or RLS issues.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+1b590ca|2025-11-10|fix: separate UPDATE and SELECT for category updates|Handle RLS policy gap by updating then fetching separately.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+9f8e8ae|2025-11-10|feat: update RLS script to drop and recreate policies|New script to avoid conflicts and apply fixed UPDATE policy.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+fb5c4a8|2025-11-10|fix: resolve RLS policy blocking SELECT after UPDATE|Add WITH CHECK clause to update policy and verify access before update.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+b89dbd6|2025-11-10|feat: manage events toggle in backoffice and update admin navigation|Move feature flag to backoffice, delete settings pages, and fix navigation.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+01c9d72|2025-11-10|feat: add feature flag toggle and event categories management|Implement feature flag toggle UI and CRUD for event categories.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+1c80473|2025-11-10|fix: correct RLS policy for neighborhood visibility|Fix RLS policy error and update logic to Users → Lots → Neighborhoods.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+52a7c4c|2025-11-10|fix: correct syntax error in event_images table constraint|Fix UNIQUE constraint and add partial unique index for hero image.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+5344e0f|2025-11-10|feat: implement database foundation for event management|Create migration scripts for feature flag, event tables, and RLS policies.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+7a9a58d|2025-11-10|feat: initialize project with migration files and components|Add migration checklist, guide, and updated README; refactor various components.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+eb3bd25|2025-11-09|Merge pull request #7 from mjcr88/v05-branch|V05 branchv05 branch: includes various map fixes, community map pages, image uploads on facilities/residents/families/pets, detail pages for locations, detail page for family.
+4bffdbc|2025-11-09|refactor: adjust dashboard layout for responsive design|Update layout to 3-column grid with map on left, widgets on right.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+e2c2561|2025-11-09|fix: resolve family profile page error and add families tab|Fix non-existent photos table query and add families tab with table.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+0497a5a|2025-11-09|feat: enhance photo management system|Fix photo auto-save, separate pet photos, and add public profile galleries
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+c620a78|2025-11-09|feat: enhance pet photo management and separation|Improved upload flow, error handling, and visual distinction
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+d7fad5d|2025-11-09|fix: correct profile photo props in edit form|Update form to pass URL and separate handlers for PhotoManager.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+5ad389d|2025-11-09|fix: update migration and code for hero photo management|Switch from `hero_photo_index` to `hero_photo` and resolve schema issues.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+755affb|2025-11-09|fix: align PhotoManager props with correct handlers|Update family form to pass separate onPhotosChange and onHeroPhotoChange props.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+09bab7f|2025-11-09|fix: initialize undefined state properties in form|Add missing state properties to `formData` to prevent errors.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+6a164f2|2025-11-09|feat: update forms to use PhotoManager for multi-photo support|Replace single photo uploads with new PhotoManager for multiple photos.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+9ca4284|2025-11-09|fix: remove "use client" from location details page|Convert to Server Component for proper cookie access and authentication.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+694446a|2025-11-09|fix: remove "use client" from location details page|Convert to Server Component for proper cookie access and authentication.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+e293661|2025-11-09|feat: implement comprehensive photo management system|Add hero shot selection, migrations, and components
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+4ba3544|2025-11-09|feat: implement comprehensive photo management system|Add hero shot selection and database migrations for photos.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+9b5b9c6|2025-11-09|feat: implement comprehensive photo management system|Add hero shot selection and database migrations for photos.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+666129f|2025-11-09|fix: resolve location details and info card issues|Remove "use client" and adjust info card size for proper Server Component functionality.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+0af330a|2025-11-09|fix: resolve location details and info card issues|Remove "use client" from location details and adjust info card size.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+bc88078|2025-11-09|fix: resolve ambiguous query and hide status for lot-type locations|Fix Supabase query and hide status badge for lot locations.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+95a843a|2025-11-09|fix: add debug logs for location query issue|Add await and debug logs to trace location query issues.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+da046dd|2025-11-09|fix: add debug logs for location query issue|Add await and debug logs to trace location query issues.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+0787221|2025-11-09|fix: correct location details page component type|Remove "use client" to make page a Server Component.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+f002900|2025-11-09|fix: correct location details page component type|Remove "use client" to make page a Server Component.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+a7e8f05|2025-11-09|fix: enhance location info card and details page|Move "View Full Details" button to header, add resident cards, fix server-side usage.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+25cb515|2025-11-09|fix: convert location details pages to Server Components|Remove "use client" and ensure server-side data fetching.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+3060136|2025-11-09|feat: add location details system|Create location details page, simplify info card, and update tables.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+1b10276|2025-11-09|fix: update status constraint and form values|Align form and database status values and fix constraint.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+96f5c7e|2025-11-09|feat: implement rich text editor and location attributes|Add rich text editor, map editor, and location info card. Fix missing exports and ignore false positives for Google Maps API.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+75528b8|2025-11-09|feat: implement pet layout and location images|Add compact pet grid and featured location image display
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+14d6ad1|2025-11-09|feat: add Family Pets section and fix RLS policy for family photo update|Add pets display and update SQL policy for photo save.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+401f634|2025-11-09|feat: add debug logs for family photo save errors|Add detailed error logging to identify save failures.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+9019534|2025-11-09|fix: add RLS policies for photo updates|Allow residents to update family unit and pet photos.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+b2b53d8|2025-11-09|feat: add debug logging for photo upload data flow|Add comprehensive logs for upload, save, and reload flows.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+89bc301|2025-11-09|fix: sync form state with updated props for photo persistence|Update family form to reinitialize state with new props after data refresh.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+80befd4|2025-11-09|feat: implement photo upload preview and save flow|Add upload preview and save to database with toast notification.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+1f48295|2025-11-09|feat: fix photo persistence and remove duplicate "Add Pet" button|Save photos directly to DB and refresh page on navigation.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+cf9f30f|2025-11-09|feat: add save buttons for family and pet photos|Explicit save buttons added for photo uploads to review before saving.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+7d79548|2025-11-09|feat: implement profile save and image upload|Save profile data and image to Supabase database on form submit.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+d96347c|2025-11-09|fix: remove redundant Link wrapper around MapPreviewWidget|Fix nested <a> tags issue in neighbours profile page.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+f46499c|2025-11-09|fix: allow initial location selection on full map|Remove `hasLotId` check to auto-select any location and show info card.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+b37d05f|2025-11-09|fix: resolve info card data binding and map zoom issues|Fix stale data display and update community map zoom for better visibility.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+b2f5c96|2025-11-09|fix: replace incorrect googlemaps import with custom marker|Use custom React component for user location marker to avoid runtime errors.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+4312b31|2025-11-09|feat: update lot colors and add Locate Me functionality|Change lot polygon colors to bright green and implement geolocation button.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+9c455a5|2025-11-09|fix: resolve boundary click layering issue|Ensure boundary doesn't block clicks with proper z-index.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+cb9cfc9|2025-11-09|fix: handle missing Google Maps ID gracefully|Optionally pass map ID to prevent `ApiProjectMapError`.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+e3bc3cd|2025-11-09|fix: enhance map highlighting and zoom level adjustments|Fix highlighting issues and adjust zoom for full boundary view.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+bd14188|2025-11-09|fix: resolve map component issues|Fix map button placement, filter input removal, zoom adjustment, and clickable areas.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+781cc31|2025-11-09|fix: resolve map rendering and visibility issues|Fix Google Maps API error, overlay opacity, location fills, and dynamic highlighting.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+c21acfd|2025-11-09|feat: add map click handler to clear selection on empty space|Implement dynamic red border highlighting and clear selection on empty clicks.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+c6d42bb|2025-11-09|fix: allow clicks through boundary overlay polygons|Set `clickable={false}` for all boundary polygons to pass clicks.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+dbf6541|2025-11-09|fix: improve boundary brightness on map|Remove dark overlay and add light overlay for better visibility.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+12e8443|2025-11-09|fix: improve boundary overlay and fill visibility|Increase overlay opacity and adjust fill opacities for better clarity.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+598c32d|2025-11-09|feat: enhance map with boundary context and improved visibility|Improve community boundary display, enlarge map preview, and add "View Full Map" button.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+6038d1b|2025-11-09|feat: implement unified map architecture|Update resident map pages and admin map to use unified query layer.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+2b08850|2025-11-09|feat: implement unified architecture for map system|Create unified query layer and map components; update admin and resident map pages.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+f2c2cdf|2025-11-09|Merge pull request #6 from mjcr88/v05-branch|fix: remove non-existent map imports to fix build errors
+067b015|2025-11-09|fix: remove non-existent map imports to fix build errors|Remove imports of missing map components and add placeholders.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+79c3dfc|2025-11-09|Merge pull request #5 from mjcr88/v05-branch|v05 branch: Resident maps, community map page, map preview card information, updated neighbor directory tables, created family unit public pages: Issues remain on map around selected locations and properly displaying the right information linked to it.
+1cfeaba|2025-11-09|fix: resolve map loading issues and prop mismatches|Fix joins and correct prop name for map components.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+d63838d|2025-11-09|fix: resolve map data loading issues|Remove inner join, add client wrapper, and fix map center calculation
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+de3d662|2025-11-09|fix: resolve map loading issues|Add null checks and update query aliases for consistent data structure.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+2953af8|2025-11-09|fix: complete Solution 1 and create missing files|Fix server crash and implement Solution 1; create missing components and exports.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+fd4d79b|2025-11-09|fix: resolve full map crash and lot_id mapping|Add null checks and optimize data flow for map page.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+8a4396f|2025-11-09|fix: resolve map data loading and crash issues|Add null checks and consistent joins for map data.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+800c172|2025-11-09|feat: fix location lot_id mapping inconsistency|Ensure proper lot_id mapping in location queries and use embedded data.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+6ccd224|2025-11-09|feat: implement Solution 1 for map component|Modify minimal mode, create FullMapClient wrapper, adjust zoom levels, and fix prop names.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+dd02b99|2025-11-09|fix: resolve map prop mismatches|Correct prop names and remove pre-selected location from community map.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+a444cf1|2025-11-09|fix: handle undefined locations in GoogleMapViewer|Add default empty array to prevent undefined filter error
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+b01ca1e|2025-11-09|fix: resolve map viewer integration issues|Add lot_id validation, update GoogleMapViewer props, and improve LocationInfoCard responsiveness.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+22d966f|2025-11-09|fix: resolve info card layout and avatar display issues|Add scrolling, reorder sections, and fix avatar image display.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+1759510|2025-11-09|fix: correct admin map link and info card|Fix broken "View Map" button link and resolve info card issue for null lot_ids.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+75111b0|2025-11-09|fix: override invalid Google Maps ID in Map component|Explicitly pass `mapId={undefined}` to prevent API error.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+5baa300|2025-11-09|fix: restore DEMO_MAP_ID for admin components|Revert Map ID removal for admin-only components to fix broken "View Map" page.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+fc265f9|2025-11-09|fix: restore DEMO_MAP_ID for admin components|Revert Map ID removal for admin-only components to fix broken "View Map" page.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+21e9050|2025-11-09|fix: remove all Map ID references|Eliminate "For development purposes only" watermark from maps
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+c9a8a6c|2025-11-09|fix: rename FormData variable to avoid conflict|Rename FormData to uploadFormData and use callback in state update.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+79ba50f|2025-11-09|fix: add defensive checks for undefined error in skills filtering|Prevent undefined access in skills filtering logic.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+ea7d35c|2025-11-09|fix: remove invalid mapId to prevent ApiProjectMapError|Map now loads without errors until proper Map ID is configured.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+363128e|2025-11-09|fix: add lot_id validation for map auto-highlight|Prevent empty info cards for locations without valid lot_id.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+b616807|2025-11-09|feat: optimize LocationInfoCard re-renders|Use React.memo and adjust useEffect for better performance.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+1e07fa0|2025-11-09|feat: add debug logging to LocationInfoCard|Track component lifecycle, data fetching, and final render state.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+6935827|2025-11-09|fix: resolve info card, pet card sizing, and family photo permissions|Fix info card loading issue, standardize pet card layout, and allow any family member to upload photos.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+d24c296|2025-11-09|feat: add pet profile pictures and upload functionality|Add profile picture column, update pet display, and enable photo uploads
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+42b9bf7|2025-11-09|feat: add family profile management UI|Add family description and profile picture upload to resident settings.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+0913d6a|2025-11-09|feat: add family profile page|Create family profile page with member details and privacy settings
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+1fa2220|2025-11-09|feat: add family display to neighbours table|Include family units in query and display in table with clickable links
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+ce51042|2025-11-09|feat: display family info in location tables and map cards|Update components to show family details and member counts.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+259c51d|2025-11-09|feat: add family profile migration and update location queries|Create migration script and update queries for family data inclusion.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+e90336a|2025-11-09|fix: optional mapId for Google Maps API error|Make Map ID optional to prevent `ApiProjectMapError`.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+f3fa4d4|2025-11-09|fix: correct residents display in location tables|Fix data structure issue and remove redundant column; add debug logging.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+e0b7724|2025-11-09|fix: correct location-users join query|Fix Supabase query to properly nest users join through lots table.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+ec30185|2025-11-09|feat: enhance location tables and map info cards|Add lot and resident info to tables and info cards, display profile pictures, and link to profiles.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+029fbb2|2025-11-09|fix: resolve map preview and centering issues|Prevent auto-show of info cards and fix map center calculation.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+c7ab071|2025-11-09|fix: remove outer Link from dashboard map card|Fix invalid nested links and enhance map interaction.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+5b8a4dd|2025-11-09|fix: resolve map interactivity and spacing issues|Remove Link wrapper, add full map interaction, and adjust spacing.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+57d192d|2025-11-09|fix: fix spacing and map centering in community map|Increase section spacing and implement automatic map centering.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+7b3512b|2025-11-09|fix: fix spacing and map centering in community map|Increase spacing and implement automatic map centering from boundary locations.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+0ee56c3|2025-11-09|fix: remove "use client" from community map page|Ensure server component usage for Supabase client access.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+30fa63c|2025-11-09|fix: remove "use client" from community map page|Ensure server component usage for Supabase client access.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+a6477e2|2025-11-09|feat: fix community map issues|Convert map page to server component, inline filters, and immediate filtering
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+a2e1de2|2025-11-09|feat: fix community map issues|Convert map page to server component, inline filters, and immediate filter on card click
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+2fe8004|2025-11-09|feat: add pagination and location type cards|Add pagination to LocationsTable and create LocationTypeCards component
+Implement resident community map page with filtering and navigation
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+186e4be|2025-11-09|fix: add lot ID to query and update button logic|Include lot ID in neighbours query and adjust button to use it.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+1d48b46|2025-11-09|fix: add debug logs for "View on Map" button visibility|Add debug logs to check residents' lot IDs for button display.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+67acc50|2025-11-09|feat: add map features to neighbors and profile pages|Add "View on Map" button and map preview for residents.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+17f2cff|2025-11-09|feat: implement controlled highlighting component pattern|Eliminate state conflicts with parent managing highlight state.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+35c0969|2025-11-09|feat: implement dynamic highlighting for Google Map viewer|Separate initial and dynamic highlight states for correct visual updates.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+cc33ceb|2025-11-09|fix: resolve map rendering and dynamic highlighting issues|Fix pointer-events conflict and update highlight logic for dynamic updates.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+fe04134|2025-11-09|fix: convert dashboard page to Server Component|Remove "use client" directive to allow server-side data fetching.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+2c4b1c6|2025-11-09|fix: convert dashboard page to Server Component|Remove "use client" to allow server-side data fetching.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+a310829|2025-11-09|fix: remove "use client" from dashboard page|Convert dashboard page to Server Component to use supabase createClient.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+af097a8|2025-11-09|fix: remove "use client" from dashboard page|Correct server component configuration for API usage.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+89eca34|2025-11-09|fix: correct server component usage for dashboard page|Remove "use client" to allow server-side data fetching.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+f957ecd|2025-11-09|fix: resolve map preview and interaction issues|Show all locations, make entire widget clickable, lighten boundary overlay, and fix location highlight switching.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+89ce488|2025-11-09|fix: resolve map widget and routing issues|Fix clickable widget, prevent auto-show info card, and fix map page auth issues.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+adbe362|2025-11-07|fix: resolve dashboard rendering issues|Create client map wrapper and add debug logs for feature flag.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+0e85b3f|2025-11-07|fix: use LocationInfoCard in map editor view mode|Replace inline info card with LocationInfoCard for proper info display
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+8503144|2025-11-07|feat: add resident map features and fix import paths|Implement map features and correct import errors for Supabase client.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+c7e0a1b|2025-11-07|fix: resolve form reset and photos column issues|Fix form reset state and remove invalid photos column.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+b028cec|2025-11-07|fix: resolve boundary, fill, and title issues in map viewer|Fix boundary darkening, increase fill opacity, and correct viewer title.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+6bc1ceb|2025-11-07|fix: resolve dashboard and map rendering issues|Correct query, enhance fill visibility, force map re-render, improve clickability.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+4d6d569|2025-11-07|feat: update map boundaries with transparent fills and no click|Add transparent fills for all locations; remove white border; disable click.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+7335617|2025-11-07|fix: merge default features with tenant settings|Correct feature toggle initialization and ensure map feature works.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+a17c8a2|2025-11-07|fix: resolve map feature toggle visibility issues|Fix nested feature toggle checks and menu visibility.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+da4035c|2025-11-07|feat: add map feature toggles and reduce line thickness|Implement map feature toggles and adjust line thickness for better visibility.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+6d54640|2025-11-06|feat: enhance location edit form with flexible neighborhood/lot linking|Add UI controls for neighborhood and lot linking for all location types
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+c2cbfce|2025-11-06|fix: prevent Map component remount on location update|Fix Map component remount issue and ensure correct center/zoom.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+ef70781|2025-11-06|fix: resolve location rendering and reduce chat log overload|Fix stale map center/zoom and remove excessive console logs.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+0216a2c|2025-11-06|fix: switch map to uncontrolled props for zoom|Convert to uncontrolled mode, remove change handlers, allow map to manage state.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+50879b4|2025-11-06|fix: resolve map highlighting, zoom, and lot count issues|Update view map highlighting, fix zoom reset, and correct lot widget count.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+d859860|2025-11-06|fix: resolve map zoom, highlighting, and selection issues|Add zoom controls, fix highlighting in edit mode, and ensure selection switching.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+d430d06|2025-11-06|feat: enhance map selection, highlighting, and z-index|Dynamic zIndex for selected locations, light blue fill, and correct zIndex order.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+8c0b558|2025-11-06|fix: resolve street thickness, z-index, and clickability issues|Reduce street thickness, set z-index for layering, and improve clickability.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+6dfae24|2025-11-06|fix: resolve import, clickability, and visibility issues|Improve GeoJSON parser for lot imports, enhance street visibility, and enable clickable areas.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+35f546b|2025-11-06|feat: enhance GeoJSON import and rendering control|Add toggle for combine/separate features and universal rendering support.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+7290526|2025-11-06|fix: fix facility rendering and dynamic map filters|Fix facility markers rendering and filter to show only existing types.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+7997f34|2025-11-05|fix: enhance boundary preprocessing logic|Intelligently detect and combine LineStrings into a single Polygon or treat as separate features.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+5ae3a00|2025-11-05|feat: fix map auto-centering and GeometryCollection import|Auto-center map on boundary load and import separate LineStrings.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+6cca640|2025-11-05|feat: migrate to new Leaflet map implementation|Update project-wide components and routes for new map features.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+a3af77a|2025-11-05|Merge pull request #4 from mjcr88/v04-branch|v04 branch: Admin map viewer & editor fixes and improvements, GEO Json import 90% complete, missing location creation and rendering.
+c82f9e2|2025-11-05|feat: convert coordinates to {lat, lng} for Google Maps|Add `convertCoordinates` function to viewer and editor components.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+4de338d|2025-11-05|fix: fix boundary save and render issues|Add detailed logging for boundary save and render processes.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+47db478|2025-11-05|feat: add debug logs for boundary loading in map components|Add console logs to track boundary loading in viewer and editor.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+d660699|2025-11-05|feat: preprocess GeometryCollection to Polygon in geojson-parser|Convert GeometryCollection of LineStrings to Polygon before parsing
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+8c9910c|2025-11-05|fix: add GeometryCollection support to map bounds calculation|#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+8062ac8|2025-11-05|fix: preserve GeometryCollection in GeoJSON parser|Update parser to maintain structure and adjust map component rendering
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+376fa07|2025-11-05|fix: correct typo in validation error message|Fix "mulit" typo in validation error message for boundary geometry.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+2d1a0a3|2025-11-05|fix: add debug logs for geometry validation error|Add detailed logging to pinpoint validation error source.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+a4ee894|2025-11-05|feat: relocate widgets and update boundary validation|Move all location widgets to map page and handle GeometryCollection for boundaries
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+5a343c7|2025-11-05|fix: resolve delete button and boundary validation issues|Remove individual delete button; update boundary validation for Polygon and MultiPolygon; add tenant_id filter to delete query.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+e51decf|2025-11-05|feat: implement boundary and dashboard features|Save boundary to tenant, grey out option, fix display, add count widgets excluding boundary
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+076955d|2025-11-05|feat: update location types and visual map settings|Add missing location types and adjust visual map settings.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+4a930bc|2025-11-05|feat: add boundary type to location dropdown|Update geojson-preview-map to include all 5 location types.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+fbeb464|2025-11-05|fix: correct UTM zone logic for Costa Rica coordinates|Adjust zone logic to use CRTM05 instead of UTM for Costa Rica.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+92f34cd|2025-11-05|fix: correct UTM zone detection for Costa Rica coordinates|Fix zone detection logic to validate both UTM zones 16N and 17N.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+dc8e176|2025-11-05|feat: create dedicated GeoJSON preview component|Add simple map preview with layers, zoom, locate, and form.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+d5575a1|2025-11-05|refactor: simplify wrapper to render GoogleMapEditor directly|Remove preview data loading logic from wrapper component.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+edfe364|2025-11-05|feat: implement Phase 1 fixes for map highlighting and debugging|Fix highlight issues and add debugging for map tiles. Add key prop to Map component.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+0b13097|2025-11-05|fix: correct GeoJSON import preview redirect path|Fix wrong redirect path in upload dialog to proper preview page.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+fdb3d46|2025-11-05|feat: restore complete google-map-editor.tsx with local imports|#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+ffb8e0f|2025-11-05|feat: restore complete google-map-editor.tsx with local imports|#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+5178ac3|2025-11-05|restore complete google-map-editor.tsx functionality from original file|#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+42622e2|2025-11-05|fix: restore google-map-editor.tsx with correct imports|Rebuild complete file with local component imports and all features.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+ab3a983|2025-11-05|fix: correct import of Polygon and Polyline components|Separate imports from @vis.gl/react-google-maps and local files.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+92a7848|2025-11-05|fix: restore corrupted google-map-editor.tsx file|Complete missing JSX rendering section for map component.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+78477d3|2025-11-05|fix: add coordinate validation and logging for Costa Rica map issues|#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+fffb77e|2025-11-05|fix: resolve map loading issue post-import|#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+04655d7|2025-11-05|feat: redirect to create page and thin preview lines|Update GeoJSON dialog to redirect to create page; reduce strokeWeight for preview lines.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+46836fa|2025-11-05|feat: add loading state for GoogleMapEditor preview|Prevent map rendering until data is loaded and bounds calculated
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+8653c49|2025-11-05|fix: improve zoom calculation in map editor|Add zoom constraints, padding, and better zoom logic
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+7de7f2f|2025-11-05|fix: add mapId to resolve tile loading issues|Fix missing mapId prop in Map component for proper tile loading.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+4cd0b44|2025-11-05|fix: resolve mode prop mismatch in viewer page|Change viewer page to pass `mode="view"` for preview mode.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+6c61d03|2025-11-05|feat: update GeoJSON upload to preview on main map|Redirect upload to viewer page, enable preview mode, and add save form.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+48f7d06|2025-11-05|fix: revert default map type to satellite in editor|Restore default map type to match viewer, resolving satellite view issue.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+eb879b0|2025-11-05|fix: switch default map type to roadmap|Change default map type to street view to avoid tile loading issues.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+70ab51c|2025-11-05|fix: correct UTM to lat/lng transformation error|Fix radians-to-degrees conversion in coordinate transformation.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+0db9737|2025-11-05|fix: store full GeoJSON data and improve map centering|Add debug logs and fix coordinate transformation issues.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+cafca8e|2025-11-05|fix: remove incorrect google import in Polygon component|Global `google` object available via APIProvider, no import needed.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+2992e0c|2025-11-05|fix: remove incorrect google import in Polygon component|Global `google` object available via APIProvider, no import needed.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+423c338|2025-11-05|feat: render GeoJSON features on map preview|Fix map preview to display imported geometry and add save option.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+3c8d2a6|2025-11-05|feat: implement GeoJSON preview on map editor|Update GoogleMapEditor to render GeoJSON preview and add save functionality
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+396c25d|2025-11-05|feat: implement GeoJSON preview on map|Add preview rendering and UI controls for feature import.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+3d6bdda|2025-11-05|fix: use sessionStorage for GeoJSON preview data|Avoid URL length limits by storing preview data in sessionStorage.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+70842f0|2025-11-04|feat: implement GeoJSON preview on map editor|Redirect to map editor with parsed data and add UI controls.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+7e598e3|2025-11-04|fix: simplify GeoJSON preview to avoid conflicts|Temporarily show feature list instead of map preview.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+e1fa457|2025-11-04|fix: remove unused mapId prop from GeoJSONPreviewMap|Fix build error preventing map page rendering.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+d19f5be|2025-11-04|add debug logging to identify map page rendering issues|#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+8ba1e08|2025-11-04|feat: implement multi-step wizard for GeoJSON upload|Update upload dialog and preview map for proper multi-step navigation
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+0dd9433|2025-11-04|feat: add GeoJSON preview step in upload wizard|Implement multi-step dialog with map preview and navigation
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+1d3ed94|2025-11-04|feat: add automatic UTM to WGS84 coordinate transformation|#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+b906dca|2025-11-04|fix: improve GeoJSON parser and upload guidance|Update parser to handle GeometryCollection and coordinate system warnings.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+aaa8b76|2025-11-04|feat: support GeometryCollection and coordinate system warnings|Update parser to handle GeometryCollection and add coordinate validation.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+a20ed60|2025-11-04|feat: implement GeoJSON upload UI & parsing|Add GeoJSON parser, upload dialog, and upload button to map page.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+25ca673|2025-11-04|remove community boundary system and prepare for future updates|#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+76c5785|2025-11-04|feat: add migration for new location types|Create SQL script to extend location types in database.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+78556ca|2025-11-04|fix: resolve polygon.tsx import and useEffect issue|Fix incorrect import and update useEffect dependency for proper polygon rendering.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+243636c|2025-11-04|fix: correct import and useEffect for polygon component|Remove incorrect google import and add polygonOptions to useEffect.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+88ae79c|2025-11-04|fix: correct polygon.tsx import and useEffect dependencies|Remove incorrect google import and add polygonOptions to useEffect.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+50454c2|2025-11-04|fix: remove incorrect google import and fix useEffect dependency|#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+3f969e8|2025-11-04|fix: correct Google Maps import in polygon.tsx|Remove incorrect import and use global `google.maps`
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+a411548|2025-11-04|fix: handle auth state uncertainty on login page|Add error handling for Supabase auth failures to prevent incorrect redirects.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+63a69c9|2025-11-04|fix: update Polygon component useEffect dependencies|Add polygonOptions to useEffect for color update re-run.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+effa402|2025-11-04|fix: rename prop to fix shadowing issue|Rename `highlightLocationId` to `initialHighlightLocationId` to resolve variable conflict.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+78f01f5|2025-11-04|fix: correct highlight behavior in view mode|#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+3c0a9a8|2025-11-04|feat: consolidate view and edit map into GoogleMapEditor|Add mode prop and separate view/edit functionality; update viewer page.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+9edf37d|2025-11-04|fix: prevent highlight reset on GoogleMapViewer re-renders|Remove highlightLocationId from useEffect dependency array
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+3e010c2|2025-11-04|fix: clear highlight on any location click|Add helper to clear highlight and update onClick handlers.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+e195eeb|2025-11-04|feat: implement map click highlight and remove boundary UI|Add click handler to clear highlight, remove boundary UI, update map management.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+957e984|2025-11-04|feat: add highlighting to GoogleMapViewer for selected locations|Add red highlighting and auto-center/zoom to viewer page.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+d1c36a2|2025-11-04|feat: add profile image upload and fix location highlighting|Implement profile image upload and correct location highlighting issue.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+7631761|2025-11-04|fix: implement missing image uploads and fix red highlighting|Add image upload to neighborhood form and update profile form. Fix red highlighting logic for selected locations.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+4dd527a|2025-11-04|feat: add bulk/individual delete and View on Map in locations table|Implement bulk/individual delete and add View on Map button to locations table
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+ace3ddf|2025-11-04|fix: resolve ambiguous relationship in locations query|Specify foreign key to fix PostgREST error and display locations.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+116909e|2025-11-04|fix: resolve map display issues|Fix LocationsTable React hook bug and add neighborhood rendering to GoogleMapViewer.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+3ff352d|2025-11-04|feat: enhance community map with location linking and UI updates|Add location_id to lots/neighborhoods, update createLocation, add hover effects, clear selection on click, update map page UI.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+aaf4d33|2025-11-04|fix: prevent blob filename conflicts on image uploads|Add random suffix to filenames to ensure uniqueness.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+f75716f|2025-11-03|fix: run migration to update location constraint|Add SQL script to include 'neighborhood' in valid location types
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+daae8ed|2025-11-03|fix: resolve neighborhood creation errors|Update database constraint and query method for location checks.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+3f6a176|2025-11-03|feat: enhance map editor with delete and validation|Add delete button, type validation, and context-aware filters
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+5dd874c|2025-11-03|feat: enhance map editor UX with multiple fixes|Add neighborhoods to filter, make locations clickable, show link indicators, simplify edit workflow, add hover feedback, and add "New Location" button.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+89cc407|2025-11-03|feat: enhance map functionality with image upload and clickable info cards|Add image upload to location creation and implement clickable info cards.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+ec93da5|2025-11-03|feat: duplicate Costa Rica file and initialize project|Update project files and components based on duplicated Costa Rica file
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+7e1f6a0|2025-11-03|Merge pull request #3 from mjcr88/v03branch|v03 branch: Tenant admin community map features, drawing tools for map to create facilities/lots/pins/walking paths, assign coordinates to neighborhoods and lots, create community outline and border.
+731f7fe|2025-11-03|feat: change start page and add neighborhood location type|Update default start page and add neighborhood support in map editor.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+15f3612|2025-11-03|feat: pre-select locations and remove address field|Remove address field from lot form; add URL param pre-selection in map editor
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+b4d5ea0|2025-11-03|feat: add map buttons and remove address toggle|Add "Add Location on Map" buttons to edit forms; remove address toggle from lot form.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+4608f72|2025-11-03|feat: thin boundary line and add map location buttons|Reduce boundary line thickness and add "Add Location on Map" buttons for neighborhoods and lots.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+97d5441|2025-11-03|feat: fix drawing re-rendering and add point counter|Fix re-rendering issue, add point counter, stay on edit map after save, auto-fill lot names, update color schemes
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+e3bfbf5|2025-11-03|fix: resolve drawing tool, boundary, and neighborhood issues|Fix drawing tool rendering, increase boundary visibility, and make neighborhood selection optional.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+0a447ac|2025-11-03|feat: update community boundary visualization|Implement simple boundary outline with subtle fill.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+5a9340b|2025-11-03|fix: correct polygon hole and increase overlay opacity|Adjust polygon path order and opacity for proper contrast.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+1817b13|2025-11-03|fix: correct boundary overlay direction and remove visible border|#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+dfcef36|2025-11-03|feat: implement inverted mask for community boundary overlay|Fix rendering issue and achieve desired visual effect.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+5f916c2|2025-11-03|fix: bypass RLS for tenant_admin UPDATEs with service role client|#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+b58b46b|2025-11-03|fix: standardize boundary data format across system|Convert saved boundary to tuples and update viewer/boundary page
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+c3f87d2|2025-11-03|fix: correct boundary API authorization logic|Fix tenant_admin role check and add debug logs
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+08d6686|2025-11-03|fix: resolve boundary editor rendering and save issues|Add key for polygon re-renders and debug logs for save failures. Implement "Edit Existing" mode.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+24357aa|2025-11-03|fix: correct Polyline and Marker import paths|Fix Polyline import to use local component and correct Marker import to use external library.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+0271f14|2025-11-03|feat: add visual feedback to boundary editor|Add markers, lines, and polygons for map drawing and set default to San Mateo, Costa Rica.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+d14f9d0|2025-11-03|fix: resolve boundary map height issue|Set explicit height for Card and Map component.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+99a12f8|2025-11-03|fix: resolve boundary editor issues and enhance instructions|Remove extra props and add clear usage instructions and workflow steps.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+3bc8eb5|2025-11-03|fix: correct boundary editor imports|Switch to consistent `@vis.gl/react-google-maps` library.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+7a7cd83|2025-11-03|feat: add boundary editor page and migration script|Add migration script and admin page for community boundary editor.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+f672a26|2025-11-03|feat: integrate community boundary visualization into map components|Add darkened overlay outside community boundary and light styles inside.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+1bf8ed0|2025-11-03|feat: update database schema and add community boundary editor|Add enum fields to locations and new fields for community boundaries.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+0a97501|2025-11-03|fix: resolve map border and height issues|Remove inner div border, add padding for gap, and use fixed height for proper display.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+c2f3a0b|2025-11-03|fix: resolve map height issue in Add Location page|Ensure proper height distribution for map rendering.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+a9065b8|2025-11-03|fix: enhance map card appearance and height utilization|#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+d74ab0d|2025-11-03|fix: prevent redirect loop for non-resident users|Check user role before querying resident data and redirect admins.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+5c54599|2025-11-03|fix: resolve map preview, layer button, and card height issues|Remove map preview, replace Select with DropdownMenu, and adjust map height.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+1ecf887|2025-11-03|fix: resolve map preview, layer icon, and card padding issues|#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+c82ae77|2025-11-03|fix: resolve map UI issues|Fix map preview, hide dropdown arrow, remove title/subtitle
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+f1b0684|2025-11-03|feat: implement Sprint 1 fixes for map UI|Repositioned map controls, updated layer icon, removed select button, added visual feedback for polygon/polyline drawing
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+81ea4e5|2025-11-03|feat: enhance map editor and viewer with new features|Replace alerts with toasts, update layer button, add delete mode, show saved locations, hide polygon markers, set default map center to San Mateo.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+719604b|2025-11-03|fix: resolve polygon/polyline rendering and button issues|Fix Polygon/Polyline re-rendering and button positioning issues.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+67f4ff4|2025-11-03|fix: recreate map components with correct rendering|Fix polygon/polyline rendering and button positioning issues.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+de8913a|2025-11-03|feat: fix polygon/polyline drawing and reposition buttons|Add "Finish Drawing" button and ensure shapes don't block clicks. Reorganize UI controls.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+a56a0c8|2025-11-03|fix: switch to standard markers and update viewer UI|Resolve Map ID issue and modernize viewer UI with custom controls.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+ba0336c|2025-11-03|fix: resolve map listener error and redesign UI|Fix `map.removeListener` and disable default UI; add custom controls.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+d0f4eb8|2025-11-03|fix: remove incorrect google maps import statements|#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+7ca648e|2025-11-03|fix: remove incorrect google maps imports and fix module errors|#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+fbf8e1c|2025-11-03|fix: remove incorrect google maps import statements|#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+15f0c27|2025-11-03|fix: remove incorrect Google Maps import statements|Resolve module loading errors by removing non-existent imports.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+b5d512b|2025-11-03|fix: remove incorrect imports for google.maps|Remove erroneous import statements in polygon.tsx and polyline.tsx.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+72738a8|2025-11-03|fix: remove incorrect Google Maps imports|Fix incorrect import statements in polygon.tsx and polyline.tsx.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+7bdc1dc|2025-11-03|fix: resolve Google Maps module loading and Pigeon Maps issues|#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+941e037|2025-11-03|feat: fix drawing tools and replace Pigeon Maps with Google Maps|Implement proper map click handling and custom Polygon/Polyline components.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+63bcd1e|2025-11-03|fix: enable Google Maps API and add locate button|Fix API activation issue and add locate button for map centering.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+2f08839|2025-11-03|feat: add Google Maps drawing editor|Implement editor with markers, polygons, and polylines.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+56916e1|2025-11-03|feat: implement Leaflet map editor with drawing tools|Replace Pigeon Maps with React Leaflet and add drawing capabilities
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+b3f434e|2025-11-03|fix: resolve marker, polygon, and save issues|Update server action, improve marker UX, and enhance drawing tools.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+74730d9|2025-11-03|fix: correct admin role check logic|Update to allow tenant_admin role access when is_tenant_admin is false.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+bb7e53d|2025-11-03|fix: correct redirect issue on create location page|Add debug logs to identify redirect cause.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+e6a36ef|2025-11-03|fix: correct table query in create location auth|Update to query `users` table and check `is_tenant_admin` for permissions.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+af0d41a|2025-11-03|feat: add street view and drawing tools|Add OpenStreetMap street view and implement map editor with drawing tools.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+c0e6dfc|2025-11-03|feat: support polygon boundaries for facilities|Render polygons in map viewer using SVG overlays.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+301c89a|2025-11-03|feat: add terrain view toggle and fix map preview|Add terrain view switch and fix iframe map preview issue.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+ba43aa6|2025-11-03|feat: switch to ESRI World Imagery tiles for satellite imagery|Replace Mapbox tiles with reliable ESRI World Imagery tiles.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+239104d|2025-11-03|fix: add debug logs for Mapbox tile provider|Track generated URLs and token availability for troubleshooting.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+2127a84|2025-11-03|fix: correct Mapbox tile URL endpoint and format|#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+f75ac61|2025-11-03|fix: set fixed height for Pigeon Maps and remove defaultWidth|Align with Mapbox documentation and resolve rendering issue.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+b04fde6|2025-11-03|fix: simplify Pigeon Maps to show markers and remove duplicate button|#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+1c50e56|2025-11-03|fix: correct syntax error in admin layout file|Fix incomplete import and remove invalid backslash.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+3906cf9|2025-11-03|fix: resolve tenant login page load issue due to caching|Clear old cached builds to prevent repeated errors.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+b42a2bc|2025-11-03|refactor: switch to Leaflet for map rendering|Replace MapLibre with Leaflet for CSP compatibility.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+0ad6918|2025-11-03|fix: resolve auth issues and remove unused webpack config|#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+28d3b28|2025-11-03|feat: switch map implementation to MapLibre GL JS|Update map-viewer.tsx and layout.tsx to use MapLibre
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+8fbe8a3|2025-11-03|switch to MapLibre GL JS for Mapbox compatibility|#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+4dd3f14|2025-11-03|feat: exclude mapbox-gl from Next.js transpilation|Fix webpack config to resolve Mapbox GL JS worker loading issues
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+4584033|2025-11-03|fix: configure Mapbox worker URL with CDN|Set workerUrl to CDN to resolve loading issues.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+17f00c6|2025-11-03|feat: switch map to MapLibre GL JS for worker compatibility|Replace Mapbox GL JS with MapLibre GL JS and update imports/CSS
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+a813ffc|2025-11-03|feat: switch map component to react-map-gl|Replace direct Mapbox GL JS with react-map-gl for better integration.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+8264bf1|2025-11-03|fix: remove global Mapbox CSS import|Load Mapbox CSS conditionally in map components only.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+dba058e|2025-11-03|fix: resolve database and Mapbox loading errors|Fix role filter in admin layout and add Mapbox CSS import.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+ea46de6|2025-11-02|feat: add interactive map viewer and management pages|Create map viewer, map preview, and location management pages.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+2aeaf0c|2025-11-02|fix: clean up script 046 SQL syntax|Remove artifacts and ensure proper SQL execution.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+8152012|2025-11-02|fix: reorder migration scripts for dependency resolution|Fix migration order to ensure privacy settings precede check-ins table creation.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+b25d5e6|2025-11-02|feat: add walking paths and map feature foundation|Extend database schema for new location types and setup.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+ea895fd|2025-11-02|feat: duplicate Hello Costa Rica page|Initialize and migrate project files for duplicated page.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+0352d07|2025-11-02|Merge pull request #2 from mjcr88/v02branch|V02branch minor fixes to get profiles and creation steps cleaned up
+4772601|2025-11-02|fix: adjust privacy settings handling for single object|#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+7e3d978|2025-11-02|fix: resolve empty privacy settings query issue|#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+0cb6693|2025-11-02|fix: correct privacy settings fetching for profiles|#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+52ac524|2025-11-02|fix: resolve profile display issues in neighbor pages|Fix conditional rendering syntax and update privacy settings in filtered data.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+b1a0a5a|2025-11-02|fix: fetch all privacy settings to apply filters correctly|#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+548fb2c|2025-11-02|fix: resolve privacy settings error and update database schema|Add missing columns to user_privacy_settings table and adjust form.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+255e8a6|2025-11-02|fix: resolve resident edit and family creation issues|Allow tenant edits for residents without lots and add lot selection for new family members.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+99e74b5|2025-11-02|fix: resolve resident lot assignment display issue|#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+10c33ef|2025-11-02|fix: remove duplicate titles in onboarding forms|Remove outer titles from family, interests, and skills forms.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+132d9dc|2025-11-02|feat: implement onboarding and UX improvements|Restructure onboarding flow and update progress bar; fix Get Started button; rename profile field; remove duplicate titles; improve dashboard layout; update bulk lot numbering.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+f6f9179|2025-11-02|fix: add missing closing brace for @theme inline|Resolve CSS syntax error in globals.css.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+21e685b|2025-11-02|feat: batch fixes for tenant and lot management|Add address field to tenants, fix lot creation, and improve bulk lot creation.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+0ac8c7e|2025-11-02|fix: enable tenant admins to manage users|Add RLS policies and individual delete buttons for residents.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+43c32f8|2025-11-02|fix: tenant admins bypass onboarding check|Update admin layout to handle tenant admin roles correctly.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+4736eaf|2025-11-02|fix: allow tenant admins to log in via tenant page|Update login form to check for tenant_admin role.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+0459171|2025-11-02|fix: correct tenant admin invite validation|Update query to match resident invite pattern and fix join issues.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+c00760a|2025-11-02|fix: exclude login from backoffice layout|Move layout to dashboard to prevent auth block on login.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+fe26d3d|2025-11-02|feat: implement backoffice fixes and navigation|Redirect root to /backoffice/login; fix 406 error; create backoffice layout; fix tenant admin invite flow
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+ae5819c|2025-11-02|feat: add hello world page at app/page.tsx|Create simple centered "Hello World!" component with welcome message.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+864e193|2025-11-02|Merge pull request #1 from mjcr88/v02branch|V02branch - User login, permissions, onboarding, community directory, home dashboard
+0fa78bd|2025-11-02|feat: add global search and fix profile page privacy|Restore global search and fix profile privacy settings query.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+232b965|2025-11-02|feat: add sortable filterable table headers|Remove separate filter section and integrate sorting/filtering into headers.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+90724a6|2025-11-02|fix: fix RLS policy and convert residents display to table format|Fix RLS policy for neighborhood visibility and update UI to table format.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+6913ea3|2025-11-02|fix: resolve community directory query errors|Remove non-existent privacy settings columns from query.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+f820f0c|2025-11-02|fix: resolve neighbors page query and add visibility scope toggle|Simplify query and add toggle to tenant features form for scope settings.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+609c58a|2025-11-02|fix: resolve dashboard display issues|Fix family widget count, add "add member" in settings, correct community member count, debug countries query.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+07cba41|2025-11-02|fix: resolve infinite recursion in RLS policy for users table|Use SECURITY DEFINER functions to fix login issues for super admin and residents.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+2043560|2025-11-02|feat: implement privacy features|Add privacy utility, save functionality, and update settings/onboarding
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+e64a29b|2025-11-02|fix: rename `current_user` alias in script 036|Avoid PostgreSQL reserved keyword conflict.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+5d96c15|2025-11-02|fix: rename alias to avoid PostgreSQL keyword conflict|Use `viewer_user` instead of `current_user` in script 035.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+b6bc6cf|2025-11-02|feat: add database scripts for resident visibility scope|Add `resident_visibility_scope` to tenants table, create RLS policy for viewing residents, and allow viewing privacy settings.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+3a07823|2025-11-02|fix: add RLS policy for residents to view neighborhoods|#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+bf9f4bd|2025-11-02|feat: add tenant_id to lots table and update RLS policy|Add tenant_id column and migrate existing lots; simplify RLS policy.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+6b3d570|2025-11-02|fix: remove broken RLS policy causing infinite recursion|Drop policy querying users table to avoid recursion.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+896da5f|2025-11-02|fix: update script 029 to drop existing policy|Allow script to run without "policy already exists" error.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+a927862|2025-11-02|fix: update RLS policy to allow super admins and tenant admins|#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+75fe503|2025-11-02|fix: remove problematic CSS import from globals.css|Fix delay-* utility error and super admin backoffice load issue.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+fcbb200|2025-11-02|fix: remove unused tw-animate-css import|Unnecessary import causing Tailwind CSS utility error removed.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+ddf2676|2025-11-02|feat: create SQL fix scripts for user and RLS policies|Add scripts 028, 029, and 030 for database fixes and RLS updates.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+013ab11|2025-11-02|fix: apply critical database fixes|Update trigger, add tenant_id, and fix RLS policies.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+e354df0|2025-11-02|fix: update trigger to preserve family_unit_id on user creation|Fix trigger logic to include missing family_unit_id field.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+952f00a|2025-11-02|fix: resolve family unit bugs|Fix family_unit_id preservation, debug lot residents query, and verify dashboard info display.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+0ea38ad|2025-11-02|fix: link auth user to resident record on signup|Update resident record with auth user ID or create new if needed.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+dc915a6|2025-11-02|fix: add debug logging for family onboarding issues|Add extensive logs to diagnose user record mismatch.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+678db6a|2025-11-02|fix: resolve family_unit_id issues and add residents column|Handle empty family_unit_id in onboarding and settings,
+add residents column to admin lots table, fix form issue.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+00190a2|2025-11-01|fix: resolve multiple family mapping issues|Fix RLS policy, family unit detection, and UI rendering issues
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+f41ac78|2025-11-01|feat: fix onboarding and admin issues|Auto-login after password set, country name search, focus search for interests/skills, family form fixes
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+5d86885|2025-11-01|fix: resolve onboarding and dashboard issues|Remove redirect loop, fix family unit handling, update UI for search, and add/style add buttons.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+71c9759|2025-11-01|fix: resolve onboarding flow and UI issues|Add family step, fix redirect loop, simplify skills/interests UI
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+90f82c1|2025-11-01|feat: add family unit creation in resident flow|Implement logic to create new family unit for second resident.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+e68884d|2025-11-01|fix: add family unit widget to dashboard|Complete missing widget for family information display.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+7f933b5|2025-11-01|feat: add family management to profile settings|Introduce family management and privacy controls for relationship visibility.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+b8b83b6|2025-11-01|feat: add family mapping onboarding step|Create family_relationships table and integrate family step in onboarding flow.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+5a96792|2025-11-01|feat: redesign skills and interests UI with search and list|Update skills display to searchable list, keep selected skills as cards, add search to profile edit form.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+fc82eff|2025-11-01|fix: resolve data persistence bugs in profile editing|Correct field names and fix Combobox displayValue error.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+f45c989|2025-10-31|fix: resolve multiple dashboard and UI issues|Fix skills, interests, and date display; adjust dropdown and navigation; add new widgets
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+7ad01e7|2025-10-31|fix: prevent redirect before onboarding update completes|Add async handling and logging for onboarding update completion.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+8f41aef|2025-10-31|fix: resolve onboarding redirect loop with full page reload|#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+e2dca17|2025-10-31|feat: fix onboarding data persistence issues|Implement save logic for journey and interests forms, mark onboarding as complete on both buttons, and update phone selector to be searchable.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+7b91677|2025-10-31|fix: resolve onboarding issues|Implement skill creation, save profile data, add country code, mark onboarding completion, restore close button
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+f153f66|2025-10-31|fix: update all references to auth_user_id to id|Fix remaining auth_user_id references in onboarding pages.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+346c5ad|2025-10-31|fix: correct trigger to delete+insert user record|Fix trigger to properly migrate user ID by deleting old record and inserting new one.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+2cce50a|2025-10-31|fix: update trigger to handle email conflicts in user creation|#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+a13e3c1|2025-10-31|fix: use service role key for admin client in create-auth-user-action|Update client to use SUPABASE_SERVICE_ROLE_KEY for admin API access.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+7d6c438|2025-10-31|feat: add server action for admin user creation|Use Supabase admin API to handle user creation and edge cases.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+2657b09|2025-10-31|fix: add detailed error logging in signup flow|Improve error tracking for new user signups.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+6055319|2025-10-31|fix: add detailed debug logs for login issues|Add logs to identify email, auth user, and query results.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+b99aab4|2025-10-31|fix: resolve invite and link flow issues|Remove getUserById and rewrite link-resident API for ID migration.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+fb9e213|2025-10-31|fix: update invite validation to query users table|Correct invite link validation and simplify link-resident API.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+36434ff|2025-10-31|refactor: remove foreign key constraint on users.id for flexibility|#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+76db8a5|2025-10-31|fix: resolve critical resident issues|Replace `is_admin` with `is_tenant_admin` and fix ID creation for resident logins.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+9d9ba2f|2025-10-31|fix: resolve critical migration issues|Fix admin layout, login, onboarding, and resident creation
+
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+1b3ce2e|2025-10-31|feat: update onboarding flow to use unified users table|Switch to `users` table for onboarding components with `role='resident'` filter.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+988719e|2025-10-31|fix: update script 024 to copy existing columns only|Remove non-existent column from migration script.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+6d53958|2025-10-31|fix: update script 024 for resident data migration|Remove enum cast and UUID cast; ensure correct column mappings
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+d2da4fd|2025-10-31|feat: add new columns without altering role type|Add new columns and enforce role values with CHECK constraint
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+9ce40f6|2025-10-31|fix: resolve script 022 dependency issues|Drop dependent policies and use CASCADE for function removal.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+c4ab6fe|2025-10-31|fix: alter role column type from TEXT to ENUM|Drop RLS policies and helper functions, then recreate them.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+86efae9|2025-10-31|fix: resolve column type change conflict in script 022|Drop and recreate RLS policies and function for role column.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+9fd8267|2025-10-31|fix: update migration scripts to match current schema|Fix script 022 to convert role column and adjust scripts 023 and 024 for RLS policies.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+8fcd83c|2025-10-31|feat: extend users schema and migrate resident data|Add resident fields and junction tables; update code to use new schema.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+819857f|2025-10-31|fix: remove foreign key constraint on residents table|Fix schema issue for resident signups.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+7922939|2025-10-31|fix: resolve resident signup/login issues|Fix RLS block on resident update and update login to use tenant_id.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+a7329e9|2025-10-31|fix: bypass RLS for invite token validation|Create server action using service role to validate invite links.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+6ca3ff3|2025-10-31|feat: add tenant_id to resident and family unit operations|Include tenant_id in resident creation, editing, and family unit creation. Fix invite validation logic to check tenant_id and token.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+e862a22|2025-10-31|fix: resolve tenant admin invite creation issues|Generate UUID for tenant admin user creation and fix invite link URL.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+8049c88|2025-10-31|fix: resolve multiple user profile issues|Truncate avatar emails, fix invite link popup, handle super admin redirects, and fix database query error.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+45a248c|2025-10-31|fix: ensure avatar menu renders for super admins|Always show avatar menu with fallback email for super admins.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+9fc3d7e|2025-10-31|feat: move avatar menu to sidebar footer and add contextual options|Update avatar menu placement and add "Resident View", "Admin Panel", and "Back to Super Admin" options.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+ef0a00f|2025-10-31|feat: add avatar menu to admin layout|Include UserAvatarMenu in admin header and add link to switch to resident view.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+5283c7d|2025-10-31|feat: add user avatar menu and settings pages|Implement user avatar menu and settings tabs for profile and privacy.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+e3cc32f|2025-10-31|fix: improve middleware auth error handling|Add try-catch for getUser() and remove redirect logic.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+3a9c026|2025-10-31|feat: duplicate Github codebase info into community-app|Copy all files and components from Github to community-app project.
+
+#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+f0031be|2025-10-30|feat: sync main changes into v0-community-app-project|#VERCEL_SKIP
+
+Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>
+
+613569a|2025-10-30|Initialized repository for chat Community App v0.1|Co-authored-by: null <174743278+mjcr88@users.noreply.github.com>

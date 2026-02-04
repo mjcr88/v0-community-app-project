@@ -115,3 +115,15 @@
 | #77 | **Auto Logout** | 2 Days | **Feb 5** | **Feb 6** | Wait for #76 |
 
 > *Note: Schedule assumes parallel execution of #76 and #63.*
+
+## Release Notes
+### Release Notes (Draft)
+🚀 **[Supabase Dev Env]**
+Established a safe, isolated development environment (`v0-community-dev`) to prevent production regressions.
+
+🛡️ **[Refactor/Security]**
+- Hardened `auto_preview.py` against command injection.
+- Secured `/api/link-resident` endpoint with strict Auth checks.
+- Clarified RLS Policies for Tenant/User data isolation.
+- Fixed `orchestrator.md` skill references.
+- Added E2E Smoke Tests for deployment validation.

@@ -63,7 +63,7 @@ The `reservations` table has RLS explicitly disabled (`rowsecurity = false`).
 Any authenticated user can query *all* reservations in the system, viewing private booking details of other neighbors.
 **Remediation:**
 *   **Enable RLS:** `ALTER TABLE reservations ENABLE ROW LEVEL SECURITY;`
-*   **Add Policy:** Create policies restricting view access to the tenant and the specific user creating/owning the reservation.
+*   **Add Policy:** Create policies restricting view access to the tenant AND (the specific user creating/owning the reservation OR the tenant admin).
 
 ### 2.5. Public Document Exposure
 **Location:** Supabase Storage (`documents` bucket)

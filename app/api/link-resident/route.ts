@@ -11,6 +11,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
+    // 1. Verify the caller is authenticated
+    const { createClient: createAuthClient } = await import("@/lib/supabase/server")
+    const authClient = await createAuthClient()
+    const { data: { user } } = await authClient.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    // 2. Allow user to only link themselves
+    if (user.id !== authUserId) {
+      return NextResponse.json({ error: "Forbidden: You can only link your own account" }, { status: 403 })
+    }
+
     // Use service role to bypass RLS
     const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
       auth: {

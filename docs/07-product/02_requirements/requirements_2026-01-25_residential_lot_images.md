@@ -72,7 +72,8 @@ Option 1 is the most straightforward and aligns with how `photos` are currently 
 - **Vibe Check**: `lots` table has RLS enabled. Currently, residents have `SELECT` access to all lots in their tenant, but NO `UPDATE` access.
 - **Attack Surface**: 
     - **RLS Gap**: A new policy is required to allow residents to update *only* the lot linked via `users.lot_id`. 
-    - **Upload Path**: Generic `/api/upload` is used. Security relies on storage bucket policies (currently `photos` is public, but restricted by app-level validation).
+    - **Upload Path**: Generic `/api/upload` is used. Security relies on storage bucket policies.
+    - **Constraint**: `lot_photos` bucket MUST be **Private**. Access via Signed URLs only.
 - **Recommendation**: Implement `UPDATE` policy on `lots` matching `auth.uid()` to `users.id` where `users.lot_id = lots.id`.
 
 ### Phase 2: Test Strategy

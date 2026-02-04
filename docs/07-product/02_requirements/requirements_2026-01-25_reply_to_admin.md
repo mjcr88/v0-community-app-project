@@ -104,6 +104,7 @@ We will implement **Option 1**. This is the standard pattern for ticket manageme
 *   **Access Control (RLS)**:
     *   `SELECT`: `EXISTS (SELECT 1 FROM resident_requests WHERE id = request_id AND (created_by = auth.uid() OR role IN ('tenant_admin', 'super_admin')))`.
     *   `INSERT`: `auth.uid() = user_id` AND `EXISTS (SELECT 1 FROM resident_requests WHERE id = request_id AND (created_by = auth.uid() OR role IN ('tenant_admin', 'super_admin')))`.
+    *   **Foreign Key**: `user_id` should reference `auth.users` (or `public.profiles` if 1:1) to ensure valid Supabase Auth linkage.
 *   **Attack Surface**:
     *   **Comment Injection**: Validation on `message` length (min 1, max 2000) and character set.
     *   **Cross-Tenant Leakage**: Ensure `tenant_id` is validated through the linked request.

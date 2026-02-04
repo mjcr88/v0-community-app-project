@@ -41,12 +41,6 @@ allowed-tools: Read, Glob, Grep
 - You can always add patterns later
 - Removing complexity is MUCH harder than adding it
 
-### 🔓 Vendor Lock-In Assessment
-**Before choosing a service (Vercel, Supabase, AWS):**
-1.  **Switching Cost**: How hard is it to move to a generic container?
-2.  **Coupling**: Are we using proprietary APIs (e.g., Vercel Cron) vs Standard APIs (e.g., HTTP Trigger)?
-3.  **Strategy**: "Rent utility, own the core." Don't couple core business logic to a vendor feature.
-
 ---
 
 ## Validation Checklist

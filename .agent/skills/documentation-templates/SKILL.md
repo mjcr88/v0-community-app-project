@@ -180,23 +180,7 @@ For RAG indexing:
 
 ---
 
-## 7. Product & Requirement Templates
-
-> Use these templates to structure raw user input into actionable docs.
-
-### Requirement / User Story
-- **Path**: `.agent/skills/documentation-templates/templates/REQUIREMENT.md`
-- **Use when**: Turning a conversation or idea into a single ticket.
-- **Key Sections**: User Story, Acceptance Criteria, Design Notes, Technical Notes.
-
-### Product Requirements Document (PRD)
-- **Path**: `.agent/skills/documentation-templates/templates/PRD.md`
-- **Use when**: Planning a large feature or epic.
-- **Key Sections**: Executive Summary, User Stories, Functional Requirements, Technical Implementation.
-
----
-
-## 8. Structure Principles
+## 7. Structure Principles
 
 | Principle | Why |
 |-----------|-----|

@@ -42,7 +42,6 @@ priority: CRITICAL
 | Rule | Description |
 |------|-------------|
 | **Small** | Max 20 lines, ideally 5-10 |
-| **No God Files** | Max 400 lines (Soft), 500 lines (Hard Limit) - Refactor if larger |
 | **One Thing** | Does one thing, does it well |
 | **One Level** | One level of abstraction per function |
 | **Few Args** | Max 3 arguments, prefer 0-2 |
@@ -58,20 +57,6 @@ priority: CRITICAL
 | **Flat > Nested** | Avoid deep nesting (max 2 levels) |
 | **Composition** | Small functions composed together |
 | **Colocation** | Keep related code close |
-
----
-
-## Data Boundaries (MANDATORY)
-
-| Boundary | Rule |
-|----------|------|
-| **External Inputs** | **ALWAYS** validate with Zod (API, **Server Actions**, Forms) |
-| **Trust** | Never trust `req.body`, `searchParams`, or `props` from weak types |
-| **Typing** | Infer types from Zod schemas: `z.infer<typeof Schema>` |
-| **Client Code** | Limit `"use client"` to leaf nodes (buttons, inputs) - never wrap pages unnecessarily |
-| **Libraries** | **No Custom Wrappers** for standard UI libs (e.g., Shadcn) unless strictly justified |
-
-> 🔴 **Rule:** No raw data enters the system without a Zod gatekeeper.
 
 ---
 
@@ -162,20 +147,20 @@ File to edit: UserService.ts
 
 | Agent | Script | Command |
 |-------|--------|---------|
-| **frontend-specialist** | UX Audit | `python ~/.claude/skills/frontend-design/scripts/ux_audit.py .` |
-| **frontend-specialist** | A11y Check | `python ~/.claude/skills/frontend-design/scripts/accessibility_checker.py .` |
-| **backend-specialist** | API Validator | `python ~/.claude/skills/api-patterns/scripts/api_validator.py .` |
-| **mobile-developer** | Mobile Audit | `python ~/.claude/skills/mobile-design/scripts/mobile_audit.py .` |
-| **database-architect** | Schema Validate | `python ~/.claude/skills/database-design/scripts/schema_validator.py .` |
-| **security-auditor** | Security Scan | `python ~/.claude/skills/vulnerability-scanner/scripts/security_scan.py .` |
-| **seo-specialist** | SEO Check | `python ~/.claude/skills/seo-fundamentals/scripts/seo_checker.py .` |
-| **seo-specialist** | GEO Check | `python ~/.claude/skills/geo-fundamentals/scripts/geo_checker.py .` |
-| **performance-optimizer** | Lighthouse | `python ~/.claude/skills/performance-profiling/scripts/lighthouse_audit.py <url>` |
-| **test-engineer** | Test Runner | `python ~/.claude/skills/testing-patterns/scripts/test_runner.py .` |
-| **test-engineer** | Playwright | `python ~/.claude/skills/webapp-testing/scripts/playwright_runner.py <url>` |
-| **Any agent** | Lint Check | `python ~/.claude/skills/lint-and-validate/scripts/lint_runner.py .` |
-| **Any agent** | Type Coverage | `python ~/.claude/skills/lint-and-validate/scripts/type_coverage.py .` |
-| **Any agent** | i18n Check | `python ~/.claude/skills/i18n-localization/scripts/i18n_checker.py .` |
+| **frontend-specialist** | UX Audit | `python .agent/skills/frontend-design/scripts/ux_audit.py .` |
+| **frontend-specialist** | A11y Check | `python .agent/skills/frontend-design/scripts/accessibility_checker.py .` |
+| **backend-specialist** | API Validator | `python .agent/skills/api-patterns/scripts/api_validator.py .` |
+| **mobile-developer** | Mobile Audit | `python .agent/skills/mobile-design/scripts/mobile_audit.py .` |
+| **database-architect** | Schema Validate | `python .agent/skills/database-design/scripts/schema_validator.py .` |
+| **security-auditor** | Security Scan | `python .agent/skills/vulnerability-scanner/scripts/security_scan.py .` |
+| **seo-specialist** | SEO Check | `python .agent/skills/seo-fundamentals/scripts/seo_checker.py .` |
+| **seo-specialist** | GEO Check | `python .agent/skills/geo-fundamentals/scripts/geo_checker.py .` |
+| **performance-optimizer** | Lighthouse | `python .agent/skills/performance-profiling/scripts/lighthouse_audit.py <url>` |
+| **test-engineer** | Test Runner | `python .agent/skills/testing-patterns/scripts/test_runner.py .` |
+| **test-engineer** | Playwright | `python .agent/skills/webapp-testing/scripts/playwright_runner.py <url>` |
+| **Any agent** | Lint Check | `python .agent/skills/lint-and-validate/scripts/lint_runner.py .` |
+| **Any agent** | Type Coverage | `python .agent/skills/lint-and-validate/scripts/type_coverage.py .` |
+| **Any agent** | i18n Check | `python .agent/skills/i18n-localization/scripts/i18n_checker.py .` |
 
 > ❌ **WRONG:** `test-engineer` running `ux_audit.py`
 > ✅ **CORRECT:** `frontend-specialist` running `ux_audit.py`

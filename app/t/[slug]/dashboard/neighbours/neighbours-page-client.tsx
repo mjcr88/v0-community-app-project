@@ -312,71 +312,73 @@ export function NeighboursPageClient({
             {/* Tabs */}
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
                 <div className="w-full overflow-x-auto no-scrollbar pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
-                    <TabsList className="bg-muted/30 p-1 rounded-full h-auto flex w-full justify-between items-center sm:inline-flex sm:w-auto sm:min-w-fit pr-1">
-                        <TabsTrigger
-                            value="residents"
-                            className="rounded-full flex-1 sm:flex-initial px-2 sm:px-6 py-2 border border-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all flex-shrink-0"
-                        >
-                            <span className="flex items-center justify-center gap-2 text-xs sm:text-sm">
-                                Residents
-                                {filteredResidents.length > 0 && (
-                                    <Badge
-                                        variant="secondary"
-                                        className={cn(
-                                            "px-1 py-0.5 sm:px-1.5 text-[9px] sm:text-[10px] h-auto min-w-[1rem] sm:min-w-[1.25rem] justify-center",
-                                            activeTab === "residents"
-                                                ? "bg-primary-foreground text-primary hover:bg-primary-foreground/90"
-                                                : "bg-primary text-primary-foreground hover:bg-primary/90"
-                                        )}
-                                    >
-                                        {filteredResidents.length}
-                                    </Badge>
-                                )}
-                            </span>
-                        </TabsTrigger>
-                        <TabsTrigger
-                            value="families"
-                            className="rounded-full flex-1 sm:flex-initial px-2 sm:px-6 py-2 border border-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all flex-shrink-0"
-                        >
-                            <span className="flex items-center justify-center gap-2 text-xs sm:text-sm">
-                                Households
-                                {filteredFamilies.length > 0 && (
-                                    <Badge
-                                        variant="secondary"
-                                        className={cn(
-                                            "px-1 py-0.5 sm:px-1.5 text-[9px] sm:text-[10px] h-auto min-w-[1rem] sm:min-w-[1.25rem] justify-center",
-                                            activeTab === "families"
-                                                ? "bg-primary-foreground text-primary hover:bg-primary-foreground/90"
-                                                : "bg-primary text-primary-foreground hover:bg-primary/90"
-                                        )}
-                                    >
-                                        {filteredFamilies.length}
-                                    </Badge>
-                                )}
-                            </span>
-                        </TabsTrigger>
-                        <TabsTrigger
-                            value="lists"
-                            className="rounded-full flex-1 sm:flex-initial px-2 sm:px-6 py-2 border border-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all flex-shrink-0"
-                        >
-                            <span className="flex items-center justify-center gap-2 text-xs sm:text-sm">
-                                My Lists
-                                {filteredLists.length > 0 && (
-                                    <Badge
-                                        variant="secondary"
-                                        className={cn(
-                                            "px-1 py-0.5 sm:px-1.5 text-[9px] sm:text-[10px] h-auto min-w-[1rem] sm:min-w-[1.25rem] justify-center",
-                                            activeTab === "lists"
-                                                ? "bg-primary-foreground text-primary hover:bg-primary-foreground/90"
-                                                : "bg-primary text-primary-foreground hover:bg-primary/90"
-                                        )}
-                                    >
-                                        {filteredLists.length}
-                                    </Badge>
-                                )}
-                            </span>
-                        </TabsTrigger>
-                    </TabsList>
+                    <div className="max-w-md">
+                        <TabsList className="bg-muted/30 p-1 rounded-full h-auto flex w-full justify-between items-center pr-1">
+                            <TabsTrigger
+                                value="residents"
+                                className="rounded-full flex-1 sm:flex-initial px-2 sm:px-6 py-2 border border-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all flex-shrink-0"
+                            >
+                                <span className="flex items-center justify-center gap-2 text-xs sm:text-sm">
+                                    Residents
+                                    {filteredResidents.length > 0 && (
+                                        <Badge
+                                            variant="secondary"
+                                            className={cn(
+                                                "px-1 py-0.5 sm:px-1.5 text-[9px] sm:text-[10px] h-auto min-w-[1rem] sm:min-w-[1.25rem] justify-center",
+                                                activeTab === "residents"
+                                                    ? "bg-primary-foreground text-primary hover:bg-primary-foreground/90"
+                                                    : "bg-primary text-primary-foreground hover:bg-primary/90"
+                                            )}
+                                        >
+                                            {filteredResidents.length}
+                                        </Badge>
+                                    )}
+                                </span>
+                            </TabsTrigger>
+                            <TabsTrigger
+                                value="families"
+                                className="rounded-full flex-1 sm:flex-initial px-2 sm:px-6 py-2 border border-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all flex-shrink-0"
+                            >
+                                <span className="flex items-center justify-center gap-2 text-xs sm:text-sm">
+                                    Households
+                                    {filteredFamilies.length > 0 && (
+                                        <Badge
+                                            variant="secondary"
+                                            className={cn(
+                                                "px-1 py-0.5 sm:px-1.5 text-[9px] sm:text-[10px] h-auto min-w-[1rem] sm:min-w-[1.25rem] justify-center",
+                                                activeTab === "families"
+                                                    ? "bg-primary-foreground text-primary hover:bg-primary-foreground/90"
+                                                    : "bg-primary text-primary-foreground hover:bg-primary/90"
+                                            )}
+                                        >
+                                            {filteredFamilies.length}
+                                        </Badge>
+                                    )}
+                                </span>
+                            </TabsTrigger>
+                            <TabsTrigger
+                                value="lists"
+                                className="rounded-full flex-1 sm:flex-initial px-2 sm:px-6 py-2 border border-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all flex-shrink-0"
+                            >
+                                <span className="flex items-center justify-center gap-2 text-xs sm:text-sm">
+                                    My Lists
+                                    {filteredLists.length > 0 && (
+                                        <Badge
+                                            variant="secondary"
+                                            className={cn(
+                                                "px-1 py-0.5 sm:px-1.5 text-[9px] sm:text-[10px] h-auto min-w-[1rem] sm:min-w-[1.25rem] justify-center",
+                                                activeTab === "lists"
+                                                    ? "bg-primary-foreground text-primary hover:bg-primary-foreground/90"
+                                                    : "bg-primary text-primary-foreground hover:bg-primary/90"
+                                            )}
+                                        >
+                                            {filteredLists.length}
+                                        </Badge>
+                                    )}
+                                </span>
+                            </TabsTrigger>
+                        </TabsList>
+                    </div>
                 </div>
             </Tabs>
 

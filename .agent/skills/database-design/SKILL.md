@@ -43,14 +43,6 @@ Before designing schema:
 
 ---
 
-## 🌩️ Supabase Specifics (MANDATORY)
-
--   **RLS Defaults**: New tables created in Supabase default to `rls_enabled: false`. **Always** enable RLS.
--   **Public Buckets**: `public: true` buckets bypass ALL RLS policies. Use private buckets for user data.
--   **Views**: Standard views run as `postgres` (admin). Use `WITH (security_invoker = true)`.
-
----
-
 ## Anti-Patterns
 
 ❌ Default to PostgreSQL for simple apps (SQLite may suffice)

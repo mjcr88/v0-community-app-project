@@ -1,5 +1,7 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
+#agents
+
 # dependencies
 /node_modules
 
@@ -18,6 +20,7 @@ yarn-error.log*
 
 # env files
 .env*
+.env.local
 
 # vercel
 .vercel
@@ -28,3 +31,7 @@ next-env.d.ts
 
 *storybook.log
 storybook-static
+
+# Supabase Local Dev
+supabase/migrations/fresh_dump.sql
+supabase/migrations/clean_schema_v*.sql

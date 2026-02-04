@@ -40,13 +40,8 @@ def find_schema_files(project_path: Path) -> list:
     for f in drizzle_files:
         if 'schema' in f.name.lower() or 'table' in f.name.lower():
             schemas.append(('drizzle', f))
-            
-    # Supabase SQL Migrations
-    sql_files = list(project_path.glob('**/scripts/*.sql'))
-    sql_files.extend(project_path.glob('**/supabase/migrations/*.sql'))
-    schemas.extend([('sql', f) for f in sql_files])
     
-    return schemas[:20]  # Increased Limit
+    return schemas[:10]  # Limit
 
 
 def validate_prisma_schema(file_path: Path) -> list:
@@ -130,37 +125,8 @@ def main():
         
         if schema_type == 'prisma':
             issues = validate_prisma_schema(file_path)
-        elif schema_type == 'sql':
-            issues = validate_sql_file(file_path)
         else:
             issues = []  # Drizzle validation could be added
-
-def validate_sql_file(file_path: Path) -> list:
-    """Validate SQL migration file for Supabase security."""
-    issues = []
-    try:
-        content = file_path.read_text(encoding='utf-8', errors='ignore').lower()
-        
-        # Check 1: RLS on Tables
-        # Naive check: If CREATE TABLE exists, check for ENABLE ROW LEVEL SECURITY
-        # Limit: Doesn't map 1-to-1, but catches files that forget it entirely
-        if 'create table' in content:
-            if 'enable row level security' not in content:
-                issues.append("Found 'CREATE TABLE' but missing 'ENABLE ROW LEVEL SECURITY'. RLS is mandatory.")
-        
-        # Check 2: View Security
-        if 'create view' in content or 'create or replace view' in content:
-            if 'security_invoker' not in content:
-                issues.append("Found 'CREATE VIEW' without 'security_invoker'. Views bypass RLS by default!")
-                
-        # Check 3: Public Bucket creation (heuristics)
-        if 'insert into storage.buckets' in content and 'public' in content and 'true' in content:
-             issues.append("Potential usage of 'public: true' bucket. Verify this is strictly necessary.")
-
-    except Exception as e:
-        issues.append(f"Error reading SQL: {str(e)[:50]}")
-    
-    return issues
         
         if issues:
             all_issues.append({

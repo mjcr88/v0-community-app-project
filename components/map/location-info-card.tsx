@@ -41,8 +41,8 @@ interface LocationInfoCardProps {
     rules?: string | null
     path_difficulty?: string | null
     path_surface?: string | null
-    path_length?: string | null
-    elevation_gain?: string | null
+    path_length?: string | number | null
+    elevation_gain?: string | number | null
     is_reservable?: boolean
     // Pre-enriched data from getLocations
     residents?: Resident[]
@@ -110,7 +110,7 @@ export function LocationInfoCard({
   const [reservationsEnabled, setReservationsEnabled] = useState(false)
 
   useEffect(() => {
-    console.log("[v0] LocationInfoCard useEffect triggered for location:", location.id)
+
 
     // Reset state before processing new location
     setNeighborhood(null)
@@ -140,7 +140,7 @@ export function LocationInfoCard({
 
     const fetchRelatedData = async () => {
       setLoading(true)
-      console.log("[v0] Starting to fetch related data...")
+
       const supabase = createBrowserClient()
 
       if (!propTenantSlug) {
@@ -424,8 +424,9 @@ export function LocationInfoCard({
           )}
 
           {location.description && (
-            <div>
-              <p className={`${textSize} text-muted-foreground leading-relaxed line-clamp-3`}>{location.description}</p>
+            <div className="space-y-1">
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">About</h4>
+              <p className={`${textSize} text-foreground leading-relaxed line-clamp-3`}>{location.description}</p>
             </div>
           )}
 
@@ -472,24 +473,43 @@ export function LocationInfoCard({
 
           {location.type === "walking_path" && (
             <div className="space-y-2 pt-2">
-              {(location.path_difficulty || location.path_length || location.path_surface) && (
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Path Details</h4>
+              {(location.path_difficulty || location.path_length || location.path_surface || location.elevation_gain) && (
                 <div className="space-y-2 text-sm">
                   {location.path_difficulty && (
                     <div className="flex items-center gap-2">
-                      <span>📈</span>
-                      <span className="text-muted-foreground">{location.path_difficulty}</span>
+                      <span title="Difficulty">📈</span>
+                      <span className="text-muted-foreground font-medium">Difficulty:</span>
+                      <span className="text-foreground capitalize">{location.path_difficulty}</span>
                     </div>
                   )}
                   {location.path_surface && (
                     <div className="flex items-center gap-2">
-                      <span>🛤️</span>
-                      <span className="text-muted-foreground capitalize">{location.path_surface}</span>
+                      <span title="Surface">🛤️</span>
+                      <span className="text-muted-foreground font-medium">Surface:</span>
+                      <span className="text-foreground capitalize">{location.path_surface}</span>
                     </div>
                   )}
                   {location.path_length && (
                     <div className="flex items-center gap-2">
-                      <span>📏</span>
-                      <span className="text-muted-foreground">{location.path_length}</span>
+                      <span title="Distance">📏</span>
+                      <span className="text-muted-foreground font-medium">Distance:</span>
+                      <span className="text-foreground">
+                        {!isNaN(Number(location.path_length))
+                          ? `${(Number(location.path_length) / 1000).toFixed(2)} km`
+                          : location.path_length}
+                      </span>
+                    </div>
+                  )}
+                  {location.elevation_gain !== undefined && location.elevation_gain !== null && (
+                    <div className="flex items-center gap-2">
+                      <span title="Elevation Gain">🏔️</span>
+                      <span className="text-muted-foreground font-medium">Elevation:</span>
+                      <span className="text-foreground">
+                        {!isNaN(Number(location.elevation_gain))
+                          ? `${Number(location.elevation_gain)} m`
+                          : location.elevation_gain} Gain
+                      </span>
                     </div>
                   )}
                 </div>
@@ -689,8 +709,9 @@ export function LocationInfoCard({
         )}
 
         {location.description && (
-          <div>
-            <p className={`${textSize} text-muted-foreground leading-relaxed line-clamp-3`}>{location.description}</p>
+          <div className="space-y-1 mb-4">
+            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">About</h4>
+            <p className={`${textSize} text-foreground leading-relaxed line-clamp-3`}>{location.description}</p>
           </div>
         )}
 
@@ -737,24 +758,43 @@ export function LocationInfoCard({
 
         {location.type === "walking_path" && (
           <div className="space-y-2 pt-2">
-            {(location.path_difficulty || location.path_length || location.path_surface) && (
+            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Path Details</h4>
+            {(location.path_difficulty || location.path_length || location.path_surface || location.elevation_gain) && (
               <div className="space-y-2 text-sm">
                 {location.path_difficulty && (
                   <div className="flex items-center gap-2">
-                    <span>📈</span>
-                    <span className="text-muted-foreground">{location.path_difficulty}</span>
+                    <span title="Difficulty">📈</span>
+                    <span className="text-muted-foreground font-medium">Difficulty:</span>
+                    <span className="text-foreground">{location.path_difficulty}</span>
                   </div>
                 )}
                 {location.path_surface && (
                   <div className="flex items-center gap-2">
-                    <span>🛤️</span>
-                    <span className="text-muted-foreground capitalize">{location.path_surface}</span>
+                    <span title="Surface">🛤️</span>
+                    <span className="text-muted-foreground font-medium">Surface:</span>
+                    <span className="text-foreground capitalize">{location.path_surface}</span>
                   </div>
                 )}
                 {location.path_length && (
                   <div className="flex items-center gap-2">
-                    <span>📏</span>
-                    <span className="text-muted-foreground">{location.path_length}</span>
+                    <span title="Distance">📏</span>
+                    <span className="text-muted-foreground font-medium">Distance:</span>
+                    <span className="text-foreground">
+                      {!isNaN(Number(location.path_length))
+                        ? `${(Number(location.path_length) / 1000).toFixed(2)} km`
+                        : location.path_length}
+                    </span>
+                  </div>
+                )}
+                {location.elevation_gain !== undefined && location.elevation_gain !== null && (
+                  <div className="flex items-center gap-2">
+                    <span title="Elevation Gain">🏔️</span>
+                    <span className="text-muted-foreground font-medium">Elevation:</span>
+                    <span className="text-foreground">
+                      {!isNaN(Number(location.elevation_gain))
+                        ? `${Number(location.elevation_gain)} m`
+                        : location.elevation_gain} Gain
+                    </span>
                   </div>
                 )}
               </div>

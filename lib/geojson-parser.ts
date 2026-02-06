@@ -5,7 +5,13 @@ export type GeoJSONGeometryType =
   | "MultiPoint"
   | "MultiLineString"
   | "MultiPolygon"
+  | "MultiPolygon"
   | "GeometryCollection"
+
+export interface PathStats {
+  distance: number // meters
+  elevationGain: number // meters
+}
 
 export interface GeoJSONFeature {
   type: "Feature"
@@ -243,6 +249,79 @@ export function validateGeoJSON(data: any): ValidationResult {
   return { error: null, warnings }
 }
 
+// Helper to calculate distance between two WGS84 points (Haversine formula approximation)
+function calculateDistance(coord1: number[], coord2: number[]): number {
+  const R = 6371e3 // Earth radius in meters
+  const lat1 = (coord1[1] * Math.PI) / 180
+  const lat2 = (coord2[1] * Math.PI) / 180
+  const dLat = ((coord2[1] - coord1[1]) * Math.PI) / 180
+  const dLon = ((coord2[0] - coord1[0]) * Math.PI) / 180
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) * Math.sin(dLon / 2)
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return R * c
+}
+
+export interface PathStats {
+  distance: number // meters
+  elevationGain: number // meters
+  hasZ: boolean
+}
+
+// Calculate total length and elevation gain from a coordinate array
+function calculatePathStats(coords: any[]): PathStats {
+  let distance = 0
+  let elevationGain = 0
+  let hasZ = false
+
+  // Flatten logic if multiline or ring, but usually paths are array of points
+  // Simple LineString: [[x,y,z], [x,y,z]]
+  if (!Array.isArray(coords[0])) return { distance: 0, elevationGain: 0, hasZ: false }
+
+  // Handle MultiLineString structure (array of arrays of points) - recursive sum
+  if (Array.isArray(coords[0][0])) {
+    return coords.reduce((acc, segment) => {
+      const segStats = calculatePathStats(segment)
+      return {
+        distance: acc.distance + segStats.distance,
+        elevationGain: acc.elevationGain + segStats.elevationGain,
+        hasZ: acc.hasZ || segStats.hasZ
+      }
+    }, { distance: 0, elevationGain: 0, hasZ: false })
+  }
+
+  for (let i = 0; i < coords.length - 1; i++) {
+    const p1 = coords[i]
+    const p2 = coords[i + 1]
+
+    // Distance
+    distance += calculateDistance(p1, p2)
+
+    // Elevation (Z is index 2)
+    // Detailed Logging for Debugging
+    if (i === 0) {
+      console.log(`[v0-parser] Point 0: [${p1.join(', ')}] (Length: ${p1.length})`)
+      console.log(`[v0-parser] Point 1: [${p2.join(', ')}] (Length: ${p2.length})`)
+      console.log(`[v0-parser] p1[2] type: ${typeof p1[2]}, value: ${p1[2]}`)
+    }
+
+    if (typeof p1[2] === 'number' && typeof p2[2] === 'number') {
+      hasZ = true
+      const dh = p2[2] - p1[2]
+      if (dh > 0) elevationGain += dh
+    }
+  }
+
+  return {
+    distance: Math.round(distance), // Round to meters
+    elevationGain: Math.round(elevationGain),
+    hasZ
+  }
+}
+
 function checkCoordinateSystem(coords: any): { valid: boolean; warning?: ValidationWarning } {
   if (Array.isArray(coords)) {
     if (coords.length === 0) return { valid: false }
@@ -302,43 +381,17 @@ function preprocessGeometryCollection(data: any): any {
       geometry: geometry,
       properties: geometry.properties ||
         data.properties || {
-          name: `Location ${index + 1}`,
-          source: "GeometryCollection",
-        },
+        name: `Location ${index + 1}`,
+        source: "GeometryCollection",
+      },
     }))
 
     // Check if all geometries are LineStrings (potential boundary segments)
     const allLineStrings = data.geometries.every((g: any) => g.type === "LineString")
 
-    // If all are LineStrings, create a combined preview option
-    if (allLineStrings) {
-      console.log("[v0] Pre-processing: All LineStrings detected, creating combined preview option")
-
-      // Combine all LineString coordinates into one Polygon for preview
-      const allCoordinates = data.geometries.flatMap((geometry: any) => geometry.coordinates)
-
-      const combinedFeature = {
-        type: "Feature",
-        geometry: {
-          type: "Polygon",
-          coordinates: [allCoordinates],
-        },
-        properties: data.properties || {
-          name: "Combined Location",
-          source: "GeometryCollection",
-        },
-      }
-
-      // Return both combined and original features
-      return {
-        type: "FeatureCollection",
-        features: [combinedFeature], // Show combined by default in preview
-        originalFeatures: originalFeatures, // Keep originals for user to choose
-      }
-    }
-
-    // For non-LineString geometries, just return as separate features
-    console.log("[v0] Pre-processing: Converting to", originalFeatures.length, "separate features")
+    // For non-LineString geometries, OR if we want to respect the original segmentation (Task 83)
+    // We strictly return separate features to prevent merging into "Rings"
+    console.log("[v0] Pre-processing: Keeping", originalFeatures.length, "separate features")
 
     return {
       type: "FeatureCollection",
@@ -412,17 +465,41 @@ export function parseGeoJSON(data: any): ParsedGeoJSON {
       })
     }
 
-    features = preprocessedData.features.map((feature: any) => {
+    features = preprocessedData.features.flatMap((feature: any) => {
+      // Flatten MultiLineString into separate LineStrings
+      if (feature.geometry && feature.geometry.type === 'MultiLineString') {
+        return feature.geometry.coordinates.map((coords: any[], index: number) => {
+          const result = transformGeometry({
+            type: 'LineString',
+            coordinates: coords
+          })
+          if (result.transformed) {
+            transformed = true
+            originalSystem = result.system
+          }
+          return {
+            ...feature,
+            properties: {
+              ...feature.properties,
+              _original_type: 'MultiLineString',
+              _segment_index: index
+            },
+            geometry: result.geometry
+          }
+        })
+      }
+
+      // Normal processing for other types
       const result = transformGeometry(feature.geometry)
       if (result.transformed) {
         transformed = true
         originalSystem = result.system
       }
 
-      return {
+      return [{
         ...feature,
-        geometry: result.geometry,
-      }
+        geometry: result.geometry
+      }]
     })
   }
 
@@ -432,6 +509,47 @@ export function parseGeoJSON(data: any): ParsedGeoJSON {
   features.forEach((feature) => {
     const type = feature.geometry.type
     byType[type] = (byType[type] || 0) + 1
+
+    // CALCULATE STATS
+    // If it is a LineString or MultiLineString, calculate path stats
+    if (type === 'LineString' || type === 'MultiLineString') {
+      const stats = calculatePathStats(feature.geometry.coordinates as any[])
+
+      // Normalize properties (Case-insensitive lookup for common aliases)
+      const props = feature.properties || {}
+      const keys = Object.keys(props).map(k => ({ original: k, lower: k.toLowerCase() }))
+
+      const findVal = (aliases: string[]) => {
+        const match = keys.find(k => aliases.includes(k.lower))
+        return match ? props[match.original] : null
+      }
+
+      // 1. Difficulty
+      const difficulty = props.path_difficulty || findVal(['difficulty', 'grade', 'rating', 'diff'])
+
+      // 2. Surface
+      const surface = props.path_surface || findVal(['surface', 'terrain', 'material', 'ground'])
+
+      // 3. Elevation Gain
+      const explicitElevation = props.elevation_gain || findVal(['elevation', 'elevationgain', 'ascent', 'total_ascent', 'climb', 'gain'])
+      let finalElevation = 0
+
+      if (stats.hasZ) {
+        finalElevation = stats.elevationGain
+      } else if (explicitElevation !== null) {
+        // Parse explicit value if available
+        const parsed = parseFloat(explicitElevation)
+        if (!isNaN(parsed)) finalElevation = parsed
+      }
+
+      feature.properties = {
+        ...feature.properties,
+        path_length: stats.distance,
+        elevation_gain: Math.round(finalElevation),
+        path_difficulty: difficulty,
+        path_surface: surface
+      }
+    }
   })
 
   return {

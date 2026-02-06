@@ -14,6 +14,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { Upload, FileJson, AlertCircle, CheckCircle2 } from "lucide-react"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
 import { parseGeoJSON, validateGeoJSON, type ParsedGeoJSON, type ValidationError } from "@/lib/geojson-parser"
 
 interface GeoJSONUploadDialogProps {
@@ -30,6 +32,9 @@ export function GeoJSONUploadDialog({ open, onOpenChange, tenantId, tenantSlug }
   const [error, setError] = useState<ValidationError | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [transformationInfo, setTransformationInfo] = useState<string | null>(null)
+  const [defaultColor, setDefaultColor] = useState("#86B25C") // Default to Green (Lot)
+  const [useCustomColor, setUseCustomColor] = useState(false)
+
 
   const handleFileSelect = async (selectedFile: File) => {
     setFile(selectedFile)
@@ -113,7 +118,20 @@ export function GeoJSONUploadDialog({ open, onOpenChange, tenantId, tenantSlug }
   const handlePreview = () => {
     if (!parsedData) return
 
-    sessionStorage.setItem("geojson-preview", JSON.stringify(parsedData))
+    // Inject default color ONLY if selected
+    const dataWithColor = {
+      ...parsedData,
+      features: parsedData.features.map(f => ({
+        ...f,
+        properties: {
+          ...f.properties,
+          ...(useCustomColor ? { color: defaultColor } : {}),
+          // Note: path_length and elevation_gain were already calculated by the parser
+        }
+      }))
+    }
+
+    sessionStorage.setItem("geojson-preview", JSON.stringify(dataWithColor))
     router.push(`/t/${tenantSlug}/admin/map/locations/create?preview=true`)
     handleClose()
   }
@@ -134,9 +152,8 @@ export function GeoJSONUploadDialog({ open, onOpenChange, tenantId, tenantSlug }
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
-            className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-              isDragging ? "border-primary bg-primary/5" : "border-border"
-            }`}
+            className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${isDragging ? "border-primary bg-primary/5" : "border-border"
+              }`}
           >
             <input
               type="file"
@@ -187,22 +204,57 @@ export function GeoJSONUploadDialog({ open, onOpenChange, tenantId, tenantSlug }
           )}
 
           {parsedData && (
-            <Alert>
-              <CheckCircle2 className="h-4 w-4" />
-              <div>
-                <p className="font-medium">GeoJSON file validated successfully</p>
-                <div className="text-sm mt-2 space-y-1">
-                  <p>Total features: {parsedData.summary.totalFeatures}</p>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {Object.entries(parsedData.summary.byType).map(([type, count]) => (
-                      <span key={type} className="px-2 py-1 bg-primary/10 text-primary rounded text-xs">
-                        {type}: {count}
-                      </span>
-                    ))}
+            <div className="space-y-4">
+              <Alert>
+                <CheckCircle2 className="h-4 w-4" />
+                <div>
+                  <p className="font-medium">GeoJSON file validated successfully</p>
+                  <div className="text-sm mt-2 space-y-1">
+                    <p>Total features: {parsedData.summary.totalFeatures}</p>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {Object.entries(parsedData.summary.byType).map(([type, count]) => (
+                        <span key={type} className="px-2 py-1 bg-primary/10 text-primary rounded text-xs">
+                          {type}: {count}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </div>
+              </Alert>
+
+              <div className="flex items-center gap-4 p-4 border rounded-lg bg-card text-card-foreground shadow-sm">
+                <div className="flex-1 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="use-custom-color"
+                      checked={useCustomColor}
+                      onCheckedChange={setUseCustomColor}
+                    />
+                    <Label htmlFor="use-custom-color" className="text-sm font-medium leading-none cursor-pointer">
+                      Override Map Color
+                    </Label>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1 pl-12">
+                    If disabled, the system default color (e.g. Green for Lots) will be used.
+                  </p>
+                </div>
+                {useCustomColor && (
+                  <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-4 duration-300">
+                    <div
+                      className="w-10 h-10 rounded border shadow-sm"
+                      style={{ backgroundColor: defaultColor }}
+                    />
+                    <input
+                      type="color"
+                      id="feature-color"
+                      value={defaultColor}
+                      onChange={(e) => setDefaultColor(e.target.value)}
+                      className="h-10 w-16 p-1 cursor-pointer bg-background border rounded"
+                    />
+                  </div>
+                )}
               </div>
-            </Alert>
+            </div>
           )}
         </div>
 

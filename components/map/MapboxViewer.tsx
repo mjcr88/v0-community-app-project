@@ -147,14 +147,6 @@ export function MapboxFullViewer({
     // Debug logging & Analytics
     useEffect(() => {
         MapAnalytics.viewed()
-        console.log("[MapboxFullViewer] Mounted")
-        console.log("[MapboxFullViewer] Token:", mapboxToken ? "Present" : "Missing")
-        console.log("[MapboxFullViewer] Locations:", locations.length)
-        console.log("[MapboxFullViewer] Map Center:", mapCenter)
-        console.log("[MapboxFullViewer] Container Dimensions:", {
-            width: containerRef.current?.offsetWidth,
-            height: containerRef.current?.offsetHeight
-        })
     }, [locations, mapCenter, mapboxToken])
 
     // Helper to check if a point is inside the community boundary
@@ -429,6 +421,7 @@ export function MapboxFullViewer({
             properties: {
                 id: boundary.id,
                 name: boundary.name,
+                color: boundary.color,
             },
         }
     }, [locations])
@@ -450,6 +443,7 @@ export function MapboxFullViewer({
                     name: lot.name,
                     neighborhood: lot.neighborhood?.name,
                     occupancy: (lot.residents && lot.residents.length > 0) ? "occupied" : "vacant",
+                    color: lot.color,
                 },
             }))
 
@@ -498,6 +492,7 @@ export function MapboxFullViewer({
                     name: fac.name,
                     facility_type: fac.facility_type,
                     icon: fac.icon || "🏛️",
+                    color: fac.color,
                 },
             }))
 
@@ -538,6 +533,7 @@ export function MapboxFullViewer({
                 properties: {
                     id: street.id,
                     name: street.name,
+                    color: street.color,
                 },
             }))
 
@@ -560,6 +556,11 @@ export function MapboxFullViewer({
                 properties: {
                     id: path.id,
                     name: path.name,
+                    color: path.color,
+                    path_length: path.path_length,
+                    elevation_gain: path.elevation_gain,
+                    path_difficulty: path.path_difficulty,
+                    path_surface: path.path_surface,
                 },
             }))
 
@@ -796,6 +797,11 @@ export function MapboxFullViewer({
                                 </button>
                             ))}
                         </div>
+
+                        {/* Layer Settings */}
+                        <div className="flex gap-2">
+                            {/* ... existing toggle buttons could go here ... */}
+                        </div>
                     </div>
                 </div>
             )}
@@ -910,7 +916,7 @@ export function MapboxFullViewer({
                                     id="boundary-line"
                                     type="line"
                                     paint={{
-                                        "line-color": "#D97742", // Sunrise Orange
+                                        "line-color": ["coalesce", ["get", "color"], "#D97742"], // Use color or fallback to Sunrise Orange
                                         "line-width": 3,
                                         "line-opacity": 0.9,
                                     }}
@@ -928,16 +934,15 @@ export function MapboxFullViewer({
                                     type="fill"
                                     paint={{
                                         "fill-color": [
-                                            "match",
-                                            ["get", "occupancy"],
-                                            "occupied", "#F59E0B", // Warm Amber for occupied
-                                            "#86B25C" // Standard Green for vacant
+                                            "coalesce",
+                                            ["get", "color"], // Prefer custom color
+                                            "#86B25C" // Asparagus (matches Admin Map)
                                         ],
                                         "fill-opacity": [
                                             "match",
                                             ["get", "occupancy"],
-                                            "occupied", 0.5, // Slightly more opaque for occupied to enhance glow
-                                            0.3
+                                            "occupied", 0.5,
+                                            0.2
                                         ],
                                     }}
                                 />
@@ -996,7 +1001,7 @@ export function MapboxFullViewer({
                                     id="facilities-fill"
                                     type="fill"
                                     paint={{
-                                        "fill-color": "#3B82F6",
+                                        "fill-color": ["coalesce", ["get", "color"], "#3B82F6"],
                                         "fill-opacity": 0.2,
                                     }}
                                 />
@@ -1049,6 +1054,9 @@ export function MapboxFullViewer({
                             const isHighlighted = highlightedCategories.has('facility');
                             const isSelected = selectedLocation?.id === location.id;
 
+                            // Use dynamic color for marker border/bg if available, else default
+                            const markerColor = location.color || (isSelected ? "#3b82f6" : "#ffffff");
+
                             return (
                                 <Marker
                                     key={location.id}
@@ -1073,7 +1081,10 @@ export function MapboxFullViewer({
                                         {isHighlighted && (
                                             <div className="absolute -inset-2 rounded-full border-2 border-[#F97316] animate-pulse opacity-70"></div>
                                         )}
-                                        <div className={`bg-white p-1.5 rounded-full shadow-md border ${isSelected ? 'border-primary ring-2 ring-primary ring-offset-1' : 'border-gray-200'} text-xl flex items-center justify-center w-10 h-10`}>
+                                        <div
+                                            className={`p-1.5 rounded-full shadow-md border ${isSelected ? 'border-primary ring-2 ring-primary ring-offset-1' : 'border-gray-200'} text-xl flex items-center justify-center w-10 h-10`}
+                                            style={{ backgroundColor: location.color || 'white' }}
+                                        >
                                             {location.icon || '🏛️'}
                                         </div>
                                     </div>
@@ -1088,7 +1099,7 @@ export function MapboxFullViewer({
                                     id="streets-line"
                                     type="line"
                                     paint={{
-                                        "line-color": highlightedCategories.has("public_street") ? "#F97316" : "#F59E0B",
+                                        "line-color": ["coalesce", ["get", "color"], highlightedCategories.has("public_street") ? "#F97316" : "#eab308"], // Yellow-500
                                         "line-width": 2,
                                         "line-opacity": 0.6,
                                     }}
@@ -1112,7 +1123,7 @@ export function MapboxFullViewer({
                                     id="paths-line"
                                     type="line"
                                     paint={{
-                                        "line-color": highlightedCategories.has("walking_path") ? "#F97316" : "#84CC16",
+                                        "line-color": ["coalesce", ["get", "color"], highlightedCategories.has("walking_path") ? "#F97316" : "#84cc16"], // Lime-500
                                         "line-width": 2,
                                         "line-dasharray": [2, 1],
                                         "line-opacity": 0.8,
@@ -1176,8 +1187,9 @@ export function MapboxFullViewer({
                                                 <div className="absolute -inset-2 rounded-full border-2 border-[#F97316] animate-pulse opacity-70"></div>
                                             )}
                                             <div
-                                                className={`bg-white p-1.5 rounded-full shadow-md border ${isSelected ? "border-primary ring-2 ring-primary ring-offset-1" : "border-gray-200"
+                                                className={`p-1.5 rounded-full shadow-md border ${isSelected ? "border-primary ring-2 ring-primary ring-offset-1" : "border-gray-200"
                                                     } text-xl flex items-center justify-center w-10 h-10`}
+                                                style={{ backgroundColor: location.color || 'white' }}
                                             >
                                                 {location.icon || "🏛️"}
                                             </div>

@@ -87,6 +87,9 @@ export interface BaseLocation {
   updated_at: string
   created_by: string | null
   is_reservable?: boolean // Added for reservation system
+  color?: string | null
+  elevation_gain?: number | null
+  path_length?: number | null
 }
 
 // Location with optional enriched relations
@@ -168,10 +171,12 @@ export const getLocations = cache(async (
     rules,
     status,
     status,
-    created_at,
     updated_at,
     created_by,
-    is_reservable
+    is_reservable,
+    color,
+    elevation_gain,
+    path_length
   `
 
   // Add neighborhood if requested
@@ -247,6 +252,9 @@ export const getLocations = cache(async (
       updated_at: loc.updated_at,
       created_by: loc.created_by || null,
       is_reservable: loc.is_reservable || false,
+      color: loc.color || null,
+      elevation_gain: loc.elevation_gain || null,
+      path_length: loc.path_length || null,
     }
 
     // Add enriched data if available

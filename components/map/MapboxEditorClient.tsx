@@ -291,7 +291,7 @@ export function MapboxEditorClient({
                             filter={["==", "$type", "Point"]}
                             paint={{
                                 "circle-radius": 6,
-                                "circle-color": "#f97316",
+                                "circle-color": editSidebar?.locationType === 'facility' ? '#3B82F6' : '#f97316',
                                 "circle-stroke-width": 2,
                                 "circle-stroke-color": "#ffffff",
                             }}
@@ -301,7 +301,7 @@ export function MapboxEditorClient({
                             type="line"
                             filter={["==", "$type", "LineString"]}
                             paint={{
-                                "line-color": "#f97316",
+                                "line-color": editSidebar?.locationType === 'walking_path' ? '#f97316' : '#f97316',
                                 "line-width": 3,
                             }}
                         />
@@ -310,7 +310,8 @@ export function MapboxEditorClient({
                             type="fill"
                             filter={["==", "$type", "Polygon"]}
                             paint={{
-                                "fill-color": "#f97316",
+                                "fill-color": editSidebar?.locationType === 'lot' ? '#86B25C' :
+                                    editSidebar?.locationType === 'facility' ? '#3B82F6' : '#f97316',
                                 "fill-opacity": 0.2,
                             }}
                         />
@@ -319,7 +320,8 @@ export function MapboxEditorClient({
                             type="line"
                             filter={["==", "$type", "Polygon"]}
                             paint={{
-                                "line-color": "#f97316",
+                                "line-color": editSidebar?.locationType === 'lot' ? '#86B25C' :
+                                    editSidebar?.locationType === 'facility' ? '#3B82F6' : '#f97316',
                                 "line-width": 2,
                             }}
                         />
@@ -451,6 +453,12 @@ export function MapboxEditorClient({
                                 contact_email: data.contact_email,
                                 website: data.website,
                                 rules: data.rules,
+                                color: data.color,
+                                // Path specific fields
+                                path_difficulty: data.path_difficulty,
+                                path_surface: data.path_surface,
+                                path_length: data.path_length ? String(data.path_length) : null,
+                                elevation_gain: data.elevation_gain ? String(data.elevation_gain) : null,
                             };
 
                             if (editSidebar.mode === 'create') {

@@ -40,3 +40,5 @@
 - **2026-01-29**: Missing RLS Policy documentation for `comments` in `docs/02-technical/schema/policies/`.
 - **2026-01-29**: Missing `comment_posted` definition in `docs/02-technical/analytics/analytics-events.md`.
 - **2026-01-29**: Missing API documentation for `postComment` in `docs/02-technical/api/api-reference.md`.
+- **2026-02-04**: [DONE] Missing `docs/02-technical/schema/tables/locations.md` (Domain Architecture for Locations).
+- **2026-02-04**: [DONE] Missing specification for map styling/theming and dynamic color customization.

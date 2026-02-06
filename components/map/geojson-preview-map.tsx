@@ -305,6 +305,13 @@ export function GeoJSONPreviewMap({ tenantSlug, tenantId }: GeoJSONPreviewMapPro
                 coord[1],
                 coord[0],
               ])
+
+              // Include calculated stats and path properties
+              if (feature.properties?.path_length !== undefined) locationData.path_length = feature.properties.path_length
+              if (feature.properties?.elevation_gain !== undefined) locationData.elevation_gain = feature.properties.elevation_gain
+              if (feature.properties?.path_difficulty) locationData.path_difficulty = feature.properties.path_difficulty
+              if (feature.properties?.path_surface) locationData.path_surface = feature.properties.path_surface
+              if (feature.properties?.color) locationData.color = feature.properties.color
             } else if (feature.geometry.type === "Polygon") {
               locationData.boundary_coordinates = feature.geometry.coordinates[0].map((coord: number[]) => [
                 coord[1],

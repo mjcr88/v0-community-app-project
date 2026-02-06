@@ -37,6 +37,9 @@
   - Created `scripts/sync_data.py` to replicate Tenants, Neighborhoods, and Users.
   - **Critical Fix**: Identified mismatch in Auth UIDs. Wrote `scripts/recreate_auth_user.py` to force-create Auth users with Prod UIDs.
   - **RLS Fix**: Applied `fix_rls_login.sql` to allow "Users to view own profile".
+- **2026-02-04**: Data Expansion (Phase 2 Addendum).
+  - Updated `sync_data.py` to include `locations` (16 rows), `events`, `announcements`, and `posts`.
+  - Confirmed full dataset availability for Feature Development.
 - **2026-02-03**: Verification (Phase 3).
   - Verified `localhost` login works with `michaelpjedamski+testresident@gmail.com`.
   - Confirmed data integrity between `auth.users` and `public.users`.

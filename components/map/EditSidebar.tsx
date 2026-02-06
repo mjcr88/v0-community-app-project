@@ -3,11 +3,24 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { X, Building2, Home, Route, Trash2 } from 'lucide-react';
 import { FacilityFields } from './form-fields/FacilityFields';
 import { LotFields } from './form-fields/LotFields';
 import { WalkingPathFields } from './form-fields/WalkingPathFields';
+
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 type LocationType = 'facility' | 'lot' | 'walking_path';
 
@@ -23,18 +36,6 @@ interface EditSidebarProps {
     onCancel: () => void;
     onDelete: (id: string) => void;
 }
-
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 
 export function EditSidebar({
     mode,
@@ -159,6 +160,49 @@ export function EditSidebar({
                                 </label>
                             </div>
                         </RadioGroup>
+                    </div>
+                )}
+
+                {/* Common Fields (Color) */}
+                {selectedType && (
+                    <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-500 p-4 border rounded-lg bg-card/50">
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="custom-color-toggle" className="cursor-pointer">Custom Map Color</Label>
+                            <Switch
+                                id="custom-color-toggle"
+                                checked={!!formData.color}
+                                onCheckedChange={(checked) => {
+                                    if (checked) {
+                                        // Set a logical default start color if enabling
+                                        const defaultStart = selectedType === 'lot' ? '#86B25C' :
+                                            selectedType === 'facility' ? '#3B82F6' : '#F97316';
+                                        setFormData({ ...formData, color: defaultStart });
+                                    } else {
+                                        setFormData({ ...formData, color: null });
+                                    }
+                                }}
+                            />
+                        </div>
+
+                        {formData.color && (
+                            <div className="flex items-center gap-3 pt-2">
+                                <div
+                                    className="w-10 h-10 rounded border shadow-sm"
+                                    style={{ backgroundColor: formData.color }}
+                                />
+                                <input
+                                    type="color"
+                                    value={formData.color}
+                                    onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+                                    className="h-10 flex-1 p-1 cursor-pointer bg-background border rounded"
+                                />
+                            </div>
+                        )}
+                        {!formData.color && (
+                            <p className="text-xs text-muted-foreground">
+                                Using system default color for {selectedType?.replace('_', ' ')}.
+                            </p>
+                        )}
                     </div>
                 )}
 

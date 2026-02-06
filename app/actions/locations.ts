@@ -31,6 +31,11 @@ export async function createLocation(
     website?: string | null
     capacity?: number | null
     rules?: string | null
+    color?: string | null
+    path_length?: number | string | null
+    elevation_gain?: number | string | null
+    path_difficulty?: string | null
+    path_surface?: string | null
   },
   path?: string
 ) {
@@ -166,6 +171,11 @@ export async function updateLocation(
     capacity?: number | null
     rules?: string | null
     is_reservable?: boolean
+    color?: string | null
+    path_length?: number | string | null
+    elevation_gain?: number | string | null
+    path_difficulty?: string | null
+    path_surface?: string | null
   },
   path?: string
 ) {
@@ -197,7 +207,7 @@ export async function updateLocation(
 
   if (error) {
     console.error("Error updating location:", error)
-    throw new Error("Failed to update location")
+    throw new Error(`Failed to update location: ${error.message || JSON.stringify(error)}`)
   }
 
   if (path) {

@@ -692,13 +692,13 @@ export default function AdminMapClient({
                             }
                         }}
                         ref={mapRef}
-                        interactiveLayerIds={['lots-fill', 'facilities-fill', 'poi-label']}
+                        interactiveLayerIds={['lots-fill', 'facilities-fill', 'poi-label', 'streets', 'paths-hit-area']}
                         onClick={(e: any) => {
                             if (e.features && e.features.length > 0) {
                                 const feature = e.features[0];
 
                                 // Handle Community Location Click
-                                if (feature.layer.id === 'lots-fill' || feature.layer.id === 'facilities-fill') {
+                                if (['lots-fill', 'facilities-fill', 'paths-hit-area', 'paths', 'streets'].includes(feature.layer.id)) {
                                     const locationId = feature.properties.id;
                                     const location = locations.find(loc => loc.id === locationId);
                                     if (location) {
@@ -764,7 +764,7 @@ export default function AdminMapClient({
                                     id="boundary-line"
                                     type="line"
                                     paint={{
-                                        'line-color': '#D97742', // Sunrise Orange
+                                        'line-color': ['coalesce', ['get', 'color'], '#D97742'], // Use custom color or Sunrise Orange
                                         'line-width': 3,
                                         'line-opacity': 0.9,
                                     }}
@@ -779,7 +779,7 @@ export default function AdminMapClient({
                                     id="lots-fill"
                                     type="fill"
                                     paint={{
-                                        'fill-color': '#86B25C',
+                                        'fill-color': ['coalesce', ['get', 'color'], '#86B25C'], // Use custom color or Asparagus (Admin default)
                                         'fill-opacity': 0.3,
                                     }}
                                 />
@@ -838,7 +838,7 @@ export default function AdminMapClient({
                                     id="facilities-fill"
                                     type="fill"
                                     paint={{
-                                        'fill-color': '#3B82F6',
+                                        'fill-color': ['coalesce', ['get', 'color'], '#3B82F6'], // Use custom color or Blue
                                         'fill-opacity': 0.2,
                                     }}
                                 />
@@ -914,7 +914,10 @@ export default function AdminMapClient({
                                         {isHighlighted && (
                                             <div className="absolute -inset-2 rounded-full border-2 border-[#F97316] animate-pulse opacity-70"></div>
                                         )}
-                                        <div className={`bg-background dark:bg-card p-1.5 rounded-full shadow-md border ${isSelected ? 'border-primary ring-2 ring-primary ring-offset-1' : 'border-border'} text-xl flex items-center justify-center w-10 h-10`}>
+                                        <div
+                                            className={`p-1.5 rounded-full shadow-md border ${isSelected ? 'border-primary ring-2 ring-primary ring-offset-1' : 'border-border'} text-xl flex items-center justify-center w-10 h-10`}
+                                            style={{ backgroundColor: location.color || '#ffffff' }}
+                                        >
                                             {location.icon || '🏛️'}
                                         </div>
                                     </div>
@@ -1050,7 +1053,7 @@ export default function AdminMapClient({
                                     id="streets"
                                     type="line"
                                     paint={{
-                                        'line-color': highlightedCategories.has('public_street') ? '#F97316' : '#8C8C8C', // Orange when highlighted
+                                        'line-color': ['coalesce', ['get', 'color'], highlightedCategories.has('public_street') ? '#F97316' : '#eab308'], // Yellow-500
                                         'line-width': highlightedCategories.has('public_street') ? 4 : 3,
                                         'line-dasharray': [2, 2],
                                     }}
@@ -1062,10 +1065,19 @@ export default function AdminMapClient({
                         {showPaths && pathsGeoJSON.features.length > 0 && (
                             <Source id="paths" type="geojson" data={pathsGeoJSON}>
                                 <Layer
-                                    id="paths"
+                                    id="paths-hit-area"
                                     type="line"
                                     paint={{
-                                        'line-color': highlightedCategories.has('walking_path') ? '#F97316' : '#6B9B47', // Orange when highlighted
+                                        'line-color': '#ffffff',
+                                        'line-width': 20, // Wide transparent hit area
+                                        'line-opacity': 0,
+                                    }}
+                                />
+                                <Layer
+                                    id="paths-line"
+                                    type="line"
+                                    paint={{
+                                        'line-color': ['coalesce', ['get', 'color'], highlightedCategories.has('walking_path') ? '#F97316' : '#84cc16'], // Lime-500
                                         'line-width': highlightedCategories.has('walking_path') ? 3 : 2,
                                         'line-dasharray': [3, 3],
                                     }}
@@ -1518,6 +1530,8 @@ export default function AdminMapClient({
                                             )}
                                         </div>
 
+
+
                                         {/* Description */}
                                         {(selectedLocation as CheckInWithRelations).description && (
                                             <div className="mb-4">
@@ -1730,6 +1744,28 @@ export default function AdminMapClient({
                                                             </Badge>
                                                         ))}
                                                     </div>
+                                                </div>
+                                            )}
+
+                                            {/* Path Stats */}
+                                            {'type' in selectedLocation && selectedLocation.type === 'walking_path' && (
+                                                <div className="grid grid-cols-2 gap-3 pt-2 border-t">
+                                                    {(selectedLocation as any).path_length && (
+                                                        <div className="bg-slate-50 p-2 rounded border">
+                                                            <span className="text-xs font-semibold text-slate-500 uppercase block">Distance</span>
+                                                            <div className="text-lg font-bold">
+                                                                {((selectedLocation as any).path_length / 1000).toFixed(2)} km
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    {(selectedLocation as any).elevation_gain && (selectedLocation as any).elevation_gain > 0 && (
+                                                        <div className="bg-slate-50 p-2 rounded border">
+                                                            <span className="text-xs font-semibold text-slate-500 uppercase block">Elev. Gain</span>
+                                                            <div className="text-lg font-bold">
+                                                                {Math.round((selectedLocation as any).elevation_gain)} m
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
 

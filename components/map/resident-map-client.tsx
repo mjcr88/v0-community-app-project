@@ -122,6 +122,9 @@ export function ResidentMapClient({
                 type: loc.type,
                 description: loc.description,
                 status: loc.status,
+                color: loc.color,
+                path_length: loc.path_length,
+                elevation_gain: loc.elevation_gain,
             };
 
             // Determine if it's a polygon or line based on type
@@ -203,7 +206,17 @@ export function ResidentMapClient({
         if (feature) {
             const locationId = feature.properties.id;
             const locationType = feature.properties.type;
-            const location = locations.find(l => l.id === locationId);
+            let location = locations.find(l => l.id === locationId);
+
+            // Augment location with properties from the clicked feature if they exist
+            if (location) {
+                const locationData = { ...location }; // Create a mutable copy
+                if (feature.properties?.path_surface) locationData.path_surface = feature.properties.path_surface;
+                if (feature.properties?.path_difficulty) locationData.path_difficulty = feature.properties.path_difficulty;
+                if (feature.properties?.color) locationData.color = feature.properties.color;
+                location = locationData; // Update the local 'location' variable to the augmented one
+            }
+
             if (location) {
                 MapAnalytics.locationClicked(locationId, locationType, isInside)
                 setSelectedLocation(location);
@@ -242,7 +255,7 @@ export function ResidentMapClient({
             id: 'polygons-fill',
             type: 'fill',
             paint: {
-                'fill-color': [
+                'fill-color': ['coalesce', ['get', 'color'], [
                     'match',
                     ['get', 'type'],
                     'lot', '#4ade80', // green-400
@@ -251,7 +264,7 @@ export function ResidentMapClient({
                     'green_area', '#22c55e', // green-500
                     'recreational_zone', '#06b6d4', // cyan-500
                     '#cccccc'
-                ],
+                ]],
                 'fill-opacity': [
                     'match',
                     ['get', 'type'],
@@ -265,7 +278,7 @@ export function ResidentMapClient({
             id: 'lines-stroke',
             type: 'line',
             paint: {
-                'line-color': [
+                'line-color': ['coalesce', ['get', 'color'], [
                     'match',
                     ['get', 'type'],
                     'lot', '#ffffff',
@@ -274,7 +287,7 @@ export function ResidentMapClient({
                     'public_street', '#eab308', // yellow-500
                     'easement', '#9ca3af', // gray-400
                     '#ffffff'
-                ],
+                ]],
                 'line-width': [
                     'match',
                     ['get', 'type'],
@@ -291,13 +304,13 @@ export function ResidentMapClient({
             type: 'circle',
             paint: {
                 'circle-radius': 6,
-                'circle-color': [
+                'circle-color': ['coalesce', ['get', 'color'], [
                     'match',
                     ['get', 'type'],
                     'facility', '#f97316', // orange-500
                     'playground', '#ec4899', // pink-500
                     '#3b82f6'
-                ],
+                ]],
                 'circle-stroke-width': 2,
                 'circle-stroke-color': '#ffffff'
             }
@@ -507,6 +520,45 @@ export function ResidentMapClient({
                                 </div>
                             )}
 
+                            {/* Walking Path Stats */}
+                            {selectedLocation.type === 'walking_path' && (
+                                <div className="grid grid-cols-2 gap-3 mb-4">
+                                    {(selectedLocation as any).path_length && (
+                                        <div className="bg-slate-50 p-2 rounded">
+                                            <span className="text-xs font-semibold text-slate-500 uppercase">Distance</span>
+                                            <div className="text-lg font-bold">
+                                                {((selectedLocation as any).path_length / 1000).toFixed(2)} km
+                                            </div>
+                                        </div>
+                                    )}
+                                    {/* Difficulty and Surface for Resident Map */}
+                                    {(selectedLocation as any).path_difficulty && (
+                                        <div className="bg-slate-50 p-2 rounded col-span-2">
+                                            <span className="text-xs font-semibold text-slate-500 uppercase">Difficulty</span>
+                                            <div className="text-lg font-bold capitalize">
+                                                {(selectedLocation as any).path_difficulty}
+                                            </div>
+                                        </div>
+                                    )}
+                                    {(selectedLocation as any).path_surface && (
+                                        <div className="bg-slate-50 p-2 rounded col-span-2">
+                                            <span className="text-xs font-semibold text-slate-500 uppercase">Surface</span>
+                                            <div className="text-lg font-bold capitalize">
+                                                {(selectedLocation as any).path_surface}
+                                            </div>
+                                        </div>
+                                    )}
+                                    {(selectedLocation as any).elevation_gain !== undefined && (
+                                        <div className="bg-slate-50 p-2 rounded">
+                                            <span className="text-xs font-semibold text-slate-500 uppercase">Elev. Gain</span>
+                                            <div className="text-lg font-bold">
+                                                {Math.round((selectedLocation as any).elevation_gain)} m
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
                             {/* Facility: Capacity, Parking, Accessibility */}
                             {selectedLocation.type === 'facility' && (
                                 <>
@@ -569,6 +621,6 @@ export function ResidentMapClient({
                     </div>
                 )}
             </div>
-        </div>
+        </div >
     );
 }

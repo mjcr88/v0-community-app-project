@@ -31,6 +31,11 @@ export async function createLocation(
     website?: string | null
     capacity?: number | null
     rules?: string | null
+    color?: string | null
+    path_length?: number | string | null
+    elevation_gain?: number | string | null
+    path_difficulty?: string | null
+    path_surface?: string | null
   },
   path?: string
 ) {
@@ -166,6 +171,11 @@ export async function updateLocation(
     capacity?: number | null
     rules?: string | null
     is_reservable?: boolean
+    color?: string | null
+    path_length?: number | string | null
+    elevation_gain?: number | string | null
+    path_difficulty?: string | null
+    path_surface?: string | null
   },
   path?: string
 ) {
@@ -291,7 +301,7 @@ export async function deleteLocation(locationId: string, tenantId: string, path?
 
   if (deleteError) {
     console.error("Error deleting location:", deleteError)
-    throw new Error(`Failed to delete location: ${deleteError.message || JSON.stringify(deleteError)}`)
+    throw new Error("Failed to delete location")
   }
 
   if (path) {

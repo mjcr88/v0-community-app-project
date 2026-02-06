@@ -11,6 +11,7 @@
 | #75 | **P0** | **S** | 4-8h | HIGH | [Security] PII Leak Prevention |
 | #77 | **P0** | **M** | 1-2d | HIGH | [Security] Automatic Logout / Session Timeout |
 | #63 | **P0** | **M** | 1-2d | MED | [Bug/Feat] Series RSVP Fix & Feature |
+| #83 | **P0** | **M** | 1-2d | MED | [Feat] GeoJSON Reliability & Map Color |
 
 ---
 
@@ -37,6 +38,9 @@
     *   *Impact:* Issues #77 and #75 need this safe environment to test Auth/RLS changes without risking Production data.
 *   **Issue #77 (Auto Logout):** Requires `middleware.ts` updates.
 *   **Issue #75 (PII Leak):** Requires Refactoring `page.tsx` data fetching patterns.
+*   **Issue #83 (GeoJSON):**
+    *   Requires `locations` table schema migration (add `color` column).
+    *   Dependent on Issue #76 (Supabase Dev Env) for safe migration testing.
 
 ---
 
@@ -94,6 +98,25 @@
     - [ ] "RSVP All" adds user to all future instances of the series.
     - [ ] "RSVP One" adds user only to that specific date.
 
+### 5. [Feat] GeoJSON Reliability & Map Color (#83)
+*   **Owner:** `frontend-specialist` (Full Stack usage)
+*   **Worklog:** [log_2026-02-05_geojson_upload.md](../../04_logs/log_2026-02-05_geojson_upload.md)
+*   **Goal:** reliable GeoJSON imports and map customization.
+*   **Implementation Steps:**
+    1.  **Database:** Add `color` column to `locations` table (Migration).
+    2.  **Parser Fix:** Patch `lib/geojson-parser.ts` to preserve Z-coords and fix multi-segment merging.
+    3.  **UI - Upload:** Update `GeoJSONUploadDialog` with color picker.
+    4.  **UI - Editor:** Update `MapboxEditorClient` to edit/persist `color`.
+    5.  **UI - Map:** Update `MapboxViewer` to render using `['get', 'color']`.
+    6.  **UX:** Add "Trail Details" (difficulty, surface, elevation) to `ResidentMapClient` sidebar.
+*   **Acceptance Criteria:**
+    - [x] GeoJSON upload preserves Altitude (Z-axis).
+    - [x] Separate LineStrings are NOT merged into Polygons.
+    - [x] Can set a default color during GeoJSON import.
+    - [x] Can edit the color of an existing location.
+    - [x] Map reflects the custom colors.
+    - [x] Walking Path metadata (surface, difficulty) appears in Resident sidebar.
+
 ---
 
 ## Definition of Done
@@ -105,14 +128,15 @@
 
 ## Sprint Schedule
 **Sprint Start:** Feb 3, 2026 (Tuesday)
-**Sprint End:** Feb 6, 2026 (Friday)
+**Sprint End:** Feb 10, 2026 (Tuesday) [Extended]
 
 | Issue | Title | Est. Duration | Start Date | Target Date | Dependencies |
 |-------|-------|---------------|------------|-------------|--------------|
 | #76 | **Supabase DEV Env** | 2 Days | **Feb 3** | **Feb 4** | None (Blocker) |
 | #63 | **Series RSVP Fix** | 2 Days | **Feb 3** | **Feb 4** | None |
-| #75 | **PII Leak Prevention** | 1 Day | **Feb 5** | **Feb 5** | Wait for #76 |
-| #77 | **Auto Logout** | 2 Days | **Feb 5** | **Feb 6** | Wait for #76 |
+| #83 | **GeoJSON & Color** | 2 Days | **Feb 5** | **Feb 6** | Wait for #76 |
+| #75 | **PII Leak Prevention** | 1 Day | **Feb 9** | **Feb 9** | Wait for #83 |
+| #77 | **Auto Logout** | 2 Days | **Feb 9** | **Feb 10** | Wait for #83 |
 
 > *Note: Schedule assumes parallel execution of #76 and #63.*
 

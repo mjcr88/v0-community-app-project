@@ -16,6 +16,22 @@ export function WalkingPathFields({ data, onChange }: WalkingPathFieldsProps) {
         onChange({ ...data, [field]: value });
     };
 
+    const toMeters = (value: number, unit: string) => {
+        if (value === null || value === undefined || isNaN(value)) return null;
+        if (unit === 'mi') return value * 1609.34;
+        if (unit === 'ft') return value * 0.3048;
+        if (unit === 'km') return value * 1000;
+        return value; // 'm' or undefined
+    };
+
+    const fromMeters = (meters: number, unit: string) => {
+        if (meters === null || meters === undefined || isNaN(meters)) return '';
+        if (unit === 'mi') return (meters / 1609.34).toFixed(2);
+        if (unit === 'ft') return (meters / 0.3048).toFixed(1);
+        if (unit === 'km') return (meters / 1000).toFixed(2);
+        return Math.round(meters).toString();
+    };
+
     return (
         <div className="space-y-4">
             {/* Name */}
@@ -43,21 +59,21 @@ export function WalkingPathFields({ data, onChange }: WalkingPathFieldsProps) {
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                     <Label>Difficulty</Label>
-                    <Select value={data.difficulty || ''} onValueChange={(v) => updateField('difficulty', v)}>
+                    <Select value={(data.path_difficulty || '').toLowerCase()} onValueChange={(v) => updateField('path_difficulty', v)}>
                         <SelectTrigger>
                             <SelectValue placeholder="Select..." />
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="easy">Easy</SelectItem>
                             <SelectItem value="moderate">Moderate</SelectItem>
-                            <SelectItem value="hard">Hard</SelectItem>
+                            <SelectItem value="difficult">Difficult</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
 
                 <div className="space-y-2">
                     <Label>Surface</Label>
-                    <Select value={data.surface || ''} onValueChange={(v) => updateField('surface', v)}>
+                    <Select value={(data.path_surface || '').toLowerCase()} onValueChange={(v) => updateField('path_surface', v)}>
                         <SelectTrigger>
                             <SelectValue placeholder="Select..." />
                         </SelectTrigger>
@@ -65,7 +81,7 @@ export function WalkingPathFields({ data, onChange }: WalkingPathFieldsProps) {
                             <SelectItem value="paved">Paved</SelectItem>
                             <SelectItem value="gravel">Gravel</SelectItem>
                             <SelectItem value="dirt">Dirt</SelectItem>
-                            <SelectItem value="mixed">Mixed</SelectItem>
+                            <SelectItem value="natural">Natural</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
@@ -77,15 +93,19 @@ export function WalkingPathFields({ data, onChange }: WalkingPathFieldsProps) {
                 <div className="flex gap-2">
                     <Input
                         type="number"
-                        step="0.1"
-                        value={data.pathLength || ''}
-                        onChange={(e) => updateField('pathLength', e.target.value)}
+                        step="0.01"
+                        value={fromMeters(data.path_length, data.path_length_unit || 'km')}
+                        onChange={(e) => {
+                            const displayVal = parseFloat(e.target.value);
+                            const meters = toMeters(displayVal, data.path_length_unit || 'km');
+                            updateField('path_length', meters);
+                        }}
                         placeholder="2.5"
                         className="flex-1"
                     />
                     <Select
-                        value={data.pathLengthUnit || 'km'}
-                        onValueChange={(v) => updateField('pathLengthUnit', v)}
+                        value={data.path_length_unit || 'km'}
+                        onValueChange={(v) => updateField('path_length_unit', v)}
                     >
                         <SelectTrigger className="w-24">
                             <SelectValue />
@@ -104,14 +124,18 @@ export function WalkingPathFields({ data, onChange }: WalkingPathFieldsProps) {
                 <div className="flex gap-2">
                     <Input
                         type="number"
-                        value={data.elevationGain || ''}
-                        onChange={(e) => updateField('elevationGain', e.target.value)}
+                        value={fromMeters(data.elevation_gain, data.elevation_unit || 'm')}
+                        onChange={(e) => {
+                            const displayVal = parseFloat(e.target.value);
+                            const meters = toMeters(displayVal, data.elevation_unit || 'm');
+                            updateField('elevation_gain', meters);
+                        }}
                         placeholder="150"
                         className="flex-1"
                     />
                     <Select
-                        value={data.elevationUnit || 'm'}
-                        onValueChange={(v) => updateField('elevationUnit', v)}
+                        value={data.elevation_unit || 'm'}
+                        onValueChange={(v) => updateField('elevation_unit', v)}
                     >
                         <SelectTrigger className="w-24">
                             <SelectValue />
@@ -137,3 +161,4 @@ export function WalkingPathFields({ data, onChange }: WalkingPathFieldsProps) {
         </div>
     );
 }
+

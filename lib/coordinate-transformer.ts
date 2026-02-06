@@ -104,11 +104,15 @@ export function crtmToLatLng(easting: number, northing: number): [number, number
  */
 export function transformCoordinates(coords: any): any {
   if (Array.isArray(coords)) {
-    // Check if it's a coordinate pair [x, y]
+    // Check if it's a coordinate tuple [x, y, (z)]
     if (typeof coords[0] === "number" && typeof coords[1] === "number") {
-      const info = detectCoordinateSystem(coords)
+      const [x, y, z] = coords
+      const info = detectCoordinateSystem([x, y])
+
       if (info.isProjected) {
-        return crtmToLatLng(coords[0], coords[1])
+        const [lng, lat] = crtmToLatLng(x, y)
+        // Preserve Elevation (Z) if it exists
+        return typeof z === "number" ? [lng, lat, z] : [lng, lat]
       }
       return coords
     }

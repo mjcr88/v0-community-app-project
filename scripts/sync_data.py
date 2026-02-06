@@ -170,5 +170,32 @@ def main():
 
     print("Data Sync Complete.")
 
+    # 8. Core Resources (Locations must be before Events)
+    sync_table(prod, dev, "locations")
+    
+    # 9. Content / Features
+    sync_table(prod, dev, "announcements")
+    sync_table(prod, dev, "announcement_reads")
+    
+    sync_table(prod, dev, "event_categories")
+    sync_table(prod, dev, "events")
+    sync_table(prod, dev, "event_rsvps")
+    sync_table(prod, dev, "event_invites")
+    
+    sync_table(prod, dev, "check_ins")
+    sync_table(prod, dev, "check_in_rsvps")
+    
+    sync_table(prod, dev, "exchange_listings") # "Posts"
+    sync_table(prod, dev, "exchange_transactions")
+    
+    sync_table(prod, dev, "resident_requests")
+    sync_table(prod, dev, "notifications")
+    
+    # 10. User Meta
+    sync_table(prod, dev, "user_privacy_settings")
+    sync_table(prod, dev, "pets")
+    
+    print("Full Context Sync Complete.")
+
 if __name__ == "__main__":
     main()

@@ -145,6 +145,7 @@ export function MapboxFullViewer({
     const sidebarRef = useRef<HTMLDivElement>(null)
     const hasUserInteracted = useRef(false) // Track if user manually selected a location
     const [isFullscreen, setIsFullscreen] = useState(false)
+    const [pendingFlyTo, setPendingFlyTo] = useState(false) // Wait for location to become available
 
     // Geolocation Hook
     const userLocation = useGeolocation({
@@ -169,8 +170,24 @@ export function MapboxFullViewer({
                     break
             }
             toast.error(errorMessage)
+            setPendingFlyTo(false) // Cancel pending fly
         }
     }, [userLocation.error])
+
+    // Pending Fly To Effect
+    useEffect(() => {
+        if (pendingFlyTo && userLocation.latitude && userLocation.longitude) {
+            const map = mapRef.current
+            if (map) {
+                map.flyTo({
+                    center: [userLocation.longitude, userLocation.latitude],
+                    zoom: 16,
+                    duration: 1000
+                })
+                setPendingFlyTo(false)
+            }
+        }
+    }, [pendingFlyTo, userLocation.latitude, userLocation.longitude])
 
     // Debug logging & Analytics
     useEffect(() => {
@@ -1346,31 +1363,10 @@ export function MapboxFullViewer({
                                                 })
                                             }
                                         }
-                                        // 3. If no location yet (loading/prompting), we wait for the hook to update
-                                        // The hook will update state, but we might want a one-time "fly on next update" logic here.
-                                        // For simplicity, user might click again, or we can use a small effect.
-                                        // Given the requirements, just enabling and relying on the user to see the dot or click again is often standard pattern 
-                                        // to avoid "flying away" unexpectedly if the user is just enabling it.
-                                        // BUT, the requirement says "Fly to them". 
-                                        // Let's add a "flyToUser" trigger.
+                                        // 3. Otherwise, set pending flag and wait for hook to update
                                         else {
                                             toast.info("Locating you...")
-                                            // We can use a one-off position fetch for the immediate fly-to
-                                            navigator.geolocation.getCurrentPosition(
-                                                (pos) => {
-                                                    const map = mapRef.current
-                                                    if (map) {
-                                                        map.flyTo({
-                                                            center: [pos.coords.longitude, pos.coords.latitude],
-                                                            zoom: 16,
-                                                            duration: 1000
-                                                        })
-                                                    }
-                                                },
-                                                (err) => {
-                                                    // handled by hook effect
-                                                }
-                                            )
+                                            setPendingFlyTo(true)
                                         }
                                     }}
                                     className="mapboxgl-ctrl-icon"

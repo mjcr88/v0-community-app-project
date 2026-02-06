@@ -11,7 +11,6 @@
 | #75 | **P0** | **S** | 4-8h | HIGH | [Security] PII Leak Prevention |
 | #77 | **P0** | **M** | 1-2d | HIGH | [Security] Automatic Logout / Session Timeout |
 | #63 | **P0** | **M** | 1-2d | MED | [Bug/Feat] Series RSVP Fix & Feature |
-| #63 | **P0** | **M** | 1-2d | MED | [Bug/Feat] Series RSVP Fix & Feature |
 | #83 | **P0** | **M** | 1-2d | MED | [Feat] GeoJSON Reliability & Map Color |
 | #86 | **P1** | **S** | 4-8h | LOW | [Feat] User Location Beacon |
 

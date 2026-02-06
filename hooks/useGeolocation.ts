@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback, useRef, useMemo } from "react"
 
 interface GeolocationState {
     latitude: number | null
@@ -30,10 +30,23 @@ export function useGeolocation(options: PositionOptions = {
     const watchId = useRef<number | null>(null)
     const [enabled, setEnabled] = useState(false)
 
+    // Memoize options to prevent unnecessary effect re-runs
+    const stableOptions = useMemo(() => options, [
+        options.enableHighAccuracy,
+        options.timeout,
+        options.maximumAge
+    ])
+
     // Monitor permission status
     useEffect(() => {
+        let mounted = true
+        let permissionResult: PermissionStatus | null = null
+
         if (navigator.permissions && navigator.permissions.query) {
             navigator.permissions.query({ name: "geolocation" }).then((result) => {
+                if (!mounted) return
+
+                permissionResult = result
                 setState((s) => ({ ...s, permissionStatus: result.state }))
 
                 // If already granted, auto-enable
@@ -42,6 +55,7 @@ export function useGeolocation(options: PositionOptions = {
                 }
 
                 result.onchange = () => {
+                    if (!mounted) return
                     setState((s) => ({ ...s, permissionStatus: result.state }))
                     if (result.state === "granted") {
                         setEnabled(true)
@@ -49,8 +63,17 @@ export function useGeolocation(options: PositionOptions = {
                 }
             }).catch(() => {
                 // Firefox or unsupported browsers might fail query
-                setState((s) => ({ ...s, permissionStatus: "unknown" }))
+                if (mounted) {
+                    setState((s) => ({ ...s, permissionStatus: "unknown" }))
+                }
             })
+        }
+
+        return () => {
+            mounted = false
+            if (permissionResult) {
+                permissionResult.onchange = null
+            }
         }
     }, [])
 
@@ -76,10 +99,10 @@ export function useGeolocation(options: PositionOptions = {
         if (!enabled || !navigator.geolocation) return
 
         // Initial fetch to get quick lock
-        navigator.geolocation.getCurrentPosition(onEvent, onError, options)
+        navigator.geolocation.getCurrentPosition(onEvent, onError, stableOptions)
 
         // Start watching
-        watchId.current = navigator.geolocation.watchPosition(onEvent, onError, options)
+        watchId.current = navigator.geolocation.watchPosition(onEvent, onError, stableOptions)
 
         return () => {
             if (watchId.current !== null) {
@@ -87,15 +110,29 @@ export function useGeolocation(options: PositionOptions = {
                 watchId.current = null
             }
         }
-    }, [enabled, options, onEvent, onError])
+    }, [enabled, stableOptions, onEvent, onError])
 
     const enable = useCallback(() => {
+        if (!navigator || !navigator.geolocation) {
+            setState((s) => ({
+                ...s,
+                error: {
+                    code: 2, // POSITION_UNAVAILABLE
+                    message: "Geolocation not supported",
+                    PERMISSION_DENIED: 1,
+                    POSITION_UNAVAILABLE: 2,
+                    TIMEOUT: 3
+                } as GeolocationPositionError
+            }))
+            return
+        }
+
         setEnabled(true)
         // Trigger a read to force the prompt if not yet granted
         if (!enabled) {
-            navigator.geolocation.getCurrentPosition(onEvent, onError, options)
+            navigator.geolocation.getCurrentPosition(onEvent, onError, stableOptions)
         }
-    }, [enabled, onEvent, onError, options])
+    }, [enabled, onEvent, onError, stableOptions])
 
     return {
         ...state,

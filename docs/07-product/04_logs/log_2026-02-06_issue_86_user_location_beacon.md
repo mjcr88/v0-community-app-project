@@ -1,5 +1,5 @@
 # Build Log: User Location Beacon (Live Blue Dot)
-**Issue:** #86 | **Date:** 2026-02-06 | **Status:** In Progress
+**Issue:** #86 | **Date:** 2026-02-06 | **Status:** Done
 
 ## Context
 - **PRD Link**: [prd_2026-02-02_sprint_1_security_polish.md](../../03_prds/prd_2026-02-02_sprint_1_security_polish.md)

@@ -457,8 +457,8 @@ export function MapboxEditorClient({
                                 // Path specific fields
                                 path_difficulty: data.path_difficulty,
                                 path_surface: data.path_surface,
-                                path_length: data.path_length ? String(data.path_length) : null,
-                                elevation_gain: data.elevation_gain ? String(data.elevation_gain) : null,
+                                path_length: (data.path_length !== null && data.path_length !== undefined) ? String(data.path_length) : null,
+                                elevation_gain: (data.elevation_gain !== null && data.elevation_gain !== undefined) ? String(data.elevation_gain) : null,
                             };
 
                             if (editSidebar.mode === 'create') {

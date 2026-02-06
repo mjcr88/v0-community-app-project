@@ -170,7 +170,7 @@ export const getLocations = cache(async (
     accessibility_features,
     rules,
     status,
-    status,
+    created_at,
     updated_at,
     created_by,
     is_reservable,

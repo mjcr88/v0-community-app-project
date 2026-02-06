@@ -301,12 +301,8 @@ function calculatePathStats(coords: any[]): PathStats {
     distance += calculateDistance(p1, p2)
 
     // Elevation (Z is index 2)
-    // Detailed Logging for Debugging
-    if (i === 0) {
-      console.log(`[v0-parser] Point 0: [${p1.join(', ')}] (Length: ${p1.length})`)
-      console.log(`[v0-parser] Point 1: [${p2.join(', ')}] (Length: ${p2.length})`)
-      console.log(`[v0-parser] p1[2] type: ${typeof p1[2]}, value: ${p1[2]}`)
-    }
+    // Elevation (Z is index 2)
+    // Debug logging removed per QA review
 
     if (typeof p1[2] === 'number' && typeof p2[2] === 'number') {
       hasZ = true

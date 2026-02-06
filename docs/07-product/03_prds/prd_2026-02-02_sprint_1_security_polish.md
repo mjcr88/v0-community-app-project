@@ -98,8 +98,6 @@
     - [ ] "RSVP All" adds user to all future instances of the series.
     - [ ] "RSVP One" adds user only to that specific date.
 
-    - [ ] "RSVP One" adds user only to that specific date.
-
 ### 5. [Feat] GeoJSON Reliability & Map Color (#83)
 *   **Owner:** `frontend-specialist` (Full Stack usage)
 *   **Worklog:** [log_2026-02-05_geojson_upload.md](../../04_logs/log_2026-02-05_geojson_upload.md)
@@ -129,7 +127,6 @@
 - [ ] Documentation updated (if applicable)
 
 ## Sprint Schedule
-**Sprint Start:** Feb 3, 2026 (Tuesday)
 **Sprint Start:** Feb 3, 2026 (Tuesday)
 **Sprint End:** Feb 10, 2026 (Tuesday) [Extended]
 

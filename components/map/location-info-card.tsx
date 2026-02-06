@@ -759,7 +759,7 @@ export function LocationInfoCard({
         {location.type === "walking_path" && (
           <div className="space-y-2 pt-2">
             <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Path Details</h4>
-            {(location.path_difficulty || location.path_length || location.path_surface || location.elevation_gain) && (
+            {(location.path_difficulty || (location.path_length !== null && location.path_length !== undefined) || location.path_surface || (location.elevation_gain !== null && location.elevation_gain !== undefined)) && (
               <div className="space-y-2 text-sm">
                 {location.path_difficulty && (
                   <div className="flex items-center gap-2">
@@ -775,7 +775,7 @@ export function LocationInfoCard({
                     <span className="text-foreground capitalize">{location.path_surface}</span>
                   </div>
                 )}
-                {location.path_length && (
+                {(location.path_length !== null && location.path_length !== undefined) && (
                   <div className="flex items-center gap-2">
                     <span title="Distance">📏</span>
                     <span className="text-muted-foreground font-medium">Distance:</span>
@@ -786,7 +786,7 @@ export function LocationInfoCard({
                     </span>
                   </div>
                 )}
-                {location.elevation_gain !== undefined && location.elevation_gain !== null && (
+                {(location.elevation_gain !== null && location.elevation_gain !== undefined) && (
                   <div className="flex items-center gap-2">
                     <span title="Elevation Gain">🏔️</span>
                     <span className="text-muted-foreground font-medium">Elevation:</span>

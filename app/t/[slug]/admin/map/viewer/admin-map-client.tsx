@@ -692,7 +692,7 @@ export default function AdminMapClient({
                             }
                         }}
                         ref={mapRef}
-                        interactiveLayerIds={['lots-fill', 'facilities-fill', 'poi-label', 'streets', 'paths', 'paths-hit-area']}
+                        interactiveLayerIds={['lots-fill', 'facilities-fill', 'poi-label', 'streets', 'paths-hit-area']}
                         onClick={(e: any) => {
                             if (e.features && e.features.length > 0) {
                                 const feature = e.features[0];
@@ -1530,27 +1530,7 @@ export default function AdminMapClient({
                                             )}
                                         </div>
 
-                                        {/* Path Stats */}
-                                        {'type' in selectedLocation && selectedLocation.type === 'walking_path' && (
-                                            <div className="grid grid-cols-2 gap-3 mb-4">
-                                                {(selectedLocation as any).path_length && (
-                                                    <div className="bg-slate-50 p-2 rounded border">
-                                                        <span className="text-xs font-semibold text-slate-500 uppercase block">Distance</span>
-                                                        <div className="text-lg font-bold">
-                                                            {((selectedLocation as any).path_length / 1000).toFixed(2)} km
-                                                        </div>
-                                                    </div>
-                                                )}
-                                                {(selectedLocation as any).elevation_gain && (selectedLocation as any).elevation_gain > 0 && (
-                                                    <div className="bg-slate-50 p-2 rounded border">
-                                                        <span className="text-xs font-semibold text-slate-500 uppercase block">Elev. Gain</span>
-                                                        <div className="text-lg font-bold">
-                                                            {Math.round((selectedLocation as any).elevation_gain)} m
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
+
 
                                         {/* Description */}
                                         {(selectedLocation as CheckInWithRelations).description && (
@@ -1764,6 +1744,28 @@ export default function AdminMapClient({
                                                             </Badge>
                                                         ))}
                                                     </div>
+                                                </div>
+                                            )}
+
+                                            {/* Path Stats */}
+                                            {'type' in selectedLocation && selectedLocation.type === 'walking_path' && (
+                                                <div className="grid grid-cols-2 gap-3 pt-2 border-t">
+                                                    {(selectedLocation as any).path_length && (
+                                                        <div className="bg-slate-50 p-2 rounded border">
+                                                            <span className="text-xs font-semibold text-slate-500 uppercase block">Distance</span>
+                                                            <div className="text-lg font-bold">
+                                                                {((selectedLocation as any).path_length / 1000).toFixed(2)} km
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    {(selectedLocation as any).elevation_gain && (selectedLocation as any).elevation_gain > 0 && (
+                                                        <div className="bg-slate-50 p-2 rounded border">
+                                                            <span className="text-xs font-semibold text-slate-500 uppercase block">Elev. Gain</span>
+                                                            <div className="text-lg font-bold">
+                                                                {Math.round((selectedLocation as any).elevation_gain)} m
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
 

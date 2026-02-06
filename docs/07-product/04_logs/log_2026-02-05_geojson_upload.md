@@ -49,6 +49,13 @@
             >
             > 🎨 **[Style] Map Color Customization**
             > You can now set custom colors for each location! Differentiate "Walking Paths" from "Property Lines" directly in the Map Editor.
+- **2026-02-06 12:10**: [QA Execution] Test Results & PR.
+    - **Draft PR**: Created #84.
+    - **Unit Tests**: ✅ PASSED (`lib/geojson-parser.test.ts`).
+    - **E2E Tests**: ⚠️ FAILED (`e2e/geojson-upload.spec.ts`).
+        - Reason: `should show trail details` failed finding sidebar. Likely due to missing Auth session in test.
+        - Action: Marked for Manual Verification.
+    - **Status**: Ready for Code Review & Manual QA.
 
 
 ## Handovers

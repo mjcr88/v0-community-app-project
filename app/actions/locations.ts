@@ -207,7 +207,7 @@ export async function updateLocation(
 
   if (error) {
     console.error("Error updating location:", error)
-    throw new Error(`Failed to update location: ${error.message || JSON.stringify(error)}`)
+    throw new Error("Failed to update location")
   }
 
   if (path) {
@@ -301,7 +301,7 @@ export async function deleteLocation(locationId: string, tenantId: string, path?
 
   if (deleteError) {
     console.error("Error deleting location:", deleteError)
-    throw new Error(`Failed to delete location: ${deleteError.message || JSON.stringify(deleteError)}`)
+    throw new Error("Failed to delete location")
   }
 
   if (path) {

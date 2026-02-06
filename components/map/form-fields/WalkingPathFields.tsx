@@ -17,7 +17,7 @@ export function WalkingPathFields({ data, onChange }: WalkingPathFieldsProps) {
     };
 
     const toMeters = (value: number, unit: string) => {
-        if (!value) return null;
+        if (value === null || value === undefined || isNaN(value)) return null;
         if (unit === 'mi') return value * 1609.34;
         if (unit === 'ft') return value * 0.3048;
         if (unit === 'km') return value * 1000;
@@ -25,7 +25,7 @@ export function WalkingPathFields({ data, onChange }: WalkingPathFieldsProps) {
     };
 
     const fromMeters = (meters: number, unit: string) => {
-        if (!meters) return '';
+        if (meters === null || meters === undefined || isNaN(meters)) return '';
         if (unit === 'mi') return (meters / 1609.34).toFixed(2);
         if (unit === 'ft') return (meters / 0.3048).toFixed(1);
         if (unit === 'km') return (meters / 1000).toFixed(2);

@@ -41,7 +41,7 @@
   - Updated `sync_data.py` to include `locations` (16 rows), `events`, `announcements`, and `posts`.
   - Confirmed full dataset availability for Feature Development.
 - **2026-02-03**: Verification (Phase 3).
-  - Verified `localhost` login works with `michaelpjedamski+testresident@gmail.com`.
+  - Verified `localhost` login works with `michaelpjedamski+testresident@example.com` (Email Redacted).
   - Confirmed data integrity between `auth.users` and `public.users`.
 
 ## Handovers
@@ -106,13 +106,16 @@
 - **Smoke Test Created**: `tests/smoke/login_smoke.test.ts`
 - **Result**: ✅ Verified application reachable at `http://localhost:3000/login`.
 
-### Phase 6: The Fix Loop
-| Component | Issue | Action Taken | Verification |
-|-----------|-------|:-------------|:-------------|
-| **Config** | `orchestrator.md` | Fixed typo `nestjs-expert` -> `nextjs-expert` | Visual Confirm |
-| **Security** | `auto_preview.py` | Set `shell=False` to prevent injection | Server Boot Verified |
-| **Security** | `link-resident` | Added `authClient` check | Code Review |
-| **Docs** | RLS/Schemas | Clarified Tenant vs User isolation | Review |
 | **Lint** | Environment | Installed `eslint-config-next` | ⚠️ Failed (React 19 Conflict) |
 
-> **Note on Lint**: Linting is currently blocked by dependency conflicts between React 19 (Beta) and ESLint plugins. Critical fixes were manually verified.
+### Phase 6: CodeRabbit Fix Loop (PR #84)
+| Priority | Component | Issue | Action Taken | Status |
+|----------|-----------|-------|:-------------|:-------|
+| 🔴 High | `locations.ts` | Data Loss (0 values) | Changed `\|\|` to `??` | ✅ Fixed |
+| 🔴 High | `WalkingPathFields` | UI Bug (0 values) | Updated `toMeters`/`fromMeters` | ✅ Fixed |
+| 🔴 High | `MapboxEditor` | Data Corruption | Proper null checks | ✅ Fixed |
+| 🟡 Medium | `actions/locations` | Security Leak | Sanitized error messages | ✅ Fixed |
+| 🟡 Medium | `log_..._env.md` | PII Leak | Redacted email | ✅ Fixed |
+| ⚪ Low | `admin-map-client` | Dead Code | Removed `paths` layer ID | ✅ Fixed |
+| ⚪ Low | `admin-map-client` | UI Layout | Fixing Path Stats placement | ✅ Fixed |
+

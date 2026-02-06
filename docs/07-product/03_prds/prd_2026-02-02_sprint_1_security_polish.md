@@ -11,7 +11,9 @@
 | #75 | **P0** | **S** | 4-8h | HIGH | [Security] PII Leak Prevention |
 | #77 | **P0** | **M** | 1-2d | HIGH | [Security] Automatic Logout / Session Timeout |
 | #63 | **P0** | **M** | 1-2d | MED | [Bug/Feat] Series RSVP Fix & Feature |
+| #63 | **P0** | **M** | 1-2d | MED | [Bug/Feat] Series RSVP Fix & Feature |
 | #83 | **P0** | **M** | 1-2d | MED | [Feat] GeoJSON Reliability & Map Color |
+| #86 | **P1** | **S** | 4-8h | LOW | [Feat] User Location Beacon |
 
 ---
 
@@ -41,6 +43,9 @@
 *   **Issue #83 (GeoJSON):**
     *   Requires `locations` table schema migration (add `color` column).
     *   Dependent on Issue #76 (Supabase Dev Env) for safe migration testing.
+*   **Issue #86 (Location Beacon):**
+    *   **Contextual Dependency:** Works best after #83 (keeps map updates grouped), but technically independent.
+    *   Client-side only (no DB changes).
 
 ---
 
@@ -117,6 +122,22 @@
     - [x] Map reflects the custom colors.
     - [x] Walking Path metadata (surface, difficulty) appears in Resident sidebar.
 
+### 6. [Feat] User Location Beacon (#86)
+*   **Owner:** `mobile-developer` / `frontend-specialist`
+*   **Goal:** Show live "Blue Dot" for user location on map.
+*   **Implementation Steps:**
+    1.  Create `useGeolocation` hook (wraps `navigator.geolocation`).
+    2.  Update `MapboxViewer` to render User Marker.
+    3.  Wire up "Find Me" button to fly to user location.
+*   **Acceptance Criteria:**
+    - [x] "Blue Dot" appears when permission granted.
+    - [x] "Find Me" button centers map on user.
+    - [x] Map does NOT auto-center if user pans away.
+    - [x] Permission denied state handled gracefully.
+*   **Links:**
+    *   [Worklog](../../04_logs/log_2026-02-06_issue_86_user_location_beacon.md)
+    *   [Walkthrough](../../../../.gemini/antigravity/brain/1ce3f1b6-f7e7-4f46-9b36-1059df9ea2d5/walkthrough.md)
+
 ---
 
 ## Definition of Done
@@ -137,6 +158,7 @@
 | #83 | **GeoJSON & Color** | 2 Days | **Feb 5** | **Feb 6** | Wait for #76 |
 | #75 | **PII Leak Prevention** | 1 Day | **Feb 9** | **Feb 9** | Wait for #83 |
 | #77 | **Auto Logout** | 2 Days | **Feb 9** | **Feb 10** | Wait for #83 |
+| #86 | **Location Beacon** | 1 Day | **Feb 10** | **Feb 10** | Independent |
 
 > *Note: Schedule assumes parallel execution of #76 and #63.*
 
@@ -151,3 +173,10 @@ Established a safe, isolated development environment (`v0-community-dev`) to pre
 - Clarified RLS Policies for Tenant/User data isolation.
 - Fixed `orchestrator.md` skill references.
 - Added E2E Smoke Tests for deployment validation.
+
+🚀 **[GeoJSON & Map Color]**
+🗺️ **[Feature] Reliable Map Import**
+Admins can now upload GeoJSON files with confidence! We've fixed the "merged paths" bug and now preserve elevation data (Z-axis) for accurate walking path stats.
+
+🎨 **[Style] Map Color Customization**
+You can now set custom colors for each location! Differentiate "Walking Paths" from "Property Lines" directly in the Map Editor.

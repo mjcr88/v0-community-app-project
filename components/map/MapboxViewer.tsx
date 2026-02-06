@@ -7,6 +7,7 @@ import * as turf from "@turf/turf"
 import { Search, X, Filter, Layers, Check, MapPin } from "lucide-react"
 import "mapbox-gl/dist/mapbox-gl.css"
 
+import { toast } from "sonner"
 import { rsvpToCheckIn } from "@/app/actions/check-ins"
 
 import { LocationWithRelations } from "@/lib/data/locations"
@@ -23,6 +24,7 @@ import {
     DropdownMenuLabel,
     DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
+import { useGeolocation } from "@/hooks/useGeolocation"
 import { LocationInfoCard } from "./location-info-card"
 
 interface CheckIn {
@@ -143,6 +145,32 @@ export function MapboxFullViewer({
     const sidebarRef = useRef<HTMLDivElement>(null)
     const hasUserInteracted = useRef(false) // Track if user manually selected a location
     const [isFullscreen, setIsFullscreen] = useState(false)
+
+    // Geolocation Hook
+    const userLocation = useGeolocation({
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+    })
+
+    // Handle Geolocation Errors with Sonner
+    useEffect(() => {
+        if (userLocation.error) {
+            let errorMessage = 'Unable to get your location'
+            switch (userLocation.error.code) {
+                case 1: // PERMISSION_DENIED
+                    errorMessage = 'Location permission denied. Please enable location access in your browser.'
+                    break
+                case 2: // POSITION_UNAVAILABLE
+                    errorMessage = 'Location information unavailable.'
+                    break
+                case 3: // TIMEOUT
+                    errorMessage = 'Location request timed out.'
+                    break
+            }
+            toast.error(errorMessage)
+        }
+    }, [userLocation.error])
 
     // Debug logging & Analytics
     useEffect(() => {
@@ -1198,6 +1226,25 @@ export function MapboxFullViewer({
                                 )
                             })}
 
+                        {/* User Location Beacon (Blue Dot) */}
+                        {userLocation.latitude && userLocation.longitude && (
+                            <Marker
+                                longitude={userLocation.longitude}
+                                latitude={userLocation.latitude}
+                                anchor="center"
+                                style={{ zIndex: 100 }} // Always on top
+                            >
+                                <div className="relative flex items-center justify-center w-6 h-6">
+                                    {/* Pulsing Ring */}
+                                    <div className="absolute w-full h-full bg-blue-500 rounded-full opacity-30 animate-ping"></div>
+                                    {/* White Stroke */}
+                                    <div className="absolute w-4 h-4 bg-white rounded-full shadow-md"></div>
+                                    {/* Blue Center */}
+                                    <div className="absolute w-3 h-3 bg-blue-600 rounded-full"></div>
+                                </div>
+                            </Marker>
+                        )}
+
                         {/* Map Controls - Top Right - All 5 buttons in ONE control group */}
                         <div className="absolute top-4 right-4 z-50">
                             <div className="mapboxgl-ctrl mapboxgl-ctrl-group">
@@ -1285,42 +1332,45 @@ export function MapboxFullViewer({
                                 {/* Geolocate */}
                                 <button
                                     onClick={() => {
-                                        if (navigator.geolocation) {
+                                        // 1. Enable tracking (triggers permission prompt if needed)
+                                        userLocation.enable()
+
+                                        // 2. If we already have a location, fly to it immediately
+                                        if (userLocation.latitude && userLocation.longitude) {
+                                            const map = mapRef.current
+                                            if (map) {
+                                                map.flyTo({
+                                                    center: [userLocation.longitude, userLocation.latitude],
+                                                    zoom: 16,
+                                                    duration: 1000
+                                                })
+                                            }
+                                        }
+                                        // 3. If no location yet (loading/prompting), we wait for the hook to update
+                                        // The hook will update state, but we might want a one-time "fly on next update" logic here.
+                                        // For simplicity, user might click again, or we can use a small effect.
+                                        // Given the requirements, just enabling and relying on the user to see the dot or click again is often standard pattern 
+                                        // to avoid "flying away" unexpectedly if the user is just enabling it.
+                                        // BUT, the requirement says "Fly to them". 
+                                        // Let's add a "flyToUser" trigger.
+                                        else {
+                                            toast.info("Locating you...")
+                                            // We can use a one-off position fetch for the immediate fly-to
                                             navigator.geolocation.getCurrentPosition(
-                                                (position) => {
+                                                (pos) => {
                                                     const map = mapRef.current
                                                     if (map) {
                                                         map.flyTo({
-                                                            center: [position.coords.longitude, position.coords.latitude],
+                                                            center: [pos.coords.longitude, pos.coords.latitude],
                                                             zoom: 16,
                                                             duration: 1000
                                                         })
                                                     }
                                                 },
-                                                (error) => {
-                                                    let errorMessage = 'Unable to get your location'
-                                                    switch (error.code) {
-                                                        case error.PERMISSION_DENIED:
-                                                            errorMessage = 'Location permission denied. Please enable location access in your browser settings.'
-                                                            break
-                                                        case error.POSITION_UNAVAILABLE:
-                                                            errorMessage = 'Location information unavailable.'
-                                                            break
-                                                        case error.TIMEOUT:
-                                                            errorMessage = 'Location request timed out.'
-                                                            break
-                                                    }
-                                                    console.error('Geolocation error:', errorMessage)
-                                                    alert(errorMessage)
-                                                },
-                                                {
-                                                    enableHighAccuracy: true,
-                                                    timeout: 10000,
-                                                    maximumAge: 0
+                                                (err) => {
+                                                    // handled by hook effect
                                                 }
                                             )
-                                        } else {
-                                            alert('Geolocation is not supported by your browser')
                                         }
                                     }}
                                     className="mapboxgl-ctrl-icon"

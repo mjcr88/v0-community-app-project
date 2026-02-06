@@ -7,6 +7,7 @@ import * as turf from "@turf/turf"
 import { Search, X, Filter, Layers, Check, MapPin } from "lucide-react"
 import "mapbox-gl/dist/mapbox-gl.css"
 
+import { toast } from "sonner"
 import { rsvpToCheckIn } from "@/app/actions/check-ins"
 
 import { LocationWithRelations } from "@/lib/data/locations"
@@ -23,6 +24,7 @@ import {
     DropdownMenuLabel,
     DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
+import { useGeolocation } from "@/hooks/useGeolocation"
 import { LocationInfoCard } from "./location-info-card"
 
 interface CheckIn {
@@ -143,6 +145,49 @@ export function MapboxFullViewer({
     const sidebarRef = useRef<HTMLDivElement>(null)
     const hasUserInteracted = useRef(false) // Track if user manually selected a location
     const [isFullscreen, setIsFullscreen] = useState(false)
+    const [pendingFlyTo, setPendingFlyTo] = useState(false) // Wait for location to become available
+
+    // Geolocation Hook
+    const userLocation = useGeolocation({
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+    })
+
+    // Handle Geolocation Errors with Sonner
+    useEffect(() => {
+        if (userLocation.error) {
+            let errorMessage = 'Unable to get your location'
+            switch (userLocation.error.code) {
+                case 1: // PERMISSION_DENIED
+                    errorMessage = 'Location permission denied. Please enable location access in your browser.'
+                    break
+                case 2: // POSITION_UNAVAILABLE
+                    errorMessage = 'Location information unavailable.'
+                    break
+                case 3: // TIMEOUT
+                    errorMessage = 'Location request timed out.'
+                    break
+            }
+            toast.error(errorMessage)
+            setPendingFlyTo(false) // Cancel pending fly
+        }
+    }, [userLocation.error])
+
+    // Pending Fly To Effect
+    useEffect(() => {
+        if (pendingFlyTo && userLocation.latitude && userLocation.longitude) {
+            const map = mapRef.current
+            if (map) {
+                map.flyTo({
+                    center: [userLocation.longitude, userLocation.latitude],
+                    zoom: 16,
+                    duration: 1000
+                })
+                setPendingFlyTo(false)
+            }
+        }
+    }, [pendingFlyTo, userLocation.latitude, userLocation.longitude])
 
     // Debug logging & Analytics
     useEffect(() => {
@@ -1198,6 +1243,25 @@ export function MapboxFullViewer({
                                 )
                             })}
 
+                        {/* User Location Beacon (Blue Dot) */}
+                        {userLocation.latitude && userLocation.longitude && (
+                            <Marker
+                                longitude={userLocation.longitude}
+                                latitude={userLocation.latitude}
+                                anchor="center"
+                                style={{ zIndex: 100 }} // Always on top
+                            >
+                                <div className="relative flex items-center justify-center w-6 h-6">
+                                    {/* Pulsing Ring */}
+                                    <div className="absolute w-full h-full bg-blue-500 rounded-full opacity-30 animate-ping"></div>
+                                    {/* White Stroke */}
+                                    <div className="absolute w-4 h-4 bg-white rounded-full shadow-md"></div>
+                                    {/* Blue Center */}
+                                    <div className="absolute w-3 h-3 bg-blue-600 rounded-full"></div>
+                                </div>
+                            </Marker>
+                        )}
+
                         {/* Map Controls - Top Right - All 5 buttons in ONE control group */}
                         <div className="absolute top-4 right-4 z-50">
                             <div className="mapboxgl-ctrl mapboxgl-ctrl-group">
@@ -1285,42 +1349,24 @@ export function MapboxFullViewer({
                                 {/* Geolocate */}
                                 <button
                                     onClick={() => {
-                                        if (navigator.geolocation) {
-                                            navigator.geolocation.getCurrentPosition(
-                                                (position) => {
-                                                    const map = mapRef.current
-                                                    if (map) {
-                                                        map.flyTo({
-                                                            center: [position.coords.longitude, position.coords.latitude],
-                                                            zoom: 16,
-                                                            duration: 1000
-                                                        })
-                                                    }
-                                                },
-                                                (error) => {
-                                                    let errorMessage = 'Unable to get your location'
-                                                    switch (error.code) {
-                                                        case error.PERMISSION_DENIED:
-                                                            errorMessage = 'Location permission denied. Please enable location access in your browser settings.'
-                                                            break
-                                                        case error.POSITION_UNAVAILABLE:
-                                                            errorMessage = 'Location information unavailable.'
-                                                            break
-                                                        case error.TIMEOUT:
-                                                            errorMessage = 'Location request timed out.'
-                                                            break
-                                                    }
-                                                    console.error('Geolocation error:', errorMessage)
-                                                    alert(errorMessage)
-                                                },
-                                                {
-                                                    enableHighAccuracy: true,
-                                                    timeout: 10000,
-                                                    maximumAge: 0
-                                                }
-                                            )
-                                        } else {
-                                            alert('Geolocation is not supported by your browser')
+                                        // 1. Enable tracking (triggers permission prompt if needed)
+                                        userLocation.enable()
+
+                                        // 2. If we already have a location, fly to it immediately
+                                        if (userLocation.latitude && userLocation.longitude) {
+                                            const map = mapRef.current
+                                            if (map) {
+                                                map.flyTo({
+                                                    center: [userLocation.longitude, userLocation.latitude],
+                                                    zoom: 16,
+                                                    duration: 1000
+                                                })
+                                            }
+                                        }
+                                        // 3. Otherwise, set pending flag and wait for hook to update
+                                        else {
+                                            toast.info("Locating you...")
+                                            setPendingFlyTo(true)
                                         }
                                     }}
                                     className="mapboxgl-ctrl-icon"

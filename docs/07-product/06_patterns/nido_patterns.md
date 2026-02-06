@@ -212,3 +212,10 @@ const MapboxViewer = dynamic(() => import('./MapboxViewer'), {
 **Context**: Project had Storybook, Chromatic, and Playwright installed but "sleeping" in the garage.
 **Problem**: Tools without enforcement are just npm bloat.
 **Learning**: World-class quality comes from *orchestration* (CI/CD enforcement), not just installation. If a tool is in `package.json`, it MUST run in CI.
+
+### [2026-02-06] Geolocation "Lazy Enable" Pattern
+**Type**: Pattern
+**Context**: Issue #86 (User Location Beacon).
+**Problem**: Requesting location permissions on page load (useEffect) causes high rejection rates ("Permission Fatigue") and poor UX.
+**Rule**: NEVER prompt for sensitive permissions (Location, Camera, Mic) on mount. ALWAYS require a user interaction (Click "Find Me") to trigger the permission prompt.
+**Implementation**: Use a hook that monitors permission state but only triggers `navigator.geolocation.getCurrentPosition` inside an `enable()` function bound to a button handler.

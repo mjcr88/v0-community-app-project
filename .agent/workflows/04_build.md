@@ -157,7 +157,7 @@ When `/build` (or `/execute`) is triggered, follow this **6-Phase Process**:
 4.  **GitHub Updates**:
     *   **Comment**: Post summary (Worklog link, PR link, QA notes) to the GitHub Issue.
     *   **Linked PR**: Use `update_project_item` or `update_issue` (or browser fallback) to Update the "Linked Pull Request" field (or description) with the Draft PR URL.
-    *   **Status**: Move Issue to **"QA"** (or "Ready for QA").
+    *   **Status**: Move Issue to **"QA"**.
     *   **PR**: Mark Draft PR as **"Ready for Review"**.
 5.  **Completion**: `✅ [BUILD COMPLETE] Issue #{num} is ready for QA.`
 

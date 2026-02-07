@@ -145,7 +145,7 @@ export const getLocations = cache(async (
   const supabase = await createServerClient()
 
   // Build the select query based on enrichment options
-  let selectQuery = `
+  const selectQuery = `
     id,
     name,
     type,
@@ -179,19 +179,9 @@ export const getLocations = cache(async (
     path_length
   `
 
-  // Add neighborhood if requested
-  if (enrichWithNeighborhood) {
-    selectQuery += `,
-      neighborhoods:neighborhood_id(id, name)
-    `
-  }
-
-  // Add lot if requested
-  if (enrichWithLot) {
-    selectQuery += `,
-      lots:lot_id(id, lot_number, address)
-    `
-  }
+  // Note: We intentionally avoid explicit joins (neighborhoods!fk, lots!fk) here
+  // because strict join syntax can fail if keys are NULL or RLS logic interferes.
+  // We will fetch relations in separate queries below.
 
   // Start building the query
   let query = supabase.from("locations").select(selectQuery).eq("tenant_id", tenantId)
@@ -209,7 +199,7 @@ export const getLocations = cache(async (
     query = query.eq("lot_id", lotId)
   }
 
-  // Execute query
+  // Execute base query
   const { data: locations, error } = await query.order("created_at", { ascending: false })
 
   if (error) {
@@ -221,8 +211,17 @@ export const getLocations = cache(async (
     return []
   }
 
-  // Transform the data to our interface, handling null values properly
+  // Transform the data to our interface
   const transformedLocations: LocationWithRelations[] = locations.map((loc: any) => {
+    // Explicitly parse string metrics to numbers (handling potential DB type lag)
+    const pathLength = loc.path_length !== null && loc.path_length !== undefined && loc.path_length !== ''
+      ? Number(loc.path_length)
+      : null
+
+    const elevationGain = loc.elevation_gain !== null && loc.elevation_gain !== undefined && loc.elevation_gain !== ''
+      ? Number(loc.elevation_gain)
+      : null
+
     const base: LocationWithRelations = {
       id: loc.id,
       name: loc.name,
@@ -253,24 +252,73 @@ export const getLocations = cache(async (
       created_by: loc.created_by || null,
       is_reservable: loc.is_reservable || false,
       color: loc.color || null,
-      elevation_gain: loc.elevation_gain || null,
-      path_length: loc.path_length || null,
-    }
-
-    // Add enriched data if available
-    if (enrichWithNeighborhood && loc.neighborhoods) {
-      base.neighborhood = loc.neighborhoods
-    }
-
-    if (enrichWithLot && loc.lots) {
-      base.lot = loc.lots
+      elevation_gain: Number.isNaN(elevationGain) ? null : elevationGain,
+      path_length: Number.isNaN(pathLength) ? null : pathLength,
     }
 
     return base
   })
 
-  // Enrich with residents, families, and pets if requested
-  // This is done in a second pass to avoid complex joins that cause issues
+  // --- Separately Fetch Relations for Stability ---
+
+  // 1. Enrich with Neighborhoods
+  if (enrichWithNeighborhood) {
+    const neighborhoodIds = transformedLocations
+      .map(l => l.neighborhood_id)
+      .filter((id): id is string => id !== null && id !== undefined)
+      // Deduplicate
+      .filter((id, index, self) => self.indexOf(id) === index)
+
+    if (neighborhoodIds.length > 0) {
+      const { data: neighborhoods } = await supabase
+        .from("neighborhoods")
+        .select("id, name")
+        .in("id", neighborhoodIds)
+
+      if (neighborhoods) {
+        const neighborhoodsById = neighborhoods.reduce((acc: any, n: any) => {
+          acc[n.id] = n
+          return acc
+        }, {})
+
+        transformedLocations.forEach(loc => {
+          if (loc.neighborhood_id && neighborhoodsById[loc.neighborhood_id]) {
+            loc.neighborhood = neighborhoodsById[loc.neighborhood_id]
+          }
+        })
+      }
+    }
+  }
+
+  // 2. Enrich with Lots
+  if (enrichWithLot) {
+    const lotIds = transformedLocations
+      .map(l => l.lot_id)
+      .filter((id): id is string => id !== null && id !== undefined)
+      .filter((id, index, self) => self.indexOf(id) === index)
+
+    if (lotIds.length > 0) {
+      const { data: lots } = await supabase
+        .from("lots")
+        .select("id, lot_number, address")
+        .in("id", lotIds)
+
+      if (lots) {
+        const lotsById = lots.reduce((acc: any, l: any) => {
+          acc[l.id] = l
+          return acc
+        }, {})
+
+        transformedLocations.forEach(loc => {
+          if (loc.lot_id && lotsById[loc.lot_id]) {
+            loc.lot = lotsById[loc.lot_id]
+          }
+        })
+      }
+    }
+  }
+
+  // 3. Enrich with Residents, Families, Pets
   if ((enrichWithResidents || enrichWithFamilies || enrichWithPets) && transformedLocations.length > 0) {
     // Get all lot IDs from locations
     const lotIds = transformedLocations

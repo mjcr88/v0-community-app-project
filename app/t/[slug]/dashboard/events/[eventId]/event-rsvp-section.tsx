@@ -1,13 +1,14 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useTransition } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Check, HelpCircle, X, Users, Clock, AlertCircle, Calendar, CalendarDays } from "lucide-react"
+import { Check, HelpCircle, X, Users, Clock, AlertCircle, Calendar, CalendarDays, Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { rsvpToEvent, getUserRsvpStatus, getEventRsvpCounts } from "@/app/actions/events"
 import { useRioFeedback } from "@/components/feedback/rio-feedback-provider"
 import { ResponsiveDialog } from "@/components/ui/responsive-dialog"
+import { useSWRConfig } from "swr"
 
 interface EventRsvpSectionProps {
   eventId: string
@@ -40,6 +41,9 @@ export function EventRsvpSection({
 }: EventRsvpSectionProps) {
   const router = useRouter()
   const { showFeedback } = useRioFeedback()
+  const { mutate } = useSWRConfig()
+  const [isPending, startTransition] = useTransition()
+
   const [currentStatus, setCurrentStatus] = useState<string | null>(initialUserStatus)
   const [counts, setCounts] = useState(initialCounts)
   const [isLoading, setIsLoading] = useState(false)
@@ -65,13 +69,15 @@ export function EventRsvpSection({
     async function loadData() {
       // Load RSVP status
       if (requiresRsvp) {
-        const statusResult = await getUserRsvpStatus(eventId)
+        const [statusResult, countsResult] = await Promise.all([
+          getUserRsvpStatus(eventId),
+          getEventRsvpCounts(eventId)
+        ])
+
         if (statusResult.success && statusResult.data) {
           setCurrentStatus(statusResult.data.rsvp_status)
         }
 
-        // Load RSVP counts
-        const countsResult = await getEventRsvpCounts(eventId)
         if (countsResult.success && countsResult.data) {
           setCounts(countsResult.data)
         }
@@ -79,7 +85,7 @@ export function EventRsvpSection({
     }
 
     loadData()
-  }, [eventId, userId, requiresRsvp])
+  }, [eventId, userId, requiresRsvp, disableAutoFetch])
 
   async function handleRsvp(status: "yes" | "maybe" | "no", scope: "this" | "series" = "this") {
     if (!userId) {
@@ -94,40 +100,70 @@ export function EventRsvpSection({
 
     setShowSeriesDialog(false)
     setIsLoading(true)
-    const result = await rsvpToEvent(eventId, tenantId, status, scope)
 
-    if (result.success) {
-      setCurrentStatus(status)
-      const statusLabel = status === "yes" ? "Attending" : status === "maybe" ? "Maybe" : "Not Attending"
-      const scopeText = scope === 'series' ? 'this and future events' : 'this event'
+    // Optimistic update for local UI
+    const previousStatus = currentStatus
+    setCurrentStatus(status)
 
-      showFeedback({
-        title: status === "yes" ? "You're going!" : "RSVP Updated",
-        description: status === "yes"
-          ? `Your RSVP has been confirmed for ${scopeText}. We've added this to your calendar.`
-          : `You've marked your status as ${statusLabel} for ${scopeText}.`,
-        variant: "success",
-        image: "/rio/rio_rsvp_celebration.png"
-      })
+    // Optimistic update for counts
+    setCounts(prev => {
+      const newCounts = { ...prev }
+      // Decrement old status if it was set
+      if (previousStatus === 'yes') newCounts.yes--
+      else if (previousStatus === 'maybe') newCounts.maybe--
+      else if (previousStatus === 'no') newCounts.no--
 
-      // Reload counts
-      const countsResult = await getEventRsvpCounts(eventId)
-      if (countsResult.success && countsResult.data) {
-        setCounts(countsResult.data)
+      // Increment new status
+      if (status === 'yes') newCounts.yes++
+      else if (status === 'maybe') newCounts.maybe++
+      else if (status === 'no') newCounts.no++
+
+      return newCounts
+    })
+
+    startTransition(async () => {
+      const result = await rsvpToEvent(eventId, tenantId, status, scope)
+
+      if (result.success) {
+        const statusLabel = status === "yes" ? "Attending" : status === "maybe" ? "Maybe" : "Not Attending"
+        const scopeText = scope === 'series' ? 'this and future events' : 'this event'
+
+        showFeedback({
+          title: status === "yes" ? "You're going!" : "RSVP Updated",
+          description: status === "yes"
+            ? `Your RSVP has been confirmed for ${scopeText}. We've added this to your calendar.`
+            : `You've marked your status as ${statusLabel} for ${scopeText}.`,
+          variant: "success",
+          image: "/rio/rio_rsvp_celebration.png"
+        })
+
+        // Mutate global event keys to update other widgets (Dashboard, etc.)
+        mutate((key) => typeof key === 'string' && key.startsWith(`/api/events/upcoming/${tenantId}`), undefined, { revalidate: true })
+
+        // Also mutate priority feed since RSVP changes affect it
+        mutate('/api/dashboard/priority')
+
+        // Reload counts to ensure accuracy
+        const countsResult = await getEventRsvpCounts(eventId)
+        if (countsResult.success && countsResult.data) {
+          setCounts(countsResult.data)
+        }
+
+        router.refresh()
+      } else {
+        // Rollback status
+        setCurrentStatus(previousStatus)
+        // Rollback counts
+        setCounts(initialCounts) // Simplest rollback, or re-fetch
+        showFeedback({
+          title: "Couldn't update RSVP",
+          description: result.error || "Something went wrong. Please try again.",
+          variant: "error",
+          image: "/rio/rio_no_results_confused.png"
+        })
       }
-
-      router.refresh()
-    } else {
-
-      showFeedback({
-        title: "Couldn't update RSVP",
-        description: result.error || "Something went wrong. Please try again.",
-        variant: "error",
-        image: "/rio/rio_no_results_confused.png"
-      })
-    }
-
-    setIsLoading(false)
+      setIsLoading(false)
+    })
   }
 
   const onRsvpClick = (status: "yes" | "maybe" | "no") => {

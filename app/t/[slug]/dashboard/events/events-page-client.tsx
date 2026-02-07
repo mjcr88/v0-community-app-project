@@ -58,6 +58,8 @@ interface Event {
   flag_count?: number
   status?: "draft" | "published" | "cancelled"
   attendee_ids?: string[]
+  parent_event_id?: string | null
+  recurrence_rule?: any | null
 }
 
 interface Category {

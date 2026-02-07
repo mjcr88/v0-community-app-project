@@ -55,6 +55,7 @@ interface Event {
   status?: "draft" | "published" | "cancelled"
   attendee_ids?: string[]
   parent_event_id?: string | null
+  recurrence_rule?: any | null
 }
 
 import { RioEmptyState } from "@/components/exchange/rio-empty-state"
@@ -266,7 +267,9 @@ export function EventsList({
                     maxAttendees={event.max_attendees}
                     currentAttendeeCount={event.attending_count || 0}
                     rsvpDeadline={event.rsvp_deadline}
-                    isSeries={!!event.parent_event_id}
+                    isSeries={!!event.parent_event_id || !!event.recurrence_rule}
+                    parentEventId={event.parent_event_id}
+                    startDate={event.start_date}
                   />
                 </div>
               </div>

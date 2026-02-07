@@ -103,6 +103,7 @@ export function EventRsvpSection({
 
     // Optimistic update for local UI
     const previousStatus = currentStatus
+    const previousCounts = counts
     setCurrentStatus(status)
 
     // Optimistic update for counts
@@ -154,7 +155,7 @@ export function EventRsvpSection({
         // Rollback status
         setCurrentStatus(previousStatus)
         // Rollback counts
-        setCounts(initialCounts) // Simplest rollback, or re-fetch
+        setCounts(previousCounts)
         showFeedback({
           title: "Couldn't update RSVP",
           description: result.error || "Something went wrong. Please try again.",

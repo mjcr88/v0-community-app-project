@@ -226,3 +226,4 @@ const MapboxViewer = dynamic(() => import('./MapboxViewer'), {
 **Problem**: RSVPing in one widget left the others stale until a full page refresh or server revalidation (slow).
 **Solution**: Use a lightweight, typed Custom Event Bus: `window.dispatchEvent(new CustomEvent('rio-sync', { detail: payload }))`.
 **Rule**: Use only for **ephemeral, cross-widget UI state** (like optimistic updates). Do not use for critical business logic or data persistence. Always namespace events (e.g., `rio-series-rsvp-sync`).
+**Cleanup**: MUST remove event listeners in `useEffect` return function to prevent memory leaks (`window.removeEventListener`).

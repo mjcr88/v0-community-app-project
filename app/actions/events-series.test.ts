@@ -159,6 +159,12 @@ describe('Series Events Logic', () => {
                 error: null
             })
 
+            // 3.5. Fetch user's existing RSVPs (for capacity check)
+            mockResponseQueue.push({
+                data: [],
+                error: null
+            })
+
             // 4. Upsert RSVPs
             mockResponseQueue.push({
                 data: null,

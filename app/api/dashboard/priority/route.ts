@@ -121,7 +121,7 @@ export async function GET() {
                     recurrence_rule
                 `)
                 .in("id", Array.from(interactedEventIds)) // Only fetching what we care about
-                .gte("end_date", nowIso) // Not ended yet (includes ongoing)
+                .or(`end_date.is.null,end_date.gte.${nowIso}`) // Not ended yet (includes ongoing with null end_date)
                 .lte("start_date", nextWeek) // Within next 7 days
                 .order("start_date", { ascending: true })
                 .limit(10)

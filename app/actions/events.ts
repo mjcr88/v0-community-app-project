@@ -527,9 +527,10 @@ export async function updateEvent(
     // Fields to propagate: requires_rsvp, rsvp_deadline, max_attendees
     // We only do this if these fields were present in the update data
     const shouldPropagateToChildren =
-      data.requires_rsvp !== undefined ||
-      data.rsvp_deadline !== undefined ||
-      data.max_attendees !== undefined
+      scope === 'series' &&
+      (data.requires_rsvp !== undefined ||
+        data.rsvp_deadline !== undefined ||
+        data.max_attendees !== undefined)
 
     if (shouldPropagateToChildren) {
       const childUpdateData: any = {
@@ -690,6 +691,29 @@ export async function deleteEvent(
 export async function detachEventOccurrence(eventId: string) {
   try {
     const supabase = await createServerClient()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: "User not authenticated" }
+    }
+
+    // Verify ownership
+    const { data: event, error: fetchError } = await supabase
+      .from("events")
+      .select("created_by")
+      .eq("id", eventId)
+      .single()
+
+    if (fetchError || !event) {
+      return { success: false, error: "Event not found" }
+    }
+
+    if (event.created_by !== user.id) {
+      return { success: false, error: "You don't have permission to detach this event" }
+    }
 
     // Clear parent_event_id and recurrence_rule to make it strictly one-off
     const { error } = await supabase

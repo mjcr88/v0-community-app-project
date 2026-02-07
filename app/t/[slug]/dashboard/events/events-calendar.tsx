@@ -242,7 +242,9 @@ export function EventsCalendar({
                           maxAttendees={event.max_attendees}
                           currentAttendeeCount={event.attending_count || 0}
                           rsvpDeadline={event.rsvp_deadline}
-                          isSeries={!!event.parent_event_id}
+                          isSeries={!!event.parent_event_id || !!(event as any).recurrence_rule}
+                          parentEventId={event.parent_event_id}
+                          startDate={event.start_date}
                         />
                       </div>
                     </CardContent>

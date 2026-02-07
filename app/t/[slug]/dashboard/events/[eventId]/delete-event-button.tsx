@@ -59,7 +59,8 @@ export function DeleteEventButton({
 
   const selectScope = async (scope: "this" | "series") => {
     setShowScopeDialog(false)
-    await handleDelete(scope)
+    setDeleteScope(scope)
+    setIsOpen(true)
   }
 
   const onButtonClick = () => {
@@ -87,9 +88,13 @@ export function DeleteEventButton({
         open={isOpen}
         onOpenChange={setIsOpen}
         title="Delete Event"
-        description="Are you sure you want to delete this event? This action cannot be undone."
+        description={
+          deleteScope === "series"
+            ? "Are you sure you want to delete this event series? All future occurrences will be removed. This action cannot be undone."
+            : "Are you sure you want to delete this event? This action cannot be undone."
+        }
         confirmText="Delete"
-        onConfirm={() => handleDelete("this")}
+        onConfirm={() => handleDelete(deleteScope)}
         isDestructive={true}
         image="/rio/rio_delete_warning.png"
         isLoading={isDeleting}

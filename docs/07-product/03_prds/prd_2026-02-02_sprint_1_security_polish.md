@@ -179,6 +179,5 @@ Admins can now upload GeoJSON files with confidence! We've fixed the "merged pat
 
 🎨 **[Style] Map Color Customization**
 You can now set custom colors for each location! Differentiate "Walking Paths" from "Property Lines" directly in the Map Editor.
-
 📍 **[Feature/Map] User Location Beacon**
 Find yourself on the map! A new "Blue Dot" indicator shows your current location, and the "Find Me" button instantly centers the view on you.

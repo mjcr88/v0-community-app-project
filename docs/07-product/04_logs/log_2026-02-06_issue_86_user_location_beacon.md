@@ -30,7 +30,6 @@
 - **2026-02-06**: Phase 4 & 5 Complete. User approved. PRD and Patterns updated. Task closed.
 
 
-
 ## Handovers
 - **To QA/User**: Feature is ready for manual verification on `feat/86-user-location-beacon`. Key test cases in `walkthrough.md`.
 

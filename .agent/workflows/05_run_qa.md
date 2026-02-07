@@ -49,11 +49,16 @@ When `/run_qa` (or `/qa`) is triggered, follow this **Strategy-First Pipeline**:
 2.  **Gap Analysis**:
     *   Do E2E tests exist?
     *   Are new tests needed?
+3.  **Migration Audit**:
+    *   **Check**: Scan `supabase/migrations` for any new files created during build.
+    *   **Analyze**: Do these migrations align with the current production schema? Are there pending migrations not yet applied to the Dev/Staging environment?
     *   **Log**: Append the following to the Worklog:
         ```markdown
         ### Phase 1: Test Readiness Audit
         - **E2E Tests**: [Yes/No] (Path: ...)
         - **Unit Tests**: [Yes/No] (Path: ...)
+        - **Migrations Required**: [Yes/No] (Count: ...)
+        - **Data Alignment**: [Pass/Fail] (Notes on drift)
         - **Coverage Gaps**: [List gaps]
         ```
 
@@ -61,7 +66,10 @@ When `/run_qa` (or `/qa`) is triggered, follow this **Strategy-First Pipeline**:
 > **Agents**: `security-auditor`, `performance-optimizer`
 1.  **Security**: Run `vulnerability-scanner`. Check RLS policies.
     *   **Log**: Append "Security Findings" to Worklog.
-2.  **Performance**: Check Bundle Size.
+2.  **Vibe Code Check**:
+    *   **Action**: Scan for "Cardinal Sins": Client-side DB access, Public Buckets, No-Policy RLS.
+    *   **Log**: Append "Vibe Code Check: [Pass/Fail]" and details to Worklog.
+3.  **Performance**: Check Bundle Size.
     *   **Log**: Append "Performance Stats" to Worklog.
 
 #### Phase 3: Documentation & Release Planning
@@ -81,6 +89,7 @@ When `/run_qa` (or `/qa`) is triggered, follow this **Strategy-First Pipeline**:
 1.  **Present Findings**:
     *   CodeRabbit Summary (Phase 0)
     *   Test Gaps (Phase 1)
+    *   **Migration Impact** (Phase 1)
     *   Security/Perf Risks (Phase 2)
     *   Proposed Doc Plan (Phase 3)
 2.  **Ask**:

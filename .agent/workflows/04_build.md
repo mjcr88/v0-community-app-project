@@ -100,6 +100,7 @@ When `/build` (or `/execute`) is triggered, follow this **6-Phase Process**:
 > **Agents**: Specialist(s) + `debugger` (if needed)
 
 1.  **Git Safety**:
+    *   **Action**: check current git status, ensure we're working with a clean new branch and are based on remote main 
     *   **Action**: `git commit` frequently locally. Push to remote.
     *   **Draft PR**: Create a **Draft PR** early to capture the diff. Log PR link in Worklog.
 2.  **Multi-Agent Coordination**:

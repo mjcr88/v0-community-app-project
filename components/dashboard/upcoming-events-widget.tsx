@@ -42,6 +42,7 @@ interface Event {
   custom_location_name?: string | null
   flag_count?: number
   status?: "draft" | "published" | "cancelled"
+  parent_event_id?: string | null
 }
 
 interface UpcomingEventsWidgetProps {
@@ -223,6 +224,7 @@ export function UpcomingEventsWidget({ slug, userId, tenantId }: UpcomingEventsW
                         maxAttendees={event.max_attendees}
                         currentAttendeeCount={event.attending_count}
                         rsvpDeadline={event.rsvp_deadline}
+                        isSeries={!!event.parent_event_id}
                       />
                     </div>
                   </div>

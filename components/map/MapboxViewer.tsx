@@ -981,13 +981,18 @@ export function MapboxFullViewer({
                                         "fill-color": [
                                             "coalesce",
                                             ["get", "color"], // Prefer custom color
-                                            "#86B25C" // Asparagus (matches Admin Map)
+                                            [
+                                                "match",
+                                                ["get", "occupancy"],
+                                                "occupied", "#F59E0B", // Warm Amber for occupied
+                                                "#86B25C" // Organic Green for vacant
+                                            ]
                                         ],
                                         "fill-opacity": [
                                             "match",
                                             ["get", "occupancy"],
                                             "occupied", 0.5,
-                                            0.2
+                                            0.3 // Updated to 30% per design doc
                                         ],
                                     }}
                                 />

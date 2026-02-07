@@ -1,6 +1,6 @@
 # Requirements: User Location Beacon (Live Blue Dot)
 - **Issue**: [#86](https://github.com/mjcr88/v0-community-app-project/issues/86)
-- **Status**: Implemented (2026-02-06)
+- **Status**: Implemented — QA In Progress (2026-02-06)
 
 
 ## Problem Statement

@@ -9,6 +9,14 @@
     - [To be filled after reading patterns]
 
 ## Clarifications (Socratic Gate)
+> [!IMPORTANT]
+> **Hotfix 2026-02-06**: A regression was found where `path_length` and `elevation_gain` were stored as TEXT in the database but expected as NUMBER in the app, causing the Resident Map to crash or render blank. 
+> - **Fix**: Database columns altered to `numeric`.
+> - **Code**: `getLocations` updated to safely cast these fields to numbers.
+> - **Robustness**: Updated `getLocations` to use explicit Foreign Key syntax (`neighborhoods!locations_neighborhood_id_fkey`) to prevent implicit join failures.
+> - **Reference**: Logic in `lib/data/locations.ts` updated.
+
+## Original Context
 - **Legacy Data**: Confirmed no migration needed for existing geometries. Current data volume: ~460 lots, ~6 facilities.
 - **Color Workflow**: Confirmed "Set Default on Import + Edit Individually Later".
 - **Geometry Type**: Heterogeneous types supported. Parser MUST NOT aggressively merge disconnected LineStrings into Polygons.

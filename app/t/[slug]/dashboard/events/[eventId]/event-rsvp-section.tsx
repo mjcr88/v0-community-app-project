@@ -248,7 +248,11 @@ export function EventRsvpSection({
               disabled={isLoading || !canRsvp}
               className="gap-2"
             >
-              <Check className="h-4 w-4" />
+              {isLoading && currentStatus === "yes" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Check className="h-4 w-4" />
+              )}
               Attending
             </Button>
             <Button
@@ -258,7 +262,11 @@ export function EventRsvpSection({
               disabled={isLoading || isDeadlinePassed}
               className="gap-2"
             >
-              <HelpCircle className="h-4 w-4" />
+              {isLoading && currentStatus === "maybe" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <HelpCircle className="h-4 w-4" />
+              )}
               Maybe
             </Button>
             <Button
@@ -268,7 +276,11 @@ export function EventRsvpSection({
               disabled={isLoading || isDeadlinePassed}
               className="gap-2"
             >
-              <X className="h-4 w-4" />
+              {isLoading && currentStatus === "no" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <X className="h-4 w-4" />
+              )}
               Not Attending
             </Button>
           </div>

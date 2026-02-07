@@ -553,6 +553,8 @@ export async function updateEvent(
       }
     }
 
+
+
     // Handle visibility scope changes
     if (data.visibility_scope === "neighborhood" && data.neighborhood_ids) {
       // Clear existing neighborhoods

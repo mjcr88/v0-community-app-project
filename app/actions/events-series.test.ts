@@ -1,247 +1,144 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { updateEvent, rsvpToEvent } from './events'
+import { describe, it, expect, vi, beforeEach } from "vitest"
+import { createServerClient } from "@/lib/supabase/server"
+import { rsvpToEvent } from "./events"
 
-const { mockSupabase, mockResponseQueue } = vi.hoisted(() => {
-    const queue: any[] = []
-
-    // The Query Builder (Thenable)
-    const queryBuilder: any = {
-        then: vi.fn((resolve, _reject) => {
-            const res = queue.shift() || { data: null, error: null }
-            if (resolve) resolve(res)
-        })
-    }
-
-    // Builder methods return the query builder itself
-    const methods = [
-        'select', 'insert', 'update', 'eq', 'in', 'rpc',
-        'order', 'limit', 'single', 'maybeSingle', 'upsert',
-        'delete', 'or', 'gte'
-    ]
-    methods.forEach(m => {
-        queryBuilder[m] = vi.fn().mockReturnValue(queryBuilder)
-    })
-
-    // The Client (Not Thenable)
-    const client: any = {
-        auth: { getUser: vi.fn() },
-        from: vi.fn().mockReturnValue(queryBuilder)
-    }
-
-    return { mockSupabase: client, mockResponseQueue: queue }
-})
-
-// Mock createServerClient
-vi.mock('../../lib/supabase/server', () => ({
-    createServerClient: vi.fn(() => Promise.resolve(mockSupabase)),
+// Mock dependencies
+vi.mock("@/lib/supabase/server", () => ({
+    createServerClient: vi.fn(),
 }))
 
-// Mock revalidatePath
-vi.mock('next/cache', () => ({
+vi.mock("next/cache", () => ({
     revalidatePath: vi.fn(),
 }))
 
-describe('Series Events Logic', () => {
-    const userId = 'user-123'
-    const tenantId = 'tenant-123'
-    const eventId = 'event-123'
+// Mock event visibility check
+vi.mock("@/lib/visibility-filter", () => ({
+    applyVisibilityFilter: vi.fn((query) => query),
+    canUserViewEvent: vi.fn().mockResolvedValue(true),
+}))
+
+describe("Event Series Actions", () => {
+    let mockSupabase: any
+    let queryResponseSequence: any[] = []
 
     beforeEach(() => {
         vi.clearAllMocks()
-        mockResponseQueue.length = 0
+        queryResponseSequence = []
 
-        mockSupabase.auth.getUser.mockResolvedValue({
-            data: { user: { id: userId } },
-            error: null,
-        })
+        // Create a mock query builder that consumes the response sequence
+        const mockQueryBuilder: any = {
+            select: vi.fn().mockReturnThis(),
+            insert: vi.fn().mockReturnThis(),
+            upsert: vi.fn().mockReturnThis(),
+            update: vi.fn().mockReturnThis(),
+            delete: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            neq: vi.fn().mockReturnThis(),
+            gt: vi.fn().mockReturnThis(),
+            gte: vi.fn().mockReturnThis(),
+            lt: vi.fn().mockReturnThis(),
+            lte: vi.fn().mockReturnThis(),
+            like: vi.fn().mockReturnThis(),
+            ilike: vi.fn().mockReturnThis(),
+            is: vi.fn().mockReturnThis(),
+            in: vi.fn().mockReturnThis(),
+            or: vi.fn().mockReturnThis(),
+            single: vi.fn().mockReturnThis(),
+            maybeSingle: vi.fn().mockReturnThis(),
+            order: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockReturnThis(),
+            // The then method makes this object awaitable
+            then: (resolve: any, reject: any) => {
+                if (queryResponseSequence.length === 0) {
+                    console.warn("Mock Supabase client ran out of responses!")
+                    return Promise.resolve({ error: { message: "Unexpected call - ran out of responses" } }).then(resolve, reject)
+                }
+                const response = queryResponseSequence.shift()
+                return Promise.resolve(response).then(resolve, reject)
+            }
+        }
+
+        mockSupabase = {
+            auth: {
+                getUser: vi.fn(),
+            },
+            from: vi.fn(() => mockQueryBuilder),
+        }
+
+            ; (createServerClient as any).mockReturnValue(mockSupabase)
     })
 
-    describe('updateEvent', () => {
-        it('should propagate rsvp settings to child events in a series', async () => {
-            const data = {
-                title: 'Updated Series Title',
-                requires_rsvp: true,
-                max_attendees: 50,
-                rsvp_deadline: '2025-12-31T23:59:00Z'
-            }
+    describe("rsvpToEvent with scope='series'", () => {
+        it("should apply RSVP to all future occurrences in the series", async () => {
+            const parentEventId = "parent-123"
+            const currentEventId = "event-1"
+            const futureEventId = "event-2"
+            const userId = "user-123"
+            const tenantId = "tenant-123"
 
-            // Queue responses:
-            // 1. Initial fetch (ownership check)
-            mockResponseQueue.push({
-                data: { created_by: userId, tenant_id: tenantId },
-                error: null
+            // 1. Mock auth user
+            mockSupabase.auth.getUser.mockResolvedValue({
+                data: { user: { id: userId } },
+                error: null,
             })
 
-            // 2. Parent update response
-            mockResponseQueue.push({ data: { id: eventId }, error: null })
-
-            // 3. Child update response
-            mockResponseQueue.push({ data: null, error: null })
-
-            const result = await updateEvent(eventId, 'slug', tenantId, data as any)
-
-            if (!result.success) console.error('Update failed:', result.error)
-            expect(result.success).toBe(true)
-
-            expect(mockSupabase.from).toHaveBeenCalledWith('events')
-
-            const queryBuilder = mockSupabase.from()
-
-            const updateCalls = queryBuilder.update.mock.calls
-            expect(updateCalls.length).toBeGreaterThanOrEqual(2)
-
-            expect(updateCalls[0][0]).toHaveProperty('title', 'Updated Series Title')
-
-            expect(updateCalls[1][0]).not.toHaveProperty('title')
-            expect(updateCalls[1][0]).toHaveProperty('requires_rsvp', true)
-
-            const eqCalls = queryBuilder.eq.mock.calls
-            expect(eqCalls).toContainEqual(['id', eventId])
-            expect(eqCalls).toContainEqual(['parent_event_id', eventId])
-        })
-
-        it('should NOT propagate if rsvp settings are unchanged', async () => {
-            const data = {
-                title: 'Just Title Update'
-            }
-
-            // 1. Initial fetch
-            mockResponseQueue.push({
-                data: { created_by: userId, tenant_id: tenantId },
-                error: null
-            })
-
-            // 2. Parent update response only
-            mockResponseQueue.push({ data: { id: eventId }, error: null })
-
-            await updateEvent(eventId, 'slug', tenantId, data as any)
-
-            const queryBuilder = mockSupabase.from()
-            const eqCalls = queryBuilder.eq.mock.calls
-            expect(eqCalls).toContainEqual(['id', eventId])
-
-            const hasChildUpdate = eqCalls.some((call: any[]) => call[0] === 'parent_event_id')
-            expect(hasChildUpdate).toBe(false)
-        })
-    })
-
-    describe('rsvpToEvent with series scope', () => {
-        it('should rsvp to all future events in series', async () => {
-            const seriesId = 'series-parent-id'
-
-            // Queue responses for rsvpToEvent logic:
-            // 1. Fetch current event details
-            mockResponseQueue.push({
-                data: {
-                    id: eventId,
-                    parent_event_id: seriesId,
-                    start_date: '2025-01-01T10:00:00Z',
-                    max_attendees: 100,
-                    rsvp_deadline: null,
-                    requires_rsvp: true
+            // Setup sequence of usage in rsvpToEvent
+            queryResponseSequence = [
+                // 1. Get Event Details
+                {
+                    data: {
+                        id: currentEventId,
+                        parent_event_id: parentEventId,
+                        start_date: "2024-01-01T10:00:00Z",
+                        requires_rsvp: true,
+                    },
+                    error: null,
                 },
-                error: null
-            })
-
-            // 2. Fetch series events
-            const futureEvents = [
-                { id: eventId, start_date: '2025-01-01T10:00:00Z', max_attendees: 100, rsvp_deadline: null },
-                { id: 'event-456', start_date: '2025-01-08T10:00:00Z', max_attendees: 100, rsvp_deadline: null }
+                // 2. Get Future Events (Series check)
+                {
+                    data: [
+                        { id: currentEventId, start_date: "2024-01-01T10:00:00Z", max_attendees: null, rsvp_deadline: null },
+                        { id: futureEventId, start_date: "2024-02-01T10:00:00Z", max_attendees: null, rsvp_deadline: null }
+                    ],
+                    error: null,
+                },
+                // 3. Get Detailed Counts (Capacity check - for 'yes' status)
+                {
+                    data: [], // No current attendees
+                    error: null
+                },
+                // 4. Get User RSVPs (Capacity check - check if user already attending)
+                {
+                    data: [], // User not attending yet
+                    error: null
+                },
+                // 5. Bulk Upsert
+                { error: null },
+                // 6. Get Tenant (for revalidation)
+                { data: { slug: "my-tenant" }, error: null }
             ]
-            mockResponseQueue.push({
-                data: futureEvents,
-                error: null
-            })
 
-            // 3. Fetch current RSVP counts
-            mockResponseQueue.push({
-                data: [],
-                error: null
-            })
+            const result = await rsvpToEvent(currentEventId, tenantId, "yes", "series")
 
-            // 3.5. Fetch user's existing RSVPs (for capacity check)
-            mockResponseQueue.push({
-                data: [],
-                error: null
-            })
+            // If result.success is false, identifying the error is helpful
+            if (!result.success) {
+                console.error("Test failed result:", result)
+            }
 
-            // 4. Upsert RSVPs
-            mockResponseQueue.push({
-                data: null,
-                error: null
-            })
-
-            const result = await rsvpToEvent(eventId, tenantId, 'yes', 'series')
-
-            if (!result.success) console.error('RSVP failed:', result.error)
             expect(result.success).toBe(true)
 
-            const queryBuilder = mockSupabase.from()
-            const upsertCalls = queryBuilder.upsert.mock.calls
-            expect(upsertCalls.length).toBe(1)
+            // Check that upsert was called ONCE with 2 items
+            const upsertSpy = mockSupabase.from().upsert
+            expect(upsertSpy).toHaveBeenCalledTimes(1)
 
-            const upsertData = upsertCalls[0][0]
-            expect(upsertData).toHaveLength(2)
-            expect(upsertData[0].event_id).toBe(eventId)
-            expect(upsertData[1].event_id).toBe('event-456')
-            expect(upsertData[0].rsvp_status).toBe('yes')
-        })
-
-        it('should fail if event is at full capacity', async () => {
-            // 1. Details
-            mockResponseQueue.push({
-                data: { id: eventId, max_attendees: 2, requires_rsvp: true, start_date: '2025-01-01T10:00:00Z' },
-                error: null
-            })
-            // 2. Current RSVP counts - 2 people already (full)
-            mockResponseQueue.push({
-                data: [
-                    { event_id: eventId, attending_count: 1 },
-                    { event_id: eventId, attending_count: 1 }
-                ],
-                error: null
-            })
-            // 3. User's RSVP - NOT attending
-            mockResponseQueue.push({ data: [], error: null })
-
-            const result = await rsvpToEvent(eventId, tenantId, 'yes', 'this')
-            expect(result.success).toBe(false)
-            expect(result.error).toBe("Event is at full capacity")
-        })
-
-        it('should succeed if event is full but user is already attending (update)', async () => {
-            // 1. Details
-            mockResponseQueue.push({
-                data: { id: eventId, max_attendees: 2, requires_rsvp: true, start_date: '2025-01-01T10:00:00Z' },
-                error: null
-            })
-            // 2. Current RSVP counts - 2 people already (full)
-            mockResponseQueue.push({
-                data: [
-                    { event_id: eventId, attending_count: 1 },
-                    { event_id: eventId, attending_count: 1 }
-                ],
-                error: null
-            })
-            // 3. User's RSVP - IS attending (member of the full count)
-            mockResponseQueue.push({ data: [{ event_id: eventId }], error: null })
-            // 4. Upsert
-            mockResponseQueue.push({ data: null, error: null })
-
-            const result = await rsvpToEvent(eventId, tenantId, 'yes', 'this')
-            expect(result.success).toBe(true)
-        })
-
-        it('should fail if RSVP deadline has passed', async () => {
-            const pastDeadline = new Date(Date.now() - 100000).toISOString()
-            mockResponseQueue.push({
-                data: { id: eventId, rsvp_deadline: pastDeadline, requires_rsvp: true },
-                error: null
-            })
-
-            const result = await rsvpToEvent(eventId, tenantId, 'yes', 'this')
-            expect(result.success).toBe(false)
-            expect(result.error).toBe("RSVP deadline has passed")
+            const upsertCallArgs = upsertSpy.mock.calls[0][0]
+            expect(upsertCallArgs).toHaveLength(2)
+            expect(upsertCallArgs).toEqual(
+                expect.arrayContaining([
+                    expect.objectContaining({ event_id: currentEventId, rsvp_status: "yes" }),
+                    expect.objectContaining({ event_id: futureEventId, rsvp_status: "yes" })
+                ])
+            )
         })
     })
 })

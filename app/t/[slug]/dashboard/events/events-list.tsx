@@ -11,6 +11,7 @@ import { RioImage } from "@/components/library/rio-image"
 import { PulsatingButton } from "@/components/library/pulsating-button"
 import { EnhancedEventCard } from "@/components/events/enhanced-event-card"
 import { FriendsGoingBadge } from "@/components/events/friends-going-badge"
+import { RioEmptyState } from "@/components/exchange/rio-empty-state"
 
 interface Event {
   id: string
@@ -57,10 +58,6 @@ interface Event {
   parent_event_id?: string | null
   recurrence_rule?: any | null
 }
-
-import { RioEmptyState } from "@/components/exchange/rio-empty-state"
-
-// ... (keep existing imports)
 
 export function EventsList({
   events,

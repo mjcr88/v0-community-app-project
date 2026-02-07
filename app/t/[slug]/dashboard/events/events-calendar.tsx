@@ -43,6 +43,7 @@ interface Event {
   custom_location_name?: string | null
   flag_count?: number
   status?: "draft" | "published" | "cancelled"
+  parent_event_id?: string | null
 }
 
 import { RioEmptyState } from "@/components/exchange/rio-empty-state"
@@ -241,6 +242,7 @@ export function EventsCalendar({
                           maxAttendees={event.max_attendees}
                           currentAttendeeCount={event.attending_count || 0}
                           rsvpDeadline={event.rsvp_deadline}
+                          isSeries={!!event.parent_event_id}
                         />
                       </div>
                     </CardContent>

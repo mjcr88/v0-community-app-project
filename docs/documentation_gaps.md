@@ -42,3 +42,5 @@
 - **2026-01-29**: Missing API documentation for `postComment` in `docs/02-technical/api/api-reference.md`.
 - **2026-02-04**: [DONE] Missing `docs/02-technical/schema/tables/locations.md` (Domain Architecture for Locations).
 - **2026-02-04**: [DONE] Missing specification for map styling/theming and dynamic color customization.
+- **2026-02-07**: Missing RLS policy documentation for 'events' table.
+- **2026-02-07**: Missing API documentation for 'app/actions/events.ts'.

@@ -27,6 +27,13 @@ supabase.auth.admin.create_user({
 ```
 **Impact:** If missed, the User logs in successfully (new ID), but queries to `public.users` fail (RLS blocks access) because the authenticated ID doesn't match the existing foreign key record.
 
+### 5. Testing Supabase Clients in Vitest
+**Context:** Supabase JS client v2 returns a "thenable" object (Promise-like) from `createServerClient`.
+**The Gotcha:**
+- If you mock the client itself as "thenable" (having a `.then` method), `await createServerClient()` will try to resolve it immediately during initialization.
+- If you mock chained methods like `.from().select()` by returning `this`, the client itself becomes the query builder.
+- **Pattern:** Always separate the `client` (not thenable) from the `queryBuilder` (thenable) in your mocks. Use `vi.hoisted` to ensure the mock factory runs before imports.
+
 ## GeoJSON & Map Data
 
 ### 2. DB Constraints vs UI Options

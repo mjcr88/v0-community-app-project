@@ -77,50 +77,63 @@ export async function GET() {
         })
 
         // ---------------------------------------------------------
-        // 2. Events (Score: 70) - Upcoming in next 7 days, RSVP'd, or Saved
+        // 2. Events (Score: 70) - Upcoming in next 7 days, RSVP'd (Yes/Maybe), or Saved
         // ---------------------------------------------------------
-        console.log('[Priority Feed] Fetching events between:', nowIso, 'and', nextWeek)
-        const { data: events, error: eventsError } = await supabase
-            .from("events")
-            .select(`
-                id, 
-                title, 
-                description, 
-                start_date, 
-                end_date,
-                event_rsvps(user_id, rsvp_status)
-            `)
-            .eq("tenant_id", resident.tenant_id)
-            .gte("start_date", nowIso) // Starts in the future or now
-            .lte("start_date", nextWeek) // Within next 7 days
-            .order("start_date", { ascending: true })
-            .limit(10)
 
-        if (eventsError) {
-            console.error('[Priority Feed] Events query error:', eventsError)
-        }
-        console.log('[Priority Feed] Found', events?.length || 0, 'events')
-        if (events && events.length > 0) {
-            console.log('[Priority Feed] Events:', events.map(e => ({ title: e.title, start: e.start_date, rsvps: e.event_rsvps })))
-        }
+        // Step A: Get Interacted Event IDs (RSVP or Saved)
+        const { data: userRsvps } = await supabase
+            .from("event_rsvps")
+            .select("event_id, rsvp_status")
+            .eq("user_id", user.id)
+            .in("rsvp_status", ["yes", "maybe"])
 
-        if (events && events.length > 0) {
-            // Fetch saved status
-            const { data: savedEvents } = await supabase
-                .from("saved_events")
-                .select("event_id")
-                .eq("user_id", user.id)
-                .in("event_id", events.map(e => e.id))
+        const { data: userSaved } = await supabase
+            .from("saved_events")
+            .select("event_id")
+            .eq("user_id", user.id)
 
-            const savedIds = new Set(savedEvents?.map(s => s.event_id) || [])
+        const interactedEventIds = new Set<string>()
+        const rsvpMap = new Map<string, string>()
+        const savedSet = new Set<string>()
 
-            events.forEach(event => {
+        userRsvps?.forEach(r => {
+            interactedEventIds.add(r.event_id)
+            rsvpMap.set(r.event_id, r.rsvp_status)
+        })
+
+        userSaved?.forEach(s => {
+            interactedEventIds.add(s.event_id)
+            savedSet.add(s.event_id)
+        })
+
+        // Step B: Fetch Details for these events IF they are upcoming
+        if (interactedEventIds.size > 0) {
+            console.log('[Priority Feed] Fetching interacted events between:', nowIso, 'and', nextWeek)
+            const { data: events, error: eventsError } = await supabase
+                .from("events")
+                .select(`
+                    id, 
+                    title, 
+                    description, 
+                    start_date, 
+                    end_date
+                `)
+                .in("id", Array.from(interactedEventIds)) // Only fetching what we care about
+                .gte("end_date", nowIso) // Not ended yet (includes ongoing)
+                .lte("start_date", nextWeek) // Within next 7 days
+                .order("start_date", { ascending: true })
+                .limit(10)
+
+            if (eventsError) {
+                console.error('[Priority Feed] Events query error:', eventsError)
+            }
+
+            console.log('[Priority Feed] Found', events?.length || 0, 'relevant interacted events')
+
+            events?.forEach(event => {
                 const isOngoing = new Date(event.start_date) <= now && new Date(event.end_date) >= now
-                // @ts-ignore
-                const rsvps = Array.isArray(event.event_rsvps) ? event.event_rsvps : []
-                const userRsvp = rsvps.find((rsvp: any) => rsvp.user_id === user.id)
-                const rsvpStatus = userRsvp?.rsvp_status || null
-                const isSaved = savedIds.has(event.id)
+                const rsvpStatus = rsvpMap.get(event.id) || null
+                const isSaved = savedSet.has(event.id)
 
                 console.log(`[Priority Feed] Event "${event.title}": rsvpStatus=${rsvpStatus}, isSaved=${isSaved}, isOngoing=${isOngoing}`)
 
@@ -142,6 +155,8 @@ export async function GET() {
                     is_saved: isSaved
                 })
             })
+        } else {
+            console.log('[Priority Feed] No interacted events found.')
         }
 
         // ---------------------------------------------------------

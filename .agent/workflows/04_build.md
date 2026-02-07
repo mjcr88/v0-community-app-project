@@ -44,7 +44,7 @@ When `/build` (or `/execute`) is triggered, follow this **6-Phase Process**:
 3.  **Activation**:
     *   **Constraint**: Once User selects the Issue, verify it matches the PRD scope.
     *   **Branch Validation**: `run_command` to check `git status`. Ensure clean state on `main` or correct feature branch.
-    *   **Switch**: `git checkout -b feat/{issue_number}-{slug}`.
+    *   **Switch**: `git fetch origin main && git checkout -b feat/{issue_number}-{slug}` (always base on latest main).
 4.  **Status Update**:
     *   **Action**: Move the GitHub Issue to **"In Progress"** on the board.
 5.  **Artifact Creation (Worklog)**:
@@ -100,6 +100,7 @@ When `/build` (or `/execute`) is triggered, follow this **6-Phase Process**:
 > **Agents**: Specialist(s) + `debugger` (if needed)
 
 1.  **Git Safety**:
+    *   **Action**: check current git status, ensure we're working with a clean new branch and are based on remote main 
     *   **Action**: `git commit` frequently locally. Push to remote.
     *   **Draft PR**: Create a **Draft PR** early to capture the diff. Log PR link in Worklog.
 2.  **Multi-Agent Coordination**:

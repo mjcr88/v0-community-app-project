@@ -252,7 +252,7 @@ export function EventRsvpSection({
         description="This event is part of a recurring series. How would you like to RSVP?"
         className="px-0 sm:px-6"
       >
-        <div className="flex flex-col gap-3 py-4">
+        <div className="flex flex-col gap-3 py-4 px-4">
           <Button
             variant="outline"
             className="justify-start gap-3 h-auto py-3"

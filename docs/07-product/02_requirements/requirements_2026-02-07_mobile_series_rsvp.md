@@ -1,4 +1,4 @@
-to# Requirements: Mobile Series RSVP UI (Issue #93)
+Requirements: Mobile Series RSVP UI (Issue #93)
 
 ## 1. Context
 *   **Problem:** The current "Series RSVP" logic (added in Issue #63) uses a standard `Dialog` component. On mobile devices, users report that **no dialog appears** (interactions result in immediate success message or no visible UI), preventing selection of "RSVP to Series". The center-aligned modal is also not ergonomically optimized for mobile.

@@ -839,26 +839,22 @@ export async function rsvpToEvent(
     if (status === 'yes') {
       const targetIds = validEventsChecks.map(e => e.id)
 
-      // Get current counts for all these events
-      const { data: counts } = await supabase
-        .from('event_rsvps')
-        .select('event_id')
-        .in('event_id', targetIds)
-        .eq('rsvp_status', 'yes')
-
-      // Aggregate counts
-      const countMap = new Map<string, number>()
-      counts?.forEach(c => {
-        countMap.set(c.event_id, (countMap.get(c.event_id) || 0) + 1) // Each row is 1 attendee usually, unless we support +1s (attending_count)
-        // Wait, we need attending_count sum.
-      })
-
-      // Correct aggregation with attending_count
+      // Get current counts for all these events with attending_count
       const { data: detailedCounts } = await supabase
         .from('event_rsvps')
         .select('event_id, attending_count')
         .in('event_id', targetIds)
         .eq('rsvp_status', 'yes')
+
+      // Check if user is already attending these events
+      const { data: userRsvps } = await supabase
+        .from('event_rsvps')
+        .select('event_id')
+        .in('event_id', targetIds)
+        .eq('user_id', user.id)
+        .eq('rsvp_status', 'yes')
+
+      const userAttendingSet = new Set(userRsvps?.map(r => r.event_id))
 
       const realCountMap = new Map<string, number>()
       detailedCounts?.forEach(c => {
@@ -869,9 +865,11 @@ export async function rsvpToEvent(
       eventsToRsvp = validEventsChecks.filter(e => {
         if (!e.max_attendees) return true
         const current = realCountMap.get(e.id) || 0
-        // If we are already attending, we don't take a new spot (simplification)
-        // Ideally we check if we are *changing* status, but 'yes' -> 'yes' is same.
-        // For now, if full, we block new RSVPs.
+        const isAttending = userAttendingSet.has(e.id)
+
+        // If already attending, allow updates (don't block due to capacity)
+        if (isAttending) return true
+
         return current < e.max_attendees
       })
 

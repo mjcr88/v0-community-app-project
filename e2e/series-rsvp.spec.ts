@@ -1,12 +1,35 @@
 import { test, expect } from '@playwright/test';
 const TEST_EVENT_SERIES_ID = 'TEST-SERIES-1'; // Mock or seed this
-const TEST_EVENT_ID = 'TEST-EVENT-1';
+const TEST_EVENT_ID = 'test-event-series-123';
+const TEST_TENANT_SLUG = 'demo';
 
 test.describe('Series RSVP', () => {
     test.beforeEach(async ({ page }) => {
-        // Mock Login State (Using Vercel Preview cookies or dev bypass)
-        // For now, assuming local dev env with auto-login or public access for testing
-        await page.goto('/t/demo/dashboard/events');
+        // Intercept Supabase calls to provide stable test data
+        await page.route('**/rest/v1/events?*', async (route) => {
+            const url = new URL(route.request().url());
+            if (url.searchParams.get('id') === `eq.${TEST_EVENT_ID}`) {
+                await route.fulfill({
+                    status: 200,
+                    contentType: 'application/json',
+                    body: JSON.stringify([{
+                        id: TEST_EVENT_ID,
+                        parent_event_id: 'series-parent-456',
+                        title: 'E2E Test Series Event',
+                        description: 'A recurring test event',
+                        start_date: new Date().toISOString(),
+                        end_date: new Date(Date.now() + 3600000).toISOString(),
+                        max_attendees: 50,
+                        requires_rsvp: true,
+                        tenant_id: 'tenant-123'
+                    }])
+                });
+            } else {
+                await route.continue();
+            }
+        });
+
+        await page.goto(`/t/${TEST_TENANT_SLUG}/dashboard/events/${TEST_EVENT_ID}`);
     });
 
     test('should show series RSVP dialog options', async ({ page }) => {

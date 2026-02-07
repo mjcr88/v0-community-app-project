@@ -6,7 +6,7 @@ const { mockSupabase, mockResponseQueue } = vi.hoisted(() => {
 
     // The Query Builder (Thenable)
     const queryBuilder: any = {
-        then: vi.fn((resolve, reject) => {
+        then: vi.fn((resolve, _reject) => {
             const res = queue.shift() || { data: null, error: null }
             if (resolve) resolve(res)
         })
@@ -120,7 +120,7 @@ describe('Series Events Logic', () => {
             const eqCalls = queryBuilder.eq.mock.calls
             expect(eqCalls).toContainEqual(['id', eventId])
 
-            const hasChildUpdate = eqCalls.some(call => call[0] === 'parent_event_id')
+            const hasChildUpdate = eqCalls.some((call: any[]) => call[0] === 'parent_event_id')
             expect(hasChildUpdate).toBe(false)
         })
     })
@@ -179,6 +179,63 @@ describe('Series Events Logic', () => {
             expect(upsertData[0].event_id).toBe(eventId)
             expect(upsertData[1].event_id).toBe('event-456')
             expect(upsertData[0].rsvp_status).toBe('yes')
+        })
+
+        it('should fail if event is at full capacity', async () => {
+            // 1. Details
+            mockResponseQueue.push({
+                data: { id: eventId, max_attendees: 2, requires_rsvp: true, start_date: '2025-01-01T10:00:00Z' },
+                error: null
+            })
+            // 2. Current RSVP counts - 2 people already (full)
+            mockResponseQueue.push({
+                data: [
+                    { event_id: eventId, attending_count: 1 },
+                    { event_id: eventId, attending_count: 1 }
+                ],
+                error: null
+            })
+            // 3. User's RSVP - NOT attending
+            mockResponseQueue.push({ data: [], error: null })
+
+            const result = await rsvpToEvent(eventId, tenantId, 'yes', 'this')
+            expect(result.success).toBe(false)
+            expect(result.error).toBe("Event is at full capacity")
+        })
+
+        it('should succeed if event is full but user is already attending (update)', async () => {
+            // 1. Details
+            mockResponseQueue.push({
+                data: { id: eventId, max_attendees: 2, requires_rsvp: true, start_date: '2025-01-01T10:00:00Z' },
+                error: null
+            })
+            // 2. Current RSVP counts - 2 people already (full)
+            mockResponseQueue.push({
+                data: [
+                    { event_id: eventId, attending_count: 1 },
+                    { event_id: eventId, attending_count: 1 }
+                ],
+                error: null
+            })
+            // 3. User's RSVP - IS attending (member of the full count)
+            mockResponseQueue.push({ data: [{ event_id: eventId }], error: null })
+            // 4. Upsert
+            mockResponseQueue.push({ data: null, error: null })
+
+            const result = await rsvpToEvent(eventId, tenantId, 'yes', 'this')
+            expect(result.success).toBe(true)
+        })
+
+        it('should fail if RSVP deadline has passed', async () => {
+            const pastDeadline = new Date(Date.now() - 100000).toISOString()
+            mockResponseQueue.push({
+                data: { id: eventId, rsvp_deadline: pastDeadline, requires_rsvp: true },
+                error: null
+            })
+
+            const result = await rsvpToEvent(eventId, tenantId, 'yes', 'this')
+            expect(result.success).toBe(false)
+            expect(result.error).toBe("RSVP deadline has passed")
         })
     })
 })

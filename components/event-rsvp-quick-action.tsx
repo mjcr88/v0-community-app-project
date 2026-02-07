@@ -39,7 +39,7 @@ export function EventRsvpQuickAction({
   const [isPending, startTransition] = useTransition()
   const [localRsvpStatus, setLocalRsvpStatus] = useState(currentRsvpStatus)
   const [localIsSaved, setLocalIsSaved] = useState(isSaved)
-  const [showseriesDialog, setShowSeriesDialog] = useState(false)
+  const [showSeriesDialog, setShowSeriesDialog] = useState(false)
   const [pendingStatus, setPendingStatus] = useState<"yes" | "maybe" | "no" | null>(null)
 
   if (!userId) return null
@@ -184,13 +184,13 @@ export function EventRsvpQuickAction({
       </div>
 
       <ResponsiveDialog
-        isOpen={showseriesDialog}
+        isOpen={showSeriesDialog}
         setIsOpen={setShowSeriesDialog}
         title="RSVP to Series"
         description="This event is part of a recurring series. How would you like to RSVP?"
         className="px-0 sm:px-6" // Remove padding on mobile drawer body to control it manually
       >
-        <div className="flex flex-col gap-3 py-4">
+        <div className="flex flex-col gap-3 py-4 px-4">
           <Button
             variant="outline"
             className="justify-start gap-3 h-auto py-3"

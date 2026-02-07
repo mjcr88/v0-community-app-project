@@ -119,7 +119,7 @@ export async function GET() {
                     end_date
                 `)
                 .in("id", Array.from(interactedEventIds)) // Only fetching what we care about
-                .gte("start_date", nowIso) // Starts in the future or now
+                .gte("end_date", nowIso) // Not ended yet (includes ongoing)
                 .lte("start_date", nextWeek) // Within next 7 days
                 .order("start_date", { ascending: true })
                 .limit(10)

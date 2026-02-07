@@ -116,10 +116,12 @@ export async function GET() {
                     title, 
                     description, 
                     start_date, 
-                    end_date
+                    end_date,
+                    parent_event_id,
+                    recurrence_rule
                 `)
                 .in("id", Array.from(interactedEventIds)) // Only fetching what we care about
-                .gte("end_date", nowIso) // Not ended yet (includes ongoing)
+                .or(`end_date.is.null,end_date.gte.${nowIso}`) // Not ended yet (includes ongoing with null end_date)
                 .lte("start_date", nextWeek) // Within next 7 days
                 .order("start_date", { ascending: true })
                 .limit(10)
@@ -152,7 +154,10 @@ export async function GET() {
                     score: score,
                     is_ongoing: isOngoing,
                     rsvp_status: rsvpStatus === 'yes' ? 'going' : rsvpStatus === 'no' ? 'not_going' : rsvpStatus,
-                    is_saved: isSaved
+                    is_saved: isSaved,
+                    is_series: !!event.parent_event_id || !!event.recurrence_rule,
+                    parent_event_id: event.parent_event_id,
+                    start_date: event.start_date
                 })
             })
         } else {

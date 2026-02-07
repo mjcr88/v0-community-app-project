@@ -1,15 +1,8 @@
 import { defineConfig } from 'vitest/config'
-import path from 'path'
-import { fileURLToPath } from 'url'
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
+import tsconfigPaths from 'vite-tsconfig-paths'
 
 export default defineConfig({
-    resolve: {
-        alias: {
-            '@': path.resolve(__dirname, './')
-        }
-    },
+    plugins: [tsconfigPaths()],
     test: {
         environment: 'node',
         include: ['app/actions/events-series.test.ts'],

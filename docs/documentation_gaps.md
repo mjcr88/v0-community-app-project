@@ -44,3 +44,5 @@
 - **2026-02-04**: [DONE] Missing specification for map styling/theming and dynamic color customization.
 - **2026-02-07**: Missing RLS policy documentation for 'events' table.
 - **2026-02-07**: Missing API documentation for 'app/actions/events.ts'.
+- **2026-02-07**: Missing Admin Guide for "Edit This Event Only" (Detachment) workflow.
+- **2026-02-07**: Missing Resident Guide for "Series RSVP" consistency and visual indicators.

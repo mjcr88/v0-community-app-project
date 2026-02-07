@@ -57,7 +57,9 @@ export interface EventWithRelations extends Event {
         rsvps: number
         flags?: number
     }
+    attending_count?: number // Alias for _count.rsvps
     attendee_ids?: string[] // IDs of users who RSVP'd "yes"
+    is_series?: boolean
 }
 
 export interface GetEventsOptions {
@@ -218,7 +220,7 @@ export const getEvents = cache(async (
 
     const { data: events, error } = await query
         .order("start_date", { ascending: true })
-        .order("start_time", { ascending: true, nullsFirst: false })
+        .order("start_time", { ascending: true, nullsFirst: true })
 
     if (error) {
         console.error("[get-events] Error fetching events:", error)
@@ -321,6 +323,7 @@ export const getEvents = cache(async (
             cancellation_reason: event.cancellation_reason,
             parent_event_id: event.parent_event_id,
             recurrence_rule: event.recurrence_rule,
+            is_series: !!event.parent_event_id || !!event.recurrence_rule,
         }
 
         if (enrichWithLocation && event.locations) {
@@ -336,10 +339,13 @@ export const getEvents = cache(async (
         }
 
         if (enrichWithRsvpCount && event.rsvps) {
+            const count = event.rsvps[0]?.count || 0
             base._count = {
                 ...base._count,
-                rsvps: event.rsvps[0]?.count || 0
+                rsvps: count
             }
+            // Alias for frontend compatibility (e.g. UpcomingEventsWidget)
+            base.attending_count = count
         }
 
         if (enrichWithFlagCount) {

@@ -408,6 +408,7 @@ export async function updateEvent(
     custom_location_type?: "pin" | "polygon" | null
     custom_location_path?: Array<{ lat: number; lng: number }> | null
   },
+  scope: "this" | "series" = "this"
 ) {
   try {
     const supabase = await createServerClient()
@@ -420,10 +421,10 @@ export async function updateEvent(
       return { success: false, error: "User not authenticated" }
     }
 
-    // Verify ownership
+    // Verify ownership and check if part of a series
     const { data: existingEvent, error: fetchError } = await supabase
       .from("events")
-      .select("created_by, tenant_id")
+      .select("created_by, tenant_id, parent_event_id, recurrence_rule, start_date")
       .eq("id", eventId)
       .single()
 
@@ -486,23 +487,50 @@ export async function updateEvent(
       updateData.custom_location_coordinates = data.custom_location_path
     }
 
-    const { error: updateError } = await supabase
-      .from("events")
-      .update(updateData)
-      .eq("id", eventId)
+    // Handle series scope
+    if (scope === "series") {
+      const masterEventId = existingEvent.parent_event_id || eventId
 
-    if (updateError) {
-      console.error("[v0] Error updating event:", updateError)
-      return { success: false, error: updateError.message }
+      // Update the master event and all future children
+      const { error: seriesUpdateError } = await supabase
+        .from("events")
+        .update(updateData)
+        .or(`id.eq.${masterEventId},and(parent_event_id.eq.${masterEventId},start_date.gte.${existingEvent.start_date})`)
+
+      if (seriesUpdateError) {
+        console.error("[v0] Error updating event series:", seriesUpdateError)
+        return { success: false, error: seriesUpdateError.message }
+      }
+    } else {
+      // Single event update
+      const { error: updateError } = await supabase
+        .from("events")
+        .update(updateData)
+        .eq("id", eventId)
+
+      if (updateError) {
+        console.error("[v0] Error updating event:", updateError)
+        return { success: false, error: updateError.message }
+      }
+
+      // If this was a child event part of a series AND we are explicitly updating only this occurrence,
+      // we "detach" it by clearing parent_event_id and recurrence_rule.
+      if (existingEvent.parent_event_id) {
+        const { error: detachError } = await detachEventOccurrence(eventId)
+        if (detachError) {
+          console.error("[v0] Error detaching event on update:", detachError)
+        }
+      }
     }
 
     // Propagate specific fields to child events if this is a parent event
     // Fields to propagate: requires_rsvp, rsvp_deadline, max_attendees
     // We only do this if these fields were present in the update data
     const shouldPropagateToChildren =
-      data.requires_rsvp !== undefined ||
-      data.rsvp_deadline !== undefined ||
-      data.max_attendees !== undefined
+      scope === 'series' &&
+      (data.requires_rsvp !== undefined ||
+        data.rsvp_deadline !== undefined ||
+        data.max_attendees !== undefined)
 
     if (shouldPropagateToChildren) {
       const childUpdateData: any = {
@@ -524,6 +552,8 @@ export async function updateEvent(
         // We log but don't fail the parent update
       }
     }
+
+
 
     // Handle visibility scope changes
     if (data.visibility_scope === "neighborhood" && data.neighborhood_ids) {
@@ -590,7 +620,12 @@ export async function updateEvent(
   }
 }
 
-export async function deleteEvent(eventId: string, tenantSlug: string, tenantId: string) {
+export async function deleteEvent(
+  eventId: string,
+  tenantSlug: string,
+  tenantId: string,
+  scope: "this" | "series" = "this"
+) {
   try {
     const supabase = await createServerClient()
 
@@ -605,23 +640,38 @@ export async function deleteEvent(eventId: string, tenantSlug: string, tenantId:
     // Verify ownership
     const { data: existingEvent, error: fetchError } = await supabase
       .from("events")
-      .select("created_by")
+      .select("created_by, parent_event_id, recurrence_rule, start_date")
       .eq("id", eventId)
       .single()
 
     if (fetchError || !existingEvent) {
       return { success: false, error: "Event not found" }
     }
-
     if (existingEvent.created_by !== user.id) {
       return { success: false, error: "You don't have permission to delete this event" }
     }
 
-    const { error: deleteError } = await supabase.from("events").delete().eq("id", eventId)
+    if (scope === "series") {
+      const masterEventId = existingEvent.parent_event_id || eventId
 
-    if (deleteError) {
-      console.error("[v0] Error deleting event:", deleteError)
-      return { success: false, error: deleteError.message }
+      // Delete the master and all children that occur on or after the selected event's date
+      const { error: deleteError } = await supabase
+        .from("events")
+        .delete()
+        .or(`id.eq.${masterEventId},parent_event_id.eq.${masterEventId}`)
+        .gte("start_date", existingEvent.start_date)
+
+      if (deleteError) {
+        console.error("[v0] Error deleting event series:", deleteError)
+        return { success: false, error: deleteError.message }
+      }
+    } else {
+      const { error: deleteError } = await supabase.from("events").delete().eq("id", eventId)
+
+      if (deleteError) {
+        console.error("[v0] Error deleting event:", deleteError)
+        return { success: false, error: deleteError.message }
+      }
     }
 
     revalidatePath(`/t/${tenantSlug}/dashboard/events`)
@@ -634,6 +684,58 @@ export async function deleteEvent(eventId: string, tenantSlug: string, tenantId:
       success: false,
       error: "An unexpected error occurred. Please try again.",
     }
+  }
+}
+
+/**
+ * Detaches an event from its parent series, making it a standalone one-off event.
+ */
+export async function detachEventOccurrence(eventId: string) {
+  try {
+    const supabase = await createServerClient()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: "User not authenticated" }
+    }
+
+    // Verify ownership
+    const { data: event, error: fetchError } = await supabase
+      .from("events")
+      .select("created_by")
+      .eq("id", eventId)
+      .single()
+
+    if (fetchError || !event) {
+      return { success: false, error: "Event not found" }
+    }
+
+    if (event.created_by !== user.id) {
+      return { success: false, error: "You don't have permission to detach this event" }
+    }
+
+    // Clear parent_event_id and recurrence_rule to make it strictly one-off
+    const { error } = await supabase
+      .from("events")
+      .update({
+        parent_event_id: null,
+        recurrence_rule: null,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", eventId)
+
+    if (error) {
+      console.error("[v0] Error detaching occurrence:", error)
+      return { success: false, error: error.message }
+    }
+
+    return { success: true }
+  } catch (error) {
+    console.error("[v0] Unexpected error in detachEventOccurrence:", error)
+    return { success: false, error: "Unexpected error" }
   }
 }
 
@@ -1777,6 +1879,7 @@ export async function cancelEvent(
   tenantSlug: string,
   cancellationReason: string,
   uncancelInstead = false,
+  scope: "this" | "series" = "this"
 ) {
   try {
     const supabase = await createServerClient()
@@ -1803,7 +1906,7 @@ export async function cancelEvent(
     // Get event to check ownership and current status
     const { data: event, error: eventError } = await supabase
       .from("events")
-      .select("id, created_by, status, tenant_id")
+      .select("id, created_by, status, tenant_id, parent_event_id, start_date")
       .eq("id", eventId)
       .eq("tenant_id", tenant.id)
       .single()
@@ -1830,10 +1933,6 @@ export async function cancelEvent(
     if (uncancelInstead) {
       if (!isAdmin) {
         return { success: false, error: "Only admins can uncancel events" }
-      }
-
-      if (event.status !== "cancelled") {
-        return { success: false, error: "Event is not cancelled" }
       }
 
       const { error: updateError } = await supabase
@@ -1870,19 +1969,34 @@ export async function cancelEvent(
       return { success: false, error: "Cancellation reason must be between 10 and 500 characters" }
     }
 
-    const { error: updateError } = await supabase
-      .from("events")
-      .update({
-        status: "cancelled",
-        cancelled_at: new Date().toISOString(),
-        cancellation_reason: trimmedReason,
-        cancelled_by: user.id,
-      })
-      .eq("id", eventId)
+    const cancellationData = {
+      status: "cancelled",
+      cancelled_at: new Date().toISOString(),
+      cancellation_reason: trimmedReason,
+      cancelled_by: user.id,
+    }
 
-    if (updateError) {
-      console.error("[v0] Error cancelling event:", updateError)
-      return { success: false, error: updateError.message }
+    if (scope === "series") {
+      const masterEventId = event.parent_event_id || eventId
+      const { error: seriesCancelError } = await supabase
+        .from("events")
+        .update(cancellationData)
+        .or(`id.eq.${masterEventId},and(parent_event_id.eq.${masterEventId},start_date.gte.${event.start_date})`)
+
+      if (seriesCancelError) {
+        console.error("[v0] Error cancelling event series:", seriesCancelError)
+        return { success: false, error: seriesCancelError.message }
+      }
+    } else {
+      const { error: updateError } = await supabase
+        .from("events")
+        .update(cancellationData)
+        .eq("id", eventId)
+
+      if (updateError) {
+        console.error("[v0] Error cancelling event:", updateError)
+        return { success: false, error: updateError.message }
+      }
     }
 
     revalidatePath(`/t/${tenantSlug}/dashboard/events/${eventId}`)

@@ -219,3 +219,11 @@ const MapboxViewer = dynamic(() => import('./MapboxViewer'), {
 **Problem**: Requesting location permissions on page load (useEffect) causes high rejection rates ("Permission Fatigue") and poor UX.
 **Rule**: NEVER prompt for sensitive permissions (Location, Camera, Mic) on mount. ALWAYS require a user interaction (Click "Find Me") to trigger the permission prompt.
 **Implementation**: Use a hook that monitors permission state but only triggers `navigator.geolocation.getCurrentPosition` inside an `enable()` function bound to a button handler.
+
+### [2026-02-07] Event Bus Sync
+**Type**: Pattern
+**Context**: Issue #78 (RSVP Sync). Independent widgets (Priority Feed, Upcoming List) needed to share ephemeral state without a global store (Redux) or deep Context prop-drilling.
+**Problem**: RSVPing in one widget left the others stale until a full page refresh or server revalidation (slow).
+**Solution**: Use a lightweight, typed Custom Event Bus: `window.dispatchEvent(new CustomEvent('rio-sync', { detail: payload }))`.
+**Rule**: Use only for **ephemeral, cross-widget UI state** (like optimistic updates). Do not use for critical business logic or data persistence. Always namespace events (e.g., `rio-series-rsvp-sync`).
+**Cleanup**: MUST remove event listeners in `useEffect` return function to prevent memory leaks (`window.removeEventListener`).

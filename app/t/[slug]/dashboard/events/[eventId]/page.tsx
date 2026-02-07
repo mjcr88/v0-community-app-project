@@ -364,6 +364,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                 slug={slug}
                 tenantId={tenant.id}
                 eventTitle={event.title}
+                isSeries={event.is_series}
                 eventStatus={event.status}
                 canManageEvent={canManageEvent}
                 isCreator={isCreator}

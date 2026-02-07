@@ -980,11 +980,11 @@ export function MapboxFullViewer({
                                     paint={{
                                         "fill-color": [
                                             "coalesce",
-                                            ["get", "color"], // Prefer custom color
+                                            ["get", "color"],
                                             [
-                                                "match",
-                                                ["get", "occupancy"],
-                                                "occupied", "#F59E0B", // Warm Amber for occupied
+                                                "case",
+                                                ["==", ["get", "occupancy"], "occupied"],
+                                                "#F59E0B", // Warm Amber for occupied
                                                 "#86B25C" // Organic Green for vacant
                                             ]
                                         ],

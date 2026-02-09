@@ -13,8 +13,10 @@ import { Label } from "@/components/library/label"
 import { Alert, AlertDescription } from "@/components/library/alert"
 import { ShineBorder } from "@/components/library/shine-border"
 import { MagicCard } from "@/components/library/magic-card"
+import { Checkbox } from "@/components/library/checkbox"
 import { cn } from "@/lib/utils"
 import { identifyUser, ErrorAnalytics } from "@/lib/analytics"
+import { setSessionPersistence } from "@/app/actions/auth-actions"
 
 interface TenantLoginFormProps {
   tenant: {
@@ -68,6 +70,7 @@ export function TenantLoginForm({ tenant }: TenantLoginFormProps) {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
 
@@ -85,6 +88,9 @@ export function TenantLoginForm({ tenant }: TenantLoginFormProps) {
       })
 
       if (signInError) throw signInError
+
+      // Set session persistence based on "Remember Me"
+      await setSessionPersistence(rememberMe)
 
       const { data: userData } = await supabase
         .from("users")
@@ -213,6 +219,20 @@ export function TenantLoginForm({ tenant }: TenantLoginFormProps) {
                 )}
               </button>
             </div>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="remember"
+              checked={rememberMe}
+              onCheckedChange={(checked: boolean) => setRememberMe(checked)}
+            />
+            <label
+              htmlFor="remember"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-earth-soil"
+            >
+              Remember me
+            </label>
           </div>
 
           <Button

@@ -19,7 +19,7 @@
 - **2026-01-27**: Missing resident guide section for "Home Showcase" features. [Review Item 151884757]
 - **2026-01-27**: Missing 'Link Account' security documentation in 'docs/02-technical/architecture/domains/identity.md'. [Review Item 151893279]
 - 2026-01-27: Missing API docs for '/api/auth/callback'. [Review Item 151893279]
-- 2026-01-27: Missing specific session management and timeout specifications in `docs/02-technical/architecture/domains/identity.md`. [Brainstorm Item: Auto Logout]
+- 2026-01-27: [DONE] Missing specific session management and timeout specifications in `docs/02-technical/architecture/domains/identity.md`. [Brainstorm Item: Auto Logout]
 - 2026-01-27: Missing UI/UX specification for the "Override and Create New Family" confirmation flow in `docs/03-design/`. [Brainstorm Item: Admin Family Selection]
 - 2026-01-28: Missing authentication and password recovery documentation in `docs/02-technical/architecture/domains/identity.md`.
 - 2026-01-28: Missing Admin Guide section for "Handling Password Reset Requests".

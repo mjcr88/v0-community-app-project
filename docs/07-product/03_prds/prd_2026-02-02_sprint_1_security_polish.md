@@ -9,7 +9,7 @@
 |-------|----------|------|------------|------|-------|
 | #76 | **P0** | **M** | 1-2d | HIGH | [Infra] Supabase DEV Environment |
 | #75 | **P0** | **S** | 4-8h | HIGH | [Security] PII Leak Prevention |
-| #77 | **P0** | **M** | 1-2d | HIGH | [Security] Automatic Logout / Session Timeout |
+| #77 | **P0** | **M** | 1-2d | HIGH | [Security] Automatic Logout / Session Timeout **[RELEASED]** |
 | #63 | **P0** | **M** | 1-2d | MED | [Bug/Feat] Series RSVP Fix & Feature ([PR #92](https://github.com/mjcr88/v0-community-app-project/pull/92)) **[RELEASED]** |
 | #83 | **P0** | **M** | 1-2d | MED | [Feat] GeoJSON Reliability & Map Color |
 | #86 | **P1** | **S** | 4-8h | LOW | [Feat] User Location Beacon |
@@ -96,8 +96,8 @@
         *   **Strict (Remember Me = FALSE):** Use `sessionStorage` (cleared on tab close) OR set aggressive 2h idle timer.
     3.  **Middleware:** Ensure consistent session validation.
 *   **Acceptance Criteria:**
-    - [ ] User logged in WITHOUT "Remember Me" is logged out after 2h idle.
-    - [ ] User logged in WITH "Remember Me" stays logged in after window close.
+    - [x] User logged in WITHOUT "Remember Me" is logged out after 2h idle.
+    - [x] User logged in WITH "Remember Me" stays logged in after window close.
 
 ### 4. [Bug/Feat] Series RSVP & Priority Feed (#63)
 *   **Owner:** `backend-specialist`
@@ -216,3 +216,5 @@ Find yourself on the map! A new "Blue Dot" indicator shows your current location
 🚀 **[Feature] Series RSVP & Priority Feed**
 📅 **Series RSVP**: Say "Yes" once, and you're set! You can now RSVP to "This and Future" events in a series with a single click.
 ⚡ **Smart Priority Feed**: Your feed is now clutter-free. We only show events you've RSVP'd to ("Yes" or "Maybe") or explicitly Saved. No more noise from irrelevant community events.
+✨ **[Fix] Upcoming Widget RSVP Counts**
+Corrected display logic for recurring event series in the dashboard widget. RSVP counts now accurately reflect "This Event" vs series-wide attendance.

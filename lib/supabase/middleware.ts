@@ -32,7 +32,46 @@ export async function updateSession(request: NextRequest) {
   // This is critical for SSR - it refreshes the auth token
   // If it fails, we still return the response to allow the app to continue
   try {
-    await supabase.auth.getUser()
+    const { data: { user }, error } = await supabase.auth.getUser()
+
+    // Issue #77: Automatic Logout Logic
+    // Only enforce if user is logged in and NOT on a public route (already filtered by matcher but double checking good practice)
+    if (user && !error) {
+      const rememberMe = request.cookies.get("remember-me")
+      const lastActive = request.cookies.get("last-active")
+
+      // If "Remember Me" is NOT present, enforce strict timeout
+      if (!rememberMe) {
+        const now = Date.now()
+        const lastActiveTime = lastActive ? parseInt(lastActive.value, 10) : 0
+        const TWO_HOURS_MS = 2 * 60 * 60 * 1000
+
+        // If inactive for > 2 hours (or no last-active cookie found which implies session start or expired), logout
+        // Note: We allow a grace period of 5 seconds for redirects to settle if needed, but here strictly:
+        // If cookie is missing in strict mode, it might mean it expired naturally (Max-Age).
+
+        if (!lastActive || (now - lastActiveTime > TWO_HOURS_MS)) {
+          console.log("[v0] Middleware: Session timed out. Logging out.")
+          await supabase.auth.signOut()
+
+          // Check if we are already on a login page to avoid redirect loops
+          const isLoginPage = request.nextUrl.pathname.includes("/login")
+
+          if (!isLoginPage) {
+            const url = request.nextUrl.clone()
+            url.pathname = `/t/${request.nextUrl.pathname.split('/')[2] || 'ecovilla-san-mateo'}/login`
+            url.searchParams.set("reason", "timeout")
+            return NextResponse.redirect(url)
+          }
+        } else {
+          // User is active and within window, refresh the "last-active" cookie
+          // We do this by setting it on the response
+          const response = await updateSessionCookie(supabaseResponse, now.toString())
+          return response
+        }
+      }
+    }
+
   } catch (error) {
     // Network errors in Edge Runtime are expected in preview environments
     // The auth check will happen again in server components
@@ -40,4 +79,16 @@ export async function updateSession(request: NextRequest) {
   }
 
   return supabaseResponse
+}
+
+// Helper to update cookie on an existing response
+async function updateSessionCookie(response: NextResponse, value: string) {
+  response.cookies.set("last-active", value, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 2 * 60 * 60, // 2 hours
+    path: "/",
+  })
+  return response
 }

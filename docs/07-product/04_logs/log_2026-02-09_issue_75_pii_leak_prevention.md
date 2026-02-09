@@ -22,6 +22,8 @@
 - **2026-02-09**: Updated `ResidentCard.tsx` to accept `isTenantAdmin` and use logic.
 - **2026-02-09**: Updated `NeighboursPageClient.tsx` to pass `isTenantAdmin` to `ResidentCard`.
 - **2026-02-09**: Verified with `tsc`. Legacy errors exist, but new changes are type-safe.
+- **2026-02-09**: Committing changes and pushing to `feat/75-pii-leak-prevention`.
+- **2026-02-09**: Draft PR created: https://github.com/mjcr88/v0-community-app-project/pull/97
 
 ## Handovers
 - **From:** `backend-specialist`

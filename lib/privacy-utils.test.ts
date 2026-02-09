@@ -26,7 +26,6 @@ describe("privacy-utils", () => {
 
     describe("applyPrivacyFilter", () => {
         it("should hide private fields for standard viewer", () => {
-            // @ts-ignore - isTenantAdmin arg not yet implemented in source, but test expects it
             const result = applyPrivacyFilter(mockUser, viewerId, false, false) // isFamilyMember=false, isTenantAdmin=false
 
             expect(result.email).toBeNull()
@@ -35,7 +34,6 @@ describe("privacy-utils", () => {
         })
 
         it("should show all fields for family member", () => {
-            // @ts-ignore
             const result = applyPrivacyFilter(mockUser, viewerId, true, false) // isFamilyMember=true
 
             expect(result.email).toBe("test@example.com")
@@ -43,14 +41,12 @@ describe("privacy-utils", () => {
         })
 
         it("should show all fields for self view", () => {
-            // @ts-ignore
             const result = applyPrivacyFilter(mockUser, "user-1", false, false) // viewerId = user.id
 
             expect(result.email).toBe("test@example.com")
         })
 
         it("should show all fields for tenant admin", () => {
-            // @ts-ignore
             const result = applyPrivacyFilter(mockUser, viewerId, false, true) // isTenantAdmin=true
 
             expect(result.email).toBe("test@example.com")
@@ -60,7 +56,6 @@ describe("privacy-utils", () => {
 
     describe("filterPrivateData", () => {
         it("should mark fields as hidden (show_X = false) for standard viewer", () => {
-            // @ts-ignore
             const result = filterPrivateData(mockUser, mockPrivacySettings, false, false) // isFamilyMember=false, isTenantAdmin=false
 
             expect(result.email).toBeNull()
@@ -72,7 +67,6 @@ describe("privacy-utils", () => {
         })
 
         it("should mark fields as visible (show_X = true) for tenant admin", () => {
-            // @ts-ignore
             const result = filterPrivateData(mockUser, mockPrivacySettings, false, true) // isTenantAdmin=true
 
             expect(result.email).toBe("test@example.com")

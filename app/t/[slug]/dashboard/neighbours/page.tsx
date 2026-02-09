@@ -152,8 +152,13 @@ export default async function NeighboursPage({ params }: { params: Promise<{ slu
 
   // Apply privacy filter to residents
   const filteredResidents = residents?.map((resident) => {
+    const isFamilyMember =
+      !!currentResident.family_unit_id &&
+      !!resident.family_unit_id &&
+      currentResident.family_unit_id === resident.family_unit_id
+
     // Cast to UserWithPrivacy to satisfy type checker (supabase types vs app types)
-    return applyPrivacyFilter(resident as unknown as UserWithPrivacy, user.id, false, isTenantAdmin)
+    return applyPrivacyFilter(resident as unknown as UserWithPrivacy, user.id, isFamilyMember, isTenantAdmin)
   })
 
   return (

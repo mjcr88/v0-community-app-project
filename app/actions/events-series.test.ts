@@ -48,6 +48,7 @@ describe("Event Series Actions", () => {
             order: vi.fn().mockReturnThis(),
             limit: vi.fn().mockReturnThis(),
             // The then method makes this object awaitable
+            // biome-ignore lint/suspicious/noThenProperty: Supabase query builder is thenable in runtime
             then: (resolve: any, reject: any) => {
                 if (queryResponseSequence.length === 0) {
                     console.warn("Mock Supabase client ran out of responses!")

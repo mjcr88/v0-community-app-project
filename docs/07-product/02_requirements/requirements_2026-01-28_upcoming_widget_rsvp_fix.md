@@ -98,7 +98,7 @@ Keep events linked but use a `series_exceptions` table.
 - **Sad Paths**:
   - **Detachment Collision**: User A edits "this only" while User B cancels the same occurrence.
   - **Series Boundary**: RSVPing to "this and future" from an event near the end of the series.
-  - **Visual Lag**: Status not updating immediately on cards without full page refresh.
+  - **Visual Lag**: Status not updating immediately on cards without full-page refresh.
 - **Test Plan**:
   - **Unit**: Verify `useEventStatus` hook handles all combinations of `status` and `user_rsvp_status`.
   - **Integration**: `app/actions/events-series.test.ts` update to verify detachment logic (cloning).
@@ -136,31 +136,7 @@ Keep events linked but use a `series_exceptions` table.
   - Code is secure.
   - The issue is purely a data interface mismatch (Type Safety gap).
 
-### Phase 2: Test Strategy
-- **Sad Paths**:
-  - API returns 500 (Handled by SWR `onError`).
-  - `attending_count` is 0/undefined (Current bug).
-  - Network failure (SWR retains stale data or shows error).
-- **Test Plan**:
-  - **E2E**:
-    1. Login as User A.
-    2. Create Event (ensure it appears in "Upcoming").
-    3. User B RSVPs "Yes".
-    4. User A checks Dashboard -> Verify `EventRsvpQuickAction` shows "1 going" (or correct count).
-  - **Unit**: Verify `Event` interface update in `upcoming-events-widget.tsx`.
 
-### Phase 3: Performance Review
-- **Query Analysis**:
-  - `GET /api/events/upcoming` calls `getEvents`.
-  - **Bottleneck**: `route.ts` fetches **ALL** upcoming events (`const events = await getEvents(...)`) and then slices them locally (`events.slice(0, limit)`).
-  - **Risk**: As event history/schedule grows, this will become slow.
-  - **Recommendation**: Add `limit` parameter to `getEvents` and `repository` layer to push limit to the SQL query.
-- **Specific Fix Impact**: Reading `_count.rsvps` has negligible performance cost (already fetched).
-
-### Phase 4: Documentation Plan
-- **Manuals**: No updates required (Bug fix, no workflow change).
-- **API/Schema**: No changes.
-- **Gaps**: None identified.
 
 
 

@@ -181,3 +181,9 @@ Admins can now upload GeoJSON files with confidence! We've fixed the "merged pat
 You can now set custom colors for each location! Differentiate "Walking Paths" from "Property Lines" directly in the Map Editor.
 📍 **[Feature/Map] User Location Beacon**
 Find yourself on the map! A new "Blue Dot" indicator shows your current location, and the "Find Me" button instantly centers the view on you.
+
+🔒 **[Security] Privacy Enforcement**
+Enhanced resident directory privacy! Sensitive contact info is now securely filtered on the server.
+
+🛡️ **[Security] Admin Override**
+Tenant Admins can now view full resident profiles to assist with community management, regardless of individual privacy settings.

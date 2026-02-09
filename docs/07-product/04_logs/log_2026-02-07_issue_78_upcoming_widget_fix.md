@@ -1,4 +1,4 @@
-but # Worklog: Issue #78 - Upcoming Widget RSVP Count Fix
+# Worklog: Issue #78 - Upcoming Widget RSVP Count Fix
 
 **Status**: QA IN PROGRESS
 **Date**: 2026-02-07

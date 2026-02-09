@@ -225,7 +225,7 @@ export function TenantLoginForm({ tenant }: TenantLoginFormProps) {
             <Checkbox
               id="remember"
               checked={rememberMe}
-              onCheckedChange={(checked: boolean) => setRememberMe(checked)}
+              onCheckedChange={(checked) => setRememberMe(checked === true)}
             />
             <label
               htmlFor="remember"

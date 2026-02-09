@@ -153,6 +153,9 @@ export function EditEventForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    // Prevent submission if the scope dialog is already open
+    if (isSeries && showScopeDialog) return
+
     if (isSeries && !showScopeDialog) {
       setShowScopeDialog(true)
       return

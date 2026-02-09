@@ -98,7 +98,7 @@ Keep events linked but use a `series_exceptions` table.
 - **Sad Paths**:
   - **Detachment Collision**: User A edits "this only" while User B cancels the same occurrence.
   - **Series Boundary**: RSVPing to "this and future" from an event near the end of the series.
-  - **Visual Lag**: Status not updating immediately on cards without full page refresh.
+  - **Visual Lag**: Status not updating immediately on cards without full-page refresh.
 - **Test Plan**:
   - **Unit**: Verify `useEventStatus` hook handles all combinations of `status` and `user_rsvp_status`.
   - **Integration**: `app/actions/events-series.test.ts` update to verify detachment logic (cloning).

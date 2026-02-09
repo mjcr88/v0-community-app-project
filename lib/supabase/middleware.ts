@@ -61,7 +61,15 @@ export async function updateSession(request: NextRequest) {
             const url = request.nextUrl.clone()
             url.pathname = `/t/${request.nextUrl.pathname.split('/')[2] || 'ecovilla-san-mateo'}/login`
             url.searchParams.set("reason", "timeout")
-            return NextResponse.redirect(url)
+            const redirectResponse = NextResponse.redirect(url)
+
+            // Preserve cookies from supabaseResponse (e.g. signOut)
+            const cookiesToSet = supabaseResponse.cookies.getAll()
+            cookiesToSet.forEach((cookie) => {
+              redirectResponse.cookies.set(cookie.name, cookie.value, cookie)
+            })
+
+            return redirectResponse
           }
         } else {
           // User is active and within window, refresh the "last-active" cookie

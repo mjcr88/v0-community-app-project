@@ -74,9 +74,9 @@ export function DeleteEventButton({
   return (
     <>
       {customTrigger ? (
-        <div onClick={onButtonClick} className="cursor-pointer">
+        <button type="button" onClick={onButtonClick} className="cursor-pointer bg-transparent border-0 p-0 text-left">
           {customTrigger}
-        </div>
+        </button>
       ) : (
         <Button variant="destructive" size="sm" onClick={onButtonClick} disabled={isDeleting} className="gap-2">
           <Trash2 className="h-4 w-4" />

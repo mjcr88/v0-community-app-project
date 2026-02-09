@@ -11,9 +11,7 @@ The database schema uses `parent_event_id` and `recurrence_rule` to define serie
 
 ### 1. Schema for Series
 - **Parent Event**: The original event definition. Has `recurrence_rule` set. `parent_event_id` is null.
-- **Child Event (Occurrence)**: An instance of the series. Has `parent_event_id` pointing to the Parent. `recurrence_rule` matches the parent (denormalized for query ease) or is null if strictly following parent? 
-  - *Correction*: Code shows children inherit `recurrence_rule`? No, usually children just link via `parent_event_id`.
-  - Let's clarify: Creating a series generates 1 parent event and N child events.
+- **Child Event (Occurrence)**: An instance of the series. Has `parent_event_id` pointing to the Parent. `recurrence_rule` is `NULL` for children—only the parent holds the rule. Creating a series generates 1 parent event and N child events.
 
 ### 2. Detachment (The "Edit This Only" Action)
 When a user edits a specific occurrence and chooses "This event only":

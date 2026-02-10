@@ -15,11 +15,12 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
-import useSWR from "swr"
+import useSWR, { useSWRConfig } from "swr"
 import { rsvpToEvent, saveEvent, unsaveEvent } from "@/app/actions/events"
 import { rsvpToCheckIn } from "@/app/actions/check-ins"
 import { useToast } from "@/hooks/use-toast"
 import { DashboardAnalytics } from "@/lib/analytics"
+import { ResponsiveDialog } from "@/components/ui/responsive-dialog"
 
 interface ApiPriorityItem {
     type: "announcement" | "event" | "check_in" | "listing" | "exchange_request" | "exchange_confirmed" | "exchange_rejected" | "exchange_return_due"
@@ -41,6 +42,9 @@ interface ApiPriorityItem {
     is_ongoing?: boolean
     rsvp_status?: "going" | "maybe" | "not_going" | null
     is_saved?: boolean
+    is_series?: boolean
+    parent_event_id?: string | null
+    start_date?: string | null
     // Listing specific
     status?: string
     // Transaction specific
@@ -57,8 +61,8 @@ const typeColors: Record<string, string> = {
     event: "bg-blue-100 text-blue-700 border-blue-200",
     check_in: "bg-green-100 text-green-700 border-green-200",
     listing: "bg-purple-100 text-purple-700 border-purple-200",
-    exchange_request: "bg-red-100 text-red-600 border-red-200",
-    exchange_return_due: "bg-amber-100 text-amber-600 border-amber-200",
+    exchange_request: "bg-destructive/10 text-destructive border-destructive/20",
+    exchange_return_due: "bg-secondary/10 text-secondary border-secondary/20",
     exchange_confirmed: "bg-emerald-100 text-emerald-600 border-emerald-200",
     exchange_rejected: "bg-gray-100 text-gray-600 border-gray-200",
 }
@@ -79,6 +83,16 @@ export function PriorityFeed({ slug, userId, tenantId }: { slug: string; userId:
     const [optimisticSaves, setOptimisticSaves] = useState<Record<string, boolean>>({})
     const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({})
     const [dismissedItems, setDismissedItems] = useState<string[]>([])
+    const { mutate: globalMutate } = useSWRConfig()
+
+    // Series RSVP state
+    const [showSeriesDialog, setShowSeriesDialog] = useState(false)
+    const [pendingRsvp, setPendingRsvp] = useState<{
+        itemId: string;
+        itemType: "event" | "check_in";
+        status: "going" | "maybe" | "not_going";
+        currentStatus: string | null;
+    } | null>(null)
 
     useEffect(() => {
         const saved = localStorage.getItem("dismissed_priority_items")
@@ -86,6 +100,38 @@ export function PriorityFeed({ slug, userId, tenantId }: { slug: string; userId:
             setDismissedItems(JSON.parse(saved))
         }
     }, [])
+
+    // Synchronize series RSVPs from other components
+    useEffect(() => {
+        const handleSync = (e: Event) => {
+            const customEvent = e as CustomEvent<{
+                seriesId: string
+                status: "yes" | "maybe" | "no" | null
+                startDate: string
+            }>
+            const { seriesId, status: newStatus, startDate: syncDate } = customEvent.detail
+
+            // Scan through all items in the feed
+            const items = data?.items || []
+            items.forEach(item => {
+                if (item.type === 'event') {
+                    const currentSeriesId = item.parent_event_id || item.id
+                    if (seriesId === currentSeriesId && item.start_date && syncDate && item.start_date >= syncDate) {
+                        // Map internal standard 'yes'/'no' to this component's 'going'/'not_going'
+                        const mappedStatus = newStatus === 'yes' ? 'going' : newStatus === 'no' ? 'not_going' : newStatus
+
+                        setOptimisticRsvps(prev => ({
+                            ...prev,
+                            [item.id]: mappedStatus
+                        }))
+                    }
+                }
+            })
+        }
+
+        window.addEventListener('rio-series-rsvp-sync', handleSync)
+        return () => window.removeEventListener('rio-series-rsvp-sync', handleSync)
+    }, [data]) // Re-bind if data changes
 
     const handleDismiss = (item: ApiPriorityItem) => {
         const newDismissed = [...dismissedItems, item.id]
@@ -141,7 +187,13 @@ export function PriorityFeed({ slug, userId, tenantId }: { slug: string; userId:
         }
     }
 
-    const handleRsvp = async (itemId: string, itemType: "event" | "check_in", status: "going" | "maybe" | "not_going", currentStatus: string | null) => {
+    const handleRsvp = async (
+        itemId: string,
+        itemType: "event" | "check_in",
+        status: "going" | "maybe" | "not_going",
+        currentStatus: string | null,
+        scope: "this" | "series" = "this"
+    ) => {
         // If clicking the same status, treat as removal (set to null)
         const newStatus = currentStatus === status ? null : status
 
@@ -158,7 +210,7 @@ export function PriorityFeed({ slug, userId, tenantId }: { slug: string; userId:
                         "maybe"
 
             if (itemType === "event") {
-                result = await rsvpToEvent(itemId, tenantId, apiStatus)
+                result = await rsvpToEvent(itemId, tenantId, apiStatus, scope)
             } else {
                 result = await rsvpToCheckIn(itemId, tenantId, slug, apiStatus)
             }
@@ -172,8 +224,28 @@ export function PriorityFeed({ slug, userId, tenantId }: { slug: string; userId:
                     variant: "destructive",
                 })
             } else {
+                // Dispatch sync event for other cards on the page if this was a series RSVP
+                if (scope === "series" && itemType === "event") {
+                    // Try to find the item in the local data to get series metadata
+                    const item = data?.items.find(i => i.id === itemId)
+                    if (item) {
+                        const internalStatus = newStatus === 'going' ? 'yes' : newStatus === 'not_going' ? 'no' : newStatus
+                        const syncEvent = new CustomEvent('rio-series-rsvp-sync', {
+                            detail: {
+                                seriesId: item.parent_event_id || item.id,
+                                status: internalStatus,
+                                startDate: item.start_date || ""
+                            }
+                        })
+                        window.dispatchEvent(syncEvent)
+                    }
+                }
+
                 // Refresh the data
                 mutate()
+
+                // Also mutate upcoming events widget since they might share data
+                globalMutate((key) => typeof key === 'string' && key.startsWith(`/api/events/upcoming/${tenantId}`), undefined, { revalidate: true })
             }
         } catch (err) {
             // Revert on error
@@ -253,11 +325,16 @@ export function PriorityFeed({ slug, userId, tenantId }: { slug: string; userId:
                         <Button
                             size="icon"
                             variant="ghost"
-                            className={cn("h-7 w-7", item.rsvp_status === 'going' && "text-green-600 bg-green-50 hover:bg-green-100 hover:text-green-700")}
+                            className={cn("h-7 w-7", (optimisticRsvps[item.id] ?? item.rsvp_status) === 'going' && "text-primary bg-primary/10 hover:bg-primary/20 hover:text-primary")}
                             onClick={(e) => {
                                 e.stopPropagation()
                                 const currentRsvp = optimisticRsvps[item.id] ?? item.rsvp_status ?? null
-                                handleRsvp(item.id, "event", "going", currentRsvp)
+                                if (item.is_series && currentRsvp !== 'going') {
+                                    setPendingRsvp({ itemId: item.id, itemType: "event", status: "going", currentStatus: currentRsvp })
+                                    setShowSeriesDialog(true)
+                                } else {
+                                    handleRsvp(item.id, "event", "going", currentRsvp)
+                                }
                             }}
                         >
                             <Check className="h-4 w-4" />
@@ -265,11 +342,16 @@ export function PriorityFeed({ slug, userId, tenantId }: { slug: string; userId:
                         <Button
                             size="icon"
                             variant="ghost"
-                            className={cn("h-7 w-7", item.rsvp_status === 'maybe' && "text-amber-600 bg-amber-50 hover:bg-amber-100 hover:text-amber-700")}
+                            className={cn("h-7 w-7", (optimisticRsvps[item.id] ?? item.rsvp_status) === 'maybe' && "text-secondary bg-secondary/10 hover:bg-secondary/20 hover:text-secondary")}
                             onClick={(e) => {
                                 e.stopPropagation()
                                 const currentRsvp = optimisticRsvps[item.id] ?? item.rsvp_status ?? null
-                                handleRsvp(item.id, "event", "maybe", currentRsvp)
+                                if (item.is_series && currentRsvp !== 'maybe') {
+                                    setPendingRsvp({ itemId: item.id, itemType: "event", status: "maybe", currentStatus: currentRsvp })
+                                    setShowSeriesDialog(true)
+                                } else {
+                                    handleRsvp(item.id, "event", "maybe", currentRsvp)
+                                }
                             }}
                         >
                             <span className="text-xs font-bold">?</span>
@@ -277,11 +359,16 @@ export function PriorityFeed({ slug, userId, tenantId }: { slug: string; userId:
                         <Button
                             size="icon"
                             variant="ghost"
-                            className={cn("h-7 w-7", item.rsvp_status === 'not_going' && "text-red-600 bg-red-50 hover:bg-red-100 hover:text-red-700")}
+                            className={cn("h-7 w-7", (optimisticRsvps[item.id] ?? item.rsvp_status) === 'not_going' && "text-destructive bg-destructive/10 hover:bg-destructive/20 hover:text-destructive")}
                             onClick={(e) => {
                                 e.stopPropagation()
                                 const currentRsvp = optimisticRsvps[item.id] ?? item.rsvp_status ?? null
-                                handleRsvp(item.id, "event", "not_going", currentRsvp)
+                                if (item.is_series && currentRsvp !== 'not_going') {
+                                    setPendingRsvp({ itemId: item.id, itemType: "event", status: "not_going", currentStatus: currentRsvp })
+                                    setShowSeriesDialog(true)
+                                } else {
+                                    handleRsvp(item.id, "event", "not_going", currentRsvp)
+                                }
                             }}
                         >
                             <span className="text-xs font-bold">✕</span>
@@ -294,7 +381,7 @@ export function PriorityFeed({ slug, userId, tenantId }: { slug: string; userId:
                         <Button
                             size="icon"
                             variant="ghost"
-                            className={cn("h-7 w-7", item.rsvp_status === 'going' && "text-green-600 bg-green-50 hover:bg-green-100 hover:text-green-700")}
+                            className={cn("h-7 w-7", (optimisticRsvps[item.id] ?? item.rsvp_status) === 'going' && "text-primary bg-primary/10 hover:bg-primary/20 hover:text-primary")}
                             onClick={(e) => {
                                 e.stopPropagation()
                                 const currentRsvp = optimisticRsvps[item.id] ?? item.rsvp_status ?? null
@@ -306,7 +393,7 @@ export function PriorityFeed({ slug, userId, tenantId }: { slug: string; userId:
                         <Button
                             size="icon"
                             variant="ghost"
-                            className={cn("h-7 w-7", item.rsvp_status === 'maybe' && "text-amber-600 bg-amber-50 hover:bg-amber-100 hover:text-amber-700")}
+                            className={cn("h-7 w-7", (optimisticRsvps[item.id] ?? item.rsvp_status) === 'maybe' && "text-secondary bg-secondary/10 hover:bg-secondary/20 hover:text-secondary")}
                             onClick={(e) => {
                                 e.stopPropagation()
                                 const currentRsvp = optimisticRsvps[item.id] ?? item.rsvp_status ?? null
@@ -318,7 +405,7 @@ export function PriorityFeed({ slug, userId, tenantId }: { slug: string; userId:
                         <Button
                             size="icon"
                             variant="ghost"
-                            className={cn("h-7 w-7", item.rsvp_status === 'not_going' && "text-red-600 bg-red-50 hover:bg-red-100 hover:text-red-700")}
+                            className={cn("h-7 w-7", (optimisticRsvps[item.id] ?? item.rsvp_status) === 'not_going' && "text-destructive bg-destructive/10 hover:bg-destructive/20 hover:text-destructive")}
                             onClick={(e) => {
                                 e.stopPropagation()
                                 const currentRsvp = optimisticRsvps[item.id] ?? item.rsvp_status ?? null
@@ -451,6 +538,53 @@ export function PriorityFeed({ slug, userId, tenantId }: { slug: string; userId:
                     </div>
                 ))}
             </div>
+
+            <ResponsiveDialog
+                isOpen={showSeriesDialog}
+                setIsOpen={setShowSeriesDialog}
+                title="RSVP to Event Series"
+                description="This event repeats. How would you like to RSVP?"
+            >
+                <div className="flex flex-col gap-3 py-4 px-4">
+                    <Button
+                        variant="outline"
+                        className="justify-start gap-3 h-auto py-3"
+                        onClick={() => {
+                            if (pendingRsvp) {
+                                handleRsvp(pendingRsvp.itemId, pendingRsvp.itemType, pendingRsvp.status, pendingRsvp.currentStatus, "this")
+                                setShowSeriesDialog(false)
+                            }
+                        }}
+                    >
+                        <Calendar className="h-5 w-5 text-muted-foreground" />
+                        <div className="flex flex-col items-start text-left">
+                            <span className="font-medium">Just this event</span>
+                            <span className="text-xs text-muted-foreground">Only update RSVP for this specific occurrence</span>
+                        </div>
+                    </Button>
+                    <Button
+                        variant="outline"
+                        className="justify-start gap-3 h-auto py-3"
+                        onClick={() => {
+                            if (pendingRsvp) {
+                                handleRsvp(pendingRsvp.itemId, pendingRsvp.itemType, pendingRsvp.status, pendingRsvp.currentStatus, "series")
+                                setShowSeriesDialog(false)
+                            }
+                        }}
+                    >
+                        <Check className="h-5 w-5 text-muted-foreground" />
+                        <div className="flex flex-col items-start text-left">
+                            <span className="font-medium">This and future events</span>
+                            <span className="text-xs text-muted-foreground">Update RSVP for all upcoming occurrences in this series</span>
+                        </div>
+                    </Button>
+                </div>
+                <div className="hidden sm:flex sm:justify-end sm:gap-2 px-4 pb-4">
+                    <Button variant="secondary" onClick={() => setShowSeriesDialog(false)}>
+                        Cancel
+                    </Button>
+                </div>
+            </ResponsiveDialog>
         </div>
     )
 }

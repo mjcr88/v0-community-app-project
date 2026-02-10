@@ -10,7 +10,7 @@
 | #72 | **P0** | **S** | 4-8h | LOW | [Bug] Admin Family Selection Improvement |
 | #81 | **P0** | **S** | 4-8h | LOW | [Design] Check-in RSVP Consistency |
 | #69 | **P0** | **XS** | 2-4h | LOW | [Bug] Neighbor Directory Tab Alignment |
-| #78 | **P0** | **XS** | 2-4h | LOW | [Bug] Upcoming Widget RSVP Count Fix |
+| #78 | **P0** | **M** | 8-16h | HIGH | [Bug] Upcoming Widget RSVP Count Fix & Event Series Management |
 
 ---
 
@@ -76,16 +76,20 @@
     - [ ] Tabs align perfectly with the Search bar on `md` and `lg` screens.
     - [ ] Mobile view remains responsive.
 
-### 4. [Bug] Upcoming Widget RSVP Count Fix (#78)
-*   **Owner:** `frontend-specialist`
-*   **Goal:** Show actual RSVP counts in dashboard widget.
+### 4. [Bug] Event RSVP Polish & Consistency (#78)
+*   **Owner:** `frontend-specialist`, `backend-specialist`
+*   **Goal:** Ensure accurate RSVP counts and visual consistency across dashboard and event lists, and implement "Detachment" strategy for series occurrences.
 *   **Implementation Steps:**
-    1.  **Component:** Edit `UpcomingEventsWidget.tsx`.
-    2.  **Data:** Switch display logic from `attending_count` (which might be static/cached) to `_count.rsvps` (live aggregation) if available.
-    3.  **Fallback:** If `_count` unavailable, check API query to ensure it's included (`include: { _count: { select: { rsvps: true } } }`).
+    1.  **Widget:** Fix `UpcomingEventsWidget.tsx` attendee count using `_count.rsvps` from `lib/data/events.ts`.
+    2.  **Consistency:** Update event card status indicators for series RSVPs in `EnhancedEventCard.tsx`.
+    3.  **Series Logic:** Fix missing RSVP modal on the first occurrence of event series in `EventRsvpQuickAction.tsx`.
+    4.  **Detachment (Backend):** In `app/actions/events.ts`, implement `detachEventOccurrence` helper. When updating "this event only" in a series, clone the occurrence to a standalone event and map relevant RSVPs.
+    5.  **Detachment (Frontend):** Update `EventRsvpQuickAction.tsx` to use `ResponsiveDialog` for mobile/desktop choice between "This event" and "Series".
 *   **Acceptance Criteria:**
-    - [ ] Widget shows "X attending" matching the actual database count.
-    - [ ] Zero count only shown if truly 0 RSVPs.
+    - [x] Widget shows correct attendee count.
+    - [x] Event cards in list view show correct RSVP status color/icon.
+    - [x] RSVPing to the first event in a series triggers "RSVP to Series" modal.
+    - [x] Manual QA: Editing "This event only" creates a standalone duplicate; parent series remains intact.
 
 ---
 
@@ -105,6 +109,6 @@
 | #72 | **Admin Family Select** | 2 Days | **Feb 9** | **Feb 10** | None |
 | #81 | **Check-in Consistency** | 2 Days | **Feb 9** | **Feb 10** | None |
 | #69 | **Tab Alignment** | 0.5 Days | **Feb 11** | **Feb 11** | None |
-| #78 | **Widget RSVP Count** | 0.5 Days | **Feb 11** | **Feb 11** | None |
+| #78 | **Event Detachment** | 2 Days | **Feb 11** | **Feb 12** | None |
 
 > *Note: Schedule assumes parallel execution of #72 and #81 is possible, otherwise sequential execution pushes end date to Feb 14.*

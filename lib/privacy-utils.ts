@@ -45,14 +45,27 @@ export interface UserWithPrivacy {
  * @param isFamilyMember - Whether the viewer is a family member (bypasses privacy)
  * @returns Filtered user object with privacy settings applied
  */
-export function applyPrivacyFilter(user: UserWithPrivacy, viewerId: string, isFamilyMember = false): UserWithPrivacy {
+/**
+ * Filters user data based on privacy settings
+ * @param user - The user object to filter
+ * @param viewerId - The ID of the user viewing the data
+ * @param isFamilyMember - Whether the viewer is a family member (bypasses privacy)
+ * @param isTenantAdmin - Whether the viewer is a tenant admin (bypasses privacy)
+ * @returns Filtered user object with privacy settings applied
+ */
+export function applyPrivacyFilter(
+  user: UserWithPrivacy,
+  viewerId: string,
+  isFamilyMember = false,
+  isTenantAdmin = false,
+): UserWithPrivacy {
   // User viewing their own profile - show everything
   if (user.id === viewerId) {
     return user
   }
 
-  // Family members see everything
-  if (isFamilyMember) {
+  // Family members and Tenant Admins see everything
+  if (isFamilyMember || isTenantAdmin) {
     return user
   }
 
@@ -116,15 +129,17 @@ export function applyPrivacyFilter(user: UserWithPrivacy, viewerId: string, isFa
  * @param user - The user object to filter
  * @param privacySettings - The privacy settings object
  * @param isFamilyMember - Whether the viewer is a family member (bypasses privacy)
+ * @param isTenantAdmin - Whether the viewer is a tenant admin (bypasses privacy)
  * @returns Filtered user object with privacy settings applied
  */
 export function filterPrivateData(
   user: UserWithPrivacy,
   privacySettings: PrivacySettings | null | undefined,
   isFamilyMember = false,
+  isTenantAdmin = false,
 ): UserWithPrivacy & PrivacySettings {
-  // Family members see everything
-  if (isFamilyMember) {
+  // Family members and Tenant Admins see everything
+  if (isFamilyMember || isTenantAdmin) {
     return {
       ...user,
       show_email: true,

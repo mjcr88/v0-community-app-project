@@ -213,6 +213,12 @@ You can now set custom colors for each location! Differentiate "Walking Paths" f
 📍 **[Feature/Map] User Location Beacon**
 Find yourself on the map! A new "Blue Dot" indicator shows your current location, and the "Find Me" button instantly centers the view on you.
 
+🔒 **[Security] Privacy Enforcement**
+Enhanced resident directory privacy! Sensitive contact info is now securely filtered on the server.
+
+🛡️ **[Security] Admin Override**
+Tenant Admins can now view full resident profiles to assist with community management, regardless of individual privacy settings.
+
 🚀 **[Feature] Series RSVP & Priority Feed**
 📅 **Series RSVP**: Say "Yes" once, and you're set! You can now RSVP to "This and Future" events in a series with a single click.
 ⚡ **Smart Priority Feed**: Your feed is now clutter-free. We only show events you've RSVP'd to ("Yes" or "Maybe") or explicitly Saved. No more noise from irrelevant community events.

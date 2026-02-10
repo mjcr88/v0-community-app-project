@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { NeighboursPageClient } from "./neighbours-page-client"
+import { applyPrivacyFilter, type UserWithPrivacy } from "@/lib/privacy-utils"
 
 export default async function NeighboursPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
@@ -146,9 +147,23 @@ export default async function NeighboursPage({ params }: { params: Promise<{ slu
   const { getNeighborLists } = await import("@/app/actions/neighbor-lists")
   const { data: neighborLists } = await getNeighborLists(currentResident.tenant_id)
 
+  // Check if current user is admin
+  const isTenantAdmin = currentResident.role === "tenant_admin" || currentResident.role === "super_admin"
+
+  // Apply privacy filter to residents
+  const filteredResidents = residents?.map((resident) => {
+    const isFamilyMember =
+      !!currentResident.family_unit_id &&
+      !!resident.family_unit_id &&
+      currentResident.family_unit_id === resident.family_unit_id
+
+    // Cast to UserWithPrivacy to satisfy type checker (supabase types vs app types)
+    return applyPrivacyFilter(resident as unknown as UserWithPrivacy, user.id, isFamilyMember, isTenantAdmin)
+  })
+
   return (
     <NeighboursPageClient
-      residents={residents || []}
+      residents={(filteredResidents as any) || []}
       families={families || []}
       neighborhoods={neighborhoods || []}
       allInterests={allInterests || []}
@@ -156,6 +171,7 @@ export default async function NeighboursPage({ params }: { params: Promise<{ slu
       tenantSlug={slug}
       currentUserFamilyId={currentResident.family_unit_id || null}
       currentTenantId={currentResident.tenant_id}
+      isTenantAdmin={isTenantAdmin}
     />
   )
 }

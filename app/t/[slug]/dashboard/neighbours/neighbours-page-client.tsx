@@ -27,8 +27,8 @@ import { createNeighborList } from "@/app/actions/neighbor-lists"
 
 interface ResidentWithRelations {
     id: string
-    first_name: string
-    last_name: string
+    first_name: string | null
+    last_name: string | null
     [key: string]: any
 }
 
@@ -47,6 +47,7 @@ interface NeighboursPageClientProps {
     tenantSlug: string
     currentUserFamilyId: string | null
     currentTenantId: string
+    isTenantAdmin?: boolean
 }
 
 type FilterSection = "neighborhood" | "lot" | "interests" | "skills" | null
@@ -62,6 +63,7 @@ export function NeighboursPageClient({
     tenantSlug,
     currentUserFamilyId,
     currentTenantId,
+    isTenantAdmin = false,
 }: NeighboursPageClientProps) {
     const router = useRouter()
     const [activeTab, setActiveTab] = useState<"residents" | "families" | "lists">("residents")
@@ -575,6 +577,7 @@ export function NeighboursPageClient({
                                                 currentUserFamilyId={currentUserFamilyId}
                                                 neighborLists={neighborLists}
                                                 tenantId={currentTenantId}
+                                                isTenantAdmin={isTenantAdmin}
                                             />
                                         </motion.div>
                                     ))}

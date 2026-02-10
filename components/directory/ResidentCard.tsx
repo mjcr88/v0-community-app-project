@@ -16,9 +16,10 @@ interface ResidentCardProps {
     currentUserFamilyId: string | null
     neighborLists?: any[]
     tenantId?: string
+    isTenantAdmin?: boolean
 }
 
-export function ResidentCard({ resident, tenantSlug, currentUserFamilyId, neighborLists = [], tenantId }: ResidentCardProps) {
+export function ResidentCard({ resident, tenantSlug, currentUserFamilyId, neighborLists = [], tenantId, isTenantAdmin = false }: ResidentCardProps) {
     const router = useRouter()
 
     const privacySettings = Array.isArray(resident.user_privacy_settings)
@@ -27,7 +28,7 @@ export function ResidentCard({ resident, tenantSlug, currentUserFamilyId, neighb
 
     // ... (existing logic) ...
     const isFamily = resident.family_unit_id === currentUserFamilyId
-    const filteredData = filterPrivateData(resident, privacySettings, isFamily)
+    const filteredData = filterPrivateData(resident, privacySettings, isFamily, isTenantAdmin)
 
     // ... (existing logic) ...
     const hiddenFieldsCount = [

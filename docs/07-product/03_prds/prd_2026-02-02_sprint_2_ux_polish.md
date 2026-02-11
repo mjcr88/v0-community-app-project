@@ -54,16 +54,21 @@
 
 ### 2. [Design] Check-in RSVP Consistency (#81)
 *   **Owner:** `frontend-specialist`
-*   **Goal:** Align Check-in RSVP UI with standard Events (3-state system).
+*   **Goal:** Align Check-in RSVP UI with standard Events and ensure cross-component state sync.
 *   **Implementation Steps:**
     1.  **Dashboard:** Refactor `CheckInRsvpQuickAction.tsx`.
-        *   Replace single toggle with `ToggleButtonGroup` (Going, Maybe, Not Going).
-        *   Map states: `going` -> `confirmed`, `maybe` -> `maybe`, `not_going` -> `declined`.
-    2.  **Notifications:** Update Notification Card to use a `DropdownMenu` for RSVP actions to save space.
+        *   Replace single toggle with 2-button group (Join, Maybe) + NumberTicker attendee counter.
+        *   Implement toggle-off (tap active button to un-RSVP).
+    2.  **Notifications:** Update Notification Card to use `DropdownMenu` for RSVP actions.
+    3.  **Priority Feed:** Update `PriorityFeed.tsx` check-in actions — 2 buttons (✓, ?), removed ✕.
+    4.  **Map Card:** Update `MapboxViewer.tsx` check-in sidebar — 2 buttons (Going, Maybe), removed "Can't", added attendee counter.
+    5.  **State Sync:** Implement `rio-checkin-rsvp-sync` CustomEvent across all 3 surfaces for real-time cross-component RSVP sync.
 *   **Acceptance Criteria:**
-    - [ ] Dashboard card shows 3 buttons (Check, Question, X).
-    - [ ] Clicking "Maybe" updates state correctly in DB.
-    - [ ] Notification card uses compact dropdown.
+    - [x] Dashboard card shows 2 buttons (Join, Maybe) with attendee counter.
+    - [x] Clicking "Maybe" updates state correctly in DB.
+    - [x] Notification card uses compact dropdown (Join/Maybe/Decline).
+    - [x] Map check-in card aligned: 2 buttons (Going, Maybe) + counter, no "Can't".
+    - [x] RSVP state syncs in real-time between dashboard, priority feed, and map.
 
 ### 3. [Bug] Neighbor Directory Tab Alignment (#69)
 *   **Owner:** `frontend-specialist`

@@ -89,9 +89,6 @@ export function TenantLoginForm({ tenant }: TenantLoginFormProps) {
 
       if (signInError) throw signInError
 
-      // Set session persistence based on "Remember Me"
-      await setSessionPersistence(rememberMe)
-
       const { data: userData } = await supabase
         .from("users")
         .select("role, tenant_id")
@@ -105,6 +102,7 @@ export function TenantLoginForm({ tenant }: TenantLoginFormProps) {
           role: 'super_admin',
           email: authData.user.email,
         })
+        await setSessionPersistence(rememberMe)
         router.push(`/t/${tenant.slug}/admin/dashboard`)
         return
       }
@@ -115,6 +113,7 @@ export function TenantLoginForm({ tenant }: TenantLoginFormProps) {
           role: 'tenant_admin',
           email: authData.user.email,
         })
+        await setSessionPersistence(rememberMe)
         router.push(`/t/${tenant.slug}/admin/dashboard`)
         return
       }
@@ -138,6 +137,9 @@ export function TenantLoginForm({ tenant }: TenantLoginFormProps) {
         role: residentData.is_tenant_admin ? 'tenant_admin' : 'resident',
         email: authData.user.email,
       })
+
+      // Set session persistence AFTER tenant validation to avoid middleware race condition
+      await setSessionPersistence(rememberMe)
 
       // Always redirect to dashboard (no onboarding check)
       if (residentData.is_tenant_admin) {

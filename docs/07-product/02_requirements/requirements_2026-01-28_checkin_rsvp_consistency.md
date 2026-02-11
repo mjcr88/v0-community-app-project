@@ -70,9 +70,11 @@ Render 3 small icon-only buttons inline.
 - **Horizon**: Q1 26
 
 ### Implementation Plan
-- [ ] **Refactor** `components/check-ins/check-in-rsvp-quick-action.tsx` to support 3 states and render 3 icon buttons.
-- [ ] **Update** `components/notifications/checkin-notification-card.tsx` to use Shadcn `DropdownMenu` for the RSVP action.
-- [ ] **Verify** `maybe` status persists correctly to `check_in_rsvps` table.
+- [x] **Refactor** `components/check-ins/check-in-rsvp-quick-action.tsx` to support 2 states (Join/Maybe) with toggle-off and NumberTicker attendee counter.
+- [x] **Update** `components/notifications/checkin-notification-card.tsx` to use Shadcn `DropdownMenu` for the RSVP action.
+- [x] **Verify** `maybe` status persists correctly to `check_in_rsvps` table.
+- [x] **Sync** Add `rio-checkin-rsvp-sync` CustomEvent across `PriorityFeed`, `CheckInRsvpQuickAction`, and `MapboxViewer` for cross-component state sync.
+- [x] **Map card** Remove "Can't" button, add attendee counter, align with dashboard 2-button pattern.
 
 ## 8. Technical Review
 

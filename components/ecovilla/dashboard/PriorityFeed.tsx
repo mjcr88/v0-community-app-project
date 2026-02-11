@@ -133,6 +133,22 @@ export function PriorityFeed({ slug, userId, tenantId }: { slug: string; userId:
         return () => window.removeEventListener('rio-series-rsvp-sync', handleSync)
     }, [data]) // Re-bind if data changes
 
+    // Synchronize check-in RSVPs from other components (e.g. LiveCheckInsWidget)
+    useEffect(() => {
+        const handleCheckinSync = (e: Event) => {
+            const customEvent = e as CustomEvent<{
+                checkInId: string
+                status: "yes" | "maybe" | "no" | null
+            }>
+            const { checkInId, status: newStatus } = customEvent.detail
+            const mappedStatus = newStatus === 'yes' ? 'going' : newStatus === 'no' ? 'not_going' : newStatus
+            setOptimisticRsvps(prev => ({ ...prev, [checkInId]: mappedStatus }))
+        }
+
+        window.addEventListener('rio-checkin-rsvp-sync', handleCheckinSync)
+        return () => window.removeEventListener('rio-checkin-rsvp-sync', handleCheckinSync)
+    }, [])
+
     const handleDismiss = (item: ApiPriorityItem) => {
         const newDismissed = [...dismissedItems, item.id]
         setDismissedItems(newDismissed)
@@ -226,7 +242,6 @@ export function PriorityFeed({ slug, userId, tenantId }: { slug: string; userId:
             } else {
                 // Dispatch sync event for other cards on the page if this was a series RSVP
                 if (scope === "series" && itemType === "event") {
-                    // Try to find the item in the local data to get series metadata
                     const item = data?.items.find(i => i.id === itemId)
                     if (item) {
                         const internalStatus = newStatus === 'going' ? 'yes' : newStatus === 'not_going' ? 'no' : newStatus
@@ -239,6 +254,14 @@ export function PriorityFeed({ slug, userId, tenantId }: { slug: string; userId:
                         })
                         window.dispatchEvent(syncEvent)
                     }
+                }
+
+                // Dispatch sync event for check-in RSVP so LiveCheckInsWidget picks it up
+                if (itemType === "check_in") {
+                    const internalStatus = newStatus === 'going' ? 'yes' : newStatus === 'not_going' ? 'no' : newStatus
+                    window.dispatchEvent(new CustomEvent('rio-checkin-rsvp-sync', {
+                        detail: { checkInId: itemId, status: internalStatus }
+                    }))
                 }
 
                 // Refresh the data
@@ -401,18 +424,6 @@ export function PriorityFeed({ slug, userId, tenantId }: { slug: string; userId:
                             }}
                         >
                             <span className="text-xs font-bold">?</span>
-                        </Button>
-                        <Button
-                            size="icon"
-                            variant="ghost"
-                            className={cn("h-7 w-7", (optimisticRsvps[item.id] ?? item.rsvp_status) === 'not_going' && "text-destructive bg-destructive/10 hover:bg-destructive/20 hover:text-destructive")}
-                            onClick={(e) => {
-                                e.stopPropagation()
-                                const currentRsvp = optimisticRsvps[item.id] ?? item.rsvp_status ?? null
-                                handleRsvp(item.id, "check_in", "not_going", currentRsvp)
-                            }}
-                        >
-                            <span className="text-xs font-bold">✕</span>
                         </Button>
                     </div>
                 )

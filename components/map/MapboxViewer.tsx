@@ -154,6 +154,22 @@ export function MapboxFullViewer({
         maximumAge: 0
     })
 
+    // Sync check-in RSVP from dashboard/priority feed
+    useEffect(() => {
+        const handleCheckinSync = (e: Event) => {
+            const { checkInId, status, goingCount } = (e as CustomEvent<{ checkInId: string; status: "yes" | "maybe" | "no" | null; goingCount?: number }>).detail
+            if (selectedLocation && (selectedLocation as CheckIn).activity_type && selectedLocation.id === checkInId) {
+                setSelectedLocation(prev => prev ? {
+                    ...prev,
+                    user_rsvp_status: status,
+                    ...(goingCount !== undefined && { rsvp_going_count: goingCount })
+                } as any : null)
+            }
+        }
+        window.addEventListener('rio-checkin-rsvp-sync', handleCheckinSync)
+        return () => window.removeEventListener('rio-checkin-rsvp-sync', handleCheckinSync)
+    }, [selectedLocation])
+
     // Handle Geolocation Errors with Sonner
     useEffect(() => {
         if (userLocation.error) {
@@ -1846,7 +1862,14 @@ export function MapboxFullViewer({
 
                                         {/* RSVP Actions */}
                                         <div className="border-t pt-4 mt-2">
-                                            <p className="text-sm font-medium text-foreground mb-3">Are you joining?</p>
+                                            <div className="flex items-center justify-between mb-3">
+                                                <p className="text-sm font-medium text-foreground">Are you joining?</p>
+                                                {(selectedLocation as any).rsvp_going_count > 0 && (
+                                                    <span className="text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                                                        {(selectedLocation as any).rsvp_going_count} going
+                                                    </span>
+                                                )}
+                                            </div>
                                             <div className="flex items-center gap-2">
                                                 <Button
                                                     size="sm"
@@ -1857,20 +1880,26 @@ export function MapboxFullViewer({
                                                         }`}
                                                     onClick={async () => {
                                                         const checkIn = selectedLocation as CheckIn
-                                                        const newStatus = (checkIn as any).user_rsvp_status === "yes" ? null : "yes"
+                                                        const previousStatus = (checkIn as any).user_rsvp_status
+                                                        const newStatus = previousStatus === "yes" ? null : "yes"
 
                                                         // Optimistic update
-                                                        setSelectedLocation({
+                                                        const updatedCheckIn = {
                                                             ...checkIn,
                                                             user_rsvp_status: newStatus,
-                                                        } as any)
+                                                            rsvp_going_count: Math.max(0, ((checkIn as any).rsvp_going_count || 0) + (newStatus === "yes" ? 1 : previousStatus === "yes" ? -1 : 0)),
+                                                        } as any
+                                                        setSelectedLocation(updatedCheckIn)
 
                                                         try {
                                                             const apiStatus = newStatus === null ? "no" : "yes"
                                                             await rsvpToCheckIn(checkIn.id, tenantId, tenantSlug, apiStatus)
+                                                            // Dispatch sync event
+                                                            window.dispatchEvent(new CustomEvent('rio-checkin-rsvp-sync', {
+                                                                detail: { checkInId: checkIn.id, status: newStatus }
+                                                            }))
                                                         } catch (error) {
                                                             console.error("Failed to RSVP:", error)
-                                                            // Revert
                                                             hasUserInteracted.current = true
                                                             setSelectedLocation(checkIn)
                                                         }
@@ -1888,16 +1917,23 @@ export function MapboxFullViewer({
                                                         }`}
                                                     onClick={async () => {
                                                         const checkIn = selectedLocation as CheckIn
-                                                        const newStatus = (checkIn as any).user_rsvp_status === "maybe" ? null : "maybe"
+                                                        const previousStatus = (checkIn as any).user_rsvp_status
+                                                        const newStatus = previousStatus === "maybe" ? null : "maybe"
 
-                                                        setSelectedLocation({
+                                                        const updatedCheckIn = {
                                                             ...checkIn,
                                                             user_rsvp_status: newStatus,
-                                                        } as any)
+                                                            rsvp_going_count: Math.max(0, ((checkIn as any).rsvp_going_count || 0) + (previousStatus === "yes" ? -1 : 0)),
+                                                        } as any
+                                                        setSelectedLocation(updatedCheckIn)
 
                                                         try {
                                                             const apiStatus = newStatus === null ? "no" : "maybe"
                                                             await rsvpToCheckIn(checkIn.id, tenantId, tenantSlug, apiStatus)
+                                                            // Dispatch sync event
+                                                            window.dispatchEvent(new CustomEvent('rio-checkin-rsvp-sync', {
+                                                                detail: { checkInId: checkIn.id, status: newStatus }
+                                                            }))
                                                         } catch (error) {
                                                             console.error("Failed to RSVP:", error)
                                                             setSelectedLocation(checkIn)
@@ -1905,36 +1941,6 @@ export function MapboxFullViewer({
                                                     }}
                                                 >
                                                     ? Maybe
-                                                </Button>
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    className={`flex-1 gap-2 ${(selectedLocation as any).user_rsvp_status === "no"
-                                                        ? "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
-                                                        : ""
-                                                        }`}
-                                                    onClick={async () => {
-                                                        const checkIn = selectedLocation as CheckIn
-                                                        const newStatus = (checkIn as any).user_rsvp_status === "no" ? null : "no"
-
-                                                        setSelectedLocation({
-                                                            ...checkIn,
-                                                            user_rsvp_status: newStatus,
-                                                        } as any)
-
-                                                        try {
-                                                            // If toggling off 'no', we effectively remove the RSVP (or set to 'no' again? Logic implies 'no' is explicit)
-                                                            // For now, let's treat 'no' as explicit decline.
-                                                            const apiStatus = "no"
-                                                            await rsvpToCheckIn(checkIn.id, tenantId, tenantSlug, apiStatus)
-                                                        } catch (error) {
-                                                            console.error("Failed to RSVP:", error)
-                                                            setSelectedLocation(checkIn)
-                                                        }
-                                                    }}
-                                                >
-                                                    <X className="h-4 w-4" />
-                                                    Can't
                                                 </Button>
                                             </div>
                                         </div>

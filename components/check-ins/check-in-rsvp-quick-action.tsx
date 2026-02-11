@@ -1,13 +1,14 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Users, Loader2 } from "lucide-react"
-import { useState, useTransition } from "react"
+import { Check, HelpCircle } from "lucide-react"
+import { useState, useTransition, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { toast } from "sonner"
+import { useToast } from "@/hooks/use-toast"
 import { rsvpToCheckIn } from "@/app/actions/check-ins"
 import { cn } from "@/lib/utils"
 import { CheckInAnalytics } from "@/lib/analytics"
+import { NumberTicker } from "@/components/library/number-ticker"
 
 interface CheckInRsvpQuickActionProps {
     checkInId: string
@@ -15,6 +16,7 @@ interface CheckInRsvpQuickActionProps {
     tenantSlug: string
     userId: string | null
     currentRsvpStatus?: "yes" | "maybe" | "no" | null
+    currentAttendeeCount?: number
     className?: string
 }
 
@@ -24,64 +26,149 @@ export function CheckInRsvpQuickAction({
     tenantSlug,
     userId,
     currentRsvpStatus,
+    currentAttendeeCount = 0,
     className,
 }: CheckInRsvpQuickActionProps) {
     const router = useRouter()
+    const { toast } = useToast()
     const [isPending, startTransition] = useTransition()
     const [localRsvpStatus, setLocalRsvpStatus] = useState(currentRsvpStatus)
+    const [localAttendeeCount, setLocalAttendeeCount] = useState(currentAttendeeCount)
+
+    // Sync from parent props (e.g. SWR revalidation) when not mid-optimistic update
+    useEffect(() => {
+        if (!isPending) {
+            setLocalRsvpStatus(currentRsvpStatus)
+            setLocalAttendeeCount(currentAttendeeCount)
+        }
+    }, [currentRsvpStatus, currentAttendeeCount, isPending])
+
+    // Listen for sync events from PriorityFeed or other components
+    useEffect(() => {
+        const handleSync = (e: Event) => {
+            const customEvent = e as CustomEvent<{
+                checkInId: string
+                status: "yes" | "maybe" | "no" | null
+            }>
+            if (customEvent.detail.checkInId !== checkInId) return
+            const { status } = customEvent.detail
+            setLocalRsvpStatus(status === "no" ? null : status)
+            // Update attendee count based on status change
+            setLocalAttendeeCount(prev => {
+                if (status === "yes" && localRsvpStatus !== "yes") return prev + 1
+                if (status !== "yes" && localRsvpStatus === "yes") return Math.max(0, prev - 1)
+                return prev
+            })
+        }
+        window.addEventListener('rio-checkin-rsvp-sync', handleSync)
+        return () => window.removeEventListener('rio-checkin-rsvp-sync', handleSync)
+    }, [checkInId, localRsvpStatus])
 
     if (!userId) return null
 
-    const handleRsvp = async (e: React.MouseEvent) => {
+    const handleRsvp = (status: "yes" | "maybe", e: React.MouseEvent) => {
         e.stopPropagation()
         e.preventDefault()
 
-        // Toggle: if already "yes", remove RSVP (set to null/no), otherwise set to "yes"
-        // For check-ins, usually it's just "Join" (yes) or nothing.
-        // If we want to support "maybe", we can, but "Join" implies "yes".
-        // Let's assume toggle behavior: Click to Join, Click again to Leave?
-        // Or just "Join" button that becomes "Joined" (disabled or toggle).
+        // If tapping same status, toggle off (un-RSVP)
+        const newStatus = localRsvpStatus === status ? "no" : status
 
-        const newStatus = localRsvpStatus === "yes" ? "no" : "yes"
+        const previousStatus = localRsvpStatus
+        const previousCount = localAttendeeCount
+
+        // Optimistic UI update
+        setLocalRsvpStatus(newStatus === "no" ? null : newStatus)
+
+        if (newStatus === "yes" && previousStatus !== "yes") {
+            setLocalAttendeeCount(prev => prev + 1)
+        } else if (newStatus !== "yes" && previousStatus === "yes") {
+            setLocalAttendeeCount(prev => Math.max(0, prev - 1))
+        }
 
         startTransition(async () => {
-            // We need an action for check-in RSVP. Assuming rsvpToCheckIn exists or similar.
-            // The implementation plan mentioned creating this component but didn't specify the action.
-            // I'll assume rsvpToCheckIn is the action name, similar to rsvpToEvent.
-            // If it doesn't exist, I'll need to create it or find the existing one.
-            // Looking at CheckInDetailModal, it uses CheckInRsvpSection.
-            // Let's check CheckInRsvpSection to see what action it uses.
-            // It likely uses `rsvpToCheckIn` or similar.
-
             const result = await rsvpToCheckIn(checkInId, tenantId, tenantSlug, newStatus)
 
             if (result.success) {
-                setLocalRsvpStatus(newStatus)
                 CheckInAnalytics.rsvp(checkInId, newStatus)
+
+                // Dispatch sync event for PriorityFeed and other components
+                window.dispatchEvent(new CustomEvent('rio-checkin-rsvp-sync', {
+                    detail: { checkInId, status: newStatus === "no" ? null : newStatus, goingCount: localAttendeeCount }
+                }))
+
                 router.refresh()
-                toast.success(newStatus === "yes" ? "You joined the check-in!" : "You left the check-in.")
+                const labels: Record<string, string> = {
+                    yes: "You joined the check-in!",
+                    maybe: "Marked as maybe",
+                    no: "RSVP removed",
+                }
+                toast({
+                    title: "RSVP updated",
+                    description: labels[newStatus],
+                })
             } else {
-                toast.error(result.error || "Failed to update RSVP")
+                // Rollback on failure
+                setLocalRsvpStatus(previousStatus)
+                setLocalAttendeeCount(previousCount)
+                toast({
+                    title: "RSVP failed",
+                    description: result.error || "Failed to update RSVP",
+                    variant: "destructive",
+                })
             }
         })
     }
 
-    const isJoined = localRsvpStatus === "yes"
-
     return (
-        <Button
-            variant={isJoined ? "secondary" : "default"}
-            size="sm"
-            className={cn("h-8 gap-1.5", className)}
-            onClick={handleRsvp}
-            disabled={isPending}
-        >
-            {isPending ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-                <Users className="h-3.5 w-3.5" />
-            )}
-            <span className="text-xs font-medium">{isJoined ? "Joined" : "Join"}</span>
-        </Button>
+        <div className={cn("flex items-center gap-2", className)} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-lg">
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => handleRsvp("yes", e)}
+                    disabled={isPending}
+                    className={cn(
+                        "h-7 gap-1.5 px-2.5 flex-shrink-0 transition-all duration-200",
+                        localRsvpStatus === "yes"
+                            ? "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
+                            : "hover:bg-primary/10 hover:text-primary",
+                        isPending && localRsvpStatus === "yes" && "opacity-100 animate-pulse"
+                    )}
+                    title="Join"
+                >
+                    <Check className={cn("h-3.5 w-3.5", localRsvpStatus === "yes" && "stroke-[3px]")} />
+                    <span className="text-xs font-medium">Join</span>
+                </Button>
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => handleRsvp("maybe", e)}
+                    disabled={isPending}
+                    className={cn(
+                        "h-7 gap-1.5 px-2.5 flex-shrink-0 transition-all duration-200",
+                        localRsvpStatus === "maybe"
+                            ? "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/90"
+                            : "hover:bg-secondary/10 hover:text-secondary",
+                        isPending && localRsvpStatus === "maybe" && "opacity-100 animate-pulse"
+                    )}
+                    title="Maybe"
+                >
+                    <HelpCircle className={cn("h-3.5 w-3.5", localRsvpStatus === "maybe" && "stroke-[3px]")} />
+                    <span className="text-xs font-medium">Maybe</span>
+                </Button>
+            </div>
+
+            {/* Attendee going count */}
+            <div className="flex items-center gap-0.5 text-xs text-muted-foreground">
+                <NumberTicker
+                    value={localAttendeeCount}
+                    className={cn(
+                        "text-xs font-semibold px-1 rounded-sm transition-colors",
+                        localRsvpStatus === "yes" ? "text-primary bg-primary/10" : "text-muted-foreground"
+                    )}
+                />
+                <span className="text-xs">going</span>
+            </div>
+        </div>
     )
 }

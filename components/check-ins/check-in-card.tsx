@@ -2,8 +2,6 @@
 
 import { Card } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Users } from "lucide-react"
 import { CheckInActivityBadge } from "./check-in-activity-badge"
 import { CheckInTimeBadge } from "./check-in-time-badge"
 import { CheckInLocationDisplay } from "./check-in-location-display"
@@ -81,8 +79,8 @@ export function CheckInCard({ checkIn, tenantSlug, tenantId, userId, onClick, cl
         {/* Description if present */}
         {checkIn.description && <p className="text-sm text-muted-foreground line-clamp-2">{checkIn.description}</p>}
 
-        {/* Footer: Location and RSVP count */}
-        <div className="flex items-center justify-between gap-2 pt-1">
+        {/* Footer: Location */}
+        <div className="pt-1 space-y-2">
           <CheckInLocationDisplay
             locationType={checkIn.location_type}
             locationId={checkIn.location_id || checkIn.location?.id}
@@ -92,23 +90,17 @@ export function CheckInCard({ checkIn, tenantSlug, tenantId, userId, onClick, cl
             compact
           />
 
-          <div className="flex items-center gap-2">
-            {userId && (
-              <CheckInRsvpQuickAction
-                checkInId={checkIn.id}
-                tenantId={tenantId}
-                tenantSlug={tenantSlug}
-                userId={userId}
-                currentRsvpStatus={checkIn.user_rsvp_status as "yes" | "maybe" | "no" | null}
-              />
-            )}
-            {attendingCount > 0 && (
-              <Badge variant="secondary" className="gap-1 flex-shrink-0">
-                <Users className="h-3 w-3" />
-                {attendingCount}
-              </Badge>
-            )}
-          </div>
+          {/* RSVP Actions */}
+          {userId && (
+            <CheckInRsvpQuickAction
+              checkInId={checkIn.id}
+              tenantId={tenantId}
+              tenantSlug={tenantSlug}
+              userId={userId}
+              currentRsvpStatus={checkIn.user_rsvp_status as "yes" | "maybe" | "no" | null}
+              currentAttendeeCount={attendingCount}
+            />
+          )}
         </div>
       </div>
     </Card>

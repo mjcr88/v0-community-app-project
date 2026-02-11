@@ -6,15 +6,20 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { MapPin, Clock, UserPlus, Check, X, Users } from 'lucide-react'
+import { MapPin, Clock, Check, HelpCircle, X, Users, ChevronDown } from 'lucide-react'
 import { markAsRead } from "@/app/actions/notifications"
 import { rsvpToCheckIn } from "@/app/actions/check-ins"
-import { toast } from "sonner"
+import { useToast } from "@/hooks/use-toast"
 import { format, parseISO, differenceInMinutes } from "date-fns"
 import { cn } from "@/lib/utils"
 import type { NotificationFull } from "@/types/notifications"
 import { getCheckInEmoji } from "@/lib/utils/emojis"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 interface CheckinNotificationCardProps {
     notification: NotificationFull & {
@@ -63,7 +68,7 @@ function CheckInTimer({ startTime, durationMinutes }: { startTime: string; durat
         }
 
         updateTimer()
-        const interval = setInterval(updateTimer, 60000) // Update every minute
+        const interval = setInterval(updateTimer, 60000)
         return () => clearInterval(interval)
     }, [startTime, durationMinutes])
 
@@ -81,7 +86,9 @@ export function CheckinNotificationCard({
     onUpdate,
 }: CheckinNotificationCardProps) {
     const router = useRouter()
-    const [isJoining, setIsJoining] = useState(false)
+    const { toast } = useToast()
+    const [isUpdating, setIsUpdating] = useState(false)
+    const [localRsvpStatus, setLocalRsvpStatus] = useState<"yes" | "maybe" | "no" | null>(null)
 
     const checkIn = notification.check_in
     const actor = notification.actor
@@ -91,32 +98,42 @@ export function CheckinNotificationCard({
             await markAsRead(notification.id, tenantSlug)
             onUpdate()
         }
-
-        // Open check-in modal via URL query param or navigate to dashboard where it opens
-        // For now, navigating to events page is the standard behavior, but user requested opening the modal.
-        // Assuming the dashboard handles ?checkInId=... or similar, or just go to dashboard.
-        // The user said "open the check-in modal (like on the user dashboard)".
-        // This usually implies navigating to the dashboard with a query param.
         router.push(`/t/${tenantSlug}/dashboard?checkInId=${checkIn?.id}`)
     }
 
-    const handleJoin = async (e: React.MouseEvent) => {
+    const handleRsvp = async (status: "yes" | "maybe" | "no", e: React.MouseEvent) => {
         e.stopPropagation()
         if (!checkIn?.id) return
 
-        setIsJoining(true)
+        setIsUpdating(true)
+        setLocalRsvpStatus(status)
+
         try {
-            const result = await rsvpToCheckIn(checkIn.id, notification.tenant_id, tenantSlug, "yes", 1)
+            const result = await rsvpToCheckIn(checkIn.id, notification.tenant_id, tenantSlug, status, 1)
             if (result.success) {
-                toast.success("You're joining this check-in!")
+                const label = status === "yes" ? "joining" : status === "maybe" ? "maybe joining" : "not joining"
+                toast({
+                    title: "RSVP updated",
+                    description: `You're ${label} this check-in`,
+                })
                 onUpdate()
             } else {
-                toast.error(result.error || "Failed to join")
+                setLocalRsvpStatus(null)
+                toast({
+                    title: "RSVP failed",
+                    description: result.error || "Failed to update RSVP",
+                    variant: "destructive",
+                })
             }
-        } catch (error) {
-            toast.error("An error occurred")
+        } catch {
+            setLocalRsvpStatus(null)
+            toast({
+                title: "Error",
+                description: "An unexpected error occurred",
+                variant: "destructive",
+            })
         } finally {
-            setIsJoining(false)
+            setIsUpdating(false)
         }
     }
 
@@ -126,7 +143,7 @@ export function CheckinNotificationCard({
         return null
     }
 
-    const showJoinButton = notification.type === "checkin_invite" && !notification.action_taken
+    const showRsvpActions = notification.type === "checkin_invite" && !notification.action_taken && !localRsvpStatus
 
     return (
         <Card
@@ -176,30 +193,60 @@ export function CheckinNotificationCard({
                                 </p>
                             </div>
 
-                            {/* Quick Actions */}
-                            {showJoinButton && (
-                                <TooltipProvider>
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <Button
-                                                variant="outline"
-                                                size="icon"
-                                                className="h-8 w-8 rounded-full border-dashed border-primary/50 text-primary hover:bg-primary/5 hover:border-primary shrink-0"
-                                                onClick={handleJoin}
-                                                disabled={isJoining}
-                                            >
-                                                {isJoining ? (
-                                                    <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                                                ) : (
-                                                    <UserPlus className="h-4 w-4" />
-                                                )}
-                                            </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                            <p>Join Check-in</p>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                </TooltipProvider>
+                            {/* RSVP Dropdown */}
+                            {showRsvpActions && (
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-8 gap-1 rounded-full border-dashed border-primary/50 text-primary hover:bg-primary/5 hover:border-primary shrink-0"
+                                            onClick={(e) => e.stopPropagation()}
+                                            disabled={isUpdating}
+                                        >
+                                            {isUpdating ? (
+                                                <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                            ) : (
+                                                <>
+                                                    <span className="text-xs">RSVP</span>
+                                                    <ChevronDown className="h-3 w-3" />
+                                                </>
+                                            )}
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-40">
+                                        <DropdownMenuItem onClick={(e) => handleRsvp("yes", e as unknown as React.MouseEvent)} className="gap-2 cursor-pointer">
+                                            <Check className="h-4 w-4 text-primary" />
+                                            <span>Join</span>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={(e) => handleRsvp("maybe", e as unknown as React.MouseEvent)} className="gap-2 cursor-pointer">
+                                            <HelpCircle className="h-4 w-4 text-secondary" />
+                                            <span>Maybe</span>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={(e) => handleRsvp("no", e as unknown as React.MouseEvent)} className="gap-2 cursor-pointer">
+                                            <X className="h-4 w-4 text-destructive" />
+                                            <span>Decline</span>
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            )}
+
+                            {/* Show selected status after RSVP */}
+                            {localRsvpStatus && (
+                                <Badge
+                                    variant="outline"
+                                    className={cn(
+                                        "shrink-0 gap-1 text-xs",
+                                        localRsvpStatus === "yes" && "border-primary/50 text-primary bg-primary/5",
+                                        localRsvpStatus === "maybe" && "border-secondary/50 text-secondary bg-secondary/5",
+                                        localRsvpStatus === "no" && "border-destructive/50 text-destructive bg-destructive/5",
+                                    )}
+                                >
+                                    {localRsvpStatus === "yes" && <Check className="h-3 w-3" />}
+                                    {localRsvpStatus === "maybe" && <HelpCircle className="h-3 w-3" />}
+                                    {localRsvpStatus === "no" && <X className="h-3 w-3" />}
+                                    {localRsvpStatus === "yes" ? "Joining" : localRsvpStatus === "maybe" ? "Maybe" : "Declined"}
+                                </Badge>
                             )}
                         </div>
 
@@ -228,11 +275,6 @@ export function CheckinNotificationCard({
                                         <Clock className="h-3 w-3 shrink-0" />
                                         <span>{Math.floor(checkIn.duration_minutes / 60)}h {checkIn.duration_minutes % 60 > 0 ? `${checkIn.duration_minutes % 60}m` : ""}</span>
                                     </div>
-                                    {/* Placeholder for RSVP count if we had it */}
-                                    {/* <div className="flex items-center gap-1">
-                                        <Users className="h-3 w-3 shrink-0" />
-                                        <span>3 joined</span>
-                                    </div> */}
                                 </div>
                             </div>
                         )}

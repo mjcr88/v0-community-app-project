@@ -315,12 +315,12 @@ export function NeighboursPageClient({
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
                 <div className="w-full overflow-x-auto no-scrollbar pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
                     <div className="max-w-md">
-                        <TabsList className="bg-muted/30 p-1 rounded-full h-auto flex w-full justify-between items-center pr-1">
+                        <TabsList className="grid w-full grid-cols-3 bg-muted/30 p-1 rounded-full h-auto">
                             <TabsTrigger
                                 value="residents"
-                                className="rounded-full flex-1 sm:flex-initial px-2 sm:px-6 py-2 border border-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all flex-shrink-0"
+                                className="rounded-full flex items-center justify-center py-2 text-xs sm:text-sm border border-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all"
                             >
-                                <span className="flex items-center justify-center gap-2 text-xs sm:text-sm">
+                                <span className="flex items-center justify-center gap-2">
                                     Residents
                                     {filteredResidents.length > 0 && (
                                         <Badge
@@ -339,9 +339,9 @@ export function NeighboursPageClient({
                             </TabsTrigger>
                             <TabsTrigger
                                 value="families"
-                                className="rounded-full flex-1 sm:flex-initial px-2 sm:px-6 py-2 border border-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all flex-shrink-0"
+                                className="rounded-full flex items-center justify-center py-2 text-xs sm:text-sm border border-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all"
                             >
-                                <span className="flex items-center justify-center gap-2 text-xs sm:text-sm">
+                                <span className="flex items-center justify-center gap-2">
                                     Households
                                     {filteredFamilies.length > 0 && (
                                         <Badge
@@ -360,9 +360,9 @@ export function NeighboursPageClient({
                             </TabsTrigger>
                             <TabsTrigger
                                 value="lists"
-                                className="rounded-full flex-1 sm:flex-initial px-2 sm:px-6 py-2 border border-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all flex-shrink-0"
+                                className="rounded-full flex items-center justify-center py-2 text-xs sm:text-sm border border-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all"
                             >
-                                <span className="flex items-center justify-center gap-2 text-xs sm:text-sm">
+                                <span className="flex items-center justify-center gap-2">
                                     My Lists
                                     {filteredLists.length > 0 && (
                                         <Badge

@@ -146,7 +146,7 @@ export function NeighboursPageClient({
             const searchLower = search.toLowerCase()
             const matchesSearch =
                 search === "" ||
-                `${resident.first_name} ${resident.last_name}`.toLowerCase().includes(searchLower) ||
+                `${resident.first_name ?? ""} ${resident.last_name ?? ""}`.toLowerCase().includes(searchLower) ||
                 resident.lots?.lot_number?.toLowerCase().includes(searchLower) ||
                 resident.lots?.neighborhoods?.name?.toLowerCase().includes(searchLower) ||
                 (Array.isArray(resident.user_interests) &&

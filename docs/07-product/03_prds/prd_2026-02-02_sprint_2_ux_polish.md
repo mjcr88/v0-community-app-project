@@ -112,3 +112,13 @@
 | #78 | **Event Detachment** | 2 Days | **Feb 11** | **Feb 12** | None |
 
 > *Note: Schedule assumes parallel execution of #72 and #81 is possible, otherwise sequential execution pushes end date to Feb 14.*
+
+## Release Notes
+### Neighbor Directory Polish
+🚀 **Tab Alignment**
+Fixed visual misalignment of tabs in the Neighbor Directory. Switched to a robust Grid Layout to ensure perfect symmetry and full-width touch targets on mobile.
+
+🤝 **Privacy & Search**
+- Restored Admin ability to view full resident profiles (Privacy Override).
+- Fixed a bug where partial names could cause search errors.
+

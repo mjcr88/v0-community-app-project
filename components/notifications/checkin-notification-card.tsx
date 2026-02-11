@@ -116,6 +116,9 @@ export function CheckinNotificationCard({
                     title: "RSVP updated",
                     description: `You're ${label} this check-in`,
                 })
+                window.dispatchEvent(new CustomEvent('rio-checkin-rsvp-sync', {
+                    detail: { checkInId: checkIn.id, status: status === "no" ? null : status }
+                }))
                 onUpdate()
             } else {
                 setLocalRsvpStatus(null)

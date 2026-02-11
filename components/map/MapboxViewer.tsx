@@ -157,9 +157,13 @@ export function MapboxFullViewer({
     // Sync check-in RSVP from dashboard/priority feed
     useEffect(() => {
         const handleCheckinSync = (e: Event) => {
-            const { checkInId, status } = (e as CustomEvent<{ checkInId: string; status: "yes" | "maybe" | "no" | null }>).detail
+            const { checkInId, status, goingCount } = (e as CustomEvent<{ checkInId: string; status: "yes" | "maybe" | "no" | null; goingCount?: number }>).detail
             if (selectedLocation && (selectedLocation as CheckIn).activity_type && selectedLocation.id === checkInId) {
-                setSelectedLocation(prev => prev ? { ...prev, user_rsvp_status: status } as any : null)
+                setSelectedLocation(prev => prev ? {
+                    ...prev,
+                    user_rsvp_status: status,
+                    ...(goingCount !== undefined && { rsvp_going_count: goingCount })
+                } as any : null)
             }
         }
         window.addEventListener('rio-checkin-rsvp-sync', handleCheckinSync)

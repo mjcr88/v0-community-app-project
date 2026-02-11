@@ -35,6 +35,14 @@ export function CheckInRsvpQuickAction({
     const [localRsvpStatus, setLocalRsvpStatus] = useState(currentRsvpStatus)
     const [localAttendeeCount, setLocalAttendeeCount] = useState(currentAttendeeCount)
 
+    // Sync from parent props (e.g. SWR revalidation) when not mid-optimistic update
+    useEffect(() => {
+        if (!isPending) {
+            setLocalRsvpStatus(currentRsvpStatus)
+            setLocalAttendeeCount(currentAttendeeCount)
+        }
+    }, [currentRsvpStatus, currentAttendeeCount, isPending])
+
     // Listen for sync events from PriorityFeed or other components
     useEffect(() => {
         const handleSync = (e: Event) => {
@@ -85,7 +93,7 @@ export function CheckInRsvpQuickAction({
 
                 // Dispatch sync event for PriorityFeed and other components
                 window.dispatchEvent(new CustomEvent('rio-checkin-rsvp-sync', {
-                    detail: { checkInId, status: newStatus === "no" ? null : newStatus }
+                    detail: { checkInId, status: newStatus === "no" ? null : newStatus, goingCount: localAttendeeCount }
                 }))
 
                 router.refresh()

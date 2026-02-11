@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { Check, HelpCircle } from "lucide-react"
-import { useState, useTransition } from "react"
+import { useState, useTransition, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { rsvpToCheckIn } from "@/app/actions/check-ins"
@@ -35,6 +35,27 @@ export function CheckInRsvpQuickAction({
     const [localRsvpStatus, setLocalRsvpStatus] = useState(currentRsvpStatus)
     const [localAttendeeCount, setLocalAttendeeCount] = useState(currentAttendeeCount)
 
+    // Listen for sync events from PriorityFeed or other components
+    useEffect(() => {
+        const handleSync = (e: Event) => {
+            const customEvent = e as CustomEvent<{
+                checkInId: string
+                status: "yes" | "maybe" | "no" | null
+            }>
+            if (customEvent.detail.checkInId !== checkInId) return
+            const { status } = customEvent.detail
+            setLocalRsvpStatus(status === "no" ? null : status)
+            // Update attendee count based on status change
+            setLocalAttendeeCount(prev => {
+                if (status === "yes" && localRsvpStatus !== "yes") return prev + 1
+                if (status !== "yes" && localRsvpStatus === "yes") return Math.max(0, prev - 1)
+                return prev
+            })
+        }
+        window.addEventListener('rio-checkin-rsvp-sync', handleSync)
+        return () => window.removeEventListener('rio-checkin-rsvp-sync', handleSync)
+    }, [checkInId, localRsvpStatus])
+
     if (!userId) return null
 
     const handleRsvp = (status: "yes" | "maybe", e: React.MouseEvent) => {
@@ -61,6 +82,12 @@ export function CheckInRsvpQuickAction({
 
             if (result.success) {
                 CheckInAnalytics.rsvp(checkInId, newStatus)
+
+                // Dispatch sync event for PriorityFeed and other components
+                window.dispatchEvent(new CustomEvent('rio-checkin-rsvp-sync', {
+                    detail: { checkInId, status: newStatus === "no" ? null : newStatus }
+                }))
+
                 router.refresh()
                 const labels: Record<string, string> = {
                     yes: "You joined the check-in!",

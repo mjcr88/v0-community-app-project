@@ -56,3 +56,9 @@ supabase.auth.admin.create_user({
 **Context:** Next.js App Router aggressively caches GET requests.
 **The Gotcha:** Admin makes a change -> Refresh -> Old data shows.
 **Pattern:** For "Live" dashboards, always explicitly set `export const dynamic = 'force-dynamic'` or use `revalidatePath` on the Server Action.
+
+### 6. Mobile Wrapper Div Misalignment (Issue #69)
+**Context:** Tab alignment fix (`grid-cols-3`) worked on desktop but was invisible on mobile.
+**The Gotcha:** The `TabsList` was wrapped in an extra `<div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">` that the search bar above it did not have. On mobile, this created a different layout context (scroll container + negative margin), causing the grid to not fill width properly despite `w-full` being set.
+**Pattern:** When two UI elements must visually align (e.g., search bar + tabs), they **must** share the same wrapper structure. Never add mobile-specific wrappers (`-mx-*`, `overflow-x-auto`, `no-scrollbar`) to only one of them.
+**Debugging Tip:** When a Tailwind fix works on desktop but not mobile, run `tailwind-merge` output through `node -e` to verify class resolution, then check the **wrapper divs** for mobile-only classes.

@@ -227,3 +227,10 @@ const MapboxViewer = dynamic(() => import('./MapboxViewer'), {
 **Solution**: Use a lightweight, typed Custom Event Bus: `window.dispatchEvent(new CustomEvent('rio-sync', { detail: payload }))`.
 **Rule**: Use only for **ephemeral, cross-widget UI state** (like optimistic updates). Do not use for critical business logic or data persistence. Always namespace events (e.g., `rio-series-rsvp-sync`).
 **Cleanup**: MUST remove event listeners in `useEffect` return function to prevent memory leaks (`window.removeEventListener`).
+
+### [2026-02-11] Mobile Wrapper Structural Parity
+**Type**: Anti-Pattern
+**Context**: Issue #69 (Tab Alignment). Tabs used `grid-cols-3 w-full` but were wrapped in a scroll container (`overflow-x-auto -mx-4 px-4`) that the adjacent search bar did not have.
+**Problem**: On mobile, the extra wrapper created a different layout context. The negative margin shifted the container, and `overflow-x-auto` turned it into a scroll box that prevented the grid from expanding to full width. Fix appeared correct in code and production build CSS, but was invisible on mobile.
+**Rule**: When UI elements must visually align, they MUST share the same wrapper structure. Never add mobile-specific wrappers (`-mx-*`, `overflow-x-auto`) to only one element in a group. If horizontal scrolling is needed, apply it consistently or use a shared component.
+**Debugging**: Use `node -e "const { twMerge } = require('tailwind-merge'); console.log(twMerge(defaults, overrides))"` to verify class resolution when `cn()` overrides aren't working as expected.

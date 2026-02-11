@@ -19,7 +19,7 @@ export default async function NeighboursPage({ params }: { params: Promise<{ slu
     .from("users")
     .select("id, tenant_id, role, family_unit_id")
     .eq("id", user.id)
-    .eq("role", "resident")
+    .in("role", ["resident", "tenant_admin", "super_admin"])
     .single()
 
   if (!currentResident) {
@@ -94,10 +94,6 @@ export default async function NeighboursPage({ params }: { params: Promise<{ slu
     .eq("tenant_id", currentResident.tenant_id)
     .eq("role", "resident")
     .order("first_name")
-
-  console.log("[DEBUG] Neighbours page - tenant_id:", currentResident.tenant_id)
-  console.log("[DEBUG] Neighbours page - residents query error:", residentsError)
-  console.log("[DEBUG] Neighbours page - residents found:", residents?.length, residents?.map(r => `${r.first_name} ${r.last_name}`))
 
   // Get all families
   const { data: families } = await supabase

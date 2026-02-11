@@ -26,6 +26,7 @@ interface EventActionsMenuProps {
     hasUserFlagged: boolean
     flagCount: number
     isTenantAdmin: boolean
+    isSeries?: boolean
 }
 
 export function EventActionsMenu({
@@ -39,6 +40,7 @@ export function EventActionsMenu({
     hasUserFlagged,
     flagCount,
     isTenantAdmin,
+    isSeries = false,
 }: EventActionsMenuProps) {
     if (!canManageEvent && (eventStatus === "cancelled" || hasUserFlagged)) {
         return null
@@ -66,8 +68,9 @@ export function EventActionsMenu({
                                 eventId={eventId}
                                 tenantSlug={slug}
                                 eventTitle={eventTitle}
+                                isSeries={isSeries}
                                 customTrigger={
-                                    <div className="flex items-center w-full cursor-pointer text-destructive">
+                                    <div className="flex w-full items-center px-2 py-1.5 text-sm text-destructive focus:bg-destructive/10 cursor-pointer">
                                         <Ban className="mr-2 h-4 w-4" />
                                         Cancel Event
                                     </div>
@@ -81,8 +84,9 @@ export function EventActionsMenu({
                                     tenantId={tenantId}
                                     tenantSlug={slug}
                                     eventTitle={eventTitle}
+                                    isSeries={isSeries}
                                     customTrigger={
-                                        <div className="flex items-center w-full cursor-pointer text-destructive">
+                                        <div className="flex w-full items-center px-2 py-1.5 text-sm text-destructive focus:bg-destructive/10 cursor-pointer">
                                             <Trash2 className="mr-2 h-4 w-4" />
                                             Delete Event
                                         </div>

@@ -9,10 +9,11 @@
 |-------|----------|------|------------|------|-------|
 | #76 | **P0** | **M** | 1-2d | HIGH | [Infra] Supabase DEV Environment |
 | #75 | **P0** | **S** | 4-8h | HIGH | [Security] PII Leak Prevention |
-| #77 | **P0** | **M** | 1-2d | HIGH | [Security] Automatic Logout / Session Timeout |
-| #63 | **P0** | **M** | 1-2d | MED | [Bug/Feat] Series RSVP Fix & Feature |
+| #77 | **P0** | **M** | 1-2d | HIGH | [Security] Automatic Logout / Session Timeout **[RELEASED]** |
+| #63 | **P0** | **M** | 1-2d | MED | [Bug/Feat] Series RSVP Fix & Feature ([PR #92](https://github.com/mjcr88/v0-community-app-project/pull/92)) **[RELEASED]** |
 | #83 | **P0** | **M** | 1-2d | MED | [Feat] GeoJSON Reliability & Map Color |
 | #86 | **P1** | **S** | 4-8h | LOW | [Feat] User Location Beacon |
+| #93 | **P1** | **S** | 4-8h | LOW | [Feat] Mobile Series RSVP UI |
 
 ---
 
@@ -42,9 +43,17 @@
 *   **Issue #83 (GeoJSON):**
     *   Requires `locations` table schema migration (add `color` column).
     *   Dependent on Issue #76 (Supabase Dev Env) for safe migration testing.
+*   **Issue #63 (Series RSVP & Priority Feed):**
+    *   **Part A (Series):** Logic exists in `actions/events.ts`, needs granular `scope` handling.
+    *   **Part B (Feed):** Requires strict DB filtering on `event_rsvps` and `saved_events` to reduce noise.
+    *   **Dependencies:** None (independent of other tickets, but affects Dashboard).
 *   **Issue #86 (Location Beacon):**
     *   **Contextual Dependency:** Works best after #83 (keeps map updates grouped), but technically independent.
     *   Client-side only (no DB changes).
+*   **Issue #93 (Mobile Series RSVP UI):**
+    *   **Contextual Dependency:** Follows #63 (Series RSVP Logic).
+    *   **Tech Stack:** `vaul` (Drawer), `radix-ui` (Dialog).
+    *   **Impact:** Refactors `EventRsvpQuickAction` and `EventRsvpSection`.
 
 ---
 
@@ -87,20 +96,28 @@
         *   **Strict (Remember Me = FALSE):** Use `sessionStorage` (cleared on tab close) OR set aggressive 2h idle timer.
     3.  **Middleware:** Ensure consistent session validation.
 *   **Acceptance Criteria:**
-    - [ ] User logged in WITHOUT "Remember Me" is logged out after 2h idle.
-    - [ ] User logged in WITH "Remember Me" stays logged in after window close.
+    - [x] User logged in WITHOUT "Remember Me" is logged out after 2h idle.
+    - [x] User logged in WITH "Remember Me" stays logged in after window close.
 
-### 4. [Bug] Series RSVP Fix (#63)
+### 4. [Bug/Feat] Series RSVP & Priority Feed (#63)
 *   **Owner:** `backend-specialist`
-*   **Goal:** Allow users to RSVP to a whole series and fix individual session RSVP.
+*   **Goal:** (A) Fix Series RSVP buttons & "Reply All" feature. (B) Reduce Priority Feed noise.
 *   **Implementation Steps:**
-    1.  **Backend:** Update `app/actions/events.ts` to handle `scope="series"`.
-        *   When `scope="series"`, apply RSVP to ALL events with same `parent_event_id` (or recurrence grouping).
-    2.  **Frontend:** Update `EventRsvpQuickAction.tsx`.
-        *   Add Dropdown/Toggle: "This Event Only" vs "All Feature Events".
+    1.  **Part A: Series RSVP (Bug/Feature)**
+        *   **Backend:** Update `app/actions/events.ts` to handle `scope="series"`. Propagate `requires_rsvp` to children.
+        *   **Frontend:** Update `EventRsvpQuickAction.tsx` with "This Event Only" vs "All Future Events" toggle/modal.
+    2.  **Part B: Priority Feed (Noise Reduction)**
+        *   **API:** Refactor `app/api/dashboard/priority/route.ts`.
+        *   **Logic:** Switch from "Fetch All -> Filter" to "Fetch Relevant Only".
+        *   **Query:** Select events where:
+            *   `start_date` is `NOW` to `NOW + 7 days`.
+            *   AND (`user` has RSVP 'yes'/'maybe' OR `user` has Saved the event).
 *   **Acceptance Criteria:**
-    - [ ] "RSVP All" adds user to all future instances of the series.
-    - [ ] "RSVP One" adds user only to that specific date.
+    - [x] "RSVP All" adds user to all future instances of the series.
+    - [x] "RSVP One" adds user only to that specific date.
+    - [x] **Priority Feed:** Events WITHOUT RSVP/Save do NOT appear in the feed.
+    - [x] **Priority Feed:** Events WITH RSVP 'yes' within 7 days DO appear.
+    - [x] **Priority Feed:** No N+1 query performance issues.
 
 ### 5. [Feat] GeoJSON Reliability & Map Color (#83)
 *   **Owner:** `frontend-specialist` (Full Stack usage)
@@ -137,6 +154,20 @@
     *   [Worklog](../../04_logs/log_2026-02-06_issue_86_user_location_beacon.md)
     *   [Walkthrough](../../../../.gemini/antigravity/brain/1ce3f1b6-f7e7-4f46-9b36-1059df9ea2d5/walkthrough.md)
 
+### 7. [Feat] Mobile Series RSVP UI (#93)
+*   **Owner:** `frontend-specialist`
+*   **Goal:** Provide a responsive RSVP experience for series events (Dialog on Desktop, Drawer on Mobile).
+*   **Implementation Steps:**
+    1.  Create `components/ui/drawer.tsx` (using `vaul`).
+    2.  Create `components/ui/responsive-dialog.tsx` (wrapper).
+    3.  Refactor `EventRsvpQuickAction.tsx` and `EventRsvpSection.tsx` to use `ResponsiveDialog`.
+*   **Acceptance Criteria:**
+    - [ ] Desktop shows Center Modal for Series RSVP.
+    - [ ] Mobile shows Bottom Sheet (Drawer) for Series RSVP.
+    - [ ] "Just this event" and "This and future" options work in both views.
+*   **Links:**
+    *   [Requirements](../02_requirements/requirements_2026-02-07_mobile_series_rsvp.md)
+
 ---
 
 ## Definition of Done
@@ -147,19 +178,19 @@
 - [ ] Documentation updated (if applicable)
 
 ## Sprint Schedule
-**Sprint Start:** Feb 3, 2026 (Tuesday)
-**Sprint End:** Feb 10, 2026 (Tuesday) [Extended]
+**Sprint Start:** Feb 9, 2026 (Monday) [Revised]
+**Sprint End:** Feb 13, 2026 (Friday)
 
-| Issue | Title | Est. Duration | Start Date | Target Date | Dependencies |
-|-------|-------|---------------|------------|-------------|--------------|
-| #76 | **Supabase DEV Env** | 2 Days | **Feb 3** | **Feb 4** | None (Blocker) |
-| #63 | **Series RSVP Fix** | 2 Days | **Feb 3** | **Feb 4** | None |
-| #83 | **GeoJSON & Color** | 2 Days | **Feb 5** | **Feb 6** | Wait for #76 |
-| #75 | **PII Leak Prevention** | 1 Day | **Feb 9** | **Feb 9** | Wait for #83 |
-| #77 | **Auto Logout** | 2 Days | **Feb 9** | **Feb 10** | Wait for #83 |
-| #86 | **Location Beacon** | 1 Day | **Feb 10** | **Feb 10** | Independent |
+| Issue | Title | Est. Duration | Start Date | Target Date | Owner | Dependencies |
+|-------|-------|---------------|------------|-------------|-------|--------------|
+| #77 | **Auto Logout** | 2 Days | **Feb 9** | **Feb 10** | Backend | #83 (Wait) |
+| #83 | **GeoJSON & Color** | 2 Days | **Feb 9** | **Feb 10** | Frontend | #76 (Env) |
+| #63 | **Series RSVP & Feed** | 2 Days | **Feb 11** | **Feb 12** | Backend | None |
+| #75 | **PII Leak Prevention** | 1 Day | **Feb 11** | **Feb 11** | Frontend | #83 |
+| #86 | **Location Beacon** | 1 Day | **Feb 12** | **Feb 12** | Mobile | #83 |
+| #93 | **Mobile Series RSVP** | 1 Day | **Feb 13** | **Feb 13** | Frontend | #63 |
 
-> *Note: Schedule assumes parallel execution of #76 and #63.*
+> *Note: Schedule aligns Frontend and Backend streams to run in parallel.*
 
 ## Release Notes
 ### Release Notes (Draft)
@@ -187,3 +218,9 @@ Enhanced resident directory privacy! Sensitive contact info is now securely filt
 
 🛡️ **[Security] Admin Override**
 Tenant Admins can now view full resident profiles to assist with community management, regardless of individual privacy settings.
+
+🚀 **[Feature] Series RSVP & Priority Feed**
+📅 **Series RSVP**: Say "Yes" once, and you're set! You can now RSVP to "This and Future" events in a series with a single click.
+⚡ **Smart Priority Feed**: Your feed is now clutter-free. We only show events you've RSVP'd to ("Yes" or "Maybe") or explicitly Saved. No more noise from irrelevant community events.
+✨ **[Fix] Upcoming Widget RSVP Counts**
+Corrected display logic for recurring event series in the dashboard widget. RSVP counts now accurately reflect "This Event" vs series-wide attendance.

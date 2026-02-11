@@ -42,6 +42,8 @@ interface Event {
   custom_location_name?: string | null
   flag_count?: number
   status?: "draft" | "published" | "cancelled"
+  parent_event_id?: string | null
+  is_series?: boolean
 }
 
 interface UpcomingEventsWidgetProps {
@@ -146,7 +148,7 @@ export function UpcomingEventsWidget({ slug, userId, tenantId }: UpcomingEventsW
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="flex items-center gap-2">
           <h3 className="text-lg font-semibold">Upcoming Events</h3>
-          <Badge variant="secondary" className="bg-orange-100 text-orange-700 hover:bg-orange-100 border-none">
+          <Badge variant="secondary" className="bg-secondary/10 text-secondary border-none hover:bg-secondary/20">
             {events.length} Next
           </Badge>
         </div>
@@ -223,6 +225,9 @@ export function UpcomingEventsWidget({ slug, userId, tenantId }: UpcomingEventsW
                         maxAttendees={event.max_attendees}
                         currentAttendeeCount={event.attending_count}
                         rsvpDeadline={event.rsvp_deadline}
+                        isSeries={event.is_series}
+                        parentEventId={event.parent_event_id}
+                        startDate={event.start_date}
                       />
                     </div>
                   </div>

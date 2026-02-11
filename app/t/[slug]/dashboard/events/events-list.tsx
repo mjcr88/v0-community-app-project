@@ -11,6 +11,7 @@ import { RioImage } from "@/components/library/rio-image"
 import { PulsatingButton } from "@/components/library/pulsating-button"
 import { EnhancedEventCard } from "@/components/events/enhanced-event-card"
 import { FriendsGoingBadge } from "@/components/events/friends-going-badge"
+import { RioEmptyState } from "@/components/exchange/rio-empty-state"
 
 interface Event {
   id: string
@@ -54,11 +55,9 @@ interface Event {
   flag_count?: number
   status?: "draft" | "published" | "cancelled"
   attendee_ids?: string[]
+  parent_event_id?: string | null
+  recurrence_rule?: any | null
 }
-
-import { RioEmptyState } from "@/components/exchange/rio-empty-state"
-
-// ... (keep existing imports)
 
 export function EventsList({
   events,
@@ -265,6 +264,9 @@ export function EventsList({
                     maxAttendees={event.max_attendees}
                     currentAttendeeCount={event.attending_count || 0}
                     rsvpDeadline={event.rsvp_deadline}
+                    isSeries={!!event.parent_event_id || !!event.recurrence_rule}
+                    parentEventId={event.parent_event_id}
+                    startDate={event.start_date}
                   />
                 </div>
               </div>

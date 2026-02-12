@@ -4,6 +4,8 @@ import { createServerClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 import { applyVisibilityFilter, canUserViewEvent } from "@/lib/visibility-filter"
 import { cache } from 'react'
+import { z } from "zod"
+import { createClient } from "@supabase/supabase-js"
 
 export async function createEvent(
   tenantSlug: string,
@@ -2129,5 +2131,132 @@ export async function getLocationEventCount(locationId: string, tenantId: string
   } catch (error) {
     console.error("[v0] Unexpected error fetching location event count:", error)
     return 0
+  }
+}
+
+// ============================================
+// CONFLICT DETECTION
+// ============================================
+
+const CheckAvailabilityInput = z
+  .object({
+    locationId: z.string().uuid(),
+    startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)"),
+    endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)"),
+    startTime: z.string().regex(/^\d{2}:\d{2}$/, "Invalid time format (HH:MM)").nullable().optional(),
+    endTime: z.string().regex(/^\d{2}:\d{2}$/, "Invalid time format (HH:MM)").nullable().optional(),
+    excludeEventId: z.string().uuid().optional(),
+    tenantId: z.string().uuid(),
+  })
+  .refine(
+    (data) => (data.startTime && data.endTime) || (!data.startTime && !data.endTime),
+    { message: "Both startTime and endTime must be provided together, or neither." }
+  )
+
+export async function checkLocationAvailability(input: z.infer<typeof CheckAvailabilityInput>) {
+  try {
+    const result = CheckAvailabilityInput.safeParse(input)
+
+    if (!result.success) {
+      return { hasConflict: false, conflictCount: 0, error: result.error.message }
+    }
+
+    const { locationId, startDate, endDate, startTime, endTime, excludeEventId, tenantId } = result.data
+
+    console.log("[AvailableCheck] Input:", { locationId, startDate, endDate, startTime, endTime, tenantId })
+
+    const supabase = await createServerClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { hasConflict: false, conflictCount: 0, error: "Unauthorized" }
+    }
+
+    // Verify tenant membership
+    const { data: userRecord } = await supabase
+      .from("users")
+      .select("tenant_id")
+      .eq("id", user.id)
+      .single()
+
+    if (!userRecord || userRecord.tenant_id !== tenantId) {
+      console.error(`[Security] User ${user.id} attempted to query tenant ${tenantId} but belongs to ${userRecord?.tenant_id}`)
+      return { hasConflict: false, conflictCount: 0, error: "Unauthorized" }
+    }
+
+    // Use service role client to check ALL events regardless of visibility
+    // We only return boolean/count, not event details, so this is safe
+    let queryClient = supabase
+
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY_DEV
+
+    if (serviceKey) {
+      try {
+        const serviceClient = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          serviceKey,
+          {
+            auth: {
+              autoRefreshToken: false,
+              persistSession: false,
+            },
+          }
+        )
+        queryClient = serviceClient
+      } catch (e) {
+        console.error("[v0] Failed to create service client, falling back to user session:", e)
+      }
+    } else {
+      console.warn("[v0] Missing SUPABASE_SERVICE_ROLE_KEY; conflict check limited to visible events.")
+    }
+
+    let query = queryClient
+      .from("events")
+      .select("id", { count: "exact", head: true })
+      .eq("location_id", locationId)
+      .eq("tenant_id", tenantId)
+      .eq("status", "published")
+      // Date overlap logic: (StartA <= EndB) and (EndA >= StartB)
+      .lte("start_date", endDate)
+      .gte("end_date", startDate)
+
+    // Exclude the event currently being edited
+    if (excludeEventId) {
+      query = query.neq("id", excludeEventId)
+    }
+
+    // Time overlap logic
+    // If input is all-day (no times), it conflicts with everything on those dates (handled by date query above)
+    // If input has times, we need to check strictly against other timed events
+    if (startTime && endTime) {
+      // We want to find events that DO overlap.
+      // An event overlaps if:
+      // 1. It is all-day (start_time IS NULL) -> Conflict (matches date overlap)
+      // 2. It has time, and time ranges overlap: (StartA < EndB) AND (EndA > StartB)
+      //
+      // In Supabase query builder, we construct this carefully.
+      // The date filter above already narrows us to potential candidates.
+      // Now we filter OUT non-conflicting times.
+      //
+      // Using 'or' for the conflict conditions:
+      // is_all_day OR time_overlap
+      query = query.or(`start_time.is.null,and(start_time.lt.${endTime},end_time.gt.${startTime})`)
+    }
+
+    const { count, error } = await query
+
+    if (error) {
+      console.error("[v0] Error checking location availability:", error)
+      return { hasConflict: false, conflictCount: 0, error: error.message }
+    }
+
+    return {
+      hasConflict: (count || 0) > 0,
+      conflictCount: count || 0
+    }
+
+  } catch (error) {
+    console.error("[v0] Unexpected error checking location availability:", error)
+    return { hasConflict: false, conflictCount: 0, error: "Unexpected error" }
   }
 }

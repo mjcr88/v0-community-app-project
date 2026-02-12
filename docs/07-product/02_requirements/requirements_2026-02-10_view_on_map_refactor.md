@@ -6,7 +6,7 @@ The "View on map" button on the Location Details page currently redirects to `/d
 ## Proposed Solution
 ### 1. Navigation Redirect
 - **Change**: Update the "View on map" button in `LocationDetailsPage` (`app/t/[slug]/dashboard/locations/[id]/page.tsx`).
-- **New Destination**: `/t/${slug}/dashboard/community-map?highlightLocation=${location.id}`.
+- **New Destination**: `/t/${slug}/dashboard/community-map?highlightLocationId=${location.id}`.
 - **Rationale**: Directs users to the feature-rich `CommunityMapClient`.
 
 ### 2. Community Map Enhancement
@@ -36,13 +36,13 @@ The "View on map" button on the Location Details page currently redirects to `/d
 ## Technical Options
 
 ### Option 1: Direct Component Swap & Cleanup (Recommended)
-Refactor the "View on map" button to point to `/dashboard/community-map` and pass the `highlightLocation` parameter. Update the `CommunityMapClient` to consume this parameter and pass it to `MapboxFullViewer`. Delete the legacy `ResidentMapClient` and the `/dashboard/map` page immediately.
+Refactor the "View on map" button to point to `/t/${slug}/dashboard/community-map` and pass the `highlightLocationId` parameter. Update the `CommunityMapClient` to consume this parameter and pass it to `MapboxFullViewer`. Delete the legacy `ResidentMapClient` and the `/dashboard/map` page immediately.
 - **Pros**: Cleanest codebase, reduces tech debt immediately, single source of truth for map logic.
 - **Cons**: Slightly higher initial effort to verify `CommunityMapClient` wiring.
 - **Effort**: Low (1-2 hours)
 
 ### Option 2: Server-Side Redirect
-Modify `/dashboard/map` to perform a server-side redirect to `/dashboard/community-map` while preserving query parameters.
+Modify `/dashboard/map` to perform a server-side redirect to `/t/${slug}/dashboard/community-map` while preserving query parameters.
 - **Pros**: Preserves any external bookmarks to the old map URL.
 - **Cons**: Keeps the directory structure for a simple redirect; less clean than removing it.
 - **Effort**: Low (1 hour)

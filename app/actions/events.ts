@@ -2138,22 +2138,27 @@ export async function getLocationEventCount(locationId: string, tenantId: string
 // CONFLICT DETECTION
 // ============================================
 
-const CheckAvailabilityInput = z.object({
-  locationId: z.string().uuid(),
-  startDate: z.string(),
-  endDate: z.string(),
-  startTime: z.string().nullable().optional(),
-  endTime: z.string().nullable().optional(),
-  excludeEventId: z.string().uuid().optional(),
-  tenantId: z.string().uuid(),
-})
+const CheckAvailabilityInput = z
+  .object({
+    locationId: z.string().uuid(),
+    startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)"),
+    endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)"),
+    startTime: z.string().regex(/^\d{2}:\d{2}$/, "Invalid time format (HH:MM)").nullable().optional(),
+    endTime: z.string().regex(/^\d{2}:\d{2}$/, "Invalid time format (HH:MM)").nullable().optional(),
+    excludeEventId: z.string().uuid().optional(),
+    tenantId: z.string().uuid(),
+  })
+  .refine(
+    (data) => (data.startTime && data.endTime) || (!data.startTime && !data.endTime),
+    { message: "Both startTime and endTime must be provided together, or neither." }
+  )
 
 export async function checkLocationAvailability(input: z.infer<typeof CheckAvailabilityInput>) {
   try {
     const result = CheckAvailabilityInput.safeParse(input)
 
     if (!result.success) {
-      return { hasConflict: false, conflictCount: 0, error: "Invalid input" }
+      return { hasConflict: false, conflictCount: 0, error: result.error.message }
     }
 
     const { locationId, startDate, endDate, startTime, endTime, excludeEventId, tenantId } = result.data
@@ -2164,6 +2169,18 @@ export async function checkLocationAvailability(input: z.infer<typeof CheckAvail
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
+      return { hasConflict: false, conflictCount: 0, error: "Unauthorized" }
+    }
+
+    // Verify tenant membership
+    const { data: userRecord } = await supabase
+      .from("users")
+      .select("tenant_id")
+      .eq("id", user.id)
+      .single()
+
+    if (!userRecord || userRecord.tenant_id !== tenantId) {
+      console.error(`[Security] User ${user.id} attempted to query tenant ${tenantId} but belongs to ${userRecord?.tenant_id}`)
       return { hasConflict: false, conflictCount: 0, error: "Unauthorized" }
     }
 

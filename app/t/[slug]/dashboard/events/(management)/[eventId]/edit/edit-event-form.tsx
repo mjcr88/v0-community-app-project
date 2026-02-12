@@ -127,6 +127,7 @@ export function EditEventForm({
 
   const [conflictWarning, setConflictWarning] = useState<string | null>(null)
   const [hasConflict, setHasConflict] = useState(false)
+  const [isCheckingAvailability, setIsCheckingAvailability] = useState(false)
 
   const checkAvailability = useCallback(async () => {
     if (
@@ -134,6 +135,7 @@ export function EditEventForm({
       formData.location_id &&
       formData.start_date
     ) {
+      setIsCheckingAvailability(true)
       setConflictWarning(null)
       setHasConflict(false)
 
@@ -146,6 +148,8 @@ export function EditEventForm({
         endTime: formData.is_all_day ? null : formData.end_time || null,
         excludeEventId: eventId,
       })
+
+      setIsCheckingAvailability(false)
 
       if (result.hasConflict) {
         setConflictWarning("This location has another event scheduled during this time.")
@@ -702,7 +706,7 @@ export function EditEventForm({
             </div>
 
             <div className="flex gap-3 pt-4">
-              <Button type="submit" disabled={isSubmitting || hasConflict} className="flex-1 sm:flex-none">
+              <Button type="submit" disabled={isSubmitting || hasConflict || isCheckingAvailability} className="flex-1 sm:flex-none">
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isSubmitting ? "Updating..." : "Update Event"}
               </Button>

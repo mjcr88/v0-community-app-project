@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { format } from "date-fns"
 import { Button } from "@/components/ui/button"
@@ -109,12 +109,18 @@ export function EventForm({ tenantSlug, tenantId, categories, initialLocation }:
   const [hasConflict, setHasConflict] = useState(false)
   const [isCheckingAvailability, setIsCheckingAvailability] = useState(false)
 
+  // Ref to track the latest request ID to prevent race conditions
+  const lastRequestRef = useRef<number>(0)
+
   const checkAvailability = useCallback(async () => {
     if (
       formData.location_type === "community" &&
       formData.location_id &&
       formData.start_date
     ) {
+      // Increment request ID
+      const requestId = ++lastRequestRef.current
+
       setIsCheckingAvailability(true)
       setConflictWarning(null)
       setHasConflict(false)
@@ -133,6 +139,12 @@ export function EventForm({ tenantSlug, tenantId, categories, initialLocation }:
         startTime: formData.is_all_day ? null : formData.start_time || null,
         endTime: formData.is_all_day ? null : formData.end_time || null,
       })
+
+      // If this is not the latest request, ignore the result
+      if (requestId !== lastRequestRef.current) {
+        console.log("[v0] Ignoring stale availability check result", { requestId, current: lastRequestRef.current })
+        return
+      }
 
       setIsCheckingAvailability(false)
 

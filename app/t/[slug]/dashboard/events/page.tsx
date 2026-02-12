@@ -39,6 +39,12 @@ export default async function EventsPage({
     .eq("tenant_id", resident.tenant_id)
     .order("name")
 
+  const { data: communityLocations } = await supabase
+    .from("locations")
+    .select("id, name, type")
+    .eq("tenant_id", resident.tenant_id)
+    .order("name")
+
   const visibleEventIds = await applyVisibilityFilter(resident.tenant_id, {
     userId: user.id,
     tenantId: resident.tenant_id,
@@ -175,6 +181,7 @@ export default async function EventsPage({
         userId={user.id}
         tenantId={resident.tenant_id}
         friendIds={friendIds}
+        locations={communityLocations || []}
       />
     </div>
   )

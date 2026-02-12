@@ -8,11 +8,13 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
-import { Search, Filter, X, ChevronDown, Calendar, Clock, Tag } from "lucide-react"
+import { Search, Filter, X, ChevronDown, Calendar, Clock, Tag, MapPin, Check, ChevronsUpDown } from "lucide-react"
 import { EventsList } from "./events-list"
 import { EventsCalendar } from "./events-calendar"
 import { cn } from "@/lib/utils"
 import { motion, AnimatePresence } from "framer-motion"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
 interface Event {
   id: string
@@ -68,7 +70,7 @@ interface Category {
   icon: string
 }
 
-type FilterSection = "categories" | "type" | "time" | null
+type FilterSection = "categories" | "type" | "time" | "location" | null
 
 export function EventsPageClient({
   events,
@@ -77,6 +79,7 @@ export function EventsPageClient({
   userId,
   tenantId,
   friendIds = [],
+  locations,
 }: {
   events: Event[]
   categories: Category[]
@@ -84,11 +87,36 @@ export function EventsPageClient({
   userId: string
   tenantId: string
   friendIds?: string[]
+  locations: { id: string; name: string; type: string }[]
 }) {
   const [view, setView] = useState("list")
 
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null)
+
+  // Group locations by type
+  const locationsByType = useMemo(() => {
+    const grouped: Record<string, typeof locations> = {}
+    locations.forEach(loc => {
+      const type = loc.type || 'other'
+      if (!grouped[type]) grouped[type] = []
+      grouped[type].push(loc)
+    })
+    return grouped
+  }, [locations])
+
+  const locationTypeLabels: Record<string, string> = {
+    facility: "Facilities",
+    lot: "Lots",
+    walking_path: "Walking Paths",
+    neighborhood: "Neighborhoods",
+    boundary: "Boundaries",
+    public_street: "Public Streets",
+    common_area: "Common Areas",
+    other: "Other"
+  }
+
   const [eventType, setEventType] = useState("all")
   const [timeFilter, setTimeFilter] = useState("upcoming") // Default to upcoming events
   const [activeFilter, setActiveFilter] = useState<FilterSection>(null)
@@ -106,6 +134,13 @@ export function EventsPageClient({
       // Category filter
       if (selectedCategories.length > 0) {
         if (!event.category_id || !selectedCategories.includes(event.category_id)) {
+          return false
+        }
+      }
+
+      // Location filter
+      if (selectedLocationId) {
+        if (event.location?.id !== selectedLocationId) {
           return false
         }
       }
@@ -131,7 +166,7 @@ export function EventsPageClient({
 
       return true
     })
-  }, [events, searchQuery, selectedCategories, eventType, timeFilter])
+  }, [events, searchQuery, selectedCategories, selectedLocationId, eventType, timeFilter])
 
   const handleCategoryToggle = (categoryId: string) => {
     setSelectedCategories((prev) =>
@@ -142,17 +177,18 @@ export function EventsPageClient({
   const clearFilters = () => {
     setSearchQuery("")
     setSelectedCategories([])
+    setSelectedLocationId(null)
     setEventType("all")
     setTimeFilter("all")
     setActiveFilter(null)
   }
 
-  const hasActiveFilters = searchQuery || selectedCategories.length > 0 || eventType !== "all" || timeFilter !== "all"
+  const hasActiveFilters = searchQuery || selectedCategories.length > 0 || selectedLocationId || eventType !== "all" || timeFilter !== "all"
 
   const activeFilterCount =
-    (searchQuery ? 1 : 0) + selectedCategories.length + (eventType !== "all" ? 1 : 0) + (timeFilter !== "all" ? 1 : 0)
+    (searchQuery ? 1 : 0) + selectedCategories.length + (selectedLocationId ? 1 : 0) + (eventType !== "all" ? 1 : 0) + (timeFilter !== "all" ? 1 : 0)
 
-  const isSearchingOrFiltering = searchQuery || selectedCategories.length > 0 || eventType !== "all"
+  const isSearchingOrFiltering = searchQuery || selectedCategories.length > 0 || selectedLocationId || eventType !== "all"
 
   let emptyStateVariant: "no-matches" | "no-upcoming" | "no-past" | "no-rsvp" | "no-listings" = "no-upcoming"
 
@@ -167,6 +203,7 @@ export function EventsPageClient({
 
   const filterSections = [
     { id: "categories" as const, label: "Categories", icon: Tag },
+    { id: "location" as const, label: "Location", icon: MapPin },
     { id: "type" as const, label: "Type", icon: Filter },
     { id: "time" as const, label: "Time", icon: Clock },
   ]
@@ -233,7 +270,7 @@ export function EventsPageClient({
 
         {/* Filter Cards */}
         <div className="mt-6 space-y-4">
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-4 gap-3">
             {filterSections.map((section) => (
               <button
                 key={section.id}
@@ -269,6 +306,17 @@ export function EventsPageClient({
                   </Badge>
                 )
               })}
+              {selectedLocationId && (
+                <Badge
+                  variant="secondary"
+                  className="gap-1 cursor-pointer hover:bg-destructive/10 hover:text-destructive"
+                  onClick={() => setSelectedLocationId(null)}
+                >
+                  <MapPin className="h-3 w-3" />
+                  {locations.find((l) => l.id === selectedLocationId)?.name || "Location"}
+                  <span className="ml-1">×</span>
+                </Badge>
+              )}
               {eventType !== "all" && (
                 <Badge
                   variant="secondary"
@@ -372,6 +420,62 @@ export function EventsPageClient({
                         </div>
                       </div>
                     )}
+
+                    {activeFilter === "location" && (
+                      <div className="space-y-4">
+                        <h4 className="font-medium text-sm">Select Location</h4>
+                        <div className="flex flex-col space-y-2">
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                className={cn("w-full justify-between", !selectedLocationId && "text-muted-foreground")}
+                              >
+                                {selectedLocationId
+                                  ? locations.find((location) => location.id === selectedLocationId)?.name
+                                  : "Select location..."}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[300px] p-0" align="start">
+                              <Command>
+                                <CommandInput placeholder="Search location..." />
+                                <CommandList>
+                                  <CommandEmpty>No location found.</CommandEmpty>
+                                  {Object.entries(locationsByType).map(([type, typeLocations]) => (
+                                    <CommandGroup key={type} heading={locationTypeLabels[type] || type}>
+                                      {typeLocations.map((location) => (
+                                        <CommandItem
+                                          key={location.id}
+                                          value={location.name}
+                                          onSelect={() => {
+                                            setSelectedLocationId(
+                                              selectedLocationId === location.id ? null : location.id
+                                            )
+                                          }}
+                                        >
+                                          <Check
+                                            className={cn(
+                                              "mr-2 h-4 w-4",
+                                              selectedLocationId === location.id ? "opacity-100" : "opacity-0"
+                                            )}
+                                          />
+                                          {location.name}
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  ))}
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                          <p className="text-xs text-muted-foreground">
+                            Only displaying locations available for this tenant.
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </motion.div>
@@ -401,7 +505,7 @@ export function EventsPageClient({
             emptyStateVariant={emptyStateVariant}
           />
         </TabsContent>
-      </Tabs>
-    </div>
+      </Tabs >
+    </div >
   )
 }

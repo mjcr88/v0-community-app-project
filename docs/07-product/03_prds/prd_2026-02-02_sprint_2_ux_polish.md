@@ -11,6 +11,7 @@
 | #81 | **P0** | **S** | 4-8h | LOW | [Design] Check-in RSVP Consistency |
 | #69 | **P0** | **XS** | 2-4h | LOW | [Bug] Neighbor Directory Tab Alignment |
 | #78 | **P0** | **M** | 8-16h | HIGH | [Bug] Upcoming Widget RSVP Count Fix & Event Series Management |
+| #61 | **P1** | **M** | 8-12h | MED | [Feature] Location Filtering & Conflict Detection |
 
 ---
 
@@ -96,6 +97,30 @@
     - [x] RSVPing to the first event in a series triggers "RSVP to Series" modal.
     - [x] Manual QA: Editing "This event only" creates a standalone duplicate; parent series remains intact.
 
+### 5. [Feature] Location Filtering & Conflict Detection (#61)
+*   **Owner:** `backend-specialist`, `frontend-specialist`
+*   **Goal:** Let planners discover events at a specific location and warn when creating overlapping events.
+*   **Requirement:** [requirements_2026-01-24_location_conflict_and_filtering.md](../02_requirements/requirements_2026-01-24_location_conflict_and_filtering.md)
+*   **Implementation Steps:**
+    1.  **Server Action (Backend):** Create `checkLocationAvailability` in `app/actions/events.ts`.
+        *   Input: `locationId`, `startDate`, `endDate`, `startTime?`, `endTime?`, `excludeEventId?`.
+        *   Uses service role client (bypass RLS) to check for overlapping events.
+        *   Returns `{ hasConflict: boolean; conflictCount: number }` — **no private event details leaked**.
+    2.  **Dashboard Filter (Frontend):** Add a "Location" filter card to `events-page-client.tsx`.
+        *   Fetch community locations from `page.tsx` and pass as prop.
+        *   Add `selectedLocationId` state and client-side filter in `filteredEvents`.
+    3.  **Event Form Warning (Frontend):** Wire `checkLocationAvailability` into `event-form.tsx`.
+        *   Trigger check when user selects a community location AND has date/time set.
+        *   Display inline `Alert` warning — non-blocking (user can still submit).
+    4.  **DB Index (Migration):** Add composite index on `events(location_id, start_date, end_date)` for conflict query performance.
+*   **Acceptance Criteria:**
+    - [ ] Dashboard: Selecting a location from the filter shows only events at that location.
+    - [ ] Dashboard: Location filter chip appears and is clearable.
+    - [ ] Event Form: Selecting a community location with overlapping dates shows a warning banner.
+    - [ ] Event Form: Warning is non-blocking (user can still create the event).
+    - [ ] Privacy: Conflict check returns boolean only, no private event titles or details.
+    - [ ] Edit Mode: Editing an existing event excludes itself from the conflict check.
+
 ---
 
 ## Definition of Done
@@ -115,8 +140,9 @@
 | #81 | **Check-in Consistency** | 2 Days | **Feb 9** | **Feb 10** | None |
 | #69 | **Tab Alignment** | 0.5 Days | **Feb 11** | **Feb 11** | None |
 | #78 | **Event Detachment** | 2 Days | **Feb 11** | **Feb 12** | None |
+| #61 | **Location Filter & Conflict** | 1.5 Days | **Feb 12** | **Feb 13** | None |
 
-> *Note: Schedule assumes parallel execution of #72 and #81 is possible, otherwise sequential execution pushes end date to Feb 14.*
+> *Note: #61 added to sprint on Feb 12. Schedule assumes parallel execution of #72 and #81 is possible.*
 
 ## Release Notes
 ### Neighbor Directory Polish

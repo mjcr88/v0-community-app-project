@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { format } from "date-fns"
 import { Button } from "@/components/ui/button"
@@ -14,8 +14,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { createEvent, saveEventImages } from "@/app/actions/events"
-import { Calendar, Loader2, MapPin, Users, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react"
+import { createEvent, saveEventImages, checkLocationAvailability } from "@/app/actions/events"
+import { Calendar, Loader2, MapPin, Users, ChevronLeft, ChevronRight, RefreshCw, AlertTriangle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useRioFeedback } from "@/components/feedback/rio-feedback-provider"
 import { NeighborhoodMultiSelect } from "@/components/event-forms/neighborhood-multi-select"
@@ -105,7 +105,64 @@ export function EventForm({ tenantSlug, tenantId, categories, initialLocation }:
     },
     [],
   )
+  const [conflictWarning, setConflictWarning] = useState<string | null>(null)
+  const [hasConflict, setHasConflict] = useState(false)
+  const [isCheckingAvailability, setIsCheckingAvailability] = useState(false)
 
+  const checkAvailability = useCallback(async () => {
+    if (
+      formData.location_type === "community" &&
+      formData.location_id &&
+      formData.start_date
+    ) {
+      setIsCheckingAvailability(true)
+      setConflictWarning(null)
+      setHasConflict(false)
+
+      console.log("[v0] Checking availability for:", {
+        locationId: formData.location_id,
+        start: formData.start_date,
+        time: formData.start_time
+      })
+
+      const result = await checkLocationAvailability({
+        locationId: formData.location_id,
+        tenantId,
+        startDate: formData.start_date,
+        endDate: formData.end_date || formData.start_date,
+        startTime: formData.is_all_day ? null : formData.start_time || null,
+        endTime: formData.is_all_day ? null : formData.end_time || null,
+      })
+
+      setIsCheckingAvailability(false)
+
+      if (result.hasConflict) {
+        setConflictWarning("This location has another event scheduled during this time.")
+        setHasConflict(true)
+      } else if (result.error) {
+        console.error("[v0] Availability check error:", result.error)
+      }
+    } else {
+      setConflictWarning(null)
+      setHasConflict(false)
+    }
+  }, [
+    formData.location_type,
+    formData.location_id,
+    formData.start_date,
+    formData.end_date,
+    formData.start_time,
+    formData.end_time,
+    formData.is_all_day,
+    tenantId
+  ])
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      checkAvailability()
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [checkAvailability])
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
@@ -663,6 +720,20 @@ export function EventForm({ tenantSlug, tenantId, categories, initialLocation }:
             </div>
           </CardHeader>
           <CardContent>
+            {conflictWarning && (
+              <div className="mb-4 rounded-md border-l-4 border-yellow-500 bg-yellow-50 p-4">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <AlertTriangle className="h-5 w-5 text-yellow-400" aria-hidden="true" />
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm text-yellow-700">
+                      {conflictWarning}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
             <LocationSelector
               tenantId={tenantId}
               locationType={formData.location_type}
@@ -805,14 +876,46 @@ export function EventForm({ tenantSlug, tenantId, categories, initialLocation }:
         {currentStep < 4 ? (
           <Button
             type="button"
-            onClick={() => setCurrentStep(currentStep + 1)}
+            onClick={() => {
+              // Block progress if there's a conflict in Step 3
+              if (currentStep === 3) {
+                if (isCheckingAvailability) return
+                if (hasConflict) {
+                  toast({
+                    title: "Location Unavailable",
+                    description: "Please select a different location or time.",
+                    variant: "destructive",
+                  })
+                  return
+                }
+                if (formData.location_type === "community" && !formData.location_id) {
+                  toast({
+                    title: "Location required",
+                    description: "Please select a community location",
+                    variant: "destructive",
+                  })
+                  return
+                }
+              }
+              setCurrentStep(currentStep + 1)
+            }}
             className="flex gap-2"
+            disabled={currentStep === 3 && (isCheckingAvailability || hasConflict)}
           >
-            Next
-            <ChevronRight className="h-4 w-4" />
+            {currentStep === 3 && isCheckingAvailability ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Checking...
+              </>
+            ) : (
+              <>
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </>
+            )}
           </Button>
         ) : (
-          <PulsatingButton type="submit" disabled={isSubmitting}>
+          <PulsatingButton type="submit" disabled={isSubmitting || hasConflict}>
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

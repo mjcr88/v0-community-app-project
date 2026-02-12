@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { updateEvent, saveEventImages } from "@/app/actions/events"
+import { updateEvent, saveEventImages, checkLocationAvailability } from "@/app/actions/events"
 import { Calendar, Loader2, AlertTriangle, CheckCircle2, CalendarDays } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { ResponsiveDialog } from "@/components/ui/responsive-dialog"
@@ -125,6 +125,57 @@ export function EditEventForm({
     [],
   )
 
+  const [conflictWarning, setConflictWarning] = useState<string | null>(null)
+  const [hasConflict, setHasConflict] = useState(false)
+
+  const checkAvailability = useCallback(async () => {
+    if (
+      formData.location_type === "community" &&
+      formData.location_id &&
+      formData.start_date
+    ) {
+      setConflictWarning(null)
+      setHasConflict(false)
+
+      const result = await checkLocationAvailability({
+        locationId: formData.location_id,
+        tenantId,
+        startDate: formData.start_date,
+        endDate: formData.end_date || formData.start_date,
+        startTime: formData.is_all_day ? null : formData.start_time || null,
+        endTime: formData.is_all_day ? null : formData.end_time || null,
+        excludeEventId: eventId,
+      })
+
+      if (result.hasConflict) {
+        setConflictWarning("This location has another event scheduled during this time.")
+        setHasConflict(true)
+      } else if (result.error) {
+        // console.error(result.error)
+      }
+    } else {
+      setConflictWarning(null)
+      setHasConflict(false)
+    }
+  }, [
+    formData.location_type,
+    formData.location_id,
+    formData.start_date,
+    formData.end_date,
+    formData.start_time,
+    formData.end_time,
+    formData.is_all_day,
+    tenantId,
+    eventId
+  ])
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      checkAvailability()
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [checkAvailability])
+
   useEffect(() => {
     const original = initialData.visibility_scope
     const current = formData.visibility_scope
@@ -185,6 +236,16 @@ export function EditEventForm({
         toast({
           title: "Location required",
           description: "Please select a community location",
+          variant: "destructive",
+        })
+        setIsSubmitting(false)
+        return
+      }
+
+      if (hasConflict) {
+        toast({
+          title: "Location Unavailable",
+          description: "Please select a different location or time.",
           variant: "destructive",
         })
         setIsSubmitting(false)
@@ -457,6 +518,21 @@ export function EditEventForm({
               />
             </div>
 
+            {conflictWarning && (
+              <div className="mb-4 rounded-md border-l-4 border-yellow-500 bg-yellow-50 p-4">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <AlertTriangle className="h-5 w-5 text-yellow-400" aria-hidden="true" />
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm text-yellow-700">
+                      {conflictWarning}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <LocationSelector
               tenantId={tenantId}
               locationType={formData.location_type}
@@ -626,7 +702,7 @@ export function EditEventForm({
             </div>
 
             <div className="flex gap-3 pt-4">
-              <Button type="submit" disabled={isSubmitting} className="flex-1 sm:flex-none">
+              <Button type="submit" disabled={isSubmitting || hasConflict} className="flex-1 sm:flex-none">
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isSubmitting ? "Updating..." : "Update Event"}
               </Button>

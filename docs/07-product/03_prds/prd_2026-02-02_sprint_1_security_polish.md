@@ -14,6 +14,7 @@
 | #83 | **P0** | **M** | 1-2d | MED | [Feat] GeoJSON Reliability & Map Color |
 | #86 | **P1** | **S** | 4-8h | LOW | [Feat] User Location Beacon |
 | #93 | **P1** | **S** | 4-8h | LOW | [Feat] Mobile Series RSVP UI |
+| #72 | **P1** | **M** | 1-2d | MED | [Feat] Admin Family Selection Improvement |
 
 ---
 

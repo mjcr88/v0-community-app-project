@@ -12,6 +12,7 @@ import { createBrowserClient } from "@/lib/supabase/client"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle, Plus, Trash2, ArrowLeft } from "lucide-react"
+import { useFamilyByLot } from "@/hooks/admin/use-family-by-lot"
 
 type Lot = {
   id: string
@@ -22,25 +23,19 @@ type Lot = {
   }
 }
 
-type ExistingResident = {
-  id: string
-  first_name: string
-  last_name: string
-  family_unit_id: string | null
-  family_units?: {
-    id: string
-    name: string
-  }
-}
-
-export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }) {
+export function CreateResidentForm({ slug, tenantId, lots }: { slug: string; tenantId: string; lots: Lot[] }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [step, setStep] = useState(1)
   const [selectedLotId, setSelectedLotId] = useState("")
-  const [existingResidents, setExistingResidents] = useState<ExistingResident[]>([])
-  const [assignmentChoice, setAssignmentChoice] = useState<"add_to_family" | "reassign" | "">("")
 
+  // Use the hook for fetching lot context
+  const { residents: existingResidents, family: existingFamily, isLoading: checkingLot } = useFamilyByLot(tenantId, selectedLotId)
+
+  // Options: "add_to_family" | "independent" | "reassign"
+  const [assignmentChoice, setAssignmentChoice] = useState<"add_to_family" | "independent" | "reassign" | "">("")
+
+  // "add_to_family" sub-logic
   const [needsNewFamilyUnit, setNeedsNewFamilyUnit] = useState(false)
   const [newFamilyUnitName, setNewFamilyUnitName] = useState("")
   const [primaryContactChoice, setPrimaryContactChoice] = useState<"existing" | "new">("existing")
@@ -52,34 +47,9 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
     primary_contact_index: 0,
   })
 
-  useEffect(() => {
-    const checkExistingResidents = async () => {
-      if (!selectedLotId) return
-
-      const supabase = createBrowserClient()
-      const { data } = await supabase
-        .from("users")
-        .select("id, first_name, last_name, family_unit_id, family_units(id, name)")
-        .eq("lot_id", selectedLotId)
-        .eq("role", "resident")
-
-      if (data && data.length > 0) {
-        setExistingResidents(data)
-
-        const existingFamilyUnit = data.find((r: any) => r.family_unit_id && r.family_unit_id !== "" && r.family_units)
-        if (existingFamilyUnit?.family_units) {
-          setNewFamilyUnitName(existingFamilyUnit.family_units.name)
-          setNeedsNewFamilyUnit(false)
-        } else {
-          setNeedsNewFamilyUnit(true)
-        }
-      } else {
-        setExistingResidents([])
-      }
-    }
-
-    checkExistingResidents()
-  }, [selectedLotId])
+  // Determine if asking for family assignment makes sense
+  // We only show "Add to Family" if there is an existing family linked to the residents
+  const hasExistingFamily = !!existingFamily
 
   const handleLotSelection = () => {
     if (!selectedLotId) return
@@ -95,10 +65,11 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
     if (!assignmentChoice) return
 
     if (assignmentChoice === "add_to_family") {
-      const hasExistingFamilyUnit = existingResidents.some(
-        (r: any) => r.family_unit_id && r.family_unit_id !== "" && r.family_units,
-      )
-      if (!hasExistingFamilyUnit) {
+      if (!hasExistingFamily) {
+        // Edge case: Lot is occupied, but no family unit exists. 
+        // User chose "Add to Family" (which effectively means "Group with them").
+        // We might need to create a new family unit or just assume they want to be grouped.
+        // Current logic allows creating a new one.
         setNeedsNewFamilyUnit(true)
         setStep(2.5) // New intermediate step to name the family unit
         return
@@ -106,7 +77,7 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
       // If family unit exists, we just need to collect member info in Step 3
     }
 
-    // If reassign, we also go to Step 3 to collect new resident info
+    // If "independent" or "reassign", we go to Step 3
     setStep(3)
   }
 
@@ -122,9 +93,6 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
     const supabase = createBrowserClient()
 
     try {
-      const { data: tenant } = await supabase.from("tenants").select("id").eq("slug", slug).single()
-      if (!tenant) throw new Error("Tenant not found")
-
       // Logic for Reassigning Lot (clearing previous residents)
       if (assignmentChoice === "reassign" && existingResidents.length > 0) {
         const { error: updateError } = await supabase
@@ -137,17 +105,17 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
         if (updateError) throw updateError
       }
 
-      // Logic A: Adding to an EXISTING family unit (or one we just defined in step 2.5) on this lot
+      // Logic A: Adding to an EXISTING family unit
       if (assignmentChoice === "add_to_family") {
-        let targetFamilyUnitId = existingResidents.find(r => r.family_unit_id)?.family_unit_id;
+        let targetFamilyUnitId = existingFamily?.id;
 
-        // If we created a name in step 2.5 because it didn't exist
+        // If we need to create a new family unit for the existing residents first
         if (needsNewFamilyUnit && !targetFamilyUnitId) {
           const { data: familyUnit, error: familyError } = await supabase
             .from("family_units")
             .insert({
               name: newFamilyUnitName,
-              tenant_id: tenant.id,
+              tenant_id: tenantId,
             })
             .select()
             .single()
@@ -164,7 +132,7 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
           if (updateExistingError) throw updateExistingError
 
           // Set primary contact
-          const primaryContactId = primaryContactChoice === "existing" ? existingResidents[0].id : null // If 'new', we set it after creating new user
+          const primaryContactId = primaryContactChoice === "existing" ? existingResidents[0].id : null
           if (primaryContactId) {
             await supabase.from("family_units").update({ primary_contact_id: primaryContactId }).eq("id", familyUnit.id)
           }
@@ -172,7 +140,7 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
 
         if (!targetFamilyUnitId) throw new Error("Target family unit ID could not be determined.");
 
-        // Insert New Members
+        // Insert New Members linked to family
         const membersToInsert = familyData.members
           .filter((m) => m.first_name && m.last_name)
           .map((member) => ({
@@ -182,7 +150,7 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
             email: member.email || null,
             phone: member.phone || null,
             family_unit_id: targetFamilyUnitId,
-            tenant_id: tenant.id,
+            tenant_id: tenantId,
             role: "resident" as const,
           }))
 
@@ -193,11 +161,9 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
             .select()
           if (membersError) throw membersError
 
-
-          // If primary contact was set to "new", update family unit now if we just inserted them
+          // If primary contact was set to "new", update family unit now
           if (needsNewFamilyUnit && primaryContactChoice === "new" && insertedResidents?.length > 0) {
             const idx = Number(familyData.primary_contact_index)
-            // Fallback to 0 if idx is out of bounds (though valid form state shouldn't allow this)
             const chosenResident = insertedResidents[idx] || insertedResidents[0]
             if (chosenResident && chosenResident.id) {
               await supabase.from("family_units").update({ primary_contact_id: chosenResident.id }).eq("id", targetFamilyUnitId)
@@ -205,7 +171,7 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
           }
         }
 
-        // Insert Pets
+        // Insert Pets linked to family
         const petsToInsert = familyData.pets
           .filter((p) => p.name && p.species)
           .map((pet) => ({
@@ -221,8 +187,52 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
           if (petsError) throw petsError
         }
 
+      } else if (assignmentChoice === "independent") {
+        // Logic B: Independent Resident (No Family Unit)
+        const membersToInsert = familyData.members
+          .filter((m) => m.first_name && m.last_name)
+          .map((member) => ({
+            lot_id: selectedLotId,
+            first_name: member.first_name,
+            last_name: member.last_name,
+            email: member.email || null,
+            phone: member.phone || null,
+            family_unit_id: null, // Explicitly null
+            tenant_id: tenantId,
+            role: "resident" as const,
+          }))
+
+        // Check if multiple members - warning they won't be in a family unit? 
+        // For now allow it.
+
+        if (membersToInsert.length > 0) {
+          const { error: membersError } = await supabase
+            .from("users")
+            .insert(membersToInsert)
+          if (membersError) throw membersError
+        }
+
+        // Pets for independent residents?
+        // If they have pets, pets usually link to family or lot.
+        // Schema: pets have family_unit_id (nullable?) and lot_id.
+        // If family_unit_id is null, that's fine.
+        const petsToInsert = familyData.pets
+          .filter((p) => p.name && p.species)
+          .map((pet) => ({
+            lot_id: selectedLotId,
+            name: pet.name,
+            species: pet.species,
+            breed: pet.breed || null,
+            family_unit_id: null,
+          }))
+
+        if (petsToInsert.length > 0) {
+          const { error: petsError } = await supabase.from("pets").insert(petsToInsert)
+          if (petsError) throw petsError
+        }
+
       } else {
-        // Logic B: Creating a NEW Household (Standard Flow)
+        // Logic C: Creating a NEW Household (Standard Flow) or Reassign Flow (which behaves like standard)
         // Check if we have multiple members or pets -> requires family unit name
         const isMulti = familyData.members.length > 1 || familyData.pets.length > 0;
         let finalFamilyName = familyData.family_name;
@@ -237,7 +247,7 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
           .from("family_units")
           .insert({
             name: finalFamilyName,
-            tenant_id: tenant.id,
+            tenant_id: tenantId,
           })
           .select()
           .single()
@@ -254,7 +264,7 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
             email: member.email || null,
             phone: member.phone || null,
             family_unit_id: familyUnit.id,
-            tenant_id: tenant.id,
+            tenant_id: tenantId,
             role: "resident" as const,
           }))
 
@@ -308,17 +318,15 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
   }
 
   const removeFamilyMember = (index: number) => {
-    if (familyData.members.length === 1) return; // Prevent removing the last member
+    if (familyData.members.length === 1) return;
     setFamilyData({
       ...familyData,
       members: familyData.members.filter((_, i) => i !== index),
-      // Adjust primary contact index if necessary
       primary_contact_index: familyData.primary_contact_index === index ? 0 : (familyData.primary_contact_index > index ? familyData.primary_contact_index - 1 : familyData.primary_contact_index)
     })
   }
 
   const addPet = () => {
-    // If we're adding the first pet, and we previously had 1 member (which is default), we might need to enforce family name logic essentially but the UI handles showing the field.
     setFamilyData({
       ...familyData,
       pets: [...familyData.pets, { name: "", species: "", breed: "" }],
@@ -360,8 +368,8 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={handleLotSelection} disabled={!selectedLotId}>
-              Continue
+            <Button onClick={handleLotSelection} disabled={!selectedLotId || checkingLot}>
+              {checkingLot ? "Checking..." : "Continue"}
             </Button>
           </CardContent>
         </Card>
@@ -372,7 +380,7 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
           <CardHeader>
             <CardTitle>Step 2: Lot Assignment</CardTitle>
             <CardDescription>
-              Lot {selectedLot?.lot_number} already has {existingResidents.length} resident(s)
+              Lot {selectedLot?.lot_number} already has {existingResidents.length} resident(s).
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -380,24 +388,58 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
                 Existing residents: {existingResidents.map((r) => `${r.first_name} ${r.last_name}`).join(", ")}
+                {existingFamily && (
+                  <div className="mt-1 font-semibold">
+                    Family Unit: {existingFamily.name}
+                  </div>
+                )}
               </AlertDescription>
             </Alert>
 
             <RadioGroup
               value={assignmentChoice}
-              onValueChange={(v) => setAssignmentChoice(v as "add_to_family" | "reassign")}
+              onValueChange={(v) => setAssignmentChoice(v as any)}
             >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="add_to_family" id="add_to_family" />
-                <Label htmlFor="add_to_family">Add to family unit in lot {selectedLot?.lot_number}</Label>
+              {hasExistingFamily && (
+                <div className="flex items-center space-x-2 p-2 border rounded hover:bg-muted/50 transition-colors cursor-pointer">
+                  <RadioGroupItem value="add_to_family" id="add_to_family" />
+                  <div className="grid gap-1.5 cursor-pointer">
+                    <Label htmlFor="add_to_family" className="font-medium cursor-pointer">
+                      Add to "{existingFamily?.name}"
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      New residents will be added to the existing family unit.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center space-x-2 p-2 border rounded hover:bg-muted/50 transition-colors cursor-pointer">
+                <RadioGroupItem value="independent" id="independent" />
+                <div className="grid gap-1.5 cursor-pointer">
+                  <Label htmlFor="independent" className="font-medium cursor-pointer">
+                    Create Independent Resident(s)
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Residents will share the lot but will NOT be part of the existing family.
+                  </p>
+                </div>
               </div>
-              <div className="flex items-center space-x-2">
+
+              <div className="flex items-center space-x-2 p-2 border rounded hover:bg-destructive/10 border-destructive/20 transition-colors cursor-pointer">
                 <RadioGroupItem value="reassign" id="reassign" />
-                <Label htmlFor="reassign">Re-assign lot (remove existing residents)</Label>
+                <div className="grid gap-1.5 cursor-pointer">
+                  <Label htmlFor="reassign" className="font-medium text-destructive cursor-pointer">
+                    Unlink Existing Residents
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Remove current residents from this lot and start fresh.
+                  </p>
+                </div>
               </div>
             </RadioGroup>
 
-            <div className="flex gap-2 justify-between">
+            <div className="flex gap-2 justify-between mt-4">
               <Button variant="outline" onClick={() => setStep(1)}>
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back
@@ -479,7 +521,9 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Resident Information</CardTitle>
+                <CardTitle>
+                  {assignmentChoice === "independent" ? "Resident Information" : "Household Information"}
+                </CardTitle>
                 <div className="flex gap-2">
                   <Button type="button" size="sm" variant="outline" onClick={addPet}>
                     <Plus className="h-4 w-4 mr-2" />
@@ -492,35 +536,38 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
                 </div>
               </div>
               <CardDescription>
-                Add one or more residents to this lot. They will be grouped into a single household.
+                {assignmentChoice === "independent"
+                  ? "Add one or more independent residents to this lot."
+                  : "Add one or more residents to this family."}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Family Name Field - Conditional */}
-              {/* Show if:
-                  1. Creating a brand new household (Standard Flow) AND multiple members/pets
-                  2. Adding to a lot but creating a NEW family unit (needsNewFamilyUnit)
+              {/* Hide if:
+                  1. "Independent" choice
+                  2. "Add to Family" (using existing)
               */}
-              {((assignmentChoice === "" && (familyData.members.length > 1 || familyData.pets.length > 0)) ||
-                (assignmentChoice === "add_to_family" && needsNewFamilyUnit)) && (
-                  <div className="space-y-2 p-4 bg-muted/50 rounded-lg border">
-                    <Label htmlFor="family_name">
-                      Household / Family Name <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="family_name"
-                      placeholder="e.g., Smith Family"
-                      value={familyData.family_name}
-                      onChange={(e) => setFamilyData({ ...familyData, family_name: e.target.value })}
-                      required={assignmentChoice === "add_to_family" ? true : undefined}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      {assignmentChoice === "add_to_family"
-                        ? "Name for the new family unit you are creating."
-                        : "Required when adding multiple members or pets."}
-                    </p>
-                  </div>
-                )}
+              {/* Show only if:
+                  - Creating standard household (assignmentChoice === "" or "reassign")
+                  - AND (multi member OR added manually)
+              */}
+              {((assignmentChoice === "" || assignmentChoice === "reassign") && (familyData.members.length > 1 || familyData.pets.length > 0)) && (
+                <div className="space-y-2 p-4 bg-muted/50 rounded-lg border">
+                  <Label htmlFor="family_name">
+                    Household / Family Name <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="family_name"
+                    placeholder="e.g., Smith Family"
+                    value={familyData.family_name}
+                    onChange={(e) => setFamilyData({ ...familyData, family_name: e.target.value })}
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Required when adding multiple members or pets.
+                  </p>
+                </div>
+              )}
 
               {/* Members List */}
               <div className="space-y-4">
@@ -594,8 +641,8 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
                       </div>
                     </div>
 
-                    {/* Primary Contact Selection if multiple */}
-                    {familyData.members.length > 1 && (
+                    {/* Primary Contact Selection if multiple AND NOT independent */}
+                    {familyData.members.length > 1 && assignmentChoice !== "independent" && (
                       <div className="flex items-center space-x-2 mt-2">
                         <RadioGroup
                           value={familyData.primary_contact_index.toString()}
@@ -683,7 +730,7 @@ export function CreateResidentForm({ slug, lots }: { slug: string; lots: Lot[] }
                     Cancel
                   </Button>
                   <Button type="submit" disabled={loading}>
-                    {loading ? "Creating..." : "Create Household"}
+                    {loading ? "Creating..." : "Create Resident"}
                   </Button>
                 </div>
               </div>

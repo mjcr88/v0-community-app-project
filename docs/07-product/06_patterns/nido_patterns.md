@@ -234,3 +234,10 @@ const MapboxViewer = dynamic(() => import('./MapboxViewer'), {
 **Problem**: On mobile, the extra wrapper created a different layout context. The negative margin shifted the container, and `overflow-x-auto` turned it into a scroll box that prevented the grid from expanding to full width. Fix appeared correct in code and production build CSS, but was invisible on mobile.
 **Rule**: When UI elements must visually align, they MUST share the same wrapper structure. Never add mobile-specific wrappers (`-mx-*`, `overflow-x-auto`) to only one element in a group. If horizontal scrolling is needed, apply it consistently or use a shared component.
 **Debugging**: Use `node -e "const { twMerge } = require('tailwind-merge'); console.log(twMerge(defaults, overrides))"` to verify class resolution when `cn()` overrides aren't working as expected.
+
+### [2026-02-12] RLS Infinite Recursion
+**Type**: Anti-Pattern
+**Context**: Issue #72 (Admin Resident Creation). Failed with `infinite recursion detected in policy for relation "users"`.
+**Problem**: RLS policies on the `users` table used subqueries that selected from `users` (e.g., checking if `auth.uid()` is a tenant admin). This triggers the policy again, creating an infinite loop.
+**Fix**: Encapsulate the permission check in a `SECURITY DEFINER` function (e.g., `is_tenant_admin_of_tenant`). This runs with the creator's privileges, bypassing RLS for that specific check and breaking the recursion.
+

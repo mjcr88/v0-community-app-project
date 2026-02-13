@@ -556,7 +556,7 @@ export async function addExistingFamilyMember(
             .update({
                 family_unit_id: familyUnitId,
                 role: 'resident', // Ensure they have resident role
-                onboarding_completed: false // Reset if needed, or keep as is? keeping as is usually better but strict for now
+                // onboarding_completed: false // REMOVED: Preserve existing onboarding state
             })
             .eq("id", data.residentId)
 

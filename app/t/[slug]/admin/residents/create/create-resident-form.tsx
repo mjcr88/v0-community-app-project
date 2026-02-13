@@ -132,7 +132,9 @@ export function CreateResidentForm({ slug, tenantId, lots }: { slug: string; ten
           if (updateExistingError) throw updateExistingError
 
           // Set primary contact
-          const primaryContactId = primaryContactChoice === "existing" ? existingResidents[0].id : null
+          const primaryContactId = primaryContactChoice === "existing" && existingResidents.length > 0
+            ? existingResidents[0].id
+            : null
           if (primaryContactId) {
             await supabase.from("family_units").update({ primary_contact_id: primaryContactId }).eq("id", familyUnit.id)
           }

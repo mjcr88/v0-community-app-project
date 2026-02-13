@@ -62,7 +62,7 @@ export default async function CreateResidentPage({
         <h2 className="text-2xl font-bold tracking-tight">Create Resident</h2>
         <p className="text-muted-foreground">Add a new resident to your community</p>
       </div>
-      <CreateResidentForm slug={slug} lots={filteredLots} />
+      <CreateResidentForm slug={slug} tenantId={tenant.id} lots={filteredLots} />
     </div>
   )
 }

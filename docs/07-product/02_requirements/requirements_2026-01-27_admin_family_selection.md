@@ -102,3 +102,10 @@ I recommend **Option 3: Form Controller with Interceptors (Hook-based)**. While 
 
 
 
+## Implemented Behavior (2026-02-12)
+- **Occupied Lots**:
+  - System detects if a family unit exists for the selected lot.
+  - Presents explicit options: "Add to Existing Family", "Create Independent Resident", or "Unlink Existing Residents".
+  - "Unlink" clears the lot assignment for current residents (moving them to "No Lot") before assigning the new resident.
+- **Household Settings**:
+  - Added strict RLS bypass (Server Action) for adding existing residents to a family unit, ensuring only valid family members can perform this action.

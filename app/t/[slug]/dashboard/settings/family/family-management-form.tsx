@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Loader2, Plus, Trash2, Users, PawPrint, Home, Upload, AlertCircle, Camera, Mail } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
-import { createFamilyMember, requestAccountAccess } from "@/app/actions/families"
+import { createFamilyMember, addExistingFamilyMember, requestAccountAccess } from "@/app/actions/families"
 import { PhotoManager } from "@/components/photo-manager"
 import { EditableProfileBanner } from "@/components/profile/editable-profile-banner"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -250,13 +250,19 @@ export function FamilyManagementForm({
       if (addMemberMode === "existing") {
         if (!selectedResident) return
 
-        const supabase = createClient()
-        const { error } = await supabase
-          .from("users")
-          .update({ family_unit_id: resident.family_unit_id })
-          .eq("id", selectedResident)
+        const result = await addExistingFamilyMember(
+          tenantSlug,
+          resident.tenant_id,
+          familyUnit.id,
+          {
+            residentId: selectedResident,
+            relationshipType: newMember.relationship || undefined,
+          }
+        )
 
-        if (error) throw error
+        if (!result.success) {
+          throw new Error(result.error)
+        }
 
       } else {
         // Create new member

@@ -471,3 +471,124 @@ export async function requestAccountAccess(
         return { success: false, error: "An unexpected error occurred" }
     }
 }
+
+/**
+ * Add an existing resident to a family unit.
+ * Used when a user already exists (e.g. from a lot) but needs to be added to a family.
+ */
+export async function addExistingFamilyMember(
+    tenantSlug: string,
+    tenantId: string,
+    familyUnitId: string,
+    data: {
+        residentId: string
+        relationshipType?: string
+    }
+) {
+    try {
+        const supabase = await createServerClient()
+
+        const {
+            data: { user },
+        } = await supabase.auth.getUser()
+
+        if (!user) {
+            return { success: false, error: "User not authenticated" }
+        }
+
+        // 1. Check permissions
+        const { data: userData } = await supabase
+            .from("users")
+            .select("is_tenant_admin, tenant_id, role")
+            .eq("id", user.id)
+            .single()
+
+        const { data: familyUnit } = await supabase
+            .from("family_units")
+            .select("primary_contact_id, tenant_id")
+            .eq("id", familyUnitId)
+            .single()
+
+        if (!familyUnit) {
+            return { success: false, error: "Family unit not found" }
+        }
+
+        // Verify tenant scope
+        if (familyUnit.tenant_id !== tenantId) {
+            return { success: false, error: "Family unit belongs to a different tenant" }
+        }
+
+        const isSuperAdmin = userData?.role === 'super_admin'
+        const isTenantAdminRole = userData?.role === 'tenant_admin' && userData?.tenant_id === tenantId
+        const isResidentAdmin = userData?.is_tenant_admin && userData?.tenant_id === tenantId
+        const isPrimaryContact = familyUnit.primary_contact_id === user.id
+
+        // Allow if admin OR if primary contact of THIS family
+        const hasPermission = isSuperAdmin || isTenantAdminRole || isResidentAdmin || isPrimaryContact
+
+        if (!hasPermission) {
+            return { success: false, error: "Unauthorized - only primary contact or admin can add members" }
+        }
+
+        // 2. Validate Target User
+        const { data: targetUser } = await supabase
+            .from("users")
+            .select("id, tenant_id, family_unit_id")
+            .eq("id", data.residentId)
+            .single()
+
+        if (!targetUser) {
+            return { success: false, error: "Resident not found" }
+        }
+
+        if (targetUser.tenant_id !== tenantId) {
+            return { success: false, error: "Resident belongs to a different tenant" }
+        }
+
+        if (targetUser.family_unit_id) {
+            return { success: false, error: "Resident is already part of a family unit" }
+        }
+
+        // 3. Update User - Use service role to bypass RLS for update
+        const serviceClient = createServiceRoleClient()
+        const { error: updateError } = await serviceClient
+            .from("users")
+            .update({
+                family_unit_id: familyUnitId,
+                role: 'resident', // Ensure they have resident role
+                // onboarding_completed: false // REMOVED: Preserve existing onboarding state
+            })
+            .eq("id", data.residentId)
+
+        if (updateError) {
+            console.error("Error adding existing family member:", updateError)
+            return { success: false, error: updateError.message }
+        }
+
+        // 4. Create Relationship (Optional)
+        if (data.relationshipType) {
+            const { error: relError } = await supabase
+                .from("family_relationships")
+                .insert({
+                    tenant_id: tenantId,
+                    user_id: user.id, // The person adding (primary contact)
+                    related_user_id: data.residentId,
+                    relationship_type: data.relationshipType
+                })
+
+            if (relError) {
+                console.error("Error creating relationship:", relError)
+                // Don't fail total operation for this
+            }
+        }
+
+        revalidatePath(`/t/${tenantSlug}/dashboard/settings/family`)
+        revalidatePath(`/t/${tenantSlug}/admin/families`)
+
+        return { success: true }
+
+    } catch (error) {
+        console.error("Unexpected error adding existing family member:", error)
+        return { success: false, error: "An unexpected error occurred" }
+    }
+}

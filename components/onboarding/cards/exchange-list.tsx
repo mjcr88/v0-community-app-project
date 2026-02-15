@@ -100,7 +100,7 @@ export function ExchangeListCard() {
             <div className="text-center mb-8 md:mb-12">
                 <h2 className="text-2xl md:text-4xl font-bold">Exchange: Share abundance</h2>
                 <p className="text-base md:text-xl text-muted-foreground mt-2">
-                    Borrow what you need, lend what you can. A library of things for everyone.
+                    From free community listings to a broader exchange economy. Browse categories, seek items, and find trusted local providers.
                 </p>
             </div>
 

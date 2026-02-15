@@ -83,4 +83,67 @@ We recommend **Option 1** because it directly addresses the user's request for f
 - **Horizon**: Q1 26 (Immediate)
 
 ---
-🔁 [PHASE 3 COMPLETE] Handing off to User Review...
+---
+## 8. Technical Review
+
+### Phase 0: Issue Details & Context gathering
+- **Issue**: [#114](https://github.com/mjcr88/v0-community-app-project/issues/114)
+- **Impact Map**:
+    - `components/map/MapboxViewer.tsx`: Contains duplicate facility rendering logic (L1117-1159 and L1213-1265).
+    - `components/map/form-fields/FacilityFields.tsx`: Lacks `icon` field input; needs to support dual emoji/upload.
+    - `app/actions/locations.ts`: Server actions already support `icon` property.
+    - `lib/data/locations.ts`: `BaseLocation` interface includes `icon: string | null`.
+    - `components/photo-manager.tsx`: To be reused for icon image uploads.
+    - `app/api/upload/route.ts`: Used for handling icon uploads to Supabase storage.
+- **Historical Context**: Recent changes to Mapbox components have led to duplication of marker rendering logic, causing visual artifacts (z-fighting).
+- **Handoff**: `🔁 [PHASE 3 COMPLETE] Handing off to Documentation Writer...`
+
+### Phase 4: Documentation Logic
+- **Doc Gaps**:
+    - **Visual Specs**: `map-visualization.md` lacks documentation for dynamic facility icons (fallback 🏛️ vs. custom emoji vs. image URL).
+    - **Admin Manual**: No end-user guide exists for facility icon management (where to set them, recommended image dimensions).
+    - **API Ref**: Internal `locations` API server actions are documented via code types, but a functional flow for handle-or-upload is missing.
+- **Proposed Updates**:
+    - **`map-visualization.md`**: Add "Section 5: Dynamic Iconography" detailing the fallback chain and rendering modes.
+    - **`facility-management-manual.md`**: (New) Guide for community admins on customizing facility markers.
+    - **`nido_patterns.md`**: Add the "Mapbox Lazy Loading" requirement to prevent further performance regressions.
+- **Handoff**: `🔁 [PHASE 4 COMPLETE] Handing off to PM/Orchestrator for Final Alignment...`
+
+### Phase 5: Strategic Alignment & Decision
+- **Final Specification**:
+    - **Goal**: Resolve "Mapbox Cleanup & Facility Icons" by unifying rendering logic and enabling custom iconography.
+    - **Decision**: Approve "Dual Input" approach (Text/Emoji or File Upload).
+    - **Performance Requirement**: Implementation must include refactoring to lazy-load `MapboxViewer` to fix existing bundle bloat.
+    - **Security Requirement**: Role-based access for icon updates must be strictly enforced via server actions.
+- **Priority**: P1 (Scheduled for immediate pick-up in Q1 26).
+- **Status**: `🚀 [READY FOR DEVELOPMENT]`
+
+---
+**Review Flow State**: `[REVIEW CYCLE COMPLETE]`
+
+### Phase 1: Vibe & Security Audit
+- **Vibe Check**:
+    - **Backend-First**: Server actions (`createLocation`, `updateLocation`) correctly enforce role checks (`is_tenant_admin` or `super_admin`) and tenant isolation.
+    - **Zero Policy RLS**: Database policies for `locations` are assumed to be enabled; however, server-side validation acts as the primary gate.
+- **Attack Surface**:
+    - **Icon Uploads**: Reuses `app/api/upload/route.ts` which implements MIME type validation for images.
+    - **Icon Rendering (XSS)**: `MapboxViewer.tsx` must ensure that the `icon` string is rendered safely. React's default escaping protects against basic XSS. For image URLs, a regex check is recommended to ensure they point to valid image formats/trusted domains.
+    - **Storage Exhaustion**: Uploads are restricted to 10MB per file.
+- **Handoff**: `🔁 [PHASE 1 COMPLETE] Handing off to Test Engineer...`
+
+### Phase 2: Test Strategy
+- **Sad Paths**:
+    - **Malformed URL**: Storing a non-image URL in the `icon` field. Result: Map marker should fallback to default icon ('🏛️').
+    - **Invalid Emoji**: Inputting multi-character text in an emoji-only context.
+    - **Upload Failure**: Handling 500 errors or timeouts during icon upload gracefully with user-facing toasts.
+    - **Concurrent Edits**: Race conditions where two admins update the same facility icon. Overwrite is acceptable, but notification is better.
+- **Verification Plan**:
+    - **Unit Tests**:
+        - Verify `MapboxViewer` icon rendering logic (branching between `text` and `img`).
+        - Validate `FacilityFields` input handling for both text and file objects.
+    - **Integration Tests**:
+        - `POST /api/upload`: Validate file size (<10MB) and MIME type filtering.
+    - **E2E Tests (Playwright)**:
+        - Admin Flow: Map Editor -> Select Facility -> Update Icon (Emoji) -> Confirm map update.
+        - Admin Flow: Map Editor -> Select Facility -> Upload Image -> Confirm map update.
+- **Handoff**: `🔁 [PHASE 2 COMPLETE] Handing off to Performance Optimizer...`

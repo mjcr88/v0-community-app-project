@@ -184,4 +184,126 @@ Additionally, the current rollout is limited to **residents who currently live i
 | **Priority** | P1 — High (critical for onboarding new residents without manual admin work) |
 | **Size** | M — Medium (~1 sprint: migration + API + frontend + admin UI) |
 | **Horizon** | Now — Alpha feature, blocks first community rollout |
-| **Risk** | Low — isolated feature, no existing data migration, reversible |
+
+## 10. Technical Review (Phase 0-4)
+
+### Phase 0: Context Gathering
+
+#### Issue Details
+- **Issue**: [#99 Request Access on Login Page](https://github.com/mjcr88/v0-community-app-project/issues/99)
+- **Scope**: Frontend (Login, New Page, Admin UI), Backend (API, Schema).
+- **Goal**: Allow prospective residents to request access, creating a `access_requested` state before full account creation.
+
+#### Impact Map
+- **Frontend**:
+    - `app/t/[slug]/login/login-form.tsx` (Entry point)
+    - `app/t/[slug]/request-access/page.tsx` (New Page)
+    - `app/t/[slug]/admin/residents/residents-table.tsx` (Admin UI)
+- **Backend / Schema**:
+    - `supabase/migrations/*` (New `access_requests` table or schema change)
+    - `app/api/v1/access-request/route.ts` (New API)
+- **Dependencies**:
+    - Users Table (`public.users` or `auth.users` wrapper)
+    - `residents-table.tsx` relies on `getResidentStatus`.
+
+#### Historical Context
+- Recent changes to `residents-table.tsx` and `login-form.tsx` suggest active development in these areas.
+- **Git Log**:
+    - `login-form.tsx`: Modified recently for visual updates or refactoring.
+    - `residents-table.tsx`: Updated to handle tenant logic and filters.
+
+### Phase 1: Vibe & Security Audit
+
+#### Vibe Code Check
+- **Zero Policy RLS**:
+    - The new `access_requests` table MUST have RLS enabled.
+    - Policy: `public` (anon) can `INSERT`. `tenant_admin` can `SELECT`, `UPDATE`.
+    - **Risk**: `users` table should NOT be used for unverified requests (Option 3 rejected).
+- **Backend-First**:
+    - `POST /api/v1/access-request` must use Zod for strict validation.
+    - `GET /api/v1/lots` must be a custom route, NOT a direct PostgREST exposure, to strip sensitive fields.
+
+#### Attack Surface Analysis
+- **Public API (`POST /access-request`)**:
+    - **Vector**: Spam / DDoS.
+    - **Mitigation**: `upstash/ratelimit` (referenced in package.json) is MANDATORY.
+- **Data Leakage (`GET /lots`)**:
+    - **Vector**: Enumeration of vacant lots or resident locations.
+    - **Mitigation**: Return ONLY `id` and `lot_number`. Do NOT return `owner_id` or `status` if sensitive.
+- **Ghost Users**:
+    - By using a separate `access_requests` table, we avoid polluting the main `users` table with unverified emails.
+
+### Phase 2: Test Strategy
+
+#### Sad Paths
+- **Duplicate Email**: User tries to request access with an email already in `users` or `access_requests`. Expect: "Administrator contact" message.
+- **Invalid Lot**: User ID manipulation to submit a lot ID from another tenant. Expect: 400 Bad Request (Validation check).
+- **Rate Limit**: Spam submission. Expect: 429 Too Many Requests.
+- **Empty Fields**: Client-side evasion. Expect: 400 Bad Request.
+
+#### Test Plan
+- **Unit**:
+    - Test `POST` route validation (Zod) ensures all fields are present and valid.
+    - Test rate limiter rejection.
+- **Integration**:
+    - Submit valid request -> Verify row in `access_requests`.
+    - Admin "Approve" -> Verify `users` row created and `access_requests` status updated.
+- **E2E (Playwright)**:
+    - Flow: Login Page -> "Request Access" -> Fill Form -> Submit -> Toast.
+- **Manual**:
+    - Verify "Costa Rica" checkbox is mandatory.
+    - Verify "Family Name" is collected.
+
+### Phase 3: Performance Assessment
+
+#### Schema Analysis
+- **New Table**: `access_requests`
+- **Indexes Required**:
+    - `CREATE INDEX idx_access_requests_tenant_status ON access_requests(tenant_id, status);` — For admin dashboard filtering.
+    - `CREATE INDEX idx_access_requests_email ON access_requests(lower(email));` — For duplicate checking (case-insensitive).
+- **Query Impact**:
+    - The admin dashboard "Access Requests" tab must use pagination (`page`, `limit`) to avoid loading all requests if spam attacks occur.
+    - `GET /lots` must use `select('id, lot_number')` to minimize payload size.
+
+### Phase 4: Documentation Logic
+
+#### Documentation Plan
+- **User Manuals**:
+    - [NEW] `docs/01-manuals/resident-guide/request-access.md`: Instructions for prospective residents.
+    - [NEW] `docs/01-manuals/admin-guide/review-access-requests.md`: Instructions for admins on reviewing and approving.
+- **API Reference**:
+    - [NEW] `docs/02-technical/api/access-requests.md`: Endpoint specs for `POST /api/v1/access-request` and `GET /api/v1/lots`.
+- **Flows**:
+    - [NEW] `docs/02-technical/flows/auth/request-access-flow.md`: Sequence diagram of the request -> approve -> invite lifecycle.
+- **Schema**:
+    - [NEW] `docs/02-technical/schema/tables/access_requests.md`: Table definition and RLS details.
+    - [NEW] `docs/02-technical/schema/policies/access_requests.md`: Plain English RLS rules.
+
+#### Documentation Gaps (Logged to `docs/documentation_gaps.md`)
+- **2026-02-14**: Missing comprehensive Admin Guide for resident management.
+- **2026-02-14**: Missing public API documentation for unauthenticated endpoints.
+- **2026-02-14**: Missing explicit RLS policy documentation for new tables.
+
+### Phase 5: Strategic Alignment & Decision
+
+#### Board Context
+- **Issue #99** is currently a P1 Enhancement.
+- **Dependency**: Blocked by or highly coordinated with **Issue #70** (Password Reset) as both touch the login page UI layout.
+- **Capacity**: Sprint 2 alignment required.
+
+#### Product Owner Decision
+- **Sizing**: M (Medium) - Initial backend setup + Frontend form + Admin UI.
+- **Recommendation**: **Prioritize** for Sprint 2. The manual onboarding bottleneck is a significant friction point for community growth.
+
+#### Definition of Done (DoD)
+- [ ] `access_requests` table created with RLS.
+- [ ] `/api/v1/access-request` endpoint implemented with rate limiting.
+- [ ] `/t/[slug]/request-access` page functional with lot selection.
+- [ ] Residents table in Admin UI updated with "Access Requests" tab.
+- [ ] "Approve" action pre-fills resident creation form.
+- [ ] Documentation updated (Manuals, API, Schema).
+
+
+
+
+

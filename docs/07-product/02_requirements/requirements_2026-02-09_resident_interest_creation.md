@@ -174,3 +174,27 @@ The `interests` table already has a `UNIQUE(tenant_id, name)` constraint. Combin
 | 3 | Add create capability to profile settings (if exists) | Profile interests form |
 | 4 | Derive `allInterests` from resident data | `neighbours/page.tsx` |
 | 5 | Verify directory filter works end-to-end | `neighbours-page-client.tsx` |
+
+## 9. Technical Review Phase Results
+
+### Phase 1: Vibe & Security Audit
+- **Critical Finding**: The RLS policy for `resident_interests` is currently `FOR ALL` with `USING (true)`, meaning any resident can delete or modify any other resident's interest linkages.
+- **Fix Required**: Change policy to `USING (auth.uid() = resident_id)` and add `CHECK` policy for inserts.
+- **Interests Table**: Requires a new `INSERT` policy for residents to enable self-expression.
+
+### Phase 2: Test Strategy
+- **Unit Testing**: Add tests for `applyPrivacyFilter` to ensure `journey_stage` is correctly nulled when `show_journey_stage` is false.
+- **Integration Testing**: Hardened RLS policies must be verified with multi-session testing (Tenant Admin vs. Resident A vs. Resident B).
+- **Manual Verification**: Test interest creation flow specifically for deduplication and immediate availability.
+
+### Phase 3: Performance Assessment
+- **N+1 Avoidance**: Observed that fetched residents currently perform multiple sub-selects for interests/skills. Consider moving to a single optimized join if performance becomes a bottleneck.
+- **Scalability**: For communities over 1000 residents, client-side filtering should be moved to server-side with pagination.
+
+### Phase 4: Documentation Logic
+- **Schema Updates**: `docs/02-technical/schema/tables/interests.md` needs to reflect resident-led creation.
+- **User Documentation**: Resident profile settings guide needs update to mention "Create New Interest" capability.
+
+### Phase 5: Strategic Alignment
+- **Decision**: Mirroring the skills pattern is the most consistent and efficient path forward.
+- **Impact**: Removes a major friction point for new communities during onboarding.

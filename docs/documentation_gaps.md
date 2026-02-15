@@ -46,3 +46,16 @@
 - **2026-02-07**: Missing API documentation for 'app/actions/events.ts'.
 - **2026-02-07**: Missing Admin Guide for "Edit This Event Only" (Detachment) workflow.
 - **2026-02-07**: Missing Resident Guide for "Series RSVP" consistency and visual indicators.
+
+- **2026-02-14**: Missing `docs/01-manuals/resident-guide` updates for "How to Reset Password" (Self-Service flow).
+- **2026-02-14**: Missing `docs/01-manuals/admin-guide` updates to mark Admin-Mediated Reset as superseded by Self-Service.
+- **2026-02-14**: Missing `docs/02-technical/flows/auth/password-reset.md` (Self-Service implementation details).
+- **2026-02-14**: Missing directory `docs/02-technical/flows/auth/`.
+
+- **2026-02-14**: Missing Admin Guide pages for resident management and access request review.
+- **2026-02-14**: Missing technical documentation for public/unauthenticated endpoints (lots, access-request).
+- **2026-02-14**: Missing RLS policy documentation for the access_requests table.
+- **2026-02-14**: Missing schema and policy documentation for `users`, `user_interests`, `user_skills`, `skills`.
+- **2026-02-14**: Missing Resident Guide content for "Profile Auto-Save".
+- **2026-02-14**: Missing documentation for new shared component `ImageCropper` (client-side cropping logic).
+- **2026-02-15**: Missing Resident Guide content for the refreshed 2026 Product Tour (Issue #117).

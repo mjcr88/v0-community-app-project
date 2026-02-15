@@ -19,7 +19,7 @@ export function MapHighlighterCard() {
                     {/* Left: Map screenshot */}
                     <div className="relative w-full h-full min-h-[200px] rounded-2xl overflow-hidden border-2 border-primary/20 shadow-xl bg-muted/20">
                         <Image
-                            src="/artifacts/map_screenshot.png"
+                            src="/artifacts/map.png"
                             alt="Community map showing terrain"
                             fill
                             className="object-contain p-1"
@@ -31,13 +31,13 @@ export function MapHighlighterCard() {
                         </div>
                     </div>
 
-                    {/* Right: Location detail shot */}
-                    <div className="relative w-full h-full min-h-[200px] rounded-2xl overflow-hidden border-2 border-primary/20 shadow-xl bg-muted/20">
+                    {/* Right: Location Detail */}
+                    <div className="relative w-full h-[200px] md:h-full min-h-[200px] shrink-0 rounded-xl overflow-hidden border-2 border-primary/20 shadow-xl bg-muted/20 order-2 md:order-2">
                         <Image
-                            src="/artifacts/location_detail.jpg"
-                            alt="Ceiba Common Area construction details"
+                            src="/artifacts/location_page.png"
+                            alt="Location details"
                             fill
-                            className="object-contain p-1"
+                            className="object-cover md:object-contain p-1"
                             priority
                         />
                         {/* Label overlay */}

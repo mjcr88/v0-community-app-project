@@ -63,4 +63,25 @@ This approach aligns with our goal of reducing technical debt and maintaining a 
 - **Size**: S
 - **Horizon**: Q1 26
 
+### Phase 1: Vibe & Security Audit
+- **Vibe Check**: Standard "Backend-First" pattern is followed. Data fetching in `CommunityMapClient` is passed down from server components.
+- **Security Check**: REDUCE ATTACK SURFACE by removing legacy `/dashboard/map` endpoint. All location fetching is constrained by `tenant_id` and Supabase RLS.
+- **Refinement**: Identified that `LocationInfoCard.tsx` has redundant client-side fetching logic that should be cleaned up during implementation to strictly follow "Backend-First" principles.
 
+### Phase 2: Test & Quality Strategy
+- **Verification Plan**:
+  - **Redirection**: Verify "View on Map" button link construction.
+  - **Highlighting**: Verify `CommunityMapClient` consumes `highlightLocationId` correct from `searchParams`.
+  - **Cleanup**: Verify build success after deleting `ResidentMapClient`.
+- **Automated Tests**: No existing E2E tests for map highlighting. Recommendation to add a Playwright smoke test for the redirection flow.
+
+### Phase 3: Performance & Scale Assessment
+- **Impact**: Removing `ResidentMapClient` significantly reduces the client-side bundle size as we eliminate a complex secondary map consumer.
+- **Efficiency**: Consolidating to `CommunityMapClient` means we only need to optimize one map component for performance (e.g., marker clustering, lazy loading).
+
+### Phase 4: Documentation & Knowledge Review
+- **Updates**: None required for external docs. The refactor simplifies the system architecture documentation by removing the "Legacy Resident Map" reference.
+
+### Phase 5: Strategic Alignment & Readiness
+- **Alignment**: This refractor is a prerequisite for more advanced map features (e.g., custom icons, heatmaps) as it cleans up the redundant map rendering pathways.
+- **Status**: 🚀 **[READY FOR DEVELOPMENT]**

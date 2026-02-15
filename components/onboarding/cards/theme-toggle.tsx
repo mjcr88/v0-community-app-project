@@ -10,7 +10,11 @@ import {
     Calendar,
     MapPin,
     Package,
-    AlertCircle
+    AlertCircle,
+    ShoppingBag,
+    MessageSquare,
+    CalendarCheck,
+    Megaphone
 } from "lucide-react"
 
 const Circle = forwardRef<
@@ -41,6 +45,10 @@ export function ThemeToggleCard() {
     const checkinsRef = useRef<HTMLDivElement>(null)
     const mapRef = useRef<HTMLDivElement>(null)
     const directoryRef = useRef<HTMLDivElement>(null)
+    const marketplaceRef = useRef<HTMLDivElement>(null)
+    const announcementsRef = useRef<HTMLDivElement>(null)
+    const reservationsRef = useRef<HTMLDivElement>(null)
+    const messagesRef = useRef<HTMLDivElement>(null)
 
     // Sync with actual theme
     useEffect(() => {
@@ -97,57 +105,39 @@ export function ThemeToggleCard() {
                         <div className="text-lg md:text-2xl font-bold text-primary">ESM</div>
                     </Circle>
 
-                    {/* Left: 3 icons stacked */}
-                    <div className="absolute left-0 md:left-8 top-1/2 -translate-y-1/2 flex flex-col gap-6 md:gap-12">
-                        <Circle ref={requestsRef}>
-                            <AlertCircle className="h-6 w-6 md:h-8 md:w-8" />
-                        </Circle>
-                        <Circle ref={exchangeRef}>
-                            <Package className="h-6 w-6 md:h-8 md:w-8" />
-                        </Circle>
-                        <Circle ref={checkinsRef}>
-                            <MapPin className="h-6 w-6 md:h-8 md:w-8" />
-                        </Circle>
-                    </div>
-
-                    {/* Right: 3 icons stacked */}
-                    <div className="absolute right-0 md:right-8 top-1/2 -translate-y-1/2 flex flex-col gap-6 md:gap-12">
+                    {/* Left: 4 icons stacked */}
+                    <div className="absolute left-0 md:left-8 top-1/2 -translate-y-1/2 flex flex-col gap-4 md:gap-8">
                         <Circle ref={directoryRef}>
-                            <Users className="h-6 w-6 md:h-8 md:w-8" />
+                            <Users className="h-5 w-5 md:h-6 md:w-6" />
                         </Circle>
                         <Circle ref={mapRef}>
-                            <Map className="h-6 w-6 md:h-8 md:w-8" />
+                            <Map className="h-5 w-5 md:h-6 md:w-6" />
                         </Circle>
                         <Circle ref={eventsRef}>
-                            <Calendar className="h-6 w-6 md:h-8 md:w-8" />
+                            <Calendar className="h-5 w-5 md:h-6 md:w-6" />
+                        </Circle>
+                        <Circle ref={reservationsRef}>
+                            <CalendarCheck className="h-5 w-5 md:h-6 md:w-6" />
                         </Circle>
                     </div>
 
-                    {/* Animated Beams */}
-                    <AnimatedBeam
-                        containerRef={containerRef}
-                        fromRef={requestsRef}
-                        toRef={centerRef}
-                        gradientStartColor="#6B9B47"
-                        gradientStopColor="#D97742"
-                        duration={4}
-                    />
-                    <AnimatedBeam
-                        containerRef={containerRef}
-                        fromRef={exchangeRef}
-                        toRef={centerRef}
-                        gradientStartColor="#6B9B47"
-                        gradientStopColor="#D97742"
-                        duration={4}
-                    />
-                    <AnimatedBeam
-                        containerRef={containerRef}
-                        fromRef={checkinsRef}
-                        toRef={centerRef}
-                        gradientStartColor="#6B9B47"
-                        gradientStopColor="#D97742"
-                        duration={4}
-                    />
+                    {/* Right: 4 icons stacked */}
+                    <div className="absolute right-0 md:right-8 top-1/2 -translate-y-1/2 flex flex-col gap-4 md:gap-8">
+                        <Circle ref={marketplaceRef}>
+                            <ShoppingBag className="h-5 w-5 md:h-6 md:w-6" />
+                        </Circle>
+                        <Circle ref={checkinsRef}>
+                            <Users className="h-5 w-5 md:h-6 md:w-6" />
+                        </Circle>
+                        <Circle ref={messagesRef}>
+                            <MessageSquare className="h-5 w-5 md:h-6 md:w-6" />
+                        </Circle>
+                        <Circle ref={announcementsRef}>
+                            <Megaphone className="h-5 w-5 md:h-6 md:w-6" />
+                        </Circle>
+                    </div>
+
+                    {/* Animated Beams - flowing FROM icons TO center */}
                     <AnimatedBeam
                         containerRef={containerRef}
                         fromRef={directoryRef}
@@ -167,6 +157,46 @@ export function ThemeToggleCard() {
                     <AnimatedBeam
                         containerRef={containerRef}
                         fromRef={eventsRef}
+                        toRef={centerRef}
+                        gradientStartColor="#6B9B47"
+                        gradientStopColor="#D97742"
+                        duration={4}
+                    />
+                    <AnimatedBeam
+                        containerRef={containerRef}
+                        fromRef={reservationsRef}
+                        toRef={centerRef}
+                        gradientStartColor="#6B9B47"
+                        gradientStopColor="#D97742"
+                        duration={4}
+                    />
+                    <AnimatedBeam
+                        containerRef={containerRef}
+                        fromRef={marketplaceRef}
+                        toRef={centerRef}
+                        gradientStartColor="#6B9B47"
+                        gradientStopColor="#D97742"
+                        duration={4}
+                    />
+                    <AnimatedBeam
+                        containerRef={containerRef}
+                        fromRef={checkinsRef}
+                        toRef={centerRef}
+                        gradientStartColor="#6B9B47"
+                        gradientStopColor="#D97742"
+                        duration={4}
+                    />
+                    <AnimatedBeam
+                        containerRef={containerRef}
+                        fromRef={messagesRef}
+                        toRef={centerRef}
+                        gradientStartColor="#6B9B47"
+                        gradientStopColor="#D97742"
+                        duration={4}
+                    />
+                    <AnimatedBeam
+                        containerRef={containerRef}
+                        fromRef={announcementsRef}
                         toRef={centerRef}
                         gradientStartColor="#6B9B47"
                         gradientStopColor="#D97742"

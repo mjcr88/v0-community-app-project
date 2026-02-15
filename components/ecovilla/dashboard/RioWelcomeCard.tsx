@@ -34,7 +34,7 @@ export function RioWelcomeCard({ slug }: { slug: string }) {
                             size="sm"
                             className="bg-orange-500 hover:bg-orange-600 text-white border-none shadow-sm gap-2"
                         >
-                            <Link href={`/t/${slug}/tour-test`}>
+                            <Link href={`/t/${slug}/onboarding/tour`}>
                                 <Play className="h-3 w-3 fill-current" />
                                 Start tour
                             </Link>

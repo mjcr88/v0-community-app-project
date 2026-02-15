@@ -52,7 +52,7 @@ const meta = {
         layout: 'centered',
         docs: {
             description: {
-                component: 'Infinite scrolling marquee component. \n\n**Status**: Used in `components/onboarding/cards/event-marquee`, which is used in `/tour-test`.',
+                component: 'Infinite scrolling marquee component. \n\n**Status**: Used in `components/onboarding/cards/event-marquee`, which is used in `/t/[slug]/onboarding/tour`.',
             },
         },
     },

@@ -17,16 +17,16 @@ export function AnnouncementAlertCard() {
 
     const announcements = [
         {
-            title: "February neighbour festival announced.",
+            title: "February Neighbor Gathering",
             body: "Get ready, plan your trip and take a closer look at our event agenda.",
-            author: "Admin Team",
+            author: "Ecovilla board & administration",
             time: "2 min ago",
             delay: 0
         },
         {
-            title: "Our titles are finally here!",
-            body: "Get in touch via our request forms to schedule your title transfer",
-            author: "Legal Team",
+            title: "Construction guidelines",
+            body: "New construction content posted.",
+            author: "Ecovilla board & administration",
             time: "Just now",
             delay: 500 // Slight delay after card appearance before typing starts
         }

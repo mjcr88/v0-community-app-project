@@ -85,9 +85,9 @@ export function EventMarqueeCard() {
         <div className="h-full w-full flex flex-col items-center justify-center px-4 py-8 md:px-8 md:py-12 overflow-hidden">
             {/* Heading */}
             <div className="text-center mb-8 md:mb-12 z-10">
-                <h2 className="text-2xl md:text-4xl font-bold">Events: Make memories together</h2>
+                <h2 className="text-2xl md:text-4xl font-bold">Events & Reservations: Gather together</h2>
                 <p className="text-base md:text-xl text-muted-foreground mt-2">
-                    Life happens here. RSVP to gatherings and see who's going.
+                    RSVP to community events or book common facilities for your own gatherings.
                 </p>
             </div>
 
@@ -115,8 +115,8 @@ export function EventMarqueeCard() {
                 {/* Central Calendar Image */}
                 <div className="relative z-20 w-full max-w-3xl max-h-[350px] aspect-video rounded-xl overflow-hidden border-2 border-primary/20 shadow-2xl bg-muted/20 mt-4">
                     <Image
-                        src="/artifacts/events_calendar_mockup.png"
-                        alt="Community events calendar"
+                        src="/artifacts/events.png"
+                        alt="Community events calendar and facility reservations"
                         fill
                         className="object-contain p-2"
                         priority

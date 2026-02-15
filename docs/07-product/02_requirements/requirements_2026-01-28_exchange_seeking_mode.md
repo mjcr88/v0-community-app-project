@@ -87,55 +87,92 @@ This approach provides the most integrated user experience. Residents can seamle
 ## 8. Technical Review
 
 ### 8.0 Phase 0: Context & History
-- **Issue**: [feat: Exchange Seeking Mode #74](https://github.com/mjcr88/v0-community-app-project/issues/74)
+- **Issue**: [feat: Exchange Seeking Mode #73](https://github.com/mjcr88/v0-community-app-project/issues/73)
 - **Goal**: Add "Seeking" mode to Exchange.
 - **Impact Map**:
-    - **Database**: `exchange_listings` (New `listing_type` column).
+    - **Database**: `exchange_listings` (New `type` column). *Note: `listing_type` in issue body, but `type` used in code types.*
     - **Logic**: `lib/data/exchange.ts`, `app/actions/exchange-listings.ts`.
     - **UI**: `components/exchange/` (Listing Cards, Feed).
 - **Historical Context**:
-    - Recent activity in `exchange` module: `feat: Alpha Cohort Reliability & UI Fixes (COMAPP-26)` (Commit `42f7d362`).
+    - Recent activity in `exchange` module focuses on Alpha Cohort reliability (e.g., commit `42f7d362`).
     - Schema managed via SQL scripts in `scripts/exchange/`.
+    - `lib/data/exchange.ts` already has `type` in TypeScript interfaces, but current code (line 153) explicitly notes the column is missing in DB.
 
 ### 8.1 Phase 1: Security Audit
-- **Vibe**: Code uses `createServerClient` properly (Backend-First).
+- **Vibe**: Code uses `createServerClient` properly (Backend-First). Validation exists for title, category, and price (Min > 0).
 - **Attack Surface**:
-    - `exchange_listings` is projected by RLS (`08_create_exchange_rls_policies.sql`).
-    - Existing Policy: `Residents can view published exchange listings` restricts to `status = 'published'`. This is safe for "Seeking" mode as long as requests also use "published" status.
-    - **Risk**: `price` column reused as `budget`. Ensure separate UI/Validation logic prevents "Negative Budget" or misuse.
-    - **Risk**: No specific `listing_type` RLS policy exists, so access is uniform across Offers/Requests. This is acceptable for this feature.
+    - `exchange_listings` is protected by RLS (`08_create_exchange_rls_policies.sql`).
+    - **Verified**: Existing policies for `SELECT` and `INSERT` are safe for "Seeking" mode as long as requests follow the standard `status` lifecycle.
+    - **Logic Gap**: `createBorrowRequest` in `app/actions/exchange-listings.ts` (line 665) currently assumes all listings are "Offers". If a listing is a "Request", the action should logically be "Offer help/item" rather than "Borrow".
+    - **Risk**: Reuse of `price` column as `budget` for requests. Ensure validation prevents null or negative values if a budget is expected.
 
 ### 8.2 Phase 2: Test Strategy
 - **Sad Paths**:
-    - **Negative Budget**: User enters -100 for "Budget/Price".
-    - **Type Confusion**: User tries to "Borrow" a "Request" (Logic should prevent this).
-    - **Empty Search**: Filtering for "Requests" yields 0 results.
+    - **Negative Budget**: User enters -100 for "Budget/Price" in a Request.
+    - **Logic Mismatch**: User tries to "Borrow" a "Request" listing (Action should be blocked or redirected to "Offer Help").
+    - **Missing Type**: Action defaults to "Offer" or errors if `type` is missing.
+    - **Category Mismatch**: Ensuring category constraints apply correctly to requests (e.g., requesting an item in a non-item category if enforced).
 - **Test Plan**:
-    - **Unit (Vitest)**: New test file `app/actions/exchange-listings.test.ts` to verify `createExchangeListing` with `type='request'` and `listing_type` column handling.
+    - **Unit (Vitest)**:
+        - Create `app/actions/exchange-listings.test.ts` (none exist currently for this module).
+        - Test `createExchangeListing` with `type='request'` and `type='offer'`.
+        - Test `getExchangeListings` with `type` filter once the column is added.
     - **E2E (Playwright)**:
-        - `auth.setup.ts` to log in.
-        - `exchange.spec.ts`: Test "Create Listing" flow, selecting "Looking For" toggle. Verify badge appears in feed.
+        - Extend `e2e/exchange.spec.ts` (verify if exists, or create new) to cover the "Create Seeking Listing" flow.
+        - Verify "Seeking" badges/labels are visible in the feed.
+        - Test "Looking For" filter toggle on the main exchange page.
 
 ### 8.3 Phase 3: Performance Review
 - **Schema Analysis**:
-    - `exchange_listings` table lacks an index for the proposed `listing_type` column.
-    - **Recommendation**: Create index `idx_exchange_listings_type` covering `(tenant_id, listing_type)` to support efficient feed filtering.
-    - Current indexes exist for `tenant_id`, `created_by`, `status`, `category_id`, `location_id`.
-- **Query Impact**:
-    - Filtering by `listing_type` on the main feed will be common. Without an index, this could slow down feed loading as the table grows.
+    - **Existing**: `exchange_listings` has indexes on `tenant_id`, `status`, and `category_id`.
+    - **N+1 Risk**: Low. Most fetches use `lib/data/exchange.ts` which uses `supabase-js` queries.
+    - **Optimization**: Filtering by `type` in the feed (which is the main use case) will be most efficient if we add a composite index.
+- **Recommendations**:
+    - **NEW INDEX**: `CREATE INDEX idx_exchange_listings_feed ON public.exchange_listings (tenant_id, status, type) WHERE status = 'published' AND cancelled_at IS NULL;`
+    - **CONSTRAINT**: Add `CHECK (type IN ('offer', 'request'))` to prevent invalid data ingestion.
+    - **Migration**: Schema change must be performed during a low-traffic window if the table is very large (unlikely given community app scale).
 
 ### 8.4 Phase 4: Documentation Plan
-- **Manuals**:
-    - `docs/01-manuals/resident-guide.md` does not exist! **CRITICAL GAP**. Needs creation to explain "Requests".
-    - `docs/01-manuals/admin-guide.md` (check existence) -> Update to include moderation of "Requests".
+- **Technical Flows**:
+    - **`docs/02-technical/flows/exchange-transactions.md`**: Update state machine to handle Request → Offer Help flow. Update inventory logic section to clarify that "Requests" don't decrement global inventory but might create "reservations" of a different kind.
+- **User Manuals**:
+    - **`docs/01-manuals/resident-guide`**: Update with "Creating a Request" section. Explain how to use the "I'm looking for..." toggle.
+- **API Docs**:
+    - Add documentation for `listing_type` (recommended name: `type`) column in the exchange schema documentation (which is currently noted as missing).
 - **Schema**:
     - `docs/02-technical/schema/tables/exchange_listings.md` does not exist! **GAP**. Needs creation.
 - **Action**: Logged to `docs/documentation_gaps.md`.
 
-### 8.5 Phase 5: Decision
-- **Recommendation**: Prioritize (Ready for Development).
-- **Justification**: P1 item, safety risk is low (RLS protects), development effort is Small (schema + UI). Critical gap in current Exchange functionality.
-- **Next Steps**:
-    1. Turn Draft Issue into Full Issue.
-    2. Move to "Ready for Development" column.
-    3. Hand off to Dev for Implementation.
+#
+---
+
+## Review Handoff Log
+
+### 2026-02-14: Phase 0 Context Gathering (Product Manager/Explorer/Archaeologist)
+- **Status**: Complete
+### 2026-02-14: Phase 1 Security Audit (Security Auditor)
+- **Status**: Complete
+- **Findings**:
+    - RLS is compatible; access is correctly scoped to tenant and user.
+    - **Identification**: `createBorrowRequest` needs adaptation or a mirrored `createOfferHelp` action for 'request' types.
+    - **Constraint**: `listing_type` column name should be finalized (issue says `listing_type`, code types say `type`). Recommended: use `type` as it's already in the codebase's interfaces.
+### 2026-02-14: Phase 2 Test Strategy (Test Engineer)
+- **Status**: Complete
+- **Findings**:
+    - Corrected "Sad Paths" to include the logic mismatch (Borrowing a Request).
+    - Identified that `exchange-listings.test.ts` is missing and must be created.
+    - E2E should focus on the "Looking For" badge and filter toggle.
+### 2026-02-14: Phase 3 Performance Assessment (Performance Optimizer)
+- **Status**: Complete
+- **Findings**:
+    - Table currently lacks a composite index for the common feed query.
+    - Recommended a partial composite index to target published listings.
+    - Added data integrity recommendation (check constraint).
+- **Handoff**: 🔁 [PHASE 3 COMPLETE] Handing off to Documentation Specialist...
+### 2026-02-14: Phase 4 Documentation Logic (Documentation Specialist)
+- **Status**: Complete
+- **Findings**:
+    - Confirmed existing gaps in `docs/documentation_gaps.md` cover this feature.
+    - Identified specific updates for `exchange-transactions.md` state machine.
+    - Verified no conflicting ADRs in `docs/06-decisions/`.
+- **Handoff**: 🔁 [PHASE 4 COMPLETE] Handing off to Strategic Architect...

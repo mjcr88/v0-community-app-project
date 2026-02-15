@@ -112,7 +112,7 @@ This approach fixes the issue at the source (`RichTextEditor`) ensuring it works
 
 ### Phase 5:- **Status**: [Ready for Development]
 - **Sizing**: XS
-- **Priority**: P1 - Functional Bugized to `RichTextEditor.tsx` and one modal.
+- **Priority**: P1 - Functional Bug localized to `RichTextEditor.tsx` and one modal.
 - **Strategic Impact**: Essential for community trust. Broken input is a high-friction user experience issue.
 - **Verification Result**: The issue is confirmed as a structural bug in the controlled component implementation.
 

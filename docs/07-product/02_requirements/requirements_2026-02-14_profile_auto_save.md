@@ -122,7 +122,7 @@ Top 3 recent commits affecting `profile-edit-form.tsx`:
 - **Attack Surface**:
   - **CRITICAL**: The `users_own_data` RLS policy allows `ALL` operations for owners.
   - **Vulnerability**: `public.users` contains sensitive columns `role`, `is_tenant_admin`. A malicious user could effectively escalate privileges by updating these fields on their own profile.
-  - **Mitigation**: Update RLS to strict column-level security or use a Postgres Trigger to prevent updating sensitive columns, OR move to Server Actions and use `service_role` (carefully) or valid logic that ignores sensitive fields. Best appraoch: Restrict RLS to non-sensitive columns if possible, or separate sensitive data.
+  - **Mitigation**: Update RLS to strict column-level security or use a Postgres Trigger to prevent updating sensitive columns, OR move to Server Actions and use `service_role` (carefully) or valid logic that ignores sensitive fields. Best approach: Restrict RLS to non-sensitive columns if possible, or separate sensitive data.
 
 
 ### Phase 2: Test Strategy
@@ -149,7 +149,7 @@ Top 3 recent commits affecting `profile-edit-form.tsx`:
   - **Bottleneck Identified**: The current logic for interests/skills is "delete-all-then-re-insert". While safe for small data, it adds unnecessary overhead to every auto-save event.
   - **Optimization**: Ideally, only sync interests/skills if they have changed, OR use a Postgres function to handle the diff server-side.
 - **Live Introspection**:
-  - `nido.prod` table sizes are minimal (all < 100 rows). Performance impact of current strategy is negligible for now but should be optimized for scale.
+  - `production` table sizes are minimal (all < 100 rows). Performance impact of current strategy is negligible for now but should be optimized for scale.
 
 
 ### Phase 4: Documentation Plan

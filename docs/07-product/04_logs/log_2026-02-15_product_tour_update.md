@@ -53,3 +53,10 @@
 **Context**: Slide 1 and Slide 2 used `AnimatedBeam`. Slide 1 had 8 nodes, Slide 2 had 6. This looked jarring.
 **Fix**: maintain visual consistency across similar "hub and spoke" visualizations. If detailed node mapping isn't strictly necessary, defaults to symmetric layouts (e.g. 4 on each side) for better balance.
 
+
+## QA & Release
+### [2026-02-15] QA Summary
+- **Status**: ✅ Passed (with Notes)
+- **Vibe Code Check**: Passed. Verified all modified components (`beam-intro.tsx`, `tour-carousel.tsx`, etc.). All are strictly `use client` and purely presentational.
+- **E2E Tests**: Skipped execution due to missing infrastructure. `e2e/product-tour.spec.ts` created but not run.
+- **Visuals**: Validated new 8-icon layout and updated assets.

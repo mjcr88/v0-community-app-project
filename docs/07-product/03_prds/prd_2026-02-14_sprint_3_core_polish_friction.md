@@ -113,3 +113,18 @@ Sprint 3 focuses on resolving critical authentication regressions (#108), system
 - [ ] Manual QA verification completed per issue ACs
 - [ ] No new P0/P1 bugs introduced
 - [ ] Documentation updated (if applicable)
+
+---
+
+## 7. Release Notes
+
+### Product Tour 2026 (#117)
+🚀 **Product Tour 2026**
+Updated the onboarding tour to reflect the latest Ecovilla features.
+
+🗺️ **Updated Visuals**
+Fresh maps, updated facility icons, and new "Exchange" transaction previews.
+
+👥 **Community Focus**
+New slides highlighting "Announcements" and "Documents" from the administration.
+

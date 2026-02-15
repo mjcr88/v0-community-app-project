@@ -39,21 +39,21 @@ Sprint 5 focuses on consolidating UX patterns across the application, specifical
 ## Proposed Changes
 
 ### [Check-in Form]
-#### [NEW] [step-1-what.tsx](file:///Users/mj/Developer/v0-community-app-project/components/check-ins/create_check_in_steps/step-1-what.tsx)
-#### [NEW] [step-2-when.tsx](file:///Users/mj/Developer/v0-community-app-project/components/check-ins/create_check_in_steps/step-2-when.tsx)
-#### [NEW] [step-3-where.tsx](file:///Users/mj/Developer/v0-community-app-project/components/check-ins/create_check_in_steps/step-3-where.tsx)
-#### [NEW] [step-4-who.tsx](file:///Users/mj/Developer/v0-community-app-project/components/check-ins/create_check_in_steps/step-4-who.tsx)
-#### [NEW] [step-5-review.tsx](file:///Users/mj/Developer/v0-community-app-project/components/check-ins/create_check_in_steps/step-5-review.tsx)
-#### [MODIFY] [create-check-in-modal.tsx](file:///Users/mj/Developer/v0-community-app-project/components/check-ins/create-check-in-modal.tsx)
+#### [NEW] [step-1-what.tsx](components/check-ins/create_check_in_steps/step-1-what.tsx)
+#### [NEW] [step-2-when.tsx](components/check-ins/create_check_in_steps/step-2-when.tsx)
+#### [NEW] [step-3-where.tsx](components/check-ins/create_check_in_steps/step-3-where.tsx)
+#### [NEW] [step-4-who.tsx](components/check-ins/create_check_in_steps/step-4-who.tsx)
+#### [NEW] [step-5-review.tsx](components/check-ins/create_check_in_steps/step-5-review.tsx)
+#### [MODIFY] [create-check-in-modal.tsx](components/check-ins/create-check-in-modal.tsx)
 - Implementation of the wizard logic and step transition animations.
 
 ### [Map Consolidation & Cleanup]
-#### [DELETE] [/app/t/[slug]/dashboard/map/page.tsx](file:///Users/mj/Developer/v0-community-app-project/app/t/[slug]/dashboard/map/page.tsx)
-#### [DELETE] [/components/map/resident-map-client.tsx](file:///Users/mj/Developer/v0-community-app-project/components/map/resident-map-client.tsx)
-#### [MODIFY] [MapboxViewer.tsx](file:///Users/mj/Developer/v0-community-app-project/components/map/MapboxViewer.tsx)
+#### [DELETE] [/app/t/[slug]/dashboard/map/page.tsx](app/t/[slug]/dashboard/map/page.tsx)
+#### [DELETE] [/components/map/resident-map-client.tsx](components/map/resident-map-client.tsx)
+#### [MODIFY] [MapboxViewer.tsx](components/map/MapboxViewer.tsx)
 - Remove duplicate facility rendering loops (L1117-1159 & L1213-1265).
 - Add support for image icons in the facility marker.
-#### [MODIFY] [FacilityFields.tsx](file:///Users/mj/Developer/v0-community-app-project/components/map/form-fields/FacilityFields.tsx)
+#### [MODIFY] [FacilityFields.tsx](components/map/form-fields/FacilityFields.tsx)
 - Add "Icon" input with dual emoji/upload support.
 
 ## Verification Plan

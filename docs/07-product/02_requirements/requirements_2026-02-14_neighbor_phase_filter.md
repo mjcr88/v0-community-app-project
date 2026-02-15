@@ -80,5 +80,5 @@ Proceed with **Option 1**: Reuse existing collapsible panel pattern but grouped 
     - Better mobile ergonomics than a dropdown.
     - Seamlessly integrates with existing `activeFilter` state.
     - Consistency with the "Neighborhood" and "Lot" filter cards.
-- **strategic Alignment**: This grouping pattern will be the baseline for all future directory filters (e.g., Languages, Occupation).
+- **Strategic Alignment**: This grouping pattern will be the baseline for all future directory filters (e.g., Languages, Occupation).
 

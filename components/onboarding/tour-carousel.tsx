@@ -57,7 +57,7 @@ export function TourCarousel({ cards, onComplete, onClose, tourType = "product" 
     return (
         <div className="fixed inset-0 z-50 flex flex-col bg-background/95 backdrop-blur-sm h-[100dvh]">
             {/* Top Bar: Progress & Close */}
-            <div className="flex-none h-16 px-4 md:px-8 flex items-center justify-between relative z-50">
+            <div className="flex-none h-12 md:h-16 px-4 md:px-8 flex items-center justify-between relative z-50">
                 {/* Progress Indicator (Centered) */}
                 <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-3 text-muted-foreground">
                     <span className="text-sm font-medium tabular-nums">
@@ -94,7 +94,7 @@ export function TourCarousel({ cards, onComplete, onClose, tourType = "product" 
             </div>
 
             {/* Middle: Content Card */}
-            <div className="flex-1 w-full max-w-7xl mx-auto px-4 overflow-hidden py-2">
+            <div className="flex-1 w-full max-w-7xl mx-auto px-4 overflow-hidden py-0 md:py-2">
                 <div className="w-full h-full bg-card border rounded-3xl overflow-hidden shadow-2xl relative">
                     <AnimatePresence mode="wait">
                         <motion.div
@@ -112,7 +112,7 @@ export function TourCarousel({ cards, onComplete, onClose, tourType = "product" 
             </div>
 
             {/* Bottom Bar: Navigation Buttons */}
-            <div className="flex-none h-20 px-8 md:px-12 flex items-center justify-between w-full max-w-7xl mx-auto">
+            <div className="flex-none h-16 md:h-20 px-4 md:px-12 flex items-center justify-between w-full max-w-7xl mx-auto">
                 <Button
                     variant="ghost"
                     onClick={handleBack}

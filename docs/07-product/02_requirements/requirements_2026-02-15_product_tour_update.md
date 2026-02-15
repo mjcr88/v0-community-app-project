@@ -178,3 +178,13 @@ While Option 2 offers better scalability, the "minimal effort" constraint and th
 
 🔁 [PHASE 5 COMPLETE] Requirement document enriched and finalized. Transitioning to Handoff...
 
+
+## Release Notes
+🚀 **Product Tour 2026**
+Updated the onboarding tour to reflect the latest Ecovilla features.
+
+🗺️ **Updated Visuals**
+Fresh maps, updated facility icons, and new "Exchange" transaction previews.
+
+👥 **Community Focus**
+New slides highlighting "Announcements" and "Documents" from the administration.

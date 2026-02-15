@@ -82,6 +82,7 @@ export function FamilyManagementForm({
     relationship: "",
     profilePictureUrl: "",
   })
+  const [existingMemberRelationship, setExistingMemberRelationship] = useState<string>("")
   const [familyProfile, setFamilyProfile] = useState({
     name: familyUnit?.name || "",
     description: familyUnit?.description || "",
@@ -256,7 +257,7 @@ export function FamilyManagementForm({
           familyUnit.id,
           {
             residentId: selectedResident,
-            relationshipType: newMember.relationship || undefined,
+            relationshipType: existingMemberRelationship || undefined,
           }
         )
 
@@ -298,6 +299,7 @@ export function FamilyManagementForm({
 
       setShowAddFamily(false)
       setSelectedResident("")
+      setExistingMemberRelationship("")
       setNewMember({
         firstName: "",
         lastName: "",
@@ -833,6 +835,25 @@ export function FamilyManagementForm({
                       <p className="text-[10px] text-muted-foreground">
                         Add someone who is already registered in your unit/lot.
                       </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="existing-relationship">Relationship to You</Label>
+                      <Select
+                        value={existingMemberRelationship}
+                        onValueChange={setExistingMemberRelationship}
+                      >
+                        <SelectTrigger id="existing-relationship">
+                          <SelectValue placeholder="Select relationship" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {RELATIONSHIP_TYPES.map((type) => (
+                            <SelectItem key={type.value} value={type.value}>
+                              {type.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </TabsContent>
                 </Tabs>

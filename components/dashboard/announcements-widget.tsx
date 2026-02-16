@@ -9,11 +9,14 @@ import { AnnouncementPriorityBadge } from "@/components/announcements/announceme
 import { format } from "date-fns"
 import { Badge } from "@/components/ui/badge"
 import useSWR from "swr"
+import { RioEmptyState } from "./rio-empty-state"
+
+import { AnnouncementType } from "@/types/announcements"
 
 interface Announcement {
   id: string
   title: string
-  announcement_type: "general" | "maintenance" | "event" | "alert" | "community_update" | "resource"
+  announcement_type: AnnouncementType
   priority: "urgent" | "important" | "normal"
   description: string
   published_at: string
@@ -51,13 +54,15 @@ export function AnnouncementsWidget({ slug, tenantId, userId }: AnnouncementsWid
 
   if (recentAnnouncements.length === 0) {
     return (
-      <div className="text-center py-8">
-        <Megaphone className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
-        <p className="text-sm text-muted-foreground mb-4">No new announcements</p>
-        <Button asChild variant="outline" size="sm">
-          <Link href={`/t/${slug}/dashboard/announcements`}>View Archive</Link>
-        </Button>
-      </div>
+      <RioEmptyState
+        title="No new announcements"
+        message="You're all caught up! Check the archive for past updates."
+        action={
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/t/${slug}/dashboard/announcements`}>View Archive</Link>
+          </Button>
+        }
+      />
     )
   }
 

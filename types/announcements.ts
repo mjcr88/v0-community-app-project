@@ -1,4 +1,4 @@
-export type AnnouncementType = 'general' | 'emergency' | 'maintenance' | 'event' | 'policy' | 'safety'
+export type AnnouncementType = 'general' | 'emergency' | 'maintenance' | 'event' | 'policy' | 'safety' | 'alert' | 'community_update' | 'resource'
 export type AnnouncementPriority = 'normal' | 'important' | 'urgent'
 export type AnnouncementStatus = 'draft' | 'published' | 'archived' | 'deleted'
 

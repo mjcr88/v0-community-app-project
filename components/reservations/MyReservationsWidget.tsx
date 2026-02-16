@@ -27,6 +27,7 @@ import {
 import { cancelReservation } from "@/app/actions/reservations"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
+import { RioEmptyState } from "@/components/dashboard/rio-empty-state"
 
 interface Reservation {
     id: string
@@ -65,15 +66,17 @@ export function MyReservationsWidget({ reservations: initialReservations, tenant
 
     if (reservations.length === 0) {
         return (
-            <div className="text-center py-8 border rounded-xl bg-card">
-                <Calendar className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
-                <p className="text-sm text-muted-foreground mb-4">No upcoming reservations</p>
-                <Button asChild>
-                    <Link href={`/t/${tenantSlug}/dashboard/community-map`}>
-                        Browse Facilities
-                    </Link>
-                </Button>
-            </div>
+            <RioEmptyState
+                title="No upcoming reservations"
+                message="Need a space? Reserve a facility for your next gathering."
+                action={
+                    <Button asChild>
+                        <Link href={`/t/${tenantSlug}/dashboard/community-map`}>
+                            Browse Facilities
+                        </Link>
+                    </Button>
+                }
+            />
         )
     }
 

@@ -14,6 +14,7 @@ import { LocationBadge } from "@/components/events/location-badge"
 import { Badge } from "@/components/ui/badge"
 import useSWR from "swr"
 import { EventRsvpQuickAction } from "@/components/event-rsvp-quick-action"
+import { RioEmptyState } from "./rio-empty-state"
 
 interface Event {
   id: string
@@ -124,21 +125,23 @@ export function UpcomingEventsWidget({ slug, userId, tenantId }: UpcomingEventsW
 
   if (!events || events.length === 0) {
     return (
-      <div className="text-center py-8">
-        <Calendar className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
-        <p className="text-sm text-muted-foreground mb-4">No upcoming events</p>
-        <div className="flex items-center justify-center gap-2">
-          <Button asChild variant="outline" size="sm">
-            <Link href={`/t/${slug}/dashboard/events`}>Browse</Link>
-          </Button>
-          <Button asChild size="sm">
-            <Link href={`/t/${slug}/dashboard/events/create`}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Event
-            </Link>
-          </Button>
-        </div>
-      </div>
+      <RioEmptyState
+        title="No upcoming events"
+        message="Get the community together! Create an event or browse what's happening."
+        action={
+          <>
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/t/${slug}/dashboard/events`}>Browse</Link>
+            </Button>
+            <Button asChild size="sm">
+              <Link href={`/t/${slug}/dashboard/events/create`}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Event
+              </Link>
+            </Button>
+          </>
+        }
+      />
     )
   }
 

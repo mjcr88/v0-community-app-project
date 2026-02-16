@@ -62,3 +62,11 @@ supabase.auth.admin.create_user({
 **The Gotcha:** The `TabsList` was wrapped in an extra `<div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">` that the search bar above it did not have. On mobile, this created a different layout context (scroll container + negative margin), causing the grid to not fill width properly despite `w-full` being set.
 **Pattern:** When two UI elements must visually align (e.g., search bar + tabs), they **must** share the same wrapper structure. Never add mobile-specific wrappers (`-mx-*`, `overflow-x-auto`, `no-scrollbar`) to only one of them.
 **Debugging Tip:** When a Tailwind fix works on desktop but not mobile, run `tailwind-merge` output through `node -e` to verify class resolution, then check the **wrapper divs** for mobile-only classes.
+
+### [2026-02-16] Middleware Session Grace Period (Issue #108)
+**Type**: Pattern
+**Context**: Middleware checks `last-active` cookie to enforce inactivity timeouts.
+**The Gotcha**: Upon a fresh login, the browser sends the request *before* the `last-active` cookie is set/propagated, causing the middleware to see "No Cookie" -> "Inactive" -> "Logout", triggering a loop or double-login friction.
+**Pattern**: Trusted **Grace Period**.
+Use `user.last_sign_in_at` (from Supabase Auth, the source of truth) to detect if the session is brand new (< 60s). If so, bypass the cookie check.
+**Rule**: Never rely solely on client-side cookies for "Am I active?" checks during the login transition state. always have a server-side baked-in grace period.

@@ -50,8 +50,8 @@ Sprint 3 focuses on resolving critical authentication regressions (#108), system
 ### #108: Double Login Regression
 - **Requirement**: Modify `lib/supabase/middleware.ts` to bypass the inactivity auto-logout check if `user.last_sign_in_at` is less than 60 seconds old.
 - **Acceptance Criteria**:
-  - [ ] Given an expired session in an open tab, when the user logs in, they are redirected to the dashboard immediately on the first attempt.
-  - [ ] Normal inactivity logout still functions for sessions older than 60 seconds.
+  - [x] Given an expired session in an open tab, when the user logs in, they are redirected to the dashboard immediately on the first attempt.
+  - [x] Normal inactivity logout still functions for sessions older than 60 seconds.
 
 ### #110: Rich Text Editor Fixes
 - **Requirement**: Update `RichTextEditor.tsx` to handle synchronization gracefully (Option 1). Add Tailwind classes `[&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5` to the editor props.

@@ -4,7 +4,6 @@ import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
 import DOMPurify from "dompurify"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent } from "@/components/ui/card"
@@ -231,7 +230,7 @@ export function ExchangeListingDetailModal({
     if (result.success) {
       onOpenChange(false)
       setShowDeleteDialog(false)
-      router.push(`/ t / ${tenantSlug} /dashboard/exchange`)
+      router.push(`/t/${tenantSlug}/dashboard/exchange`)
     } else {
       showFeedback({
         title: "Couldn't delete listing",
@@ -317,7 +316,7 @@ export function ExchangeListingDetailModal({
   const creatorName =
     `${listing.creator?.first_name || ""} ${listing.creator?.last_name || ""} `.trim() || "Unknown User"
   const creatorInitials =
-    `${listing.creator?.first_name?.[0] || ""}${listing.creator?.last_name?.[0] || ""} `.toUpperCase() || "?"
+    `${listing.creator?.first_name?.[0] || ""}${listing.creator?.last_name?.[0] || ""}`.toUpperCase() || "?"
 
   const conditionDisplay = listing.condition
     ? listing.condition.split("_").map((word: string) => word.charAt(0).toUpperCase() + word.slice(1)).join(" ")
@@ -586,7 +585,7 @@ export function ExchangeListingDetailModal({
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 space-y-1">
-                    <h4 className="font-semibold">{isCreator ? "Listed by You" : `Listed by ${creatorName} `}</h4>
+                    <h4 className="font-semibold">{isCreator ? "Listed by You" : `Listed by ${creatorName}`}</h4>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Calendar className="h-3.5 w-3.5" />
                       Posted {new Date(listing.created_at).toLocaleDateString()}

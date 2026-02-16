@@ -99,8 +99,6 @@ export function CancelEventDialog({
       if (result.success) {
         EventsAnalytics.cancelled(eventId)
 
-        EventsAnalytics.cancelled(eventId)
-
         handleSetOpen(false)
         setReason("")
 

@@ -58,7 +58,7 @@ export function EventActionsMenu({
                     <span className="sr-only">More options</span>
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" onCloseAutoFocus={(e) => e.preventDefault()}>
                 {canManageEvent && eventStatus !== "cancelled" && (
                     <>
                         <DropdownMenuItem asChild>
@@ -67,7 +67,12 @@ export function EventActionsMenu({
                                 Edit Event
                             </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => setCancelDialogOpen(true)}>
+                        <DropdownMenuItem
+                            onSelect={(e) => {
+                                e.preventDefault()
+                                setTimeout(() => setCancelDialogOpen(true), 0)
+                            }}
+                        >
                             <div className="flex w-full items-center text-destructive cursor-pointer">
                                 <Ban className="mr-2 h-4 w-4" />
                                 Cancel Event
@@ -102,7 +107,12 @@ export function EventActionsMenu({
                 {eventStatus !== "cancelled" && (
                     <>
                         {canManageEvent && <DropdownMenuSeparator />}
-                        <DropdownMenuItem onSelect={() => setFlagDialogOpen(true)}>
+                        <DropdownMenuItem
+                            onSelect={(e) => {
+                                e.preventDefault()
+                                setTimeout(() => setFlagDialogOpen(true), 0)
+                            }}
+                        >
                             <div className="flex items-center w-full cursor-pointer">
                                 <Flag className="mr-2 h-4 w-4" />
                                 {hasUserFlagged ? "Flagged" : "Flag Event"}

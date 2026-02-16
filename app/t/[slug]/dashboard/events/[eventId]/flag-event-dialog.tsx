@@ -48,9 +48,10 @@ export function FlagEventDialog({
   onOpenChange: setControlledOpen,
 }: FlagEventDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false)
-  const isControlled = controlledOpen !== undefined
+  const isControlled =
+    controlledOpen !== undefined && setControlledOpen !== undefined
   const open = isControlled ? controlledOpen : internalOpen
-  const setOpen = isControlled ? setControlledOpen! : setInternalOpen
+  const setOpen = isControlled ? setControlledOpen : setInternalOpen
 
   const [reason, setReason] = useState("")
   const [isPending, startTransition] = useTransition()

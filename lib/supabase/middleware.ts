@@ -51,6 +51,17 @@ export async function updateSession(request: NextRequest) {
         // If cookie is missing in strict mode, it might mean it expired naturally (Max-Age).
 
         if (!lastActive || (now - lastActiveTime > TWO_HOURS_MS)) {
+          // Fix for Issue #108: Grace Period for Fresh Logins
+          // If the user just signed in (< 60s ago), don't kick them out even if cookie is missing/stale.
+          if (user.last_sign_in_at) {
+            const lastSignInTime = new Date(user.last_sign_in_at).getTime()
+            if (now - lastSignInTime < 60000) { // 60 seconds grace period
+              // User is freshly authenticated. Treat as active.
+              const response = await updateSessionCookie(supabaseResponse, now.toString())
+              return response
+            }
+          }
+
           console.log("[v0] Middleware: Session timed out. Logging out.")
           await supabase.auth.signOut()
 

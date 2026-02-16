@@ -60,7 +60,7 @@ describe("exchange-transactions", () => {
             // Allow awaiting the builder directly if needed (though usually we await specific methods)
             // But usually we await .single() or .update() or .select()
             // If the code awaits the builder itself (like `await query`), we need `then`.
-            builder.then = (resolve: any) => resolve({ data: null, error: null })
+
 
             return builder
         }
@@ -100,7 +100,7 @@ describe("exchange-transactions", () => {
             transactionBuilder.select.mockReturnValue(transactionBuilder)
             transactionBuilder.eq.mockReturnValue(transactionBuilder)
             transactionBuilder.update.mockReturnValue(transactionBuilder)
-            transactionBuilder.then = (resolve: any) => resolve({ data: null, error: null })
+
 
             const listingBuilder = {
                 select: vi.fn(),
@@ -111,7 +111,7 @@ describe("exchange-transactions", () => {
             listingBuilder.select.mockReturnValue(listingBuilder)
             listingBuilder.eq.mockReturnValue(listingBuilder)
             listingBuilder.update.mockReturnValue(listingBuilder)
-            listingBuilder.then = (resolve: any) => resolve({ data: null, error: null })
+
 
             // Configure behavior based on table name
             mockSupabase.from.mockImplementation((tableName: string) => {
@@ -148,7 +148,7 @@ describe("exchange-transactions", () => {
             transactionBuilder.select.mockReturnValue(transactionBuilder)
             transactionBuilder.eq.mockReturnValue(transactionBuilder)
             transactionBuilder.update.mockReturnValue(transactionBuilder)
-            transactionBuilder.then = (resolve: any) => resolve({ data: null, error: null })
+
 
             const listingBuilder = {
                 select: vi.fn(),
@@ -193,7 +193,7 @@ describe("exchange-transactions", () => {
             transactionBuilder.select.mockReturnValue(transactionBuilder)
             transactionBuilder.eq.mockReturnValue(transactionBuilder)
             transactionBuilder.update.mockReturnValue(transactionBuilder)
-            transactionBuilder.then = (resolve: any) => resolve({ data: null, error: null })
+
 
             const listingBuilder = {
                 select: vi.fn(),
@@ -204,7 +204,7 @@ describe("exchange-transactions", () => {
             listingBuilder.select.mockReturnValue(listingBuilder)
             listingBuilder.eq.mockReturnValue(listingBuilder)
             listingBuilder.update.mockReturnValue(listingBuilder)
-            listingBuilder.then = (resolve: any) => resolve({ data: null, error: null })
+
 
             mockSupabase.from.mockImplementation((tableName: string) => {
                 if (tableName === "exchange_transactions") return transactionBuilder

@@ -5,9 +5,15 @@ import { createClient } from "@supabase/supabase-js"
 export async function createAuthUserAction(email: string, password: string, residentId: string) {
   console.log("[v0] Creating auth user with admin API:", { email, residentId })
 
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY_DEV || ""
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY_DEV
 
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceRoleKey, {
+  if (!supabaseUrl || !serviceRoleKey) {
+    console.error("[v0] Server configuration error: missing Supabase credentials")
+    return { error: "Server configuration error" }
+  }
+
+  const supabase = createClient(supabaseUrl, serviceRoleKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
@@ -34,10 +40,12 @@ export async function createAuthUserAction(email: string, password: string, resi
     password,
     email_confirm: true,
     user_metadata: {
-      tenant_id: resident?.tenant_id,
-      role: resident?.role || "resident",
       full_name: resident?.name,
       avatar_url: resident?.profile_picture_url,
+    },
+    app_metadata: {
+      tenant_id: resident?.tenant_id,
+      role: resident?.role || "resident",
       resident_id: residentId, // Store original resident ID for debugging
     },
   })

@@ -1,5 +1,7 @@
 -- Fix missing ON UPDATE CASCADE for all tables referencing users(id)
 
+BEGIN;
+
 -- 1. Notifications
 ALTER TABLE public.notifications
 DROP CONSTRAINT IF EXISTS notifications_recipient_id_fkey,
@@ -168,3 +170,5 @@ ADD CONSTRAINT neighbor_lists_owner_id_fkey
   REFERENCES public.users(id)
   ON DELETE CASCADE
   ON UPDATE CASCADE;
+
+COMMIT;

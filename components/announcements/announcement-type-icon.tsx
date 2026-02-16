@@ -1,4 +1,4 @@
-import { Megaphone, AlertTriangle, Wrench, Calendar, FileText, ShieldAlert } from 'lucide-react'
+import { Megaphone, AlertTriangle, Wrench, Calendar, FileText, ShieldAlert, AlertCircle } from 'lucide-react'
 import { cn } from "@/lib/utils"
 import type { AnnouncementType } from "@/types/announcements"
 
@@ -21,6 +21,12 @@ export function AnnouncementTypeIcon({ type, className }: AnnouncementTypeIconPr
       return <FileText className={cn("text-gray-500", className)} />
     case "safety":
       return <ShieldAlert className={cn("text-yellow-500", className)} />
+    case "alert":
+      return <AlertCircle className={cn("text-red-500", className)} />
+    case "community_update":
+      return <Megaphone className={cn("text-blue-500", className)} />
+    case "resource":
+      return <FileText className={cn("text-green-500", className)} />
     default:
       return <Megaphone className={cn("text-gray-500", className)} />
   }

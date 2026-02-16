@@ -9,6 +9,7 @@ import { CreateCheckInButton } from "@/components/check-ins/create-check-in-butt
 import { CheckInDetailModal } from "@/components/check-ins/check-in-detail-modal"
 import useSWR from "swr"
 import { useSearchParams } from "next/navigation"
+import { RioEmptyState } from "./RioEmptyState"
 
 interface CheckIn {
   id: string
@@ -92,13 +93,12 @@ export function LiveCheckInsWidget({ tenantSlug, tenantId, userId }: LiveCheckIn
 
   if (!checkIns || checkIns.length === 0) {
     return (
-      <div className="text-center py-8">
-        <div className="relative w-20 h-20 mx-auto mb-3">
-          <img src="/rio/parrot.png" alt="Rio" className="object-contain w-full h-full" />
-        </div>
-        <p className="text-sm text-muted-foreground mb-4">No one is checked in right now</p>
-        <CreateCheckInButton tenantSlug={tenantSlug} tenantId={tenantId} />
-      </div>
+      <RioEmptyState
+        title="No Live Check-ins"
+        message="It's quiet right now. Be the first to check in!"
+        imageSize={128}
+        action={<CreateCheckInButton tenantSlug={tenantSlug} tenantId={tenantId} />}
+      />
     )
   }
 

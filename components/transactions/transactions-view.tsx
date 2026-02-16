@@ -3,6 +3,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TransactionCard } from "./transaction-card"
 import { Package } from 'lucide-react'
+import { RioEmptyState } from "@/components/dashboard/RioEmptyState"
 
 export interface Transaction {
   id: string
@@ -89,14 +90,11 @@ export function TransactionsView({
 
   function renderEmptyState(message: string) {
     return (
-      <div className="text-center py-12">
-        <img
-          src="/rio/rio_no_results_confused.png"
-          alt="No transactions"
-          className="h-24 w-24 mx-auto mb-4 object-contain"
-        />
-        <p className="text-sm text-muted-foreground">{message}</p>
-      </div>
+      <RioEmptyState
+        title={message}
+        message=""
+        imageSize={96}
+      />
     )
   }
 

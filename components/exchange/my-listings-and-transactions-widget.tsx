@@ -26,6 +26,7 @@ import {
 import { RioConfirmationModal } from "@/components/feedback/rio-confirmation-modal"
 import Image from "next/image"
 import type { Location } from "@/types/locations"
+import { RioEmptyState } from "@/components/dashboard/RioEmptyState"
 import { TransactionsView } from "@/components/transactions/transactions-view"
 import { ArchiveView } from "./archive-view"
 import { ListingHistoryModal } from "./listing-history-modal"
@@ -340,33 +341,30 @@ export function MyListingsAndTransactionsWidget({
 
   function renderEmptyState(message: string) {
     return (
-      <div className="text-center py-12 border-2 border-dashed rounded-xl">
-        <div className="relative w-24 h-24 mx-auto mb-4">
-          <Image src="/rio/parrot.png" alt="Rio" fill className="object-contain" />
-        </div>
-        <p className="text-sm text-muted-foreground">{message}</p>
-      </div>
+      <RioEmptyState
+        title="No listings found"
+        message={message}
+        imageSize={96}
+        className="border-dashed"
+      />
     )
   }
 
   if (listings.length === 0 && transactions.length === 0) {
     return (
-      <div className="text-center py-12 border rounded-xl bg-card">
-        <div className="relative w-24 h-24 mx-auto mb-4">
-          <Image src="/rio/parrot.png" alt="Rio" fill className="object-contain" />
-        </div>
-        <h3 className="text-lg font-semibold mb-2">No Listings Yet</h3>
-        <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
-          You haven't created any listings yet. Start sharing items with your community!
-        </p>
-        <CreateExchangeListingButton
-          tenantSlug={tenantSlug}
-          tenantId={tenantId}
-          categories={categories}
-          neighborhoods={neighborhoods}
-          variant="default"
-        />
-      </div>
+      <RioEmptyState
+        title="No Listings Yet"
+        message="You haven't created any listings yet. Start sharing items with your community!"
+        action={
+          <CreateExchangeListingButton
+            tenantSlug={tenantSlug}
+            tenantId={tenantId}
+            categories={categories}
+            neighborhoods={neighborhoods}
+            variant="default"
+          />
+        }
+      />
     )
   }
 

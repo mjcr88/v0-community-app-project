@@ -8,6 +8,7 @@ import { Archive, Package, History, Loader2 } from 'lucide-react'
 import { getArchivedListings, getCompletedTransactions } from "@/app/actions/exchange-history"
 import { ArchivedListingsTable } from "./archived-listings-table"
 import { CompletedTransactionsTable } from "./completed-transactions-table"
+import { RioEmptyState } from "@/components/dashboard/RioEmptyState"
 
 interface ArchiveViewProps {
   userId: string
@@ -115,17 +116,11 @@ export function ArchiveView({ userId, tenantId, tenantSlug }: ArchiveViewProps) 
 
         <TabsContent value="listings" className="mt-4">
           {archivedListings.length === 0 ? (
-            <div className="text-center py-12">
-              <img
-                src="/rio/rio_no_results_confused.png"
-                alt="No archived listings"
-                className="h-24 w-24 mx-auto mb-4 object-contain"
-              />
-              <p className="text-sm text-muted-foreground">No archived listings yet</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Listings you archive will appear here
-              </p>
-            </div>
+            <RioEmptyState
+              title="No archived listings yet"
+              message="Listings you archive will appear here"
+              imageSize={96}
+            />
           ) : (
             <>
               <ArchivedListingsTable
@@ -160,17 +155,11 @@ export function ArchiveView({ userId, tenantId, tenantSlug }: ArchiveViewProps) 
 
         <TabsContent value="transactions" className="mt-4">
           {completedTransactions.length === 0 ? (
-            <div className="text-center py-12">
-              <img
-                src="/rio/rio_no_results_confused.png"
-                alt="No transaction history"
-                className="h-24 w-24 mx-auto mb-4 object-contain"
-              />
-              <p className="text-sm text-muted-foreground">No completed transactions yet</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Your transaction history will appear here
-              </p>
-            </div>
+            <RioEmptyState
+              title="No completed transactions yet"
+              message="Your transaction history will appear here"
+              imageSize={96}
+            />
           ) : (
             <>
               <CompletedTransactionsTable

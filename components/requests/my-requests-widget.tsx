@@ -10,6 +10,7 @@ import { RequestStatusBadge } from "./request-status-badge"
 import { format } from "date-fns"
 import { useEffect } from "react"
 import { DashboardAnalytics } from "@/lib/analytics"
+import { RioEmptyState } from "@/components/dashboard/RioEmptyState"
 
 interface MyRequestsWidgetProps {
   requests: any[]
@@ -34,18 +35,18 @@ export function MyRequestsWidget({ requests, tenantSlug }: MyRequestsWidgetProps
           <CardDescription>Track your maintenance and service requests</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-6">
-            <ClipboardList className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-sm text-muted-foreground mb-4">
-              You don't have any active requests.
-            </p>
-            <Button asChild>
-              <Link href={`/t/${tenantSlug}/dashboard/requests`}>
-                <Plus className="h-4 w-4 mr-2" />
-                New Request
-              </Link>
-            </Button>
-          </div>
+          <RioEmptyState
+            title="No Active Requests"
+            message="You don't have any active requests."
+            action={
+              <Button asChild>
+                <Link href={`/t/${tenantSlug}/dashboard/requests`}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Request
+                </Link>
+              </Button>
+            }
+          />
         </CardContent>
       </Card>
     )

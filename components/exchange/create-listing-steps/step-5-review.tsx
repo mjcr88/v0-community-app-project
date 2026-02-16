@@ -101,9 +101,10 @@ export function Step5Review({
                         </div>
                     </div>
                     {formData.description && (
-                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                            {formData.description}
-                        </p>
+                        <div
+                            className="prose prose-sm max-w-none dark:prose-invert text-sm text-muted-foreground break-words"
+                            dangerouslySetInnerHTML={{ __html: formData.description }}
+                        />
                     )}
                 </div>
             </div>

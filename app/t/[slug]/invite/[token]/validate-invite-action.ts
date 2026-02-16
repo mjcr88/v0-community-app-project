@@ -27,10 +27,10 @@ export async function validateInviteToken(token: string, tenantId: string) {
 
   // Create a Supabase client with service role to bypass RLS
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY_DEV
 
   if (!supabaseUrl || !supabaseServiceKey) {
-    const missing = !supabaseUrl ? "NEXT_PUBLIC_SUPABASE_URL" : "SUPABASE_SERVICE_ROLE_KEY"
+    const missing = !supabaseUrl ? "NEXT_PUBLIC_SUPABASE_URL" : "SUPABASE_SERVICE_ROLE_KEY(_DEV)"
     console.error(`[v0] Missing Supabase credentials: ${missing}`)
     return {
       success: false,

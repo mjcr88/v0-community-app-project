@@ -229,21 +229,25 @@ export async function markItemPickedUp(
       return { success: false, error: updateError.message }
     }
 
-    // Restore listing quantity
-    const { data: listing } = await supabase
-      .from("exchange_listings")
-      .select("available_quantity")
-      .eq("id", transaction.listing_id)
-      .single()
-
-    if (listing) {
-      await supabase
+    // Restore listing quantity ONLY if it's NOT "Food & Produce"
+    // "Services & Skills" still restores (reusable capacity)
+    // "Food & Produce" consumes (one-way)
+    if (categoryName !== "Food & Produce") {
+      const { data: listing } = await supabase
         .from("exchange_listings")
-        .update({
-          available_quantity: listing.available_quantity + transaction.quantity,
-          is_available: true,
-        })
+        .select("available_quantity")
         .eq("id", transaction.listing_id)
+        .single()
+
+      if (listing) {
+        await supabase
+          .from("exchange_listings")
+          .update({
+            available_quantity: listing.available_quantity + transaction.quantity,
+            is_available: true,
+          })
+          .eq("id", transaction.listing_id)
+      }
     }
 
     // Create completion notification for both parties

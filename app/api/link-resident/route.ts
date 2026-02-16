@@ -26,7 +26,8 @@ export async function POST(request: Request) {
     }
 
     // Use service role to bypass RLS
-    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY_DEV || ""
+    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceRoleKey, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,

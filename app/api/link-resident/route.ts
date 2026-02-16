@@ -26,7 +26,14 @@ export async function POST(request: Request) {
     }
 
     // Use service role to bypass RLS
-    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY_DEV
+
+    if (!supabaseUrl || !serviceRoleKey) {
+      return NextResponse.json({ error: "Server configuration error" }, { status: 500 })
+    }
+
+    const supabase = createClient(supabaseUrl, serviceRoleKey, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,

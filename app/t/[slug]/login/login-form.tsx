@@ -126,7 +126,15 @@ export function TenantLoginForm({ tenant }: TenantLoginFormProps) {
         .eq("tenant_id", tenant.id)
         .maybeSingle()
 
+      if (process.env.NODE_ENV !== "production") {
+        console.log("[v0] Login check - ID:", authData.user.id, "Tenant:", tenant.id, "Role: resident")
+        console.log("[v0] Login check result:", { residentData, residentError })
+      }
+
       if (residentError || !residentData) {
+        if (process.env.NODE_ENV !== "production") {
+          console.error("[v0] Login check failed details:", residentError)
+        }
         await supabase.auth.signOut()
         throw new Error("You do not have access to this community")
       }

@@ -229,21 +229,33 @@ export async function markItemPickedUp(
       return { success: false, error: updateError.message }
     }
 
-    // Restore listing quantity
-    const { data: listing } = await supabase
-      .from("exchange_listings")
-      .select("available_quantity")
-      .eq("id", transaction.listing_id)
-      .single()
+    // Restore listing quantity ONLY if it's NOT "Food & Produce"
+    // "Services & Skills" still restores (reusable capacity)
+    // "Food & Produce" consumes (one-way)
+    if (categoryName !== "Food & Produce") {
+      const { data: listing, error: listingError } = await supabase
+        .from("exchange_listings")
+        .select("available_quantity")
+        .eq("id", transaction.listing_id)
+        .single()
 
-    if (listing) {
-      await supabase
+      if (listingError || !listing) {
+        console.error("[v0] Error fetching listing:", listingError)
+        return { success: false, error: "Listing not found" }
+      }
+
+      const { error: listingUpdateError } = await supabase
         .from("exchange_listings")
         .update({
           available_quantity: listing.available_quantity + transaction.quantity,
           is_available: true,
         })
         .eq("id", transaction.listing_id)
+
+      if (listingUpdateError) {
+        console.error("[v0] Error updating listing:", listingUpdateError)
+        return { success: false, error: listingUpdateError.message }
+      }
     }
 
     // Create completion notification for both parties

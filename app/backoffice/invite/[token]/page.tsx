@@ -21,7 +21,7 @@ export default async function BackofficeInvitePage({
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY_DEV
 
   if (!supabaseUrl || !supabaseServiceKey) {
     return (

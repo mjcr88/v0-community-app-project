@@ -30,6 +30,8 @@ interface CancelEventDialogProps {
   triggerSize?: "default" | "sm" | "lg" | "icon"
   customTrigger?: React.ReactNode
   isSeries?: boolean
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 export function CancelEventDialog({
@@ -39,8 +41,22 @@ export function CancelEventDialog({
   triggerSize = "sm",
   customTrigger,
   isSeries = false,
+  open: controlledOpen,
+  onOpenChange: setControlledOpen,
 }: CancelEventDialogProps) {
-  const [open, setOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
+  const isControlled = controlledOpen !== undefined
+  const open = isControlled ? controlledOpen : internalOpen
+
+  // Wrapper for setOpen to handle reset logic
+  const handleSetOpen = (isOpen: boolean) => {
+    if (isControlled && setControlledOpen) {
+      setControlledOpen(isOpen)
+    } else {
+      setInternalOpen(isOpen)
+    }
+  }
+
   const [showScopeDialog, setShowScopeDialog] = useState(false)
   const [reason, setReason] = useState("")
   const [isPending, startTransition] = useTransition()
@@ -48,7 +64,7 @@ export function CancelEventDialog({
   const { showFeedback } = useRioFeedback()
 
   const handleOpenChange = (isOpen: boolean) => {
-    setOpen(isOpen)
+    handleSetOpen(isOpen)
     if (!isOpen) {
       setReason("")
       setShowScopeDialog(false)
@@ -83,7 +99,9 @@ export function CancelEventDialog({
       if (result.success) {
         EventsAnalytics.cancelled(eventId)
 
-        setOpen(false)
+        EventsAnalytics.cancelled(eventId)
+
+        handleSetOpen(false)
         setReason("")
 
         showFeedback({
@@ -154,7 +172,7 @@ export function CancelEventDialog({
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isPending}>
+              <Button type="button" variant="ghost" onClick={() => handleSetOpen(false)} disabled={isPending}>
                 Keep Event
               </Button>
               <Button type="submit" variant="destructive" disabled={!isValid || isPending}>

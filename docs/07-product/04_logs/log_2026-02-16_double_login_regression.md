@@ -1,10 +1,11 @@
 # Build Log: [Bug] Double Login Regression
-**Issue:** #108 | **Date:** 2026-02-16 | **Status:** In Progress
+**Issue:** #108 | **Date:** 2026-02-16 | **Status:** QA Ready
 
 ## Context
 - **PRD Link**: [prd_2026-02-14_sprint_3_core_polish_friction.md](file:///Users/mj/Developer/v0-community-app-project/docs/07-product/03_prds/prd_2026-02-14_sprint_3_core_polish_friction.md)
 - **Req Link**: [requirements_2026-02-14_double_login_regression.md](file:///Users/mj/Developer/v0-community-app-project/docs/07-product/02_requirements/requirements_2026-02-14_double_login_regression.md)
-- **Board Status**: Moving to In Progress.
+- **Board Status**: QA Ready
+
 
 ## Clarifications (Socratic Gate)
 - **Grace Period**: Confirmed with user that 60 seconds is sufficient. The grace period bridges the gap between `last_sign_in_at` update and the next request where `last-active` cookie is missing.

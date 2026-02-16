@@ -30,6 +30,8 @@ interface FlagEventDialogProps {
   initialFlagCount: number
   initialHasUserFlagged: boolean
   customTrigger?: React.ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 export function FlagEventDialog({
@@ -42,8 +44,14 @@ export function FlagEventDialog({
   initialFlagCount,
   initialHasUserFlagged,
   customTrigger,
+  open: controlledOpen,
+  onOpenChange: setControlledOpen,
 }: FlagEventDialogProps) {
-  const [open, setOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
+  const isControlled = controlledOpen !== undefined
+  const open = isControlled ? controlledOpen : internalOpen
+  const setOpen = isControlled ? setControlledOpen! : setInternalOpen
+
   const [reason, setReason] = useState("")
   const [isPending, startTransition] = useTransition()
   const router = useRouter()

@@ -248,3 +248,42 @@ const MapboxViewer = dynamic(() => import('./MapboxViewer'), {
 **Problem**: RLS policies on the `users` table used subqueries that selected from `users` (e.g., checking if `auth.uid()` is a tenant admin). This triggers the policy again, creating an infinite loop.
 **Fix**: Encapsulate the permission check in a `SECURITY DEFINER` function (e.g., `is_tenant_admin_of_tenant`). This runs with the creator's privileges, bypassing RLS for that specific check and breaking the recursion.
 
+### 11. Radix UI / Shadcn UI Gotchas
+
+#### Dialogs inside DropdownMenus
+**Problem:** Rendering a `Dialog` inside a `DropdownMenuItem` can cause focus management issues, specifically blocking the "Space" key (which triggers the menu item) from working in inputs within the Dialog.
+**Solution:**
+1.  **Lift State Up:** Manage the `Dialog`'s open state in the parent component (e.g., `isOpen`, `setIsOpen`).
+2.  **Separate Components:** Render the `DropdownMenuItem` solely as a trigger that sets the state.
+3.  **Render Outside:** Render the `Dialog` component *outside* of the `DropdownMenu` content, passing the controlled state to it.
+
+```tsx
+// ❌ Avoid this pattern
+<DropdownMenu>
+  <DropdownMenuContent>
+    <DropdownMenuItem>
+      <Dialog>
+        <DialogTrigger>Open Dialog</DialogTrigger>
+        <DialogContent>...</DialogContent>
+      </Dialog>
+    </DropdownMenuItem>
+  </DropdownMenuContent>
+</DropdownMenu>
+
+// ✅ Use this pattern
+const [open, setOpen] = useState(false)
+return (
+  <>
+    <DropdownMenu>
+      <DropdownMenuContent>
+        <DropdownMenuItem onSelect={() => setOpen(true)}>
+          Open Dialog
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent>...</DialogContent>
+    </Dialog>
+  </>
+)
+```

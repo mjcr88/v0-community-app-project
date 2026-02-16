@@ -110,7 +110,7 @@ This approach fixes the issue at the source (`RichTextEditor`) ensuring it works
 - **Code Audit**: `.trim()` calls found in `handleSubmit` and `handleSubmitListing` in both Create and Edit modals.
 - **Root Cause Hypothesis**: The space-blocking is likely caused by aggressive state trimming in parent components or a feedback loop in the `RichTextEditor` controlled component logic.
 
-### Phase 5:- **Status**: [Ready for Development]
+### Phase 5:- **Status**: [Implemented]
 - **Sizing**: XS
 - **Priority**: P1 - Functional Bug localized to `RichTextEditor.tsx` and one modal.
 - **Strategic Impact**: Essential for community trust. Broken input is a high-friction user experience issue.
@@ -143,3 +143,7 @@ Wrap the content in `DOMPurify` (or similar) before rendering with `dangerouslyS
 - **Root Cause (Logic)**:
     - Found `.trim()` calls in `handleSubmit` and `handleSubmitListing` in both Create/Edit modals.
     - **Hypothesis**: The space blocking might occur if `value.trim()` is applied during state updates in a parent component, causing the trailing space to be removed before it's passed back to the Editor.
+
+### 4. Fix Flag Event Input Blocking (FlagEventDialog.tsx)
+**Problem:** Input blocking in `FlagEventDialog` caused by nesting within `DropdownMenu`.
+**Fix:** Refactor `EventActionsMenu` to lift dialog state up and render dialogs outside the `DropdownMenu`.

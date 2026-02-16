@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
     DropdownMenu,
@@ -42,6 +43,9 @@ export function EventActionsMenu({
     isTenantAdmin,
     isSeries = false,
 }: EventActionsMenuProps) {
+    const [flagDialogOpen, setFlagDialogOpen] = useState(false)
+    const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
+
     if (!canManageEvent && (eventStatus === "cancelled" || hasUserFlagged)) {
         return null
     }
@@ -54,7 +58,7 @@ export function EventActionsMenu({
                     <span className="sr-only">More options</span>
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" onCloseAutoFocus={(e) => e.preventDefault()}>
                 {canManageEvent && eventStatus !== "cancelled" && (
                     <>
                         <DropdownMenuItem asChild>
@@ -63,19 +67,16 @@ export function EventActionsMenu({
                                 Edit Event
                             </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                            <CancelEventDialog
-                                eventId={eventId}
-                                tenantSlug={slug}
-                                eventTitle={eventTitle}
-                                isSeries={isSeries}
-                                customTrigger={
-                                    <div className="flex w-full items-center px-2 py-1.5 text-sm text-destructive focus:bg-destructive/10 cursor-pointer">
-                                        <Ban className="mr-2 h-4 w-4" />
-                                        Cancel Event
-                                    </div>
-                                }
-                            />
+                        <DropdownMenuItem
+                            onSelect={(e) => {
+                                e.preventDefault()
+                                setTimeout(() => setCancelDialogOpen(true), 0)
+                            }}
+                        >
+                            <div className="flex w-full items-center text-destructive cursor-pointer">
+                                <Ban className="mr-2 h-4 w-4" />
+                                Cancel Event
+                            </div>
                         </DropdownMenuItem>
                         {isCreator && (
                             <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
@@ -106,23 +107,38 @@ export function EventActionsMenu({
                 {eventStatus !== "cancelled" && (
                     <>
                         {canManageEvent && <DropdownMenuSeparator />}
-                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                            <FlagEventDialog
-                                eventId={eventId}
-                                tenantSlug={slug}
-                                initialFlagCount={flagCount}
-                                initialHasUserFlagged={hasUserFlagged}
-                                customTrigger={
-                                    <div className="flex items-center w-full cursor-pointer">
-                                        <Flag className="mr-2 h-4 w-4" />
-                                        {hasUserFlagged ? "Flagged" : "Flag Event"}
-                                    </div>
-                                }
-                            />
+                        <DropdownMenuItem
+                            onSelect={(e) => {
+                                e.preventDefault()
+                                setTimeout(() => setFlagDialogOpen(true), 0)
+                            }}
+                        >
+                            <div className="flex items-center w-full cursor-pointer">
+                                <Flag className="mr-2 h-4 w-4" />
+                                {hasUserFlagged ? "Flagged" : "Flag Event"}
+                            </div>
                         </DropdownMenuItem>
                     </>
                 )}
             </DropdownMenuContent>
+
+            <CancelEventDialog
+                eventId={eventId}
+                tenantSlug={slug}
+                eventTitle={eventTitle}
+                isSeries={isSeries}
+                open={cancelDialogOpen}
+                onOpenChange={setCancelDialogOpen}
+            />
+
+            <FlagEventDialog
+                eventId={eventId}
+                tenantSlug={slug}
+                initialFlagCount={flagCount}
+                initialHasUserFlagged={hasUserFlagged}
+                open={flagDialogOpen}
+                onOpenChange={setFlagDialogOpen}
+            />
         </DropdownMenu>
     )
 }

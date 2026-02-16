@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import DOMPurify from "dompurify"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent } from "@/components/ui/card"
 import { ExchangeCategoryBadge } from "./exchange-category-badge"
@@ -313,7 +314,7 @@ export function ExchangeListingDetailModal({
 
   const isCreator = userId === listing.created_by
   const creatorName =
-    `${listing.creator?.first_name || ""} ${listing.creator?.last_name || ""}`.trim() || "Unknown User"
+    `${listing.creator?.first_name || ""} ${listing.creator?.last_name || ""} `.trim() || "Unknown User"
   const creatorInitials =
     `${listing.creator?.first_name?.[0] || ""}${listing.creator?.last_name?.[0] || ""}`.toUpperCase() || "?"
 
@@ -567,13 +568,10 @@ export function ExchangeListingDetailModal({
             </Card>
 
             {listing.description && (
-              <div className="space-y-2">
-                <h3 className="font-semibold text-lg">Description</h3>
-                <div
-                  className="prose prose-neutral dark:prose-invert max-w-none"
-                  dangerouslySetInnerHTML={{ __html: listing.description }}
-                />
-              </div>
+              <div
+                className="text-sm text-gray-700 mt-4 prose prose-sm max-w-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5"
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(listing.description) }}
+              />
             )}
 
             {/* Creator Profile Card */}

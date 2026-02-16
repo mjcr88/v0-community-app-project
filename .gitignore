@@ -38,3 +38,6 @@ supabase/migrations/clean_schema_v*.sql
 test-results/
 .agent/preview.log
 playwright-report/
+
+#Documentation
+docs/

@@ -83,6 +83,8 @@ export function RichTextEditor({
         class: cn(
           "prose prose-sm max-w-none focus:outline-none min-h-[200px] px-3 py-2 text-sm border rounded-md border-input bg-background",
           "dark:prose-invert",
+          // List styles (Issue #110)
+          "[&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5",
           // Table styles
           "[&_table]:border-collapse [&_table]:w-full [&_table]:my-4",
           "[&_table]:border [&_table]:border-border",
@@ -101,7 +103,8 @@ export function RichTextEditor({
   useEffect(() => {
     if (editor && value !== undefined && value !== null) {
       const currentContent = editor.getHTML()
-      if (value !== currentContent) {
+      // Fix for Issue #110: prevent cursor jumping/blocking by respecting focus
+      if (value !== currentContent && !editor.isFocused) {
         editor.commands.setContent(value || '')
       }
     }

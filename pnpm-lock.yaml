@@ -146,6 +146,9 @@ dependencies:
   '@types/canvas-confetti':
     specifier: ^1.9.0
     version: 1.9.0
+  '@types/dompurify':
+    specifier: ^3.0.5
+    version: 3.2.0
   '@types/mapbox-gl':
     specifier: ^3.4.1
     version: 3.4.1
@@ -328,6 +331,9 @@ devDependencies:
   '@vitest/coverage-v8':
     specifier: ^4.0.15
     version: 4.0.17(vitest@4.0.17)
+  eslint:
+    specifier: ^9.39.2
+    version: 9.39.2
   eslint-config-next:
     specifier: ^16.1.6
     version: 16.1.6(@typescript-eslint/parser@8.54.0)(eslint@9.39.2)(typescript@5.9.3)
@@ -5951,6 +5957,13 @@ packages:
   /@types/doctrine@0.0.9:
     resolution: {integrity: sha512-eOIHzCUSH7SMfonMG1LsC2f8vxBFtho6NGBznK41R84YzPuvSBzrhEps33IsQiOW9+VL6NQ9DbjQJznk/S4uRA==}
     dev: true
+
+  /@types/dompurify@3.2.0:
+    resolution: {integrity: sha512-Fgg31wv9QbLDA0SpTOXO3MaxySc4DKGLi8sna4/Utjo4r3ZRPdCt4UQee8BWr+Q5z21yifghREPJGYaEOEIACg==}
+    deprecated: This is a stub types definition. dompurify provides its own type definitions, so you do not need this installed.
+    dependencies:
+      dompurify: 3.3.1
+    dev: false
 
   /@types/estree@1.0.8:
     resolution: {integrity: sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w==}

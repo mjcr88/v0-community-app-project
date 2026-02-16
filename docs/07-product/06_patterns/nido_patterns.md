@@ -214,7 +214,7 @@ const MapboxViewer = dynamic(() => import('./MapboxViewer'), {
 **Learning**: World-class quality comes from *orchestration* (CI/CD enforcement), not just installation. If a tool is in `package.json`, it MUST run in CI.
 
 ### Empty States
-- **Standard Component**: Always use `RioEmptyState` for empty states in dashboard widgets and lists.
+- **Standard Component**: Always use `RioEmptyState` (from `@/components/dashboard/rio-empty-state`) for empty states in dashboard widgets and lists.
 - **Visual**: Use the "Rio Confused" image (`rio_no_results_confused.png`).
 - **Functionality**: Retain primary action buttons (e.g., "Create", "Browse") within the empty state to guide users.
 - **Consistency**: Avoid manual implementations of empty states with custom images or layouts.

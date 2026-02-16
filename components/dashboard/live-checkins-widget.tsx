@@ -9,7 +9,7 @@ import { CreateCheckInButton } from "@/components/check-ins/create-check-in-butt
 import { CheckInDetailModal } from "@/components/check-ins/check-in-detail-modal"
 import useSWR from "swr"
 import { useSearchParams } from "next/navigation"
-import { RioEmptyState } from "./RioEmptyState"
+import { RioEmptyState } from "./rio-empty-state"
 
 interface CheckIn {
   id: string

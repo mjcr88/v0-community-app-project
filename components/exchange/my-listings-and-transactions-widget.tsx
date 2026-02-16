@@ -26,7 +26,7 @@ import {
 import { RioConfirmationModal } from "@/components/feedback/rio-confirmation-modal"
 import Image from "next/image"
 import type { Location } from "@/types/locations"
-import { RioEmptyState } from "@/components/dashboard/RioEmptyState"
+import { RioEmptyState } from "@/components/dashboard/rio-empty-state"
 import { TransactionsView } from "@/components/transactions/transactions-view"
 import { ArchiveView } from "./archive-view"
 import { ListingHistoryModal } from "./listing-history-modal"

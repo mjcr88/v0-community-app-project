@@ -14,7 +14,7 @@ import { LocationBadge } from "@/components/events/location-badge"
 import { Badge } from "@/components/ui/badge"
 import useSWR from "swr"
 import { EventRsvpQuickAction } from "@/components/event-rsvp-quick-action"
-import { RioEmptyState } from "./RioEmptyState"
+import { RioEmptyState } from "./rio-empty-state"
 
 interface Event {
   id: string

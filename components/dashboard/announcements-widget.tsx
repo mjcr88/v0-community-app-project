@@ -9,7 +9,7 @@ import { AnnouncementPriorityBadge } from "@/components/announcements/announceme
 import { format } from "date-fns"
 import { Badge } from "@/components/ui/badge"
 import useSWR from "swr"
-import { RioEmptyState } from "./RioEmptyState"
+import { RioEmptyState } from "./rio-empty-state"
 
 import { AnnouncementType } from "@/types/announcements"
 

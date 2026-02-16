@@ -10,7 +10,7 @@ import { RequestStatusBadge } from "./request-status-badge"
 import { format } from "date-fns"
 import { useEffect } from "react"
 import { DashboardAnalytics } from "@/lib/analytics"
-import { RioEmptyState } from "@/components/dashboard/RioEmptyState"
+import { RioEmptyState } from "@/components/dashboard/rio-empty-state"
 
 interface MyRequestsWidgetProps {
   requests: any[]

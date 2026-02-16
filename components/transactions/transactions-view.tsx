@@ -3,7 +3,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TransactionCard } from "./transaction-card"
 import { Package } from 'lucide-react'
-import { RioEmptyState } from "@/components/dashboard/RioEmptyState"
+import { RioEmptyState } from "@/components/dashboard/rio-empty-state"
 
 export interface Transaction {
   id: string

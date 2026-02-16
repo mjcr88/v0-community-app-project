@@ -27,7 +27,7 @@ import {
 import { cancelReservation } from "@/app/actions/reservations"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
-import { RioEmptyState } from "@/components/dashboard/RioEmptyState"
+import { RioEmptyState } from "@/components/dashboard/rio-empty-state"
 
 interface Reservation {
     id: string

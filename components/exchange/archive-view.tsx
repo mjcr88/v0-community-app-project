@@ -8,7 +8,7 @@ import { Archive, Package, History, Loader2 } from 'lucide-react'
 import { getArchivedListings, getCompletedTransactions } from "@/app/actions/exchange-history"
 import { ArchivedListingsTable } from "./archived-listings-table"
 import { CompletedTransactionsTable } from "./completed-transactions-table"
-import { RioEmptyState } from "@/components/dashboard/RioEmptyState"
+import { RioEmptyState } from "@/components/dashboard/rio-empty-state"
 
 interface ArchiveViewProps {
   userId: string

@@ -40,4 +40,4 @@ test-results/
 playwright-report/
 
 #Documentation
-.gitignore
+docs/

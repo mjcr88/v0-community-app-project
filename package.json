@@ -10,7 +10,9 @@
     "type-check": "tsc --noEmit",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
-    "test": "vitest"
+    "test": "vitest",
+    "docs:dev": "cd docs-site && npm start -- --port 3001",
+    "docs:build": "cd docs-site && npm run build"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

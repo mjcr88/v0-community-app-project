@@ -8,9 +8,9 @@
 
 Antigravity Kit is a modular system consisting of:
 
-- **20 Specialist Agents** - Role-based AI personas
-- **36 Skills** - Domain-specific knowledge modules
-- **11 Workflows** - Slash command procedures
+- **21 Specialist Agents** - Role-based AI personas
+- **40 Skills** - Domain-specific knowledge modules
+- **12 Workflows** - Slash command procedures
 
 ---
 
@@ -54,8 +54,10 @@ Specialist AI personas for different domains.
 | `qa-automation-engineer` | E2E testing, CI pipelines | webapp-testing, testing-patterns |
 | `code-archaeologist` | Legacy code, refactoring | clean-code, code-review-checklist |
 | `explorer-agent` | Codebase analysis | - |
+| `content-writer` | User guides, product copy | content-localization, user-guide-writing |
 
 ---
+
 
 ## 🧩 Skills (36)
 
@@ -144,6 +146,15 @@ Modular knowledge domains that agents can load on-demand. based on task context.
 | Skill | Description |
 | ----- | ----------- |
 | `seo-fundamentals` | SEO, E-E-A-T, Core Web Vitals |
+
+### Documentation & Content
+
+| Skill | Description |
+| ----- | ----------- |
+| `user-guide-writing` | How-to guides, user-centric tone |
+| `excalidraw-diagrams` | Diagram generation (JSON) |
+| `content-localization` | Doc translation, cultural adaptation |
+| `screenshot-annotation` | UI capture, highlighting |
 | `geo-fundamentals` | GenAI optimization |
 
 ### Shell/CLI
@@ -185,6 +196,7 @@ Slash command procedures. Invoke with `/command`.
 | `/status` | Check project status |
 | `/test` | Run tests |
 | `/ui-ux-pro-max` | Design with 50 styles |
+| `/document` | Generate comprehensive docs |
 
 ---
 

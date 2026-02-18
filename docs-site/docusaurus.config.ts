@@ -33,11 +33,11 @@ const config: Config = {
       {
         docs: {
           sidebarPath: './sidebars.ts',
-          editUrl: 'https://github.com/mjcr88/v0-community-app-project/tree/main/docs-site/',
+          // editUrl: 'https://github.com/...',
         },
         blog: {
           showReadingTime: true,
-          editUrl: 'https://github.com/mjcr88/v0-community-app-project/tree/main/docs-site/',
+          // editUrl: 'https://github.com/...',
         },
         theme: {
           customCss: './src/css/custom.css',
@@ -77,11 +77,6 @@ const config: Config = {
           type: 'localeDropdown',
           position: 'right',
         },
-        {
-          href: 'https://github.com/mjcr88/v0-community-app-project',
-          label: 'GitHub',
-          position: 'right',
-        },
       ],
     },
     footer: {
@@ -98,7 +93,7 @@ const config: Config = {
         {
           title: 'Community',
           items: [
-            { label: 'GitHub', href: 'https://github.com/mjcr88/v0-community-app-project' },
+            // Community links to be added later
           ],
         },
       ],

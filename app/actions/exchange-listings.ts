@@ -76,7 +76,20 @@ export async function getExchangeListingById(listingId: string, tenantId: string
       return { success: false, error: "You don't have permission to view this listing", data: null }
     }
 
-    return { success: true, data: listing }
+    // Check for active transactions
+    const { count: activeTransactionsCount, error: txError } = await supabase
+      .from("exchange_transactions")
+      .select("id", { count: "exact", head: true })
+      .eq("listing_id", listingId)
+      .in("status", ["pending", "confirmed", "picked_up"])
+
+    const hasActiveTransactions = activeTransactionsCount ? activeTransactionsCount > 0 : false
+    const enrichedListing = {
+      ...listing,
+      has_active_transactions: hasActiveTransactions
+    }
+
+    return { success: true, data: enrichedListing }
   } catch (error) {
     console.error("Unexpected error fetching exchange listing:", error)
     return {
@@ -129,6 +142,18 @@ export async function createExchangeListing(
       .select("id, onboarding_completed")
       .eq("id", user.id)
       .single()
+
+    // Runtime validation of Enums
+    const validPricingTypes = ['free', 'fixed_price', 'pay_what_you_want']
+    const validConditions = ['new', 'slightly_used', 'used', 'slightly_damaged', 'maintenance']
+
+    if (!validPricingTypes.includes(data.pricing_type)) {
+      return { success: false, error: `Invalid pricing type: ${data.pricing_type}` }
+    }
+
+    if (data.condition && data.condition.trim() !== '' && !validConditions.includes(data.condition)) {
+      return { success: false, error: `Invalid condition: ${data.condition}` }
+    }
 
 
 
@@ -339,6 +364,18 @@ export async function updateExchangeListing(
       }
     }
 
+    // Runtime validation of Enums
+    const validPricingTypes = ['free', 'fixed_price', 'pay_what_you_want']
+    const validConditions = ['new', 'slightly_used', 'used', 'slightly_damaged', 'maintenance']
+
+    if (data.pricing_type !== undefined && !validPricingTypes.includes(data.pricing_type)) {
+      return { success: false, error: `Invalid pricing type: ${data.pricing_type}` }
+    }
+
+    if (data.condition !== undefined && data.condition !== null && data.condition.trim() !== '' && !validConditions.includes(data.condition)) {
+      return { success: false, error: `Invalid condition: ${data.condition}` }
+    }
+
     // Prepare update data
     const updateData: any = {}
 
@@ -378,7 +415,11 @@ export async function updateExchangeListing(
     }
 
     if (data.condition !== undefined) {
-      updateData.condition = data.condition
+      if (data.condition === null || data.condition.trim() === '') {
+        updateData.condition = null
+      } else {
+        updateData.condition = data.condition
+      }
     }
 
     if (data.available_quantity !== undefined) {

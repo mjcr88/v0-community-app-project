@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -111,7 +112,7 @@ export function EditExchangeListingModal({
         heroPhotoType: typeof listing.hero_photo,
       })
 
-      setHasActiveTransactions(false) // TODO: Add this check in getExchangeListingById
+      setHasActiveTransactions(listing.has_active_transactions || false)
 
       let locationType: "none" | "community" | "custom" = "none"
       if (listing.location_id) {
@@ -124,9 +125,9 @@ export function EditExchangeListingModal({
         title: listing.title,
         description: listing.description || "",
         category_id: categoryId,
-        pricing_type: listing.pricing_type,
+        pricing_type: (listing.pricing_type as ExchangePricingType) || "free",
         price: listing.price ? listing.price.toString() : "",
-        condition: listing.condition || "",
+        condition: (listing.condition as ExchangeCondition) || "",
         available_quantity: listing.available_quantity ? listing.available_quantity.toString() : "",
         visibility_scope: listing.visibility_scope,
         neighborhood_ids: listing.neighborhoods?.map((n: any) => n.neighborhood_id) || [],
@@ -221,7 +222,7 @@ export function EditExchangeListingModal({
         category_id: formData.category_id,
         pricing_type: formData.pricing_type,
         price: formData.pricing_type === "fixed_price" ? parseFloat(formData.price) : null,
-        condition: formData.condition,
+        condition: formData.condition === "" ? null : formData.condition,
         available_quantity: formData.available_quantity ? parseInt(formData.available_quantity, 10) : null,
         visibility_scope: formData.visibility_scope,
         neighborhood_ids: formData.visibility_scope === "neighborhood" ? formData.neighborhood_ids : [],
@@ -350,8 +351,11 @@ export function EditExchangeListingModal({
   if (isLoading) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-3xl">
-          <div className="flex items-center justify-center py-12">
+        <DialogContent className="max-w-3xl" aria-describedby="loading-description">
+          <VisuallyHidden>
+            <DialogTitle>Loading Listing...</DialogTitle>
+          </VisuallyHidden>
+          <div id="loading-description" className="flex items-center justify-center py-12">
             <div className="text-center space-y-2">
               <Loader2 className="h-8 w-8 animate-spin mx-auto" />
               <p className="text-sm text-muted-foreground">Loading listing...</p>
@@ -391,7 +395,6 @@ export function EditExchangeListingModal({
                     onHeroPhotoChange={(heroPhoto) => setFormData(prev => ({ ...prev, hero_photo: heroPhoto }))}
                     maxPhotos={10}
                     entityType="location"
-                    disabled={hasActiveTransactions}
                   />
                 </div>
 

@@ -145,6 +145,38 @@
         "darkMode": "Modo Oscuro",
         "lightMode": "Modo Claro"
     },
+    "announcements": {
+        "title": "Anuncios",
+        "subtitle": "Actualizaciones oficiales de tu comunidad",
+        "createAnnouncement": "Crear Anuncio",
+        "priority": {
+            "normal": "Normal",
+            "important": "Importante",
+            "urgent": "Urgente"
+        },
+        "status": {
+            "draft": "Borrador",
+            "published": "Publicado",
+            "archived": "Archivado"
+        },
+        "targetAudience": "Dirigido A",
+        "communityWide": "Toda la Comunidad",
+        "specificNeighborhoods": "Vecindarios Específicos",
+        "autoArchive": "Archivar Automáticamente El",
+        "publishNow": "Publicar Ahora",
+        "saveDraft": "Guardar como Borrador",
+        "published": "Publicado",
+        "archived": "Archivado",
+        "general": "General",
+        "emergency": "Emergencia",
+        "maintenance": "Mantenimiento",
+        "event": "Evento",
+        "policy": "Política",
+        "safety": "Seguridad",
+        "alert": "Alerta",
+        "community_update": "Actualización de la Comunidad",
+        "resource": "Recurso"
+    },
     "notifications": {
         "title": "Notificaciones",
         "markAllRead": "Marcar Todo como Leído",

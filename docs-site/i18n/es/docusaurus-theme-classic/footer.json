@@ -1,0 +1,26 @@
+{
+  "link.title.Docs": {
+    "message": "Docs",
+    "description": "The title of the footer links column with title=Docs in the footer"
+  },
+  "link.title.Community": {
+    "message": "Community",
+    "description": "The title of the footer links column with title=Community in the footer"
+  },
+  "link.item.label.Residents": {
+    "message": "Residents",
+    "description": "The label of footer link with label=Residents linking to /docs/guides/residents/intro"
+  },
+  "link.item.label.Admins": {
+    "message": "Admins",
+    "description": "The label of footer link with label=Admins linking to /docs/guides/admins/intro"
+  },
+  "link.item.label.API Reference": {
+    "message": "API Reference",
+    "description": "The label of footer link with label=API Reference linking to /docs/developers/api/intro"
+  },
+  "copyright": {
+    "message": "Copyright © 2026 Nido Platform. Built with Docusaurus.",
+    "description": "The footer copyright"
+  }
+}

@@ -15,6 +15,9 @@ import { getExchangeListings as getExchangeListingsFromLib, getExchangeListingBy
 
 // ... (keep createNotification)
 
+const VALID_PRICING_TYPES = ['free', 'fixed_price', 'pay_what_you_want'] as const
+const VALID_CONDITIONS = ['new', 'slightly_used', 'used', 'slightly_damaged', 'maintenance'] as const
+
 /**
  * Server actions for exchange listing operations
  */
@@ -83,6 +86,10 @@ export async function getExchangeListingById(listingId: string, tenantId: string
       .eq("listing_id", listingId)
       .in("status", ["requested", "confirmed", "picked_up"])
 
+    if (txError) {
+      console.error("Error checking active transactions:", txError)
+    }
+
     const hasActiveTransactions = activeTransactionsCount ? activeTransactionsCount > 0 : false
     const enrichedListing = {
       ...listing,
@@ -144,14 +151,11 @@ export async function createExchangeListing(
       .single()
 
     // Runtime validation of Enums
-    const validPricingTypes = ['free', 'fixed_price', 'pay_what_you_want']
-    const validConditions = ['new', 'slightly_used', 'used', 'slightly_damaged', 'maintenance']
-
-    if (!validPricingTypes.includes(data.pricing_type)) {
+    if (!VALID_PRICING_TYPES.includes(data.pricing_type as any)) {
       return { success: false, error: `Invalid pricing type: ${data.pricing_type}` }
     }
 
-    if (data.condition && data.condition.trim() !== '' && !validConditions.includes(data.condition)) {
+    if (data.condition && data.condition.trim() !== '' && !VALID_CONDITIONS.includes(data.condition as any)) {
       return { success: false, error: `Invalid condition: ${data.condition}` }
     }
 
@@ -365,14 +369,11 @@ export async function updateExchangeListing(
     }
 
     // Runtime validation of Enums
-    const validPricingTypes = ['free', 'fixed_price', 'pay_what_you_want']
-    const validConditions = ['new', 'slightly_used', 'used', 'slightly_damaged', 'maintenance']
-
-    if (data.pricing_type !== undefined && !validPricingTypes.includes(data.pricing_type)) {
+    if (data.pricing_type !== undefined && !VALID_PRICING_TYPES.includes(data.pricing_type as any)) {
       return { success: false, error: `Invalid pricing type: ${data.pricing_type}` }
     }
 
-    if (data.condition !== undefined && data.condition !== null && data.condition.trim() !== '' && !validConditions.includes(data.condition)) {
+    if (data.condition !== undefined && data.condition !== null && data.condition.trim() !== '' && !VALID_CONDITIONS.includes(data.condition as any)) {
       return { success: false, error: `Invalid condition: ${data.condition}` }
     }
 

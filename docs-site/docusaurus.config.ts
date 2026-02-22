@@ -8,7 +8,7 @@ const config: Config = {
   favicon: 'img/favicon.ico',
 
   // Set the production url of your site here
-  url: 'https://nido-docs.vercel.app',
+  url: 'https://v0-community-app-project-oib6-ac6vfephz.vercel.app',
   baseUrl: '/',
 
   // GitHub pages deployment config.

@@ -145,6 +145,38 @@
         "darkMode": "Dark Mode",
         "lightMode": "Light Mode"
     },
+    "announcements": {
+        "title": "Announcements",
+        "subtitle": "Official updates from your community",
+        "createAnnouncement": "Create Announcement",
+        "priority": {
+            "normal": "Normal",
+            "important": "Important",
+            "urgent": "Urgent"
+        },
+        "status": {
+            "draft": "Draft",
+            "published": "Published",
+            "archived": "Archived"
+        },
+        "targetAudience": "Target Audience",
+        "communityWide": "Community-Wide",
+        "specificNeighborhoods": "Specific Neighborhoods",
+        "autoArchive": "Auto-Archive On",
+        "publishNow": "Publish Now",
+        "saveDraft": "Save as Draft",
+        "published": "Published",
+        "archived": "Archived",
+        "general": "General",
+        "emergency": "Emergency",
+        "maintenance": "Maintenance",
+        "event": "Event",
+        "policy": "Policy",
+        "safety": "Safety",
+        "alert": "Alert",
+        "community_update": "Community Update",
+        "resource": "Resource"
+    },
     "notifications": {
         "title": "Notifications",
         "markAllRead": "Mark All as Read",

@@ -1,0 +1,26 @@
+{
+  "version.label": {
+    "message": "Next",
+    "description": "The label for version current"
+  },
+  "sidebar.guidesSidebar.category.admins": {
+    "message": "admins",
+    "description": "The label for category 'admins' in sidebar 'guidesSidebar'"
+  },
+  "sidebar.guidesSidebar.category.residents": {
+    "message": "residents",
+    "description": "The label for category 'residents' in sidebar 'guidesSidebar'"
+  },
+  "sidebar.developersSidebar.category.api": {
+    "message": "api",
+    "description": "The label for category 'api' in sidebar 'developersSidebar'"
+  },
+  "sidebar.developersSidebar.category.architecture": {
+    "message": "architecture",
+    "description": "The label for category 'architecture' in sidebar 'developersSidebar'"
+  },
+  "sidebar.developersSidebar.category.schema": {
+    "message": "schema",
+    "description": "The label for category 'schema' in sidebar 'developersSidebar'"
+  }
+}

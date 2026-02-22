@@ -10,9 +10,9 @@ export interface ExchangeListing {
     created_by: string
     tenant_id: string
     status: 'draft' | 'published' | 'archived' | 'completed'
-    pricing_type: 'free' | 'fixed_price' | 'negotiable'
+    pricing_type: 'free' | 'fixed_price' | 'pay_what_you_want'
     price: number | null
-    condition: 'new' | 'like_new' | 'good' | 'fair' | 'poor' | null
+    condition: 'new' | 'slightly_used' | 'used' | 'slightly_damaged' | 'maintenance' | null
     available_quantity: number
     images: string[] | null
     hero_photo: string | null

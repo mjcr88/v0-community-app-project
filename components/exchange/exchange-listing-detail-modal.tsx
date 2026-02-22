@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import DOMPurify from "dompurify"
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent } from "@/components/ui/card"
 import { ExchangeCategoryBadge } from "./exchange-category-badge"
@@ -297,11 +298,11 @@ export function ExchangeListingDetailModal({
   if (isLoading || !listing) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle className="sr-only">Loading Listing</DialogTitle>
-          </DialogHeader>
-          <div className="flex items-center justify-center py-12">
+        <DialogContent className="max-w-3xl" aria-describedby="listing-detail-loading">
+          <VisuallyHidden>
+            <DialogTitle>Loading Listing Details</DialogTitle>
+          </VisuallyHidden>
+          <div id="listing-detail-loading" className="flex items-center justify-center py-12">
             <div className="text-center space-y-2">
               <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto" />
               <p className="text-sm text-muted-foreground">Loading listing...</p>

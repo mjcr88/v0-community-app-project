@@ -15,6 +15,9 @@ import { getExchangeListings as getExchangeListingsFromLib, getExchangeListingBy
 
 // ... (keep createNotification)
 
+const VALID_PRICING_TYPES = ['free', 'fixed_price', 'pay_what_you_want'] as const
+const VALID_CONDITIONS = ['new', 'slightly_used', 'used', 'slightly_damaged', 'maintenance'] as const
+
 /**
  * Server actions for exchange listing operations
  */
@@ -76,7 +79,24 @@ export async function getExchangeListingById(listingId: string, tenantId: string
       return { success: false, error: "You don't have permission to view this listing", data: null }
     }
 
-    return { success: true, data: listing }
+    // Check for active transactions
+    const { count: activeTransactionsCount, error: txError } = await supabase
+      .from("exchange_transactions")
+      .select("id", { count: "exact", head: true })
+      .eq("listing_id", listingId)
+      .in("status", ["requested", "confirmed", "picked_up"])
+
+    if (txError) {
+      console.error("Error checking active transactions:", txError)
+    }
+
+    const hasActiveTransactions = activeTransactionsCount ? activeTransactionsCount > 0 : false
+    const enrichedListing = {
+      ...listing,
+      has_active_transactions: hasActiveTransactions
+    }
+
+    return { success: true, data: enrichedListing }
   } catch (error) {
     console.error("Unexpected error fetching exchange listing:", error)
     return {
@@ -129,6 +149,15 @@ export async function createExchangeListing(
       .select("id, onboarding_completed")
       .eq("id", user.id)
       .single()
+
+    // Runtime validation of Enums
+    if (!VALID_PRICING_TYPES.includes(data.pricing_type as any)) {
+      return { success: false, error: `Invalid pricing type: ${data.pricing_type}` }
+    }
+
+    if (data.condition && data.condition.trim() !== '' && !VALID_CONDITIONS.includes(data.condition as any)) {
+      return { success: false, error: `Invalid condition: ${data.condition}` }
+    }
 
 
 
@@ -311,7 +340,7 @@ export async function updateExchangeListing(
       .from("exchange_transactions")
       .select("id")
       .eq("listing_id", listingId)
-      .in("status", ["pending", "confirmed", "picked_up"])
+      .in("status", ["requested", "confirmed", "picked_up"])
       .limit(1)
 
     const hasActiveTransactions = activeTransactions && activeTransactions.length > 0
@@ -337,6 +366,15 @@ export async function updateExchangeListing(
           error: "Cannot edit listing details with active transactions. Only quantity can be updated.",
         }
       }
+    }
+
+    // Runtime validation of Enums
+    if (data.pricing_type !== undefined && !VALID_PRICING_TYPES.includes(data.pricing_type as any)) {
+      return { success: false, error: `Invalid pricing type: ${data.pricing_type}` }
+    }
+
+    if (data.condition !== undefined && data.condition !== null && data.condition.trim() !== '' && !VALID_CONDITIONS.includes(data.condition as any)) {
+      return { success: false, error: `Invalid condition: ${data.condition}` }
     }
 
     // Prepare update data
@@ -378,7 +416,11 @@ export async function updateExchangeListing(
     }
 
     if (data.condition !== undefined) {
-      updateData.condition = data.condition
+      if (data.condition === null || data.condition.trim() === '') {
+        updateData.condition = null
+      } else {
+        updateData.condition = data.condition
+      }
     }
 
     if (data.available_quantity !== undefined) {
@@ -630,7 +672,7 @@ export async function deleteExchangeListing(listingId: string, tenantSlug: strin
       .from("exchange_transactions")
       .select("id, status")
       .eq("listing_id", listingId)
-      .in("status", ["pending", "confirmed", "picked_up"])
+      .in("status", ["requested", "confirmed", "picked_up"])
 
     if (activeTransactions && activeTransactions.length > 0) {
       return {
@@ -1388,7 +1430,7 @@ export async function adminArchiveListings(
       .from("exchange_transactions")
       .select("id, borrower_id, listing_id")
       .in("listing_id", listingIds)
-      .eq("status", "pending") // Changed from 'requested' to 'pending'
+      .eq("status", "requested") // Changed from 'pending' to 'requested' to match ExchangeTransactionStatus
 
     if (listings && listings.length > 0) {
       // Notify creators

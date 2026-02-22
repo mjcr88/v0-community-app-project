@@ -43,7 +43,7 @@ const mockListings = [
         title: 'Kids Bicycle',
         status: 'draft' as const,
         is_available: false,
-        pricing_type: 'negotiable' as const,
+        pricing_type: 'pay_what_you_want' as const,
         price: null,
         photos: [],
         hero_photo: null,
@@ -83,7 +83,7 @@ const mockTransactions = [
         returned_at: null,
         completed_at: null,
     },
-];
+] as any[];
 
 export const WithListings: Story = {
     args: {

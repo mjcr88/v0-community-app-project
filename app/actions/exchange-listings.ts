@@ -81,7 +81,7 @@ export async function getExchangeListingById(listingId: string, tenantId: string
       .from("exchange_transactions")
       .select("id", { count: "exact", head: true })
       .eq("listing_id", listingId)
-      .in("status", ["pending", "confirmed", "picked_up"])
+      .in("status", ["requested", "confirmed", "picked_up"])
 
     const hasActiveTransactions = activeTransactionsCount ? activeTransactionsCount > 0 : false
     const enrichedListing = {
@@ -336,7 +336,7 @@ export async function updateExchangeListing(
       .from("exchange_transactions")
       .select("id")
       .eq("listing_id", listingId)
-      .in("status", ["pending", "confirmed", "picked_up"])
+      .in("status", ["requested", "confirmed", "picked_up"])
       .limit(1)
 
     const hasActiveTransactions = activeTransactions && activeTransactions.length > 0
@@ -671,7 +671,7 @@ export async function deleteExchangeListing(listingId: string, tenantSlug: strin
       .from("exchange_transactions")
       .select("id, status")
       .eq("listing_id", listingId)
-      .in("status", ["pending", "confirmed", "picked_up"])
+      .in("status", ["requested", "confirmed", "picked_up"])
 
     if (activeTransactions && activeTransactions.length > 0) {
       return {
@@ -1429,7 +1429,7 @@ export async function adminArchiveListings(
       .from("exchange_transactions")
       .select("id, borrower_id, listing_id")
       .in("listing_id", listingIds)
-      .eq("status", "pending") // Changed from 'requested' to 'pending'
+      .eq("status", "requested") // Changed from 'pending' to 'requested' to match ExchangeTransactionStatus
 
     if (listings && listings.length > 0) {
       // Notify creators

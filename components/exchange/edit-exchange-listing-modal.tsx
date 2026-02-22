@@ -121,13 +121,13 @@ export function EditExchangeListingModal({
         locationType = "custom"
       }
 
-      const newFormData = {
+      const newFormData: typeof formData = {
         title: listing.title,
         description: listing.description || "",
         category_id: categoryId,
-        pricing_type: (listing.pricing_type as ExchangePricingType) || "free",
+        pricing_type: listing.pricing_type || "free",
         price: listing.price ? listing.price.toString() : "",
-        condition: (listing.condition as ExchangeCondition) || "",
+        condition: listing.condition || "",
         available_quantity: listing.available_quantity ? listing.available_quantity.toString() : "",
         visibility_scope: listing.visibility_scope,
         neighborhood_ids: listing.neighborhoods?.map((n: any) => n.neighborhood_id) || [],

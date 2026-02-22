@@ -46,7 +46,7 @@ interface Listing {
   title: string
   status: "draft" | "published" | "paused" | "cancelled"
   is_available: boolean
-  pricing_type: "free" | "fixed_price" | "negotiable"
+  pricing_type: "free" | "fixed_price" | "pay_what_you_want"
   price: number | null
   photos: string[]
   hero_photo: string | null

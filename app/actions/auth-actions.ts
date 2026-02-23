@@ -2,6 +2,16 @@
 
 import { cookies, headers } from "next/headers"
 import { createClient } from "@/lib/supabase/server"
+import { z } from "zod"
+
+const resetPasswordSchema = z.object({
+    email: z.string().email().max(254),
+    tenantSlug: z.string().min(1).max(100).regex(/^[a-z0-9-]+$/),
+})
+
+const updatePasswordSchema = z.object({
+    password: z.string().min(6).max(256),
+})
 
 const REMEMBER_ME_COOKIE = "remember-me"
 const LAST_ACTIVE_COOKIE = "last-active"
@@ -52,8 +62,13 @@ export async function setSessionPersistence(rememberMe: boolean) {
  */
 export async function resetPassword(email: string, tenantSlug: string) {
     try {
+        const parsed = resetPasswordSchema.safeParse({ email, tenantSlug })
+        if (!parsed.success) {
+            return { success: true } // Invalid input — fail silently (anti-enumeration)
+        }
+
         const supabase = await createClient()
-        const normalizedEmail = email.toLowerCase().trim()
+        const normalizedEmail = parsed.data.email.toLowerCase().trim()
 
         // Build a reliable absolute origin. The `origin` header may be absent
         // for same-origin requests in some browsers. Fall back to a trusted
@@ -126,10 +141,15 @@ export async function resetPassword(email: string, tenantSlug: string) {
  */
 export async function updatePassword(password: string) {
     try {
+        const parsed = updatePasswordSchema.safeParse({ password })
+        if (!parsed.success) {
+            return { error: "Password must be at least 6 characters." }
+        }
+
         const supabase = await createClient()
 
         const { error } = await supabase.auth.updateUser({
-            password: password
+            password: parsed.data.password
         })
 
         if (error) {

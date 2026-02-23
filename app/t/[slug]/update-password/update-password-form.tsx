@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { Eye, EyeOff, Lock, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/library/button"
 import { Input } from "@/components/library/input"
@@ -11,7 +10,6 @@ import { Alert, AlertDescription } from "@/components/library/alert"
 import { updatePassword } from "@/app/actions/auth-actions"
 
 export function UpdatePasswordForm({ tenantSlug }: { tenantSlug: string }) {
-  const router = useRouter()
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)

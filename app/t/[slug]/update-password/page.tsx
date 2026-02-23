@@ -10,8 +10,8 @@ export default async function UpdatePasswordPage({ params }: { params: Promise<{
 
     // If no user session is found, they cannot update the password.
     if (!user || error) {
-        console.error(`[v0] UpdatePasswordPage: No active session found for tenant ${slug}. Redirecting to login.`)
-        redirect(`/t/${slug}/login?error=The+recovery+session+is+invalid+or+expired.`)
+        console.log(`[v0] UpdatePasswordPage: No active session for tenant ${slug}, redirecting to login.`)
+        redirect(`/t/${slug}/login?error=recovery_expired`)
     }
 
     return (

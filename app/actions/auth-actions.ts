@@ -53,7 +53,18 @@ export async function setSessionPersistence(rememberMe: boolean) {
 export async function resetPassword(email: string, tenantSlug: string) {
     try {
         const supabase = await createClient()
-        const origin = (await headers()).get("origin") || ""
+        const normalizedEmail = email.toLowerCase().trim()
+
+        // Build a reliable absolute origin. The `origin` header may be absent
+        // for same-origin requests in some browsers. Fall back to a trusted
+        // env var or construct from the `host` header.
+        const headersList = await headers()
+        const origin =
+            headersList.get("origin") ||
+            process.env.NEXT_PUBLIC_APP_URL ||
+            (headersList.get("host")
+                ? `${headersList.get("x-forwarded-proto") || "https"}://${headersList.get("host")}`
+                : "")
 
         // 1. Look up the tenant by slug
         const { data: tenant, error: tenantError } = await supabase
@@ -69,20 +80,19 @@ export async function resetPassword(email: string, tenantSlug: string) {
         }
 
         // 2. Check if the email belongs to a user who is a resident of this tenant.
-        //    We query auth.users via the admin client to find the user by email,
-        //    then check the residents table. Since we're using the anon client,
-        //    we look up residents by joining on the user's email instead.
         const { data: resident, error: residentError } = await supabase
             .rpc("check_resident_email", {
-                p_email: email.toLowerCase().trim(),
+                p_email: normalizedEmail,
                 p_tenant_id: tenant.id,
             })
 
-        // If the RPC doesn't exist yet, fall back to always sending (safe default)
-        if (residentError && residentError.message.includes("check_resident_email")) {
-            console.warn("[Auth] check_resident_email RPC not found, falling back to direct send")
-        } else if (residentError || !resident) {
-            // User is not a resident of this tenant — silently return success
+        // Fail-closed: any RPC error (including function-not-found) blocks the send
+        // to preserve tenant gating.
+        if (residentError) {
+            console.error("[Auth] check_resident_email RPC error, aborting reset for safety:", residentError.message)
+            return { success: true }
+        }
+        if (!resident) {
             console.log("[Auth] Reset password: email not found as resident in tenant", tenantSlug)
             return { success: true }
         }
@@ -92,7 +102,7 @@ export async function resetPassword(email: string, tenantSlug: string) {
         // Supabase strips query parameters from redirect_to during its own redirect chain.
         const redirectTo = `${origin}/auth/confirm/${tenantSlug}`
 
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
             redirectTo,
         })
 

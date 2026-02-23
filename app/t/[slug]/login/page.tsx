@@ -12,7 +12,15 @@ export default async function TenantLoginPage({
 }) {
   const { slug } = await params
   const resolvedSearchParams = await searchParams
-  const urlError = resolvedSearchParams?.error as string | undefined
+  // Map URL error keys to fixed messages to prevent phishing via crafted URLs.
+  const ERROR_MESSAGES: Record<string, string> = {
+    timeout: "Your session timed out. Please log in again.",
+    recovery_expired: "The recovery link is invalid or has expired.",
+    access_denied: "You do not have access to this community.",
+  }
+  const rawError = resolvedSearchParams?.error
+  const errorKey = Array.isArray(rawError) ? rawError[0] : rawError
+  const urlError = errorKey ? ERROR_MESSAGES[errorKey] : undefined
   const supabase = await createClient()
 
   // Check if tenant exists

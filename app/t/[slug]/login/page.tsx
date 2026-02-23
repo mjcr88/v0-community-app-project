@@ -5,10 +5,14 @@ import { TenantLoginForm } from "./login-form"
 
 export default async function TenantLoginPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
   const { slug } = await params
+  const resolvedSearchParams = await searchParams
+  const urlError = resolvedSearchParams?.error as string | undefined
   const supabase = await createClient()
 
   // Check if tenant exists
@@ -52,7 +56,7 @@ export default async function TenantLoginPage({
     <div className="flex min-h-[100dvh] flex-col lg:grid lg:grid-cols-2">
       {/* Left Panel: Login Form */}
       <div className="flex flex-1 flex-col items-center justify-center p-8 bg-earth-cloud/30 w-full">
-        <TenantLoginForm tenant={tenant as any} />
+        <TenantLoginForm tenant={tenant as any} initialError={urlError} />
       </div>
 
       {/* Right Side - Hero/Brand */}

@@ -1,6 +1,7 @@
 "use server"
 
-import { cookies } from "next/headers"
+import { cookies, headers } from "next/headers"
+import { createClient } from "@/lib/supabase/server"
 
 const REMEMBER_ME_COOKIE = "remember-me"
 const LAST_ACTIVE_COOKIE = "last-active"
@@ -44,4 +45,91 @@ export async function setSessionPersistence(rememberMe: boolean) {
     }
 
     console.log(`[Auth] Session persistence set. RememberMe: ${rememberMe}`)
+}
+
+/**
+ * Triggers the Supabase password reset email flow.
+ */
+export async function resetPassword(email: string, tenantSlug: string) {
+    try {
+        const supabase = await createClient()
+        const origin = (await headers()).get("origin") || ""
+
+        // 1. Look up the tenant by slug
+        const { data: tenant, error: tenantError } = await supabase
+            .from("tenants")
+            .select("id")
+            .eq("slug", tenantSlug)
+            .maybeSingle()
+
+        if (tenantError || !tenant) {
+            // Don't reveal tenant existence; always return success
+            console.error("[Auth] Reset password: tenant not found for slug:", tenantSlug)
+            return { success: true }
+        }
+
+        // 2. Check if the email belongs to a user who is a resident of this tenant.
+        //    We query auth.users via the admin client to find the user by email,
+        //    then check the residents table. Since we're using the anon client,
+        //    we look up residents by joining on the user's email instead.
+        const { data: resident, error: residentError } = await supabase
+            .rpc("check_resident_email", {
+                p_email: email.toLowerCase().trim(),
+                p_tenant_id: tenant.id,
+            })
+
+        // If the RPC doesn't exist yet, fall back to always sending (safe default)
+        if (residentError && residentError.message.includes("check_resident_email")) {
+            console.warn("[Auth] check_resident_email RPC not found, falling back to direct send")
+        } else if (residentError || !resident) {
+            // User is not a resident of this tenant — silently return success
+            console.log("[Auth] Reset password: email not found as resident in tenant", tenantSlug)
+            return { success: true }
+        }
+
+        // 3. Send the reset email only for verified residents
+        // Encode the tenant slug in the URL path (not a query param) because
+        // Supabase strips query parameters from redirect_to during its own redirect chain.
+        const redirectTo = `${origin}/auth/confirm/${tenantSlug}`
+
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo,
+        })
+
+        if (error) {
+            console.error("[Auth] Reset password error:", error.message)
+            // Don't expose Supabase errors to the user (e.g., rate limits)
+            // Return success to prevent info leakage
+            return { success: true }
+        }
+
+        return { success: true }
+    } catch (err: any) {
+        console.error("[Auth] Unexpected reset password error:", err)
+        // Always return success to prevent email enumeration
+        return { success: true }
+    }
+}
+
+/**
+ * Updates the user's password using the current recovery session.
+ */
+export async function updatePassword(password: string) {
+    try {
+        const supabase = await createClient()
+
+        const { error } = await supabase.auth.updateUser({
+            password: password
+        })
+
+        if (error) {
+            console.error("[Auth] Update password error:", error.message)
+            return { error: error.message }
+        }
+
+        return { success: true }
+    } catch (err: any) {
+        console.error("[Auth] Unexpected update password error:", err)
+        return { error: "An unexpected error occurred." }
+    }
 }

@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server"
 import { z } from "zod"
 
 const resetPasswordSchema = z.object({
-    email: z.string().email().max(254),
+    email: z.string().email().max(254).transform((v) => v.toLowerCase().trim()),
     tenantSlug: z.string().min(1).max(100).regex(/^[a-z0-9-]+$/),
 })
 
@@ -68,7 +68,7 @@ export async function resetPassword(email: string, tenantSlug: string) {
         }
 
         const supabase = await createClient()
-        const normalizedEmail = parsed.data.email.toLowerCase().trim()
+        const normalizedEmail = parsed.data.email // already normalized by Zod transform
 
         // Build a reliable absolute origin. The `origin` header may be absent
         // for same-origin requests in some browsers. Fall back to a trusted
@@ -80,6 +80,11 @@ export async function resetPassword(email: string, tenantSlug: string) {
             (headersList.get("host")
                 ? `${headersList.get("x-forwarded-proto") || "https"}://${headersList.get("host")}`
                 : "")
+
+        if (!origin) {
+            console.error("[Auth] Reset password: could not determine absolute origin — NEXT_PUBLIC_APP_URL must be set")
+            return { success: true }
+        }
 
         // 1. Look up the tenant by slug
         const { data: tenant, error: tenantError } = await supabase

@@ -3,6 +3,13 @@ import Image from "next/image"
 import { createClient } from "@/lib/supabase/server"
 import { TenantLoginForm } from "./login-form"
 
+// Map URL error keys to fixed messages to prevent phishing via crafted URLs.
+const ERROR_MESSAGES: Record<string, string> = {
+  timeout: "Your session timed out. Please log in again.",
+  recovery_expired: "The recovery link is invalid or has expired.",
+  access_denied: "You do not have access to this community.",
+}
+
 export default async function TenantLoginPage({
   params,
   searchParams,
@@ -12,12 +19,6 @@ export default async function TenantLoginPage({
 }) {
   const { slug } = await params
   const resolvedSearchParams = await searchParams
-  // Map URL error keys to fixed messages to prevent phishing via crafted URLs.
-  const ERROR_MESSAGES: Record<string, string> = {
-    timeout: "Your session timed out. Please log in again.",
-    recovery_expired: "The recovery link is invalid or has expired.",
-    access_denied: "You do not have access to this community.",
-  }
   const rawError = resolvedSearchParams?.error
   const errorKey = Array.isArray(rawError) ? rawError[0] : rawError
   const urlError = errorKey ? ERROR_MESSAGES[errorKey] : undefined
@@ -64,7 +65,7 @@ export default async function TenantLoginPage({
     <div className="flex min-h-[100dvh] flex-col lg:grid lg:grid-cols-2">
       {/* Left Panel: Login Form */}
       <div className="flex flex-1 flex-col items-center justify-center p-8 bg-earth-cloud/30 w-full">
-        <TenantLoginForm tenant={tenant as any} initialError={urlError} />
+        <TenantLoginForm tenant={tenant} initialError={urlError} />
       </div>
 
       {/* Right Side - Hero/Brand */}

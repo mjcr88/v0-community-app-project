@@ -37,13 +37,14 @@ export function UpdatePasswordForm({ tenantSlug }: { tenantSlug: string }) {
       const result = await updatePassword(password)
 
       if (result.error) {
-        throw new Error(result.error)
+        setError(result.error)
+        return
       }
 
       setSuccess(true)
     } catch (err: any) {
-      console.error("[v0] Update password error:", err)
-      setError(err.message || "An error occurred. Your recovery session may have expired.")
+      console.error("[Auth] Update password error:", err)
+      setError("An error occurred. Your recovery session may have expired.")
     } finally {
       setLoading(false)
     }
@@ -95,12 +96,14 @@ export function UpdatePasswordForm({ tenantSlug }: { tenantSlug: string }) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              autoComplete="new-password"
               className="pl-10 pr-10 border-earth-pebble focus-visible:ring-forest-canopy"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
               className="absolute right-3 top-3 text-mist-gray hover:text-forest-canopy"
+              aria-label={showPassword ? "Hide password" : "Show password"}
             >
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
@@ -118,6 +121,7 @@ export function UpdatePasswordForm({ tenantSlug }: { tenantSlug: string }) {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
+              autoComplete="new-password"
               className="pl-10 pr-10 border-earth-pebble focus-visible:ring-forest-canopy"
             />
           </div>

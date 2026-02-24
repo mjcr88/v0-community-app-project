@@ -72,11 +72,18 @@ export async function GET(
     )
 
     if (code) {
-        const { error } = await supabase.auth.exchangeCodeForSession(code)
-        if (!error) {
-            return response
+        const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+        if (!error && data.session?.access_token) {
+            // Verify the session is from a recovery flow by inspecting JWT amr claim
+            const [, payload] = data.session.access_token.split(".")
+            const claims = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")))
+            const amrMethods = (claims.amr ?? []).map((x: any) => x.method ?? x)
+            if (amrMethods.includes("recovery")) {
+                return response
+            }
+            console.error("[Auth] Code Exchange: session is not a recovery session, rejecting")
         }
-        console.error("[Auth] Code Exchange Error:", error.message)
+        console.error("[Auth] Code Exchange Error:", error?.message)
     } else if (token_hash && type) {
         const { error } = await supabase.auth.verifyOtp({ type, token_hash })
         if (!error) {

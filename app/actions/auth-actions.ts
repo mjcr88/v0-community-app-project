@@ -70,15 +70,18 @@ export async function resetPassword(email: string, tenantSlug: string) {
         const supabase = await createClient()
         const normalizedEmail = parsed.data.email // already normalized by Zod transform
 
-        // Build a reliable absolute origin. The `origin` header may be absent
-        // for same-origin requests in some browsers. Fall back to a trusted
-        // env var or construct from the `host` header.
+        // Build a reliable absolute origin for the password reset redirect URL.
+        // Prioritize the trusted env var. Only fall back to request headers
+        // in non-production (local dev) — headers are attacker-controllable
+        // and could inject phishing URLs into reset emails.
         const headersList = await headers()
         const origin =
-            headersList.get("origin") ||
             process.env.NEXT_PUBLIC_APP_URL ||
-            (headersList.get("host")
-                ? `${headersList.get("x-forwarded-proto") || "https"}://${headersList.get("host")}`
+            (process.env.NODE_ENV !== "production"
+                ? headersList.get("origin") ||
+                (headersList.get("host")
+                    ? `${headersList.get("x-forwarded-proto") || "https"}://${headersList.get("host")}`
+                    : "")
                 : "")
 
         if (!origin) {

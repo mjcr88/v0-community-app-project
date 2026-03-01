@@ -126,25 +126,33 @@ export default async function ResidentsPage({
 
   if (showAccessRequests) {
     try {
-      const { data: requests } = await supabase
+      const { data: requests, error: requestsError } = await supabase
         .from("access_requests")
         .select("*, lots:lot_id (id, lot_number)")
         .eq("tenant_id", tenant.id)
         .eq("status", "pending")
         .order("created_at", { ascending: false })
 
-      accessRequests = requests || []
+      if (requestsError) {
+        console.error("[residents-page] failed to load access requests", { code: requestsError.code })
+      } else {
+        accessRequests = requests || []
+      }
     } catch {
       // access_requests table may not exist yet (migration not applied)
     }
 
-    const { data: lots } = await supabase
+    const { data: lots, error: lotsError } = await supabase
       .from("lots")
       .select("id, lot_number")
       .eq("tenant_id", tenant.id)
       .order("lot_number", { ascending: true })
 
-    allLots = lots || []
+    if (lotsError) {
+      console.error("[residents-page] failed to load lots", { code: lotsError.code })
+    } else {
+      allLots = lots || []
+    }
 
     // Get occupied lot IDs
     const occupiedResidents = residents?.filter((r: any) => r.lots?.id) || []

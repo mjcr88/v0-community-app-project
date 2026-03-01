@@ -52,6 +52,7 @@ export function AccessRequestsTable({
     const [requests, setRequests] = useState(initialRequests)
     const [rejectingId, setRejectingId] = useState<string | null>(null)
     const [processing, setProcessing] = useState<string | null>(null)
+    const [actionError, setActionError] = useState<string | null>(null)
     const router = useRouter()
 
     const occupiedSet = new Set(occupiedLotIds)
@@ -63,17 +64,13 @@ export function AccessRequestsTable({
     const handleApprove = (request: AccessRequest) => {
         const params = new URLSearchParams()
         params.set("from_request", request.id)
-        if (request.first_name) params.set("first_name", request.first_name)
-        if (request.last_name) params.set("last_name", request.last_name)
-        if (request.email) params.set("email", request.email)
-        if (request.family_name) params.set("family_name", request.family_name)
-        if (request.lot_id) params.set("lot_id", request.lot_id)
 
         router.push(`/t/${slug}/admin/residents/create?${params.toString()}`)
     }
 
     const handleReject = async (requestId: string) => {
         setProcessing(requestId)
+        setActionError(null)
         try {
             const supabase = createBrowserClient()
             const { error } = await supabase
@@ -84,15 +81,19 @@ export function AccessRequestsTable({
                 })
                 .eq("id", requestId)
 
-            if (!error) {
-                setRequests((prev) =>
-                    prev.map((r) =>
-                        r.id === requestId ? { ...r, status: "rejected" } : r
-                    )
-                )
+            if (error) {
+                setActionError("Failed to reject request. Please try again.")
+                return
             }
+
+            setRequests((prev) =>
+                prev.map((r) =>
+                    r.id === requestId ? { ...r, status: "rejected" } : r
+                )
+            )
         } catch (err) {
             console.error("[access-requests] Reject failed:", err)
+            setActionError("Failed to reject request. Please try again.")
         } finally {
             setProcessing(null)
             setRejectingId(null)
@@ -205,6 +206,11 @@ export function AccessRequestsTable({
 
     return (
         <>
+            {actionError && (
+                <div className="mb-3 rounded-md border border-clay-red/30 bg-clay-mist px-3 py-2 text-sm text-clay-red">
+                    {actionError}
+                </div>
+            )}
             <Tabs defaultValue="in_cr" className="w-full">
                 <TabsList className="grid w-full max-w-md grid-cols-2 mb-4">
                     <TabsTrigger value="in_cr" className="flex items-center gap-1.5">

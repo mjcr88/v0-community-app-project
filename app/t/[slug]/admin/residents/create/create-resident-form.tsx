@@ -30,13 +30,8 @@ export function CreateResidentForm({ slug, tenantId, lots }: { slug: string; ten
   const [step, setStep] = useState(1)
   const [selectedLotId, setSelectedLotId] = useState("")
 
-  // Pre-populate from access request approval (URL search params)
+  // Only read the opaque request ID from URL — no PII in query params
   const fromRequestId = searchParams.get("from_request")
-  const preFirstName = searchParams.get("first_name")
-  const preLastName = searchParams.get("last_name")
-  const preEmail = searchParams.get("email")
-  const preFamilyName = searchParams.get("family_name")
-  const preLotId = searchParams.get("lot_id")
 
   // Use the hook for fetching lot context
   const { residents: existingResidents, family: existingFamily, isLoading: checkingLot } = useFamilyByLot(tenantId, selectedLotId)
@@ -50,18 +45,40 @@ export function CreateResidentForm({ slug, tenantId, lots }: { slug: string; ten
   const [primaryContactChoice, setPrimaryContactChoice] = useState<"existing" | "new">("existing")
 
   const [familyData, setFamilyData] = useState({
-    family_name: preFamilyName || "",
-    members: [{ first_name: preFirstName || "", last_name: preLastName || "", email: preEmail || "", phone: "" }],
+    family_name: "",
+    members: [{ first_name: "", last_name: "", email: "", phone: "" }],
     pets: [{ name: "", species: "", breed: "" }],
     primary_contact_index: 0,
   })
 
-  // Auto-select lot from access request
+  // Fetch prefill data from access_requests if from_request is present (server-side, no PII in URL)
   useEffect(() => {
-    if (preLotId && !selectedLotId) {
-      setSelectedLotId(preLotId)
+    if (!fromRequestId) return
+
+    const fetchPrefill = async () => {
+      const supabase = createBrowserClient()
+      const { data } = await supabase
+        .from("access_requests")
+        .select("first_name, last_name, email, family_name, lot_id")
+        .eq("id", fromRequestId)
+        .eq("status", "pending")
+        .single()
+
+      if (data) {
+        setFamilyData((prev) => ({
+          ...prev,
+          family_name: data.family_name || "",
+          members: [{ first_name: data.first_name || "", last_name: data.last_name || "", email: data.email || "", phone: "" }],
+        }))
+        if (data.lot_id) {
+          setSelectedLotId(data.lot_id)
+        }
+      }
     }
-  }, [preLotId, selectedLotId])
+    fetchPrefill()
+  }, [fromRequestId])
+
+
 
   // Determine if asking for family assignment makes sense
   // We only show "Add to Family" if there is an existing family linked to the residents
@@ -320,15 +337,23 @@ export function CreateResidentForm({ slug, tenantId, lots }: { slug: string; ten
         }
       }
 
-      // If created from an access request approval, mark it as approved
+      // If created from an access request approval, mark it as approved (scoped + error-checked)
       if (fromRequestId) {
-        await supabase
+        const { data: approvedRequest, error: approveError } = await supabase
           .from("access_requests")
           .update({
             status: "approved",
             reviewed_at: new Date().toISOString(),
           })
           .eq("id", fromRequestId)
+          .eq("tenant_id", tenantId)
+          .eq("status", "pending")
+          .select("id")
+          .single()
+
+        if (approveError || !approvedRequest) {
+          console.error("[create-resident] Access request approval failed:", approveError?.code)
+        }
       }
 
       setLoading(false)

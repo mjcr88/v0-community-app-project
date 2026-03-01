@@ -13,7 +13,7 @@ import { Alert, AlertDescription } from "@/components/library/alert"
 import { ShineBorder } from "@/components/library/shine-border"
 import { MagicCard } from "@/components/library/magic-card"
 import { Checkbox } from "@/components/library/checkbox"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Combobox } from "@/components/ui/combobox"
 import { cn } from "@/lib/utils"
 import { accessRequestSchema, type AccessRequestInput } from "@/lib/validation/access-request-schema"
 
@@ -300,29 +300,26 @@ export function RequestAccessForm({ tenant }: RequestAccessFormProps) {
                         </div>
                     </div>
 
-                    {/* Lot Dropdown */}
+                    {/* Lot Dropdown (Searchable) */}
                     <div className="space-y-1.5">
                         <Label htmlFor="ra-lot" className="text-earth-soil font-medium text-sm">
                             Lot Number <span className="text-mist-gray text-xs">(optional)</span>
                         </Label>
-                        <Select value={selectedLotId} onValueChange={setSelectedLotId}>
-                            <SelectTrigger className="border-earth-pebble focus:ring-forest-canopy bg-white">
-                                <div className="flex items-center gap-2">
-                                    <MapPin className="h-4 w-4 text-mist-gray" />
-                                    <SelectValue placeholder={lotsLoading ? "Loading lots..." : "Select your lot"} />
-                                </div>
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="none">— No lot selected —</SelectItem>
-                                {lots.map((lot) => (
-                                    <SelectItem key={lot.id} value={lot.id}>
-                                        <span className="flex items-center gap-2">
-                                            {lot.is_occupied ? "🟡" : "🟢"} Lot {lot.lot_number}
-                                        </span>
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                        <Combobox
+                            options={[
+                                { value: "__none__", label: "— No lot selected —" },
+                                ...lots.map((lot) => ({
+                                    value: lot.id,
+                                    label: `${lot.is_occupied ? "🟡" : "🟢"} Lot ${lot.lot_number}`,
+                                })),
+                            ]}
+                            value={selectedLotId || "__none__"}
+                            onValueChange={(val) => setSelectedLotId(val === "__none__" ? "" : val)}
+                            placeholder={lotsLoading ? "Loading lots..." : "Search for your lot..."}
+                            searchPlaceholder="Type a lot number..."
+                            emptyText="No matching lots found."
+                            className="border-earth-pebble bg-white"
+                        />
                         {selectedLot?.is_occupied && (
                             <p className="text-xs text-mist-gray bg-earth-cloud/50 rounded px-2 py-1">
                                 This lot currently has residents. The admin will review your request in context.

@@ -37,7 +37,7 @@ async function handler(request: NextRequest): Promise<NextResponse> {
         // 2. Resolve tenant_id from slug (server-side — prevents cross-tenant injection)
         const { data: tenant, error: tenantError } = await supabase
             .from('tenants')
-            .select('id, access_requests_enabled')
+            .select('id')
             .eq('slug', tenant_slug)
             .single()
 
@@ -48,8 +48,16 @@ async function handler(request: NextRequest): Promise<NextResponse> {
             )
         }
 
-        // 3. Check feature flag
-        if (!tenant.access_requests_enabled) {
+        // 3. Check feature flag (graceful: defaults to true if column doesn't exist yet)
+        const { data: tenantFlags } = await supabase
+            .from('tenants')
+            .select('access_requests_enabled')
+            .eq('id', tenant.id)
+            .maybeSingle()
+
+        const accessRequestsEnabled = tenantFlags?.access_requests_enabled ?? true
+
+        if (!accessRequestsEnabled) {
             return NextResponse.json(
                 { success: false, error: { message: 'Access requests are not available for this community', code: 'FEATURE_DISABLED' } },
                 { status: 403 }

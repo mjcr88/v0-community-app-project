@@ -29,16 +29,23 @@ export default async function RequestAccessPage({
         )
     }
 
-    // Check feature flag (graceful: defaults to true if column doesn't exist yet)
-    let accessRequestsEnabled = true
-    const { data: tenantFlags } = await supabase
+    // Check feature flag (fail-closed: only allow on success or missing column)
+    let accessRequestsEnabled = false
+    const { data: tenantFlags, error: flagError } = await supabase
         .from("tenants")
         .select("access_requests_enabled")
         .eq("id", tenant.id)
         .maybeSingle()
 
-    if (tenantFlags && typeof tenantFlags.access_requests_enabled === "boolean") {
+    if (flagError) {
+        // Missing column (pre-migration) → fail-open, otherwise fail-closed
+        const isMissingColumn = flagError.message?.includes('access_requests_enabled') || flagError.code === 'PGRST204'
+        accessRequestsEnabled = isMissingColumn
+    } else if (tenantFlags && typeof tenantFlags.access_requests_enabled === "boolean") {
         accessRequestsEnabled = tenantFlags.access_requests_enabled
+    } else {
+        // Column exists but tenant has no row or null value → default true
+        accessRequestsEnabled = true
     }
 
     if (!accessRequestsEnabled) {

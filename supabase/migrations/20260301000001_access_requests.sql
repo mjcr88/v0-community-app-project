@@ -68,9 +68,9 @@ CREATE UNIQUE INDEX "idx_access_requests_tenant_email_pending"
 ALTER TABLE "public"."access_requests" ENABLE ROW LEVEL SECURITY;
 
 -- 7. RLS Policies
--- Anonymous INSERT: The API route handles auth/rate-limiting; RLS allows the insert
--- since the route uses service_role which bypasses RLS anyway.
--- We still define policies for defense-in-depth.
+-- No anonymous INSERT policy is defined. The public access-request API route
+-- uses the service_role client, which bypasses RLS. Admin SELECT/UPDATE
+-- policies are defined below for defense-in-depth.
 
 -- Admin can read access requests for their tenant
 CREATE POLICY "access_requests_admin_select" ON "public"."access_requests"

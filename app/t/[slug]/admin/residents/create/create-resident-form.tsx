@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -25,9 +25,18 @@ type Lot = {
 
 export function CreateResidentForm({ slug, tenantId, lots }: { slug: string; tenantId: string; lots: Lot[] }) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [loading, setLoading] = useState(false)
   const [step, setStep] = useState(1)
   const [selectedLotId, setSelectedLotId] = useState("")
+
+  // Pre-populate from access request approval (URL search params)
+  const fromRequestId = searchParams.get("from_request")
+  const preFirstName = searchParams.get("first_name")
+  const preLastName = searchParams.get("last_name")
+  const preEmail = searchParams.get("email")
+  const preFamilyName = searchParams.get("family_name")
+  const preLotId = searchParams.get("lot_id")
 
   // Use the hook for fetching lot context
   const { residents: existingResidents, family: existingFamily, isLoading: checkingLot } = useFamilyByLot(tenantId, selectedLotId)
@@ -41,11 +50,18 @@ export function CreateResidentForm({ slug, tenantId, lots }: { slug: string; ten
   const [primaryContactChoice, setPrimaryContactChoice] = useState<"existing" | "new">("existing")
 
   const [familyData, setFamilyData] = useState({
-    family_name: "",
-    members: [{ first_name: "", last_name: "", email: "", phone: "" }],
+    family_name: preFamilyName || "",
+    members: [{ first_name: preFirstName || "", last_name: preLastName || "", email: preEmail || "", phone: "" }],
     pets: [{ name: "", species: "", breed: "" }],
     primary_contact_index: 0,
   })
+
+  // Auto-select lot from access request
+  useEffect(() => {
+    if (preLotId && !selectedLotId) {
+      setSelectedLotId(preLotId)
+    }
+  }, [preLotId, selectedLotId])
 
   // Determine if asking for family assignment makes sense
   // We only show "Add to Family" if there is an existing family linked to the residents
@@ -302,6 +318,17 @@ export function CreateResidentForm({ slug, tenantId, lots }: { slug: string; ten
           const { error: petsError } = await supabase.from("pets").insert(petsToInsert)
           if (petsError) throw petsError
         }
+      }
+
+      // If created from an access request approval, mark it as approved
+      if (fromRequestId) {
+        await supabase
+          .from("access_requests")
+          .update({
+            status: "approved",
+            reviewed_at: new Date().toISOString(),
+          })
+          .eq("id", fromRequestId)
       }
 
       setLoading(false)

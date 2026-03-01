@@ -118,21 +118,25 @@ export default async function ResidentsPage({
     petComplaints.set(pet.id, { active: activeCount, total: totalCount })
   })
 
-  // Fetch access requests if feature is enabled
+  // Fetch access requests if feature is enabled (graceful: handles pre-migration state)
   const showAccessRequests = tenant.access_requests_enabled ?? true
   let accessRequests: any[] = []
   let allLots: { id: string; lot_number: string }[] = []
   let occupiedLotIds: string[] = []
 
   if (showAccessRequests) {
-    const { data: requests } = await supabase
-      .from("access_requests")
-      .select("*, lots:lot_id (id, lot_number)")
-      .eq("tenant_id", tenant.id)
-      .eq("status", "pending")
-      .order("created_at", { ascending: false })
+    try {
+      const { data: requests } = await supabase
+        .from("access_requests")
+        .select("*, lots:lot_id (id, lot_number)")
+        .eq("tenant_id", tenant.id)
+        .eq("status", "pending")
+        .order("created_at", { ascending: false })
 
-    accessRequests = requests || []
+      accessRequests = requests || []
+    } catch {
+      // access_requests table may not exist yet (migration not applied)
+    }
 
     const { data: lots } = await supabase
       .from("lots")

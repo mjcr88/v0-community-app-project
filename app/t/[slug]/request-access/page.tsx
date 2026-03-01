@@ -11,10 +11,10 @@ export default async function RequestAccessPage({
     const { slug } = await params
     const supabase = await createClient()
 
-    // Resolve tenant
+    // Resolve tenant (select without access_requests_enabled to stay compatible pre-migration)
     const { data: tenant, error } = await supabase
         .from("tenants")
-        .select("id, name, slug, access_requests_enabled")
+        .select("id, name, slug")
         .eq("slug", slug)
         .maybeSingle()
 
@@ -29,8 +29,19 @@ export default async function RequestAccessPage({
         )
     }
 
-    // Check feature flag
-    if (!tenant.access_requests_enabled) {
+    // Check feature flag (graceful: defaults to true if column doesn't exist yet)
+    let accessRequestsEnabled = true
+    const { data: tenantFlags } = await supabase
+        .from("tenants")
+        .select("access_requests_enabled")
+        .eq("id", tenant.id)
+        .maybeSingle()
+
+    if (tenantFlags && typeof tenantFlags.access_requests_enabled === "boolean") {
+        accessRequestsEnabled = tenantFlags.access_requests_enabled
+    }
+
+    if (!accessRequestsEnabled) {
         return (
             <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-earth-cloud/30 p-8">
                 <div className="w-full max-w-md space-y-4 rounded-lg border border-earth-pebble bg-white p-8 shadow-lg text-center">

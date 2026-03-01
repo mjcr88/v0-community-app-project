@@ -109,7 +109,26 @@ async function handler(request: NextRequest): Promise<NextResponse> {
             })
 
         if (insertError) {
-            console.error('[access-request] Insert failed:', insertError)
+            const message = (insertError.message || '').toLowerCase()
+
+            if (message.includes('duplicate key') || insertError.code === '23505') {
+                return NextResponse.json(
+                    { success: false, error: { message: 'A request for this email already exists', code: 'DUPLICATE_REQUEST' } },
+                    { status: 409 }
+                )
+            }
+
+            if (message.includes('does not exist') || message.includes('relation')) {
+                return NextResponse.json(
+                    { success: false, error: { message: 'Access requests are temporarily unavailable', code: 'FEATURE_UNAVAILABLE' } },
+                    { status: 503 }
+                )
+            }
+
+            console.error('[access-request] Insert failed', {
+                code: insertError.code,
+                name: insertError.name,
+            })
             return NextResponse.json(
                 { success: false, error: { message: 'Failed to submit request', code: 'INSERT_FAILED' } },
                 { status: 500 }

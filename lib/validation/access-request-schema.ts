@@ -8,24 +8,25 @@ import { z } from 'zod'
 export const accessRequestSchema = z.object({
     email: z
         .string()
+        .trim()
         .min(1, 'Email is required')
         .email('Please enter a valid email address')
         .max(255, 'Email must be less than 255 characters')
-        .transform((val) => val.toLowerCase().trim()),
+        .transform((val) => val.toLowerCase()),
     first_name: z
         .string()
+        .trim()
         .min(1, 'First name is required')
-        .max(100, 'First name must be less than 100 characters')
-        .transform((val) => val.trim()),
+        .max(100, 'First name must be less than 100 characters'),
     last_name: z
         .string()
+        .trim()
         .min(1, 'Last name is required')
-        .max(100, 'Last name must be less than 100 characters')
-        .transform((val) => val.trim()),
+        .max(100, 'Last name must be less than 100 characters'),
     family_name: z
         .string()
+        .trim()
         .max(100, 'Family name must be less than 100 characters')
-        .transform((val) => val.trim())
         .optional()
         .or(z.literal('')),
     lot_id: z
@@ -43,7 +44,7 @@ export type AccessRequestParsed = z.output<typeof accessRequestSchema>
  * Schema for the API route, which also requires tenant_slug.
  */
 export const accessRequestAPISchema = accessRequestSchema.extend({
-    tenant_slug: z.string().min(1, 'Tenant slug is required'),
+    tenant_slug: z.string().trim().min(1, 'Tenant slug is required'),
 })
 
 export type AccessRequestAPIInput = z.input<typeof accessRequestAPISchema>

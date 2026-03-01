@@ -55,12 +55,20 @@ async function handler(request: NextRequest): Promise<NextResponse> {
         }
 
         // 3. Get occupied lot IDs (lots that have at least one resident)
-        const { data: occupiedLots } = await supabase
+        const { data: occupiedLots, error: occupiedLotsError } = await supabase
             .from('users')
             .select('lot_id')
             .eq('tenant_id', tenant.id)
             .eq('role', 'resident')
             .not('lot_id', 'is', null)
+
+        if (occupiedLotsError) {
+            console.error('[lots] Occupancy query failed:', { code: occupiedLotsError.code })
+            return NextResponse.json(
+                { success: false, error: { message: 'Failed to fetch occupancy data', code: 'QUERY_FAILED' } },
+                { status: 500 }
+            )
+        }
 
         const occupiedLotIds = new Set(
             (occupiedLots || []).map((u) => u.lot_id).filter(Boolean)

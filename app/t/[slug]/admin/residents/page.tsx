@@ -4,7 +4,10 @@ import { Button } from "@/components/ui/button"
 import { Plus } from 'lucide-react'
 import Link from "next/link"
 import { ResidentsTable } from "./residents-table"
+import { AccessRequestsTable } from "./access-requests-table"
 import { Users } from 'lucide-react'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Badge } from "@/components/ui/badge"
 
 export default async function ResidentsPage({
   params,
@@ -87,15 +90,15 @@ export default async function ResidentsPage({
   const residentComplaints = new Map<string, { active: number; total: number }>()
   residents?.forEach((resident) => {
     const activeCount = complaints?.filter(
-      (c) => 
-        c.tagged_resident_ids?.includes(resident.id) && 
+      (c) =>
+        c.tagged_resident_ids?.includes(resident.id) &&
         ['pending', 'in_progress'].includes(c.status)
     ).length || 0
-    
+
     const totalCount = complaints?.filter(
       (c) => c.tagged_resident_ids?.includes(resident.id)
     ).length || 0
-    
+
     residentComplaints.set(resident.id, { active: activeCount, total: totalCount })
   })
 
@@ -103,17 +106,60 @@ export default async function ResidentsPage({
   const petComplaints = new Map<string, { active: number; total: number }>()
   filteredPets?.forEach((pet) => {
     const activeCount = complaints?.filter(
-      (c) => 
-        c.tagged_pet_ids?.includes(pet.id) && 
+      (c) =>
+        c.tagged_pet_ids?.includes(pet.id) &&
         ['pending', 'in_progress'].includes(c.status)
     ).length || 0
-    
+
     const totalCount = complaints?.filter(
       (c) => c.tagged_pet_ids?.includes(pet.id)
     ).length || 0
-    
+
     petComplaints.set(pet.id, { active: activeCount, total: totalCount })
   })
+
+  // Fetch access requests if feature is enabled (graceful: handles pre-migration state)
+  const showAccessRequests = tenant.access_requests_enabled ?? true
+  let accessRequests: any[] = []
+  let allLots: { id: string; lot_number: string }[] = []
+  let occupiedLotIds: string[] = []
+
+  if (showAccessRequests) {
+    try {
+      const { data: requests, error: requestsError } = await supabase
+        .from("access_requests")
+        .select("*, lots:lot_id (id, lot_number)")
+        .eq("tenant_id", tenant.id)
+        .eq("status", "pending")
+        .order("created_at", { ascending: false })
+
+      if (requestsError) {
+        console.error("[residents-page] failed to load access requests", { code: requestsError.code })
+      } else {
+        accessRequests = requests || []
+      }
+    } catch {
+      // access_requests table may not exist yet (migration not applied)
+    }
+
+    const { data: lots, error: lotsError } = await supabase
+      .from("lots")
+      .select("id, lot_number")
+      .eq("tenant_id", tenant.id)
+      .order("lot_number", { ascending: true })
+
+    if (lotsError) {
+      console.error("[residents-page] failed to load lots", { code: lotsError.code })
+    } else {
+      allLots = lots || []
+    }
+
+    // Get occupied lot IDs
+    const occupiedResidents = residents?.filter((r: any) => r.lots?.id) || []
+    occupiedLotIds = [...new Set(occupiedResidents.map((r: any) => r.lots.id))]
+  }
+
+  const pendingCount = accessRequests.length
 
   return (
     <div className="space-y-6">
@@ -130,17 +176,59 @@ export default async function ResidentsPage({
         </Button>
       </div>
 
-      {!residents || residents.length === 0 ? (
+      {showAccessRequests ? (
+        <Tabs defaultValue="residents">
+          <TabsList>
+            <TabsTrigger value="residents">Residents</TabsTrigger>
+            <TabsTrigger value="access_requests" className="flex items-center gap-1.5">
+              Access Requests
+              {pendingCount > 0 && (
+                <Badge variant="destructive" className="text-xs h-5 min-w-5 flex items-center justify-center">
+                  {pendingCount}
+                </Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="residents" className="mt-4">
+            {!residents || residents.length === 0 ? (
+              <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
+                <Users className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No residents yet</h3>
+                <p className="text-sm text-muted-foreground mb-4">Get started by creating your first resident</p>
+              </div>
+            ) : (
+              <ResidentsTable
+                residents={residents}
+                pets={filteredPets}
+                slug={slug}
+                familyUnits={familyUnits || []}
+                residentComplaints={residentComplaints}
+                petComplaints={petComplaints}
+              />
+            )}
+          </TabsContent>
+
+          <TabsContent value="access_requests" className="mt-4">
+            <AccessRequestsTable
+              requests={accessRequests}
+              slug={slug}
+              lots={allLots}
+              occupiedLotIds={occupiedLotIds}
+            />
+          </TabsContent>
+        </Tabs>
+      ) : !residents || residents.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
           <Users className="h-12 w-12 text-muted-foreground mb-4" />
           <h3 className="text-lg font-semibold mb-2">No residents yet</h3>
           <p className="text-sm text-muted-foreground mb-4">Get started by creating your first resident</p>
         </div>
       ) : (
-        <ResidentsTable 
-          residents={residents} 
-          pets={filteredPets} 
-          slug={slug} 
+        <ResidentsTable
+          residents={residents}
+          pets={filteredPets}
+          slug={slug}
           familyUnits={familyUnits || []}
           residentComplaints={residentComplaints}
           petComplaints={petComplaints}

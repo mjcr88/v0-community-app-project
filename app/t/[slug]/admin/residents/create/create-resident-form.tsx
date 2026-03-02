@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -25,9 +25,13 @@ type Lot = {
 
 export function CreateResidentForm({ slug, tenantId, lots }: { slug: string; tenantId: string; lots: Lot[] }) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [loading, setLoading] = useState(false)
   const [step, setStep] = useState(1)
   const [selectedLotId, setSelectedLotId] = useState("")
+
+  // Only read the opaque request ID from URL — no PII in query params
+  const fromRequestId = searchParams.get("from_request")
 
   // Use the hook for fetching lot context
   const { residents: existingResidents, family: existingFamily, isLoading: checkingLot } = useFamilyByLot(tenantId, selectedLotId)
@@ -46,6 +50,35 @@ export function CreateResidentForm({ slug, tenantId, lots }: { slug: string; ten
     pets: [{ name: "", species: "", breed: "" }],
     primary_contact_index: 0,
   })
+
+  // Fetch prefill data from access_requests if from_request is present (server-side, no PII in URL)
+  useEffect(() => {
+    if (!fromRequestId) return
+
+    const fetchPrefill = async () => {
+      const supabase = createBrowserClient()
+      const { data } = await supabase
+        .from("access_requests")
+        .select("first_name, last_name, email, family_name, lot_id")
+        .eq("id", fromRequestId)
+        .eq("status", "pending")
+        .single()
+
+      if (data) {
+        setFamilyData((prev) => ({
+          ...prev,
+          family_name: data.family_name || "",
+          members: [{ first_name: data.first_name || "", last_name: data.last_name || "", email: data.email || "", phone: "" }],
+        }))
+        if (data.lot_id) {
+          setSelectedLotId(data.lot_id)
+        }
+      }
+    }
+    fetchPrefill()
+  }, [fromRequestId])
+
+
 
   // Determine if asking for family assignment makes sense
   // We only show "Add to Family" if there is an existing family linked to the residents
@@ -301,6 +334,25 @@ export function CreateResidentForm({ slug, tenantId, lots }: { slug: string; ten
         if (petsToInsert.length > 0) {
           const { error: petsError } = await supabase.from("pets").insert(petsToInsert)
           if (petsError) throw petsError
+        }
+      }
+
+      // If created from an access request approval, mark it as approved (scoped + error-checked)
+      if (fromRequestId) {
+        const { data: approvedRequest, error: approveError } = await supabase
+          .from("access_requests")
+          .update({
+            status: "approved",
+            reviewed_at: new Date().toISOString(),
+          })
+          .eq("id", fromRequestId)
+          .eq("tenant_id", tenantId)
+          .eq("status", "pending")
+          .select("id")
+          .single()
+
+        if (approveError || !approvedRequest) {
+          console.error("[create-resident] Access request approval failed:", approveError?.code)
         }
       }
 

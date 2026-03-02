@@ -48,6 +48,7 @@ type Tenant = {
   documents_enabled?: boolean
   neighbor_lists_enabled?: boolean
   reservations_enabled?: boolean
+  access_requests_enabled?: boolean
 }
 
 type Feature = {
@@ -162,6 +163,12 @@ const FEATURES: Feature[] = [
     description: "Enable official document library for community regulations, HOA documents, and resources",
     table: "documents",
   },
+  {
+    key: "access_requests",
+    label: "Access Requests",
+    description: "Allow new residents to request community access from the login page",
+    table: "access_requests",
+  },
 ]
 
 const LOCATION_TYPE_OPTIONS = [
@@ -232,6 +239,7 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
     requests?: boolean
     announcements?: boolean
     documents?: boolean
+    access_requests?: boolean
     location_types?: {
       facility?: boolean
       lot?: boolean
@@ -255,6 +263,7 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
     requests: tenant.requests_enabled ?? true,
     announcements: tenant.announcements_enabled ?? true,
     documents: tenant.documents_enabled ?? true,
+    access_requests: tenant.access_requests_enabled ?? true,
     location_types: {
       ...defaultFeatures.location_types,
       ...(tenant.features?.location_types || {}),
@@ -386,7 +395,7 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
     setLoading(true)
 
     try {
-      const { events, checkins, exchange, requests, announcements, documents, reservations, ...otherFeatures } = features
+      const { events, checkins, exchange, requests, announcements, documents, reservations, access_requests, ...otherFeatures } = features
 
       const wasEventsEnabled = tenant.events_enabled ?? false
       const willEnableEvents = !wasEventsEnabled && (events ?? false)
@@ -406,6 +415,7 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
           announcements_enabled: announcements ?? true,
           documents_enabled: documents ?? true,
           reservations_enabled: reservations ?? false,
+          access_requests_enabled: access_requests ?? true,
         })
         .eq("id", tenant.id)
 
@@ -502,7 +512,7 @@ export default function TenantFeaturesForm({ tenant }: { tenant: Tenant }) {
 
         <div className="space-y-4 pt-4 border-t">
           <h3 className="text-sm font-semibold text-muted-foreground">Community Features</h3>
-          {FEATURES.filter((f) => ["pets", "interests", "skills", "events", "checkins", "exchange", "requests", "announcements", "documents", "neighbor_lists", "reservations"].includes(f.key)).map(
+          {FEATURES.filter((f) => ["pets", "interests", "skills", "events", "checkins", "exchange", "requests", "announcements", "documents", "neighbor_lists", "reservations", "access_requests"].includes(f.key)).map(
             (feature) => (
               <div key={feature.key} className="flex items-center justify-between space-x-4">
                 <div className="flex-1 space-y-1">

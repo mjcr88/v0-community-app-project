@@ -218,25 +218,21 @@ export default async function ResidentsPage({
             />
           </TabsContent>
         </Tabs>
+      ) : !residents || residents.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
+          <Users className="h-12 w-12 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold mb-2">No residents yet</h3>
+          <p className="text-sm text-muted-foreground mb-4">Get started by creating your first resident</p>
+        </div>
       ) : (
-        <>
-          {!residents || residents.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
-              <Users className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No residents yet</h3>
-              <p className="text-sm text-muted-foreground mb-4">Get started by creating your first resident</p>
-            </div>
-          ) : (
-            <ResidentsTable
-              residents={residents}
-              pets={filteredPets}
-              slug={slug}
-              familyUnits={familyUnits || []}
-              residentComplaints={residentComplaints}
-              petComplaints={petComplaints}
-            />
-          )}
-        </>
+        <ResidentsTable
+          residents={residents}
+          pets={filteredPets}
+          slug={slug}
+          familyUnits={familyUnits || []}
+          residentComplaints={residentComplaints}
+          petComplaints={petComplaints}
+        />
       )}
     </div>
   )

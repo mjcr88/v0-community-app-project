@@ -33,6 +33,33 @@ describe('accessRequestSchema', () => {
         }
     })
 
+    it('rejects whitespace-only first_name', () => {
+        const result = accessRequestSchema.safeParse({
+            ...validInput,
+            first_name: '   ',
+        })
+        expect(result.success).toBe(false)
+    })
+
+    it('rejects whitespace-only last_name', () => {
+        const result = accessRequestSchema.safeParse({
+            ...validInput,
+            last_name: '   ',
+        })
+        expect(result.success).toBe(false)
+    })
+
+    it('accepts email with surrounding spaces after normalization', () => {
+        const result = accessRequestSchema.safeParse({
+            ...validInput,
+            email: '  Test@Example.COM  ',
+        })
+        expect(result.success).toBe(true)
+        if (result.success) {
+            expect(result.data.email).toBe('test@example.com')
+        }
+    })
+
     it('rejects missing email', () => {
         const result = accessRequestSchema.safeParse({
             ...validInput,

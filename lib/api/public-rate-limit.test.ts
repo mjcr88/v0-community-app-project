@@ -1,21 +1,11 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 
-/**
- * Import getClientIP directly to avoid pulling in rate-limit module
- * which requires Upstash Redis runtime dependencies.
- */
-function getClientIP(request: NextRequest): string {
-    const forwarded = request.headers.get('x-forwarded-for')
-    if (forwarded) {
-        return forwarded.split(',')[0].trim()
-    }
-    const realIP = request.headers.get('x-real-ip')
-    if (realIP) {
-        return realIP.trim()
-    }
-    return '127.0.0.1'
-}
+vi.mock('@/lib/rate-limit', () => ({
+    rateLimit: vi.fn(),
+}))
+
+import { getClientIP } from './public-rate-limit'
 
 describe('getClientIP', () => {
     function createRequest(headers: Record<string, string> = {}): NextRequest {

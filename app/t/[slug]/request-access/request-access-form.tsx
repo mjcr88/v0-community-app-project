@@ -86,7 +86,8 @@ export function RequestAccessForm({ tenant }: RequestAccessFormProps) {
     useEffect(() => {
         async function fetchLots() {
             try {
-                const response = await fetch(`/api/v1/lots?tenant_slug=${tenant.slug}`)
+                const params = new URLSearchParams({ tenant_slug: tenant.slug })
+                const response = await fetch(`/api/v1/lots?${params.toString()}`)
                 const data = await response.json()
                 if (data.success && Array.isArray(data.data)) {
                     setLots(data.data)

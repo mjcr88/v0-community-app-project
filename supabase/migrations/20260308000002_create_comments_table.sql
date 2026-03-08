@@ -1,6 +1,6 @@
 -- Create composite unique constraint on resident_requests to allow composite foreign key
 ALTER TABLE public.resident_requests
-ADD CONSTRAINT IF NOT EXISTS resident_requests_tenant_id_id_key UNIQUE (tenant_id, id);
+ADD CONSTRAINT resident_requests_tenant_id_id_key UNIQUE (tenant_id, id);
 
 -- Create comments table
 CREATE TABLE IF NOT EXISTS public.comments (

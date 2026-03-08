@@ -125,13 +125,6 @@ export default async function NeighboursPage({ params }: { params: Promise<{ slu
     .eq("tenant_id", currentResident.tenant_id)
     .order("name")
 
-  // Get all interests for filtering
-  const { data: allInterests } = await supabase
-    .from("interests")
-    .select("id, name")
-    .eq("tenant_id", currentResident.tenant_id)
-    .order("name")
-
   // Get all neighborhoods for filtering
   const { data: neighborhoods } = await supabase
     .from("neighborhoods")
@@ -156,6 +149,19 @@ export default async function NeighboursPage({ params }: { params: Promise<{ slu
     // Cast to UserWithPrivacy to satisfy type checker (supabase types vs app types)
     return applyPrivacyFilter(resident as unknown as UserWithPrivacy, user.id, isFamilyMember, isTenantAdmin)
   })
+
+  // Derive interests from resident data (includes user-created interests)
+  const uniqueInterests = new Map<string, { id: string; name: string }>()
+  filteredResidents?.forEach((resident: any) => {
+    if (Array.isArray(resident.user_interests)) {
+      resident.user_interests.forEach((ui: any) => {
+        if (ui.interests?.id && ui.interests?.name) {
+          uniqueInterests.set(ui.interests.id, { id: ui.interests.id, name: ui.interests.name })
+        }
+      })
+    }
+  })
+  const allInterests = Array.from(uniqueInterests.values()).sort((a, b) => a.name.localeCompare(b.name))
 
   return (
     <NeighboursPageClient

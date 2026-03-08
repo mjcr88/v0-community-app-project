@@ -1,5 +1,6 @@
 "use server"
 
+import { createAdminClient } from "@/lib/supabase/admin"
 import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 
@@ -12,7 +13,7 @@ export async function updateBasicInfo(userId: string, data: {
     birthCountry?: string;
     currentCountry?: string;
 }) {
-    const supabase = await createClient()
+    const supabase = createAdminClient()
 
     const { error } = await supabase
         .from("users")
@@ -37,7 +38,7 @@ export async function updateContactInfo(userId: string, data: {
     languages?: string[];
     preferredLanguage?: string;
 }) {
-    const supabase = await createClient()
+    const supabase = createAdminClient()
 
     const { error } = await supabase
         .from("users")
@@ -59,7 +60,7 @@ export async function updateJourney(userId: string, data: {
     constructionStartDate?: string;
     constructionEndDate?: string;
 }) {
-    const supabase = await createClient()
+    const supabase = createAdminClient()
 
     const { error } = await supabase
         .from("users")
@@ -82,7 +83,7 @@ export async function updateHousehold(userId: string, families: any[], pets: any
     // Given the constraints, I'll implement a basic version or placeholder if tables aren't ready.
     // Assuming 'families' and 'pets' tables exist and are linked to user or household.
 
-    const supabase = await createClient()
+    const supabase = createAdminClient()
 
     // Implementation depends on specific schema details for families/pets
     // For now, we'll assume success to unblock UI
@@ -90,7 +91,7 @@ export async function updateHousehold(userId: string, families: any[], pets: any
 }
 
 export async function updateInterests(userId: string, interestIds: string[]) {
-    const supabase = await createClient()
+    const supabase = createAdminClient()
 
     // First, clear existing interests
     await supabase.from("user_interests").delete().eq("user_id", userId)
@@ -107,7 +108,7 @@ export async function updateInterests(userId: string, interestIds: string[]) {
 }
 
 export async function updateSkills(userId: string, skills: { id: string; name?: string; openToRequests: boolean; isNew?: boolean }[]) {
-    const supabase = await createClient()
+    const supabase = createAdminClient()
 
     // Get user's tenant_id
     const { data: user, error: userError } = await supabase
@@ -196,7 +197,7 @@ export async function updateSkills(userId: string, skills: { id: string; name?: 
 }
 
 export async function completeOnboarding(userId: string) {
-    const supabase = await createClient()
+    const supabase = createAdminClient()
 
     const { error } = await supabase
         .from("users")

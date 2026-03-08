@@ -3,9 +3,11 @@
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Check, Search, X } from "lucide-react"
+import { Check, Search, X, Plus, Loader2 } from "lucide-react"
 import { useState, useEffect, useRef } from "react"
 import { cn } from "@/lib/utils"
+import { useCreateInterest } from "@/hooks/use-create-interest"
+import { useToast } from "@/hooks/use-toast"
 
 interface RootsStepProps {
     onNext: (data: any) => void
@@ -15,10 +17,21 @@ interface RootsStepProps {
 }
 
 export function RootsStep({ onNext, onBack, initialData, availableInterests = [] }: RootsStepProps) {
+    const { toast } = useToast()
     const [selected, setSelected] = useState<string[]>(initialData?.interests || [])
+    const [allInterests, setAllInterests] = useState(availableInterests)
     const [searchQuery, setSearchQuery] = useState("")
     const [showDropdown, setShowDropdown] = useState(false)
     const searchRef = useRef<HTMLDivElement>(null)
+
+    const { handleCreateInterest, isAddingInterest } = useCreateInterest({
+        tenantId: initialData?.tenantId,
+        onSuccess: (newInterest) => {
+            setAllInterests(prev => [...prev, newInterest])
+            setSelected(prev => [...prev, newInterest.id])
+            setSearchQuery("")
+        }
+    })
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -44,12 +57,17 @@ export function RootsStep({ onNext, onBack, initialData, availableInterests = []
     }
 
     // Filter interests based on search query
-    const filteredInterests = availableInterests.filter(interest =>
-        interest.name.toLowerCase().includes(searchQuery.toLowerCase())
+    const trimmedQuery = searchQuery.trim()
+    const normalizedQuery = trimmedQuery.toLowerCase()
+    const filteredInterests = allInterests.filter(interest =>
+        interest.name.toLowerCase().includes(normalizedQuery)
     )
 
+    const exactMatch = allInterests.find(i => i.name.trim().toLowerCase() === normalizedQuery)
+    const showCreateOption = trimmedQuery.length > 0 && !exactMatch
+
     // Get selected interest names for display
-    const selectedInterests = availableInterests.filter(i => selected.includes(i.id))
+    const selectedInterests = allInterests.filter(i => selected.includes(i.id))
 
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -68,7 +86,7 @@ export function RootsStep({ onNext, onBack, initialData, availableInterests = []
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input
                                 type="text"
-                                placeholder="Search interests..."
+                                placeholder="Search interests or type to create new..."
                                 value={searchQuery}
                                 onChange={(e) => {
                                     setSearchQuery(e.target.value)
@@ -80,8 +98,19 @@ export function RootsStep({ onNext, onBack, initialData, availableInterests = []
                         </div>
 
                         {/* Dropdown */}
-                        {showDropdown && filteredInterests.length > 0 && (
+                        {showDropdown && (showCreateOption || filteredInterests.length > 0) && (
                             <div className="absolute top-full left-0 right-0 mt-2 max-h-60 overflow-y-auto bg-popover border rounded-xl shadow-lg z-10">
+                                {showCreateOption && (
+                                    <button
+                                        type="button"
+                                        onClick={() => handleCreateInterest(trimmedQuery)}
+                                        disabled={isAddingInterest}
+                                        className="w-full px-4 py-3 text-left hover:bg-muted/50 transition-colors flex items-center gap-2 bg-primary/5 border-b"
+                                    >
+                                        {isAddingInterest ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                                        <span className="text-sm font-medium">Create &quot;{trimmedQuery}&quot;</span>
+                                    </button>
+                                )}
                                 {filteredInterests.map((interest) => {
                                     const isSelected = selected.includes(interest.id)
                                     return (
@@ -109,9 +138,9 @@ export function RootsStep({ onNext, onBack, initialData, availableInterests = []
                             </div>
                         )}
 
-                        {showDropdown && searchQuery && filteredInterests.length === 0 && (
+                        {showDropdown && trimmedQuery && filteredInterests.length === 0 && !showCreateOption && !isAddingInterest && (
                             <div className="absolute top-full left-0 right-0 mt-2 bg-popover border rounded-xl shadow-lg z-10 p-4 text-center text-sm text-muted-foreground">
-                                No interests found matching "{searchQuery}"
+                                No interests found matching &quot;{trimmedQuery}&quot;
                             </div>
                         )}
                     </div>

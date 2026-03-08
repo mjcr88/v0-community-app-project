@@ -12,10 +12,11 @@ import { Badge } from "@/components/ui/badge"
 import { Combobox } from "@/components/ui/combobox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Loader2, X, Plus, AlertCircle, Mail, Phone, Languages, Lightbulb, Wrench, MapPin, User, MessageSquare, Calendar, Camera, Map as MapIcon } from "lucide-react"
+import { Loader2, X, Plus, AlertCircle, Mail, Phone, Languages, Lightbulb, Wrench, MapPin, User, MessageSquare, Calendar, Camera, Map as MapIcon, Search } from "lucide-react"
 import { COUNTRIES, LANGUAGES } from "@/lib/data/countries-languages"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { createClient } from "@/lib/supabase/client"
+import { useCreateInterest } from "@/hooks/use-create-interest"
+import { updateProfileAction } from "@/app/actions/profile"
 import { useToast } from "@/hooks/use-toast"
 import { EditableProfileBanner } from "@/components/profile/editable-profile-banner"
 import { MapPreviewWidget } from "@/components/map/map-preview-widget"
@@ -86,6 +87,7 @@ interface ProfileEditFormProps {
   tenantSlug: string
   locations?: any[]
   userEmail: string
+  isSuperAdmin?: boolean
 }
 
 export function ProfileEditForm({
@@ -96,6 +98,7 @@ export function ProfileEditForm({
   tenantSlug,
   locations = [],
   userEmail,
+  isSuperAdmin = false,
 }: ProfileEditFormProps) {
   const router = useRouter()
   const { toast } = useToast()
@@ -129,6 +132,21 @@ export function ProfileEditForm({
     languageSearch: "",
   })
 
+  // Inline interest search+create state
+  const [allProfileInterests, setAllProfileInterests] = useState(availableInterests)
+  const [interestSearch, setInterestSearch] = useState("")
+  const [showInterestDropdown, setShowInterestDropdown] = useState(false)
+
+  const { handleCreateInterest, isAddingInterest } = useCreateInterest({
+    tenantId: resident.tenant_id,
+    onSuccess: (newInterest) => {
+      ProfileAnalytics.interestAdded(newInterest.name)
+      setAllProfileInterests((prev) => [...prev, newInterest])
+      setFormData((prev) => ({ ...prev, selectedInterests: [...prev.selectedInterests, newInterest.id] }))
+      setInterestSearch("")
+    }
+  })
+
   const initials = [formData.firstName, formData.lastName]
     .filter(Boolean)
     .map((n) => n[0])
@@ -140,110 +158,56 @@ export function ProfileEditForm({
     setIsLoading(true)
 
     try {
-      const supabase = createClient()
-
-      // Build update object with dirty checking
-      const updates: any = {}
-
-      if (formData.firstName !== resident.first_name) updates.first_name = formData.firstName
-      if (formData.lastName !== resident.last_name) updates.last_name = formData.lastName
-      if (formData.phone !== resident.phone) updates.phone = formData.phone
-      if (formData.birthday !== resident.birthday) updates.birthday = formData.birthday || null
-      if (formData.birthCountry !== resident.birth_country) updates.birth_country = formData.birthCountry || null
-      if (formData.currentCountry !== resident.current_country) updates.current_country = formData.currentCountry || null
-      // Array comparison for languages
-      const languagesChanged = JSON.stringify([...formData.languages].sort()) !== JSON.stringify([...(resident.languages || [])].sort())
-      if (languagesChanged) updates.languages = formData.languages
-
-      if (formData.preferredLanguage !== resident.preferred_language) updates.preferred_language = formData.preferredLanguage || null
-      if (formData.about !== resident.about) updates.about = formData.about || null
-      if (formData.journeyStage !== resident.journey_stage) updates.journey_stage = formData.journeyStage || null
-      if (formData.estimatedMoveInDate !== resident.estimated_move_in_date) updates.estimated_move_in_date = formData.estimatedMoveInDate || null
-      if (formData.estimatedConstructionStartDate !== resident.estimated_construction_start_date) updates.estimated_construction_start_date = formData.estimatedConstructionStartDate || null
-      if (formData.estimatedConstructionEndDate !== resident.estimated_construction_end_date) updates.estimated_construction_end_date = formData.estimatedConstructionEndDate || null
-
-      // Photo arrays
-      const photosChanged = JSON.stringify([...formData.photos].sort()) !== JSON.stringify([...(resident.photos || [])].sort())
-      if (photosChanged) updates.photos = formData.photos
-
-      if (formData.heroPhoto !== resident.hero_photo) {
-        updates.hero_photo = formData.heroPhoto
-        updates.profile_picture_url = formData.heroPhoto // Sync profile picture
-      }
-      if (formData.bannerImageUrl !== resident.banner_image_url) updates.banner_image_url = formData.bannerImageUrl
-
-      if (Object.keys(updates).length > 0) {
-        const { error: userError } = await supabase
-          .from("users")
-          .update(updates)
-          .eq("id", resident.id)
-
-        if (userError) throw userError
+      if (isSuperAdmin) {
+        console.log("[v0] Super admin test mode - simulating profile update")
+        toast({ title: "Success", description: "Profile updated successfully (test mode)!" })
+        router.refresh()
+        return
       }
 
-      if (formData.about !== resident.about) ProfileAnalytics.aboutUpdated('bio')
-      if (formData.journeyStage !== resident.journey_stage) ProfileAnalytics.aboutUpdated('journey')
+      await updateProfileAction(resident.id, {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phone: formData.phone,
+        birthday: formData.birthday || null,
+        birthCountry: formData.birthCountry || null,
+        currentCountry: formData.currentCountry || null,
+        about: formData.about,
+        languages: formData.languages,
+        preferredLanguage: formData.preferredLanguage,
+        journeyStage: formData.journeyStage,
+        estimatedMoveInDate: formData.estimatedMoveInDate || null,
+        estimatedConstructionStartDate: formData.estimatedConstructionStartDate || null,
+        estimatedConstructionEndDate: formData.estimatedConstructionEndDate || null,
+        photos: formData.photos,
+        heroPhoto: formData.heroPhoto,
+        bannerImageUrl: formData.bannerImageUrl,
+        userInterests: formData.selectedInterests,
+        userSkills: formData.skills.map(s => ({
+          id: s.skill_id || "",
+          skill_name: s.skill_name,
+          open_to_requests: s.open_to_requests,
+          isNew: !s.skill_id
+        })),
+        tenantId: resident.tenant_id,
+        slug: tenantSlug,
+      })
 
-      // Handle Interests
-      const { error: deleteInterestsError } = await supabase.from("user_interests").delete().eq("user_id", resident.id)
-      if (deleteInterestsError) console.error("Error deleting interests:", deleteInterestsError)
-
-      if (formData.selectedInterests.length > 0) {
-        const interestsToInsert = formData.selectedInterests.map((interestId) => ({
-          user_id: resident.id,
-          interest_id: interestId,
-        }))
-        const { error: insertInterestsError } = await supabase.from("user_interests").insert(interestsToInsert)
-        if (insertInterestsError) throw insertInterestsError
-      }
-
-      // Handle Skills
-      const { error: deleteSkillsError } = await supabase.from("user_skills").delete().eq("user_id", resident.id)
-      if (deleteSkillsError) console.error("Error deleting skills:", deleteSkillsError)
-
-      if (formData.skills.length > 0) {
-        const skillsToInsert = []
-        for (const skill of formData.skills) {
-          if (skill.skill_id) {
-            skillsToInsert.push({
-              user_id: resident.id,
-              skill_id: skill.skill_id,
-              open_to_requests: skill.open_to_requests,
-            })
-          } else {
-            const { data: newSkillData } = await supabase
-              .from("skills")
-              .insert({ name: skill.skill_name, tenant_id: resident.tenant_id })
-              .select()
-              .single()
-
-            if (newSkillData) {
-              skillsToInsert.push({
-                user_id: resident.id,
-                skill_id: newSkillData.id,
-                open_to_requests: skill.open_to_requests,
-              })
-            }
-          }
-        }
-        if (skillsToInsert.length > 0) {
-          const { error: insertSkillsError } = await supabase.from("user_skills").insert(skillsToInsert)
-          if (insertSkillsError) throw insertSkillsError
-        }
-      }
+      if (formData.about !== resident.about) ProfileAnalytics.aboutUpdated("bio")
+      if (formData.journeyStage !== resident.journey_stage) ProfileAnalytics.aboutUpdated("journey")
 
       toast({
         title: "Success",
         description: "Profile updated successfully!",
       })
-      ProfileAnalytics.updated(['profile'])
+      ProfileAnalytics.updated(["profile"])
       router.refresh()
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating profile:", error)
-      ErrorAnalytics.actionFailed('update_profile', error instanceof Error ? error.message : "Unknown error")
+      ErrorAnalytics.actionFailed("update_profile", error instanceof Error ? error.message : "Unknown error")
       toast({
         title: "Error",
-        description: "Failed to update profile. Please try again.",
+        description: error.message || "Failed to update profile. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -273,10 +237,22 @@ export function ProfileEditForm({
     setFormData({ ...formData, languages: formData.languages.filter((l) => l !== language) })
   }
 
+
+
+  const toggleInterest = (interestId: string) => {
+    const interest = allProfileInterests.find(i => i.id === interestId)
+    if (formData.selectedInterests.includes(interestId)) {
+      if (interest) ProfileAnalytics.interestRemoved(interest.name)
+      setFormData((prev) => ({ ...prev, selectedInterests: prev.selectedInterests.filter(id => id !== interestId) }))
+    } else {
+      if (interest) ProfileAnalytics.interestAdded(interest.name)
+      setFormData((prev) => ({ ...prev, selectedInterests: [...prev.selectedInterests, interestId] }))
+    }
+  }
+
   const addSkill = () => {
     const newSkillTrimmed = formData.newSkill.trim()
     if (newSkillTrimmed) {
-      // Check if skill already exists in selected skills
       if (!formData.skills.some(s => s.skill_name.toLowerCase() === newSkillTrimmed.toLowerCase())) {
         ProfileAnalytics.skillAdded(newSkillTrimmed, false)
         setFormData({
@@ -550,29 +526,89 @@ export function ProfileEditForm({
           {/* Interests */}
           {tenant?.features?.interests && (
             <CollapsibleCard title="Interests" description="Things you're passionate about" icon={Lightbulb} defaultOpen={false}>
-              <div className="space-y-2">
-                <Label>Interests</Label>
-                <MultiSelect
-                  options={availableInterests.map(i => ({ value: i.id, label: i.name }))}
-                  selected={formData.selectedInterests}
-                  onChange={(selected) => {
-                    // Track analytics
-                    const added = selected.find(id => !formData.selectedInterests.includes(id))
-                    if (added) {
-                      const interest = availableInterests.find(i => i.id === added)
-                      if (interest) ProfileAnalytics.interestAdded(interest.name)
-                    }
-                    const removed = formData.selectedInterests.find(id => !selected.includes(id))
-                    if (removed) {
-                      const interest = availableInterests.find(i => i.id === removed)
-                      if (interest) ProfileAnalytics.interestRemoved(interest.name)
-                    }
-                    setFormData({ ...formData, selectedInterests: selected })
-                  }}
-                  placeholder="Select interests..."
-                  searchPlaceholder="Search interests..."
-                  emptyMessage="No interests found."
-                />
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Interests</Label>
+                  <p className="text-sm text-muted-foreground">Search for existing interests or create a new one</p>
+                </div>
+
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search interests or type to create new..."
+                    value={interestSearch}
+                    onChange={(e) => setInterestSearch(e.target.value)}
+                    onFocus={() => setShowInterestDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowInterestDropdown(false), 200)}
+                    className="pl-9"
+                  />
+
+                  {showInterestDropdown && (() => {
+                    const normalizedQuery = interestSearch.trim().toLowerCase()
+                    const filtered = allProfileInterests.filter(
+                      (i) => i.name.toLowerCase().includes(normalizedQuery) && !formData.selectedInterests.includes(i.id)
+                    )
+                    const exactMatch = allProfileInterests.find((i) => i.name.trim().toLowerCase() === normalizedQuery)
+                    const showCreate = interestSearch.trim() && !exactMatch
+
+                    return (
+                      <div className="absolute z-10 w-full mt-1 bg-popover border rounded-lg shadow-lg max-h-[300px] overflow-auto">
+                        {showCreate && (
+                          <button
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault()
+                              handleCreateInterest(interestSearch.trim())
+                            }}
+                            disabled={isAddingInterest}
+                            className="w-full text-left px-3 py-2 hover:bg-accent transition-colors border-b flex items-center gap-2 bg-primary/5"
+                          >
+                            {isAddingInterest ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                            <span className="font-medium">Create &quot;{interestSearch.trim()}&quot;</span>
+                          </button>
+                        )}
+
+                        {filtered.length > 0 && (
+                          filtered.map((interest) => (
+                            <button
+                              key={interest.id}
+                              type="button"
+                              onMouseDown={(e) => {
+                                e.preventDefault()
+                                toggleInterest(interest.id)
+                                setInterestSearch("")
+                              }}
+                              className="w-full text-left px-3 py-2 hover:bg-accent transition-colors flex items-center justify-between"
+                            >
+                              <div className="font-medium text-sm">{interest.name}</div>
+                            </button>
+                          ))
+                        )}
+                        {filtered.length === 0 && !showCreate && !isAddingInterest && (
+                          <div className="px-3 py-2 text-sm text-muted-foreground">
+                            {interestSearch ? `No interests found matching "${interestSearch}"` : "No more interests available"}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })()}
+                </div>
+
+                {formData.selectedInterests.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {formData.selectedInterests.map((interestId) => {
+                      const interest = allProfileInterests.find(i => i.id === interestId)
+                      return interest ? (
+                        <Badge key={interestId} variant="secondary" className="flex items-center gap-1">
+                          {interest.name}
+                          <button type="button" onClick={() => toggleInterest(interestId)} className="ml-1 hover:text-destructive">
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ) : null
+                    })}
+                  </div>
+                )}
               </div>
             </CollapsibleCard>
           )}

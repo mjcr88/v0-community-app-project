@@ -78,7 +78,7 @@ export function RequestAccessForm({ tenant }: RequestAccessFormProps) {
     const [email, setEmail] = useState("")
     const [firstName, setFirstName] = useState("")
     const [lastName, setLastName] = useState("")
-    const [familyName, setFamilyName] = useState("")
+    const [householdName, setHouseholdName] = useState("")
     const [selectedLotId, setSelectedLotId] = useState("")
     const [inCostaRica, setInCostaRica] = useState(false)
 
@@ -115,7 +115,7 @@ export function RequestAccessForm({ tenant }: RequestAccessFormProps) {
                 email,
                 first_name: firstName,
                 last_name: lastName,
-                family_name: familyName || undefined,
+                family_name: householdName || undefined,
                 lot_id: selectedLotId || undefined,
                 in_costa_rica: inCostaRica,
             }
@@ -204,7 +204,7 @@ export function RequestAccessForm({ tenant }: RequestAccessFormProps) {
                         />
                     </div>
                     <p className="text-mist-gray text-sm">
-                        Interested in joining {tenant.name}? Fill out the form below and an admin
+                        Please fill out the form below and an admin
                         will review your request.
                     </p>
                 </div>
@@ -284,18 +284,18 @@ export function RequestAccessForm({ tenant }: RequestAccessFormProps) {
                         </div>
                     </div>
 
-                    {/* Family Name */}
+                    {/* Household Name */}
                     <div className="space-y-1.5">
-                        <Label htmlFor="ra-family-name" className="text-earth-soil font-medium text-sm">
-                            Family Name <span className="text-mist-gray text-xs">(optional)</span>
+                        <Label htmlFor="ra-household-name" className="text-earth-soil font-medium text-sm">
+                            Household Name <span className="text-mist-gray text-xs">(optional)</span>
                         </Label>
                         <div className="relative">
                             <Users className="absolute left-3 top-3 h-4 w-4 text-mist-gray" />
                             <Input
-                                id="ra-family-name"
-                                placeholder="e.g., The Smith Family"
-                                value={familyName}
-                                onChange={(e) => setFamilyName(e.target.value)}
+                                id="ra-household-name"
+                                placeholder="e.g., The Smith Household"
+                                value={householdName}
+                                onChange={(e) => setHouseholdName(e.target.value)}
                                 className="pl-10 border-earth-pebble focus-visible:ring-forest-canopy bg-white"
                             />
                         </div>
@@ -352,7 +352,7 @@ export function RequestAccessForm({ tenant }: RequestAccessFormProps) {
                             >
                                 <Alert className="bg-sunrise/10 border-sunrise/30">
                                     <AlertDescription className="text-xs text-earth-soil">
-                                        No worries! We&apos;re currently rolling out in Costa Rica first,
+                                        We&apos;re currently rolling out in Costa Rica first,
                                         but your request will be saved for when we expand to your region.
                                     </AlertDescription>
                                 </Alert>

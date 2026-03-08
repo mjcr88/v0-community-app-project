@@ -17,7 +17,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import {
-  Home, MapPin, Users, Building2, HeartHandshake, Lightbulb, Map, Calendar, Package, ClipboardList, Megaphone,
+  Home, MapPin, Users, Building2, HeartHandshake, Map, Calendar, Package, ClipboardList, Megaphone,
   User,
   Settings,
   FileText,
@@ -268,16 +268,6 @@ export default async function TenantAdminLayout({
                       <Link href={`/t/${slug}/admin/families`}>
                         <HeartHandshake />
                         <span>Families</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                )}
-                {features.interests && (
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link href={`/t/${slug}/admin/interests`}>
-                        <Lightbulb />
-                        <span>Interests</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

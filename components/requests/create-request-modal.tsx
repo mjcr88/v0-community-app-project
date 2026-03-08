@@ -105,6 +105,11 @@ export function CreateRequestModal({
     setStep(prev => prev - 1)
   }
 
+  const effectiveIsPublic = formData.is_anonymous ? false :
+    formData.request_type && ['maintenance', 'safety'].includes(formData.request_type) ? true :
+      formData.request_type && ['complaint', 'account_access'].includes(formData.request_type) ? false :
+        formData.is_public;
+
   const handleSubmit = async () => {
     if (!formData.request_type) return
     setIsSubmitting(true)
@@ -121,7 +126,7 @@ export function CreateRequestModal({
         custom_location_lat: formData.location_type === "custom" ? formData.custom_location_lat : null,
         custom_location_lng: formData.location_type === "custom" ? formData.custom_location_lng : null,
         is_anonymous: formData.is_anonymous,
-        is_public: formData.is_public,
+        is_public: effectiveIsPublic,
         images: formData.images,
         tagged_resident_ids: formData.tagged_resident_ids,
         tagged_pet_ids: formData.tagged_pet_ids,
@@ -296,7 +301,7 @@ export function CreateRequestModal({
                 <div className="flex items-start space-x-3 p-4 rounded-lg bg-muted/30 border border-muted transition-all">
                   <Checkbox
                     id="is_public"
-                    checked={['maintenance', 'safety'].includes(formData.request_type) ? true : formData.is_public}
+                    checked={effectiveIsPublic}
                     disabled={['maintenance', 'safety'].includes(formData.request_type)}
                     onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_public: checked as boolean }))}
                     className="mt-1"
@@ -446,7 +451,7 @@ export function CreateRequestModal({
                   </div>
                 )}
 
-                {formData.is_public && !formData.is_anonymous && (
+                {effectiveIsPublic && !formData.is_anonymous && (
                   <div className="bg-primary/5 p-3 rounded-md text-sm text-primary flex items-center gap-2 border border-primary/10">
                     <MessageSquare className="h-4 w-4" />
                     Visible to community

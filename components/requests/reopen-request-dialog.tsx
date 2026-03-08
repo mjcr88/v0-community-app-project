@@ -71,7 +71,10 @@ export function ReopenRequestDialog({
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleReopen} disabled={isPending}>
+                    <AlertDialogAction onClick={(e) => {
+                        e.preventDefault();
+                        handleReopen();
+                    }} disabled={isPending}>
                         {isPending ? "Reopening..." : "Confirm Reopen"}
                     </AlertDialogAction>
                 </AlertDialogFooter>

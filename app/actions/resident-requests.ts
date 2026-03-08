@@ -248,6 +248,7 @@ export async function addRequestComment(
       .from("users")
       .select("role, is_tenant_admin")
       .eq("id", user.id)
+      .eq("tenant_id", tenantId) // Prevent cross-tenant data leakage
       .single()
 
     const isAdmin = userData && (['tenant_admin', 'super_admin'].includes(userData.role) || userData.is_tenant_admin)
@@ -293,7 +294,7 @@ export async function addRequestComment(
           .from("users")
           .select("id")
           .eq("tenant_id", tenantId)
-          .in("role", ["tenant_admin", "super_admin"])
+          .or(`role.in.("tenant_admin","super_admin"),is_tenant_admin.eq.true`)
 
         if (admins && admins.length > 0) {
           for (const admin of admins) {
@@ -346,7 +347,7 @@ export async function addRequestComment(
           .from("users")
           .select("id")
           .eq("tenant_id", tenantId)
-          .in("role", ["tenant_admin", "super_admin"])
+          .or(`role.in.("tenant_admin","super_admin"),is_tenant_admin.eq.true`)
 
         if (admins && admins.length > 0) {
           for (const admin of admins) {

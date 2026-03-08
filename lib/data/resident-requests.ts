@@ -23,6 +23,8 @@ export interface Comment {
         first_name: string
         last_name: string
         profile_picture_url: string | null
+        role?: string
+        is_tenant_admin?: boolean
     }
 }
 
@@ -213,7 +215,7 @@ export const getResidentRequests = cache(async (
                 .from("comments")
                 .select(`
                 *,
-                author:users!author_id(id, first_name, last_name, profile_picture_url)
+                author:users!author_id(id, first_name, last_name, profile_picture_url, role, is_tenant_admin)
             `)
                 .in("resident_request_id", typedRequests.map((r: any) => r.id))
                 .order("created_at", { ascending: true })

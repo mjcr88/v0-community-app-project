@@ -87,7 +87,9 @@ export function RequestComments({
                             <AnimatePresence initial={false}>
                                 {comments.map((comment, index) => {
                                     const isMe = comment.author_id === currentUserId
-                                    const isAuthorStaff = !isMe && comment.author?.id !== currentUserId && isAdmin
+                                    const isAuthorStaff = comment.author?.role === 'tenant_admin' ||
+                                        comment.author?.role === 'super_admin' ||
+                                        comment.author?.is_tenant_admin === true
 
                                     return (
                                         <motion.div

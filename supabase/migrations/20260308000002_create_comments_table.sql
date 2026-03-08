@@ -23,7 +23,7 @@ ALTER TABLE public.comments ENABLE ROW LEVEL SECURITY;
 
 -- SELECT POLICY: Users can see a comment if:
 -- 1. They belong to the same tenant, AND
--- 2. They are the author, OR they created the associated request, OR they are an admin
+-- 2. They are the author, OR they are the original submitter of the associated request, OR the request is public, OR they are an admin
 CREATE POLICY "Users can view comments on their requests or if they are admins"
 ON public.comments
 FOR SELECT
@@ -34,7 +34,7 @@ USING (
     EXISTS (
       SELECT 1 FROM public.resident_requests rr 
       WHERE rr.id = resident_request_id 
-      AND rr.created_by = auth.uid()
+      AND (rr.original_submitter_id = auth.uid() OR rr.is_public = true)
     ) OR
     EXISTS (
       SELECT 1 FROM public.users u 
@@ -47,7 +47,7 @@ USING (
 -- INSERT POLICY: Users can insert a comment if:
 -- 1. They belong to the same tenant, AND
 -- 2. They are inserting under their own author_id, AND
--- 3. They are the creator of the associated request, OR they are an admin
+-- 3. They are the original submitter of the associated request, OR the request is public, OR they are an admin
 CREATE POLICY "Users can insert comments on their requests or if they are admins"
 ON public.comments
 FOR INSERT
@@ -58,7 +58,7 @@ WITH CHECK (
     EXISTS (
       SELECT 1 FROM public.resident_requests rr 
       WHERE rr.id = resident_request_id 
-      AND rr.created_by = auth.uid()
+      AND (rr.original_submitter_id = auth.uid() OR rr.is_public = true)
     ) OR
     EXISTS (
       SELECT 1 FROM public.users u 

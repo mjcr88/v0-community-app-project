@@ -56,6 +56,25 @@ export default async function RequestDetailPage({ params }: RequestDetailPagePro
     notFound()
   }
 
+  // Authorization Guard: Only original submitters, public requests, or admins can view
+  const isOriginalSubmitter = request.original_submitter_id === user.id
+  const isPublic = request.is_public === true
+
+  if (!isOriginalSubmitter && !isPublic) {
+    const { data: userData } = await supabase
+      .from("users")
+      .select("role, is_tenant_admin")
+      .eq("id", user.id)
+      .eq("tenant_id", tenant.id)
+      .single()
+
+    const isAdmin = userData && (['tenant_admin', 'super_admin'].includes(userData.role) || userData.is_tenant_admin)
+
+    if (!isAdmin) {
+      notFound()
+    }
+  }
+
   // Fetch all locations for the map context
   const allLocations = await getLocations(tenant.id, {
     enrichWithNeighborhood: false,
@@ -185,7 +204,7 @@ export default async function RequestDetailPage({ params }: RequestDetailPagePro
             )}
 
             {/* Conversation */}
-            {(request.created_by === user.id || request.is_public) && (
+            {(request.original_submitter_id === user.id || request.is_public) && (
               <div className="space-y-4">
                 <RequestComments
                   requestId={requestId}

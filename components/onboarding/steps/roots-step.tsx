@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Check, Search, X, Plus, Loader2 } from "lucide-react"
 import { useState, useEffect, useRef } from "react"
 import { cn } from "@/lib/utils"
-import { createClient } from "@/lib/supabase/client"
+import { useCreateInterest } from "@/hooks/use-create-interest"
 import { useToast } from "@/hooks/use-toast"
 
 interface RootsStepProps {
@@ -17,14 +17,21 @@ interface RootsStepProps {
 }
 
 export function RootsStep({ onNext, onBack, initialData, availableInterests = [] }: RootsStepProps) {
-    const supabase = createClient()
     const { toast } = useToast()
     const [selected, setSelected] = useState<string[]>(initialData?.interests || [])
     const [allInterests, setAllInterests] = useState(availableInterests)
     const [searchQuery, setSearchQuery] = useState("")
     const [showDropdown, setShowDropdown] = useState(false)
-    const [isAddingInterest, setIsAddingInterest] = useState(false)
     const searchRef = useRef<HTMLDivElement>(null)
+
+    const { handleCreateInterest, isAddingInterest } = useCreateInterest({
+        tenantId: initialData?.tenantId,
+        onSuccess: (newInterest) => {
+            setAllInterests(prev => [...prev, newInterest])
+            setSelected(prev => [...prev, newInterest.id])
+            setSearchQuery("")
+        }
+    })
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -49,57 +56,15 @@ export function RootsStep({ onNext, onBack, initialData, availableInterests = []
         setSelected(prev => prev.filter(i => i !== interestId))
     }
 
-    const handleCreateInterest = async (name: string) => {
-        if (!initialData?.tenantId) {
-            console.error("Missing tenantId for interest creation")
-            toast({
-                title: "Error",
-                description: "Required information (tenantId) is missing. Please try again.",
-                variant: "destructive",
-            })
-            return
-        }
-
-        setIsAddingInterest(true)
-        try {
-            const { data: newInterest, error } = await supabase
-                .from("interests")
-                .insert({ name: name.trim(), tenant_id: initialData.tenantId })
-                .select()
-                .single()
-
-            if (error) {
-                console.error("Error creating interest:", error)
-                toast({
-                    title: "Error",
-                    description: "Failed to create interest. Please try again.",
-                    variant: "destructive",
-                })
-                return
-            }
-
-            setAllInterests(prev => [...prev, newInterest])
-            setSelected(prev => [...prev, newInterest.id])
-            setSearchQuery("")
-        } catch (error) {
-            console.error("Error creating interest:", error)
-            toast({
-                title: "Error",
-                description: "An unexpected error occurred. Please try again.",
-                variant: "destructive",
-            })
-        } finally {
-            setIsAddingInterest(false)
-        }
-    }
-
     // Filter interests based on search query
+    const trimmedQuery = searchQuery.trim()
+    const normalizedQuery = trimmedQuery.toLowerCase()
     const filteredInterests = allInterests.filter(interest =>
-        interest.name.toLowerCase().includes(searchQuery.toLowerCase())
+        interest.name.toLowerCase().includes(normalizedQuery)
     )
 
-    const exactMatch = filteredInterests.find(i => i.name.toLowerCase() === searchQuery.toLowerCase())
-    const showCreateOption = searchQuery.trim() && !exactMatch && !isAddingInterest
+    const exactMatch = allInterests.find(i => i.name.trim().toLowerCase() === normalizedQuery)
+    const showCreateOption = trimmedQuery.length > 0 && !exactMatch
 
     // Get selected interest names for display
     const selectedInterests = allInterests.filter(i => selected.includes(i.id))
@@ -138,12 +103,12 @@ export function RootsStep({ onNext, onBack, initialData, availableInterests = []
                                 {showCreateOption && (
                                     <button
                                         type="button"
-                                        onClick={() => handleCreateInterest(searchQuery)}
+                                        onClick={() => handleCreateInterest(trimmedQuery)}
                                         disabled={isAddingInterest}
                                         className="w-full px-4 py-3 text-left hover:bg-muted/50 transition-colors flex items-center gap-2 bg-primary/5 border-b"
                                     >
                                         {isAddingInterest ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                                        <span className="text-sm font-medium">Create &quot;{searchQuery}&quot;</span>
+                                        <span className="text-sm font-medium">Create &quot;{trimmedQuery}&quot;</span>
                                     </button>
                                 )}
                                 {filteredInterests.map((interest) => {
@@ -173,9 +138,9 @@ export function RootsStep({ onNext, onBack, initialData, availableInterests = []
                             </div>
                         )}
 
-                        {showDropdown && searchQuery && filteredInterests.length === 0 && !showCreateOption && (
+                        {showDropdown && trimmedQuery && filteredInterests.length === 0 && !showCreateOption && !isAddingInterest && (
                             <div className="absolute top-full left-0 right-0 mt-2 bg-popover border rounded-xl shadow-lg z-10 p-4 text-center text-sm text-muted-foreground">
-                                No interests found matching &quot;{searchQuery}&quot;
+                                No interests found matching &quot;{trimmedQuery}&quot;
                             </div>
                         )}
                     </div>

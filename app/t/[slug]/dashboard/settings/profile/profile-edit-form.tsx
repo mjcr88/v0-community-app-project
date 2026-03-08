@@ -15,7 +15,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Loader2, X, Plus, AlertCircle, Mail, Phone, Languages, Lightbulb, Wrench, MapPin, User, MessageSquare, Calendar, Camera, Map as MapIcon, Search } from "lucide-react"
 import { COUNTRIES, LANGUAGES } from "@/lib/data/countries-languages"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { createClient } from "@/lib/supabase/client"
+import { useCreateInterest } from "@/hooks/use-create-interest"
+import { updateProfileAction } from "@/app/actions/profile"
 import { useToast } from "@/hooks/use-toast"
 import { EditableProfileBanner } from "@/components/profile/editable-profile-banner"
 import { MapPreviewWidget } from "@/components/map/map-preview-widget"
@@ -44,7 +45,7 @@ interface Resident {
   estimated_move_in_date: string | null
   estimated_construction_start_date: string | null
   estimated_construction_end_date: string | null
-  user_interests?: { interest_id: string; interests?: { name: string } }[]
+  user_interests?: { interest_id: string }[]
   user_skills?: { skill_id: string; skills?: { name: string }; open_to_requests: boolean }[]
   lot_id?: string
   lots?: {
@@ -86,6 +87,7 @@ interface ProfileEditFormProps {
   tenantSlug: string
   locations?: any[]
   userEmail: string
+  isSuperAdmin?: boolean
 }
 
 export function ProfileEditForm({
@@ -96,10 +98,10 @@ export function ProfileEditForm({
   tenantSlug,
   locations = [],
   userEmail,
+  isSuperAdmin = false,
 }: ProfileEditFormProps) {
   const router = useRouter()
   const { toast } = useToast()
-  const supabase = createClient()
   const [isLoading, setIsLoading] = useState(false)
 
   const [formData, setFormData] = useState({
@@ -134,7 +136,16 @@ export function ProfileEditForm({
   const [allProfileInterests, setAllProfileInterests] = useState(availableInterests)
   const [interestSearch, setInterestSearch] = useState("")
   const [showInterestDropdown, setShowInterestDropdown] = useState(false)
-  const [isAddingInterest, setIsAddingInterest] = useState(false)
+
+  const { handleCreateInterest, isAddingInterest } = useCreateInterest({
+    tenantId: resident.tenant_id,
+    onSuccess: (newInterest) => {
+      ProfileAnalytics.interestAdded(newInterest.name)
+      setAllProfileInterests((prev) => [...prev, newInterest])
+      setFormData((prev) => ({ ...prev, selectedInterests: [...prev.selectedInterests, newInterest.id] }))
+      setInterestSearch("")
+    }
+  })
 
   const initials = [formData.firstName, formData.lastName]
     .filter(Boolean)
@@ -147,109 +158,56 @@ export function ProfileEditForm({
     setIsLoading(true)
 
     try {
-
-      // Build update object with dirty checking
-      const updates: any = {}
-
-      if (formData.firstName !== resident.first_name) updates.first_name = formData.firstName
-      if (formData.lastName !== resident.last_name) updates.last_name = formData.lastName
-      if (formData.phone !== resident.phone) updates.phone = formData.phone
-      if (formData.birthday !== resident.birthday) updates.birthday = formData.birthday || null
-      if (formData.birthCountry !== resident.birth_country) updates.birth_country = formData.birthCountry || null
-      if (formData.currentCountry !== resident.current_country) updates.current_country = formData.currentCountry || null
-      // Array comparison for languages
-      const languagesChanged = JSON.stringify([...formData.languages].sort()) !== JSON.stringify([...(resident.languages || [])].sort())
-      if (languagesChanged) updates.languages = formData.languages
-
-      if (formData.preferredLanguage !== resident.preferred_language) updates.preferred_language = formData.preferredLanguage || null
-      if (formData.about !== resident.about) updates.about = formData.about || null
-      if (formData.journeyStage !== resident.journey_stage) updates.journey_stage = formData.journeyStage || null
-      if (formData.estimatedMoveInDate !== resident.estimated_move_in_date) updates.estimated_move_in_date = formData.estimatedMoveInDate || null
-      if (formData.estimatedConstructionStartDate !== resident.estimated_construction_start_date) updates.estimated_construction_start_date = formData.estimatedConstructionStartDate || null
-      if (formData.estimatedConstructionEndDate !== resident.estimated_construction_end_date) updates.estimated_construction_end_date = formData.estimatedConstructionEndDate || null
-
-      // Photo arrays
-      const photosChanged = JSON.stringify([...formData.photos].sort()) !== JSON.stringify([...(resident.photos || [])].sort())
-      if (photosChanged) updates.photos = formData.photos
-
-      if (formData.heroPhoto !== resident.hero_photo) {
-        updates.hero_photo = formData.heroPhoto
-        updates.profile_picture_url = formData.heroPhoto // Sync profile picture
-      }
-      if (formData.bannerImageUrl !== resident.banner_image_url) updates.banner_image_url = formData.bannerImageUrl
-
-      if (Object.keys(updates).length > 0) {
-        const { error: userError } = await supabase
-          .from("users")
-          .update(updates)
-          .eq("id", resident.id)
-
-        if (userError) throw userError
+      if (isSuperAdmin) {
+        console.log("[v0] Super admin test mode - simulating profile update")
+        toast({ title: "Success", description: "Profile updated successfully (test mode)!" })
+        router.refresh()
+        return
       }
 
-      if (formData.about !== resident.about) ProfileAnalytics.aboutUpdated('bio')
-      if (formData.journeyStage !== resident.journey_stage) ProfileAnalytics.aboutUpdated('journey')
+      await updateProfileAction(resident.id, {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phone: formData.phone,
+        birthday: formData.birthday || null,
+        birthCountry: formData.birthCountry || null,
+        currentCountry: formData.currentCountry || null,
+        about: formData.about,
+        languages: formData.languages,
+        preferredLanguage: formData.preferredLanguage,
+        journeyStage: formData.journeyStage,
+        estimatedMoveInDate: formData.estimatedMoveInDate || null,
+        estimatedConstructionStartDate: formData.estimatedConstructionStartDate || null,
+        estimatedConstructionEndDate: formData.estimatedConstructionEndDate || null,
+        photos: formData.photos,
+        heroPhoto: formData.heroPhoto,
+        bannerImageUrl: formData.bannerImageUrl,
+        userInterests: formData.selectedInterests,
+        userSkills: formData.skills.map(s => ({
+          id: s.skill_id || "",
+          skill_name: s.skill_name,
+          open_to_requests: s.open_to_requests,
+          isNew: !s.skill_id
+        })),
+        tenantId: resident.tenant_id,
+        slug: tenantSlug,
+      })
 
-      // Handle Interests
-      const { error: deleteInterestsError } = await supabase.from("user_interests").delete().eq("user_id", resident.id)
-      if (deleteInterestsError) console.error("Error deleting interests:", deleteInterestsError)
-
-      if (formData.selectedInterests.length > 0) {
-        const interestsToInsert = formData.selectedInterests.map((interestId) => ({
-          user_id: resident.id,
-          interest_id: interestId,
-        }))
-        const { error: insertInterestsError } = await supabase.from("user_interests").insert(interestsToInsert)
-        if (insertInterestsError) throw insertInterestsError
-      }
-
-      // Handle Skills
-      const { error: deleteSkillsError } = await supabase.from("user_skills").delete().eq("user_id", resident.id)
-      if (deleteSkillsError) console.error("Error deleting skills:", deleteSkillsError)
-
-      if (formData.skills.length > 0) {
-        const skillsToInsert = []
-        for (const skill of formData.skills) {
-          if (skill.skill_id) {
-            skillsToInsert.push({
-              user_id: resident.id,
-              skill_id: skill.skill_id,
-              open_to_requests: skill.open_to_requests,
-            })
-          } else {
-            const { data: newSkillData } = await supabase
-              .from("skills")
-              .insert({ name: skill.skill_name, tenant_id: resident.tenant_id })
-              .select()
-              .single()
-
-            if (newSkillData) {
-              skillsToInsert.push({
-                user_id: resident.id,
-                skill_id: newSkillData.id,
-                open_to_requests: skill.open_to_requests,
-              })
-            }
-          }
-        }
-        if (skillsToInsert.length > 0) {
-          const { error: insertSkillsError } = await supabase.from("user_skills").insert(skillsToInsert)
-          if (insertSkillsError) throw insertSkillsError
-        }
-      }
+      if (formData.about !== resident.about) ProfileAnalytics.aboutUpdated("bio")
+      if (formData.journeyStage !== resident.journey_stage) ProfileAnalytics.aboutUpdated("journey")
 
       toast({
         title: "Success",
         description: "Profile updated successfully!",
       })
-      ProfileAnalytics.updated(['profile'])
+      ProfileAnalytics.updated(["profile"])
       router.refresh()
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating profile:", error)
-      ErrorAnalytics.actionFailed('update_profile', error instanceof Error ? error.message : "Unknown error")
+      ErrorAnalytics.actionFailed("update_profile", error instanceof Error ? error.message : "Unknown error")
       toast({
         title: "Error",
-        description: "Failed to update profile. Please try again.",
+        description: error.message || "Failed to update profile. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -279,40 +237,7 @@ export function ProfileEditForm({
     setFormData({ ...formData, languages: formData.languages.filter((l) => l !== language) })
   }
 
-  const handleCreateInterest = async (name: string) => {
-    setIsAddingInterest(true)
-    try {
-      const { data: newInterest, error } = await supabase
-        .from("interests")
-        .insert({ name: name.trim(), tenant_id: resident.tenant_id })
-        .select()
-        .single()
 
-      if (error) {
-        console.error("Error creating interest:", error)
-        toast({
-          title: "Error",
-          description: "Failed to create interest. Please try again.",
-          variant: "destructive",
-        })
-        return
-      }
-
-      ProfileAnalytics.interestAdded(newInterest.name)
-      setAllProfileInterests((prev) => [...prev, newInterest])
-      setFormData((prev) => ({ ...prev, selectedInterests: [...prev.selectedInterests, newInterest.id] }))
-      setInterestSearch("")
-    } catch (error) {
-      console.error("Error creating interest:", error)
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsAddingInterest(false)
-    }
-  }
 
   const toggleInterest = (interestId: string) => {
     const interest = allProfileInterests.find(i => i.id === interestId)
@@ -619,11 +544,12 @@ export function ProfileEditForm({
                   />
 
                   {showInterestDropdown && (() => {
+                    const normalizedQuery = interestSearch.trim().toLowerCase()
                     const filtered = allProfileInterests.filter(
-                      (i) => i.name.toLowerCase().includes(interestSearch.toLowerCase()) && !formData.selectedInterests.includes(i.id)
+                      (i) => i.name.toLowerCase().includes(normalizedQuery) && !formData.selectedInterests.includes(i.id)
                     )
-                    const exactMatch = filtered.find((i) => i.name.toLowerCase() === interestSearch.toLowerCase())
-                    const showCreate = interestSearch.trim() && !exactMatch && !isAddingInterest
+                    const exactMatch = allProfileInterests.find((i) => i.name.trim().toLowerCase() === normalizedQuery)
+                    const showCreate = interestSearch.trim() && !exactMatch
 
                     return (
                       <div className="absolute z-10 w-full mt-1 bg-popover border rounded-lg shadow-lg max-h-[300px] overflow-auto">
@@ -632,13 +558,13 @@ export function ProfileEditForm({
                             type="button"
                             onMouseDown={(e) => {
                               e.preventDefault()
-                              handleCreateInterest(interestSearch)
+                              handleCreateInterest(interestSearch.trim())
                             }}
                             disabled={isAddingInterest}
                             className="w-full text-left px-3 py-2 hover:bg-accent transition-colors border-b flex items-center gap-2 bg-primary/5"
                           >
                             {isAddingInterest ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                            <span className="font-medium">Create &quot;{interestSearch}&quot;</span>
+                            <span className="font-medium">Create &quot;{interestSearch.trim()}&quot;</span>
                           </button>
                         )}
 
@@ -658,7 +584,7 @@ export function ProfileEditForm({
                             </button>
                           ))
                         )}
-                        {filtered.length === 0 && !showCreate && (
+                        {filtered.length === 0 && !showCreate && !isAddingInterest && (
                           <div className="px-3 py-2 text-sm text-muted-foreground">
                             {interestSearch ? `No interests found matching "${interestSearch}"` : "No more interests available"}
                           </div>

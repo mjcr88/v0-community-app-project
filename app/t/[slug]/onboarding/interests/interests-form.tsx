@@ -9,9 +9,10 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Loader2, Plus, Search, Check } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { createClient } from "@/lib/supabase/client"
 import { Input } from "@/components/ui/input"
 import { OnboardingAnalytics } from "@/lib/analytics"
+import { useCreateInterest } from "@/hooks/use-create-interest"
+import { updateInterests } from "@/app/actions/onboarding"
 import { useToast } from "@/hooks/use-toast"
 
 interface InterestsFormProps {
@@ -30,7 +31,6 @@ interface InterestsFormProps {
 
 export function InterestsForm({ tenant, resident, interests, residentInterests, isSuperAdmin }: InterestsFormProps) {
   const router = useRouter()
-  const supabase = createClient()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
   const [allInterests, setAllInterests] =
@@ -38,7 +38,16 @@ export function InterestsForm({ tenant, resident, interests, residentInterests, 
   const [selectedInterests, setSelectedInterests] = useState<string[]>(residentInterests)
   const [searchQuery, setSearchQuery] = useState("")
   const [showDropdown, setShowDropdown] = useState(false)
-  const [isAddingInterest, setIsAddingInterest] = useState(false)
+
+  const { handleCreateInterest, isAddingInterest } = useCreateInterest({
+    tenantId: tenant.id,
+    onSuccess: (newInterest) => {
+      const interestWithCount = { ...newInterest, user_count: 0 }
+      setAllInterests((prev) => [...prev, interestWithCount])
+      setSelectedInterests((prev) => [...prev, newInterest.id])
+      setSearchQuery("")
+    }
+  })
 
   const toggleInterest = (interestId: string) => {
     setSelectedInterests((prev) =>
@@ -46,55 +55,7 @@ export function InterestsForm({ tenant, resident, interests, residentInterests, 
     )
   }
 
-  const handleCreateInterest = async (interestName: string) => {
-    setIsAddingInterest(true)
-    try {
-      if (isSuperAdmin) {
-        console.log("[v0] Super admin test mode - simulating interest creation")
-        const tempId = `temp-${Date.now()}`
-        const newInterest = { id: tempId, name: interestName.trim(), description: null, user_count: 0 }
-        setAllInterests((prev) => [...prev, newInterest])
-        setSelectedInterests((prev) => [...prev, tempId])
-        setSearchQuery("")
-        setIsAddingInterest(false)
-        return
-      }
 
-      const { data: newInterest, error } = await supabase
-        .from("interests")
-        .insert({
-          name: interestName.trim(),
-          tenant_id: tenant.id,
-        })
-        .select()
-        .single()
-
-      if (error) {
-        console.error("[v0] Error creating interest:", error)
-        toast({
-          title: "Error",
-          description: "Failed to create interest. Please try again.",
-          variant: "destructive",
-        })
-        return
-      }
-
-      console.log("[v0] Created new interest:", newInterest)
-      const interestWithCount = { ...newInterest, user_count: 0 }
-      setAllInterests((prev) => [...prev, interestWithCount])
-      setSelectedInterests((prev) => [...prev, newInterest.id])
-      setSearchQuery("")
-    } catch (error) {
-      console.error("[v0] Error creating interest:", error)
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsAddingInterest(false)
-    }
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -107,29 +68,18 @@ export function InterestsForm({ tenant, resident, interests, residentInterests, 
         return
       }
 
-      const { error: deleteError } = await supabase.from("user_interests").delete().eq("user_id", resident.id)
-
-      if (deleteError) {
-        console.error("[v0] Error deleting old interests:", deleteError)
-        return
-      }
-
-      if (selectedInterests.length > 0) {
-        const { error: insertError } = await supabase
-          .from("user_interests")
-          .insert(selectedInterests.map((interestId) => ({ user_id: resident.id, interest_id: interestId })))
-
-        if (insertError) {
-          console.error("[v0] Error inserting interests:", insertError)
-          return
-        }
-      }
+      await updateInterests(resident.id, selectedInterests)
 
       console.log("[v0] Interests saved successfully")
       OnboardingAnalytics.stepCompleted(4, 'interests')
       router.push(`/t/${tenant.slug}/onboarding/skills`)
-    } catch (error) {
+    } catch (error: any) {
       console.error("[v0] Error updating interests:", error)
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update interests. Please try again.",
+        variant: "destructive",
+      })
     } finally {
       setIsLoading(false)
     }
@@ -140,14 +90,16 @@ export function InterestsForm({ tenant, resident, interests, residentInterests, 
     router.push(`/t/${tenant.slug}/onboarding/skills`)
   }
 
+  const trimmedQuery = searchQuery.trim()
+  const normalizedQuery = trimmedQuery.toLowerCase()
   const filteredInterests = allInterests.filter(
-    (interest) => interest.name.toLowerCase().includes(searchQuery.toLowerCase()) && !selectedInterests.includes(interest.id),
+    (interest) => interest.name.toLowerCase().includes(normalizedQuery) && !selectedInterests.includes(interest.id),
   )
 
   const selectedInterestObjects = allInterests.filter((i) => selectedInterests.includes(i.id))
 
-  const exactMatch = filteredInterests.find((interest) => interest.name.toLowerCase() === searchQuery.toLowerCase())
-  const showCreateOption = searchQuery.trim() && !exactMatch && !isAddingInterest
+  const exactMatch = allInterests.find((interest) => interest.name.trim().toLowerCase() === normalizedQuery)
+  const showCreateOption = trimmedQuery.length > 0 && !exactMatch
 
   return (
     <form onSubmit={handleSubmit}>
@@ -162,7 +114,7 @@ export function InterestsForm({ tenant, resident, interests, residentInterests, 
               <Input
                 placeholder="Search interests or type to create new..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
                 onFocus={() => setShowDropdown(true)}
                 onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
                 className="pl-9"
@@ -175,13 +127,13 @@ export function InterestsForm({ tenant, resident, interests, residentInterests, 
                       type="button"
                       onMouseDown={(e) => {
                         e.preventDefault()
-                        handleCreateInterest(searchQuery)
+                        handleCreateInterest(trimmedQuery)
                       }}
                       disabled={isAddingInterest}
                       className="w-full text-left px-3 py-2 hover:bg-accent transition-colors border-b flex items-center gap-2 bg-primary/5"
                     >
                       {isAddingInterest ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                      <span className="font-medium">Create &quot;{searchQuery}&quot;</span>
+                      <span className="font-medium">Create &quot;{trimmedQuery}&quot;</span>
                     </button>
                   )}
 
@@ -211,9 +163,9 @@ export function InterestsForm({ tenant, resident, interests, residentInterests, 
                       </button>
                     ))
                   )}
-                  {filteredInterests.length === 0 && !showCreateOption && (
+                  {filteredInterests.length === 0 && !showCreateOption && !isAddingInterest && (
                     <div className="px-3 py-2 text-sm text-muted-foreground">
-                      {searchQuery ? `No interests found matching "${searchQuery}"` : "No more interests available"}
+                      {trimmedQuery ? `No interests found matching "${trimmedQuery}"` : "No more interests available"}
                     </div>
                   )}
                 </div>

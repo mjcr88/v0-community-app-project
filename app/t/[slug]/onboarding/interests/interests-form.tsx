@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { createClient } from "@/lib/supabase/client"
 import { Input } from "@/components/ui/input"
 import { OnboardingAnalytics } from "@/lib/analytics"
+import { useToast } from "@/hooks/use-toast"
 
 interface InterestsFormProps {
   tenant: {
@@ -30,6 +31,7 @@ interface InterestsFormProps {
 export function InterestsForm({ tenant, resident, interests, residentInterests, isSuperAdmin }: InterestsFormProps) {
   const router = useRouter()
   const supabase = createClient()
+  const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
   const [allInterests, setAllInterests] =
     useState<Array<{ id: string; name: string; description: string | null; user_count?: number }>>(interests)
@@ -69,6 +71,11 @@ export function InterestsForm({ tenant, resident, interests, residentInterests, 
 
       if (error) {
         console.error("[v0] Error creating interest:", error)
+        toast({
+          title: "Error",
+          description: "Failed to create interest. Please try again.",
+          variant: "destructive",
+        })
         return
       }
 
@@ -79,6 +86,11 @@ export function InterestsForm({ tenant, resident, interests, residentInterests, 
       setSearchQuery("")
     } catch (error) {
       console.error("[v0] Error creating interest:", error)
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      })
     } finally {
       setIsAddingInterest(false)
     }

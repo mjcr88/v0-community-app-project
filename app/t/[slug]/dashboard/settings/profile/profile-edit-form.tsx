@@ -290,6 +290,11 @@ export function ProfileEditForm({
 
       if (error) {
         console.error("Error creating interest:", error)
+        toast({
+          title: "Error",
+          description: "Failed to create interest. Please try again.",
+          variant: "destructive",
+        })
         return
       }
 
@@ -299,6 +304,11 @@ export function ProfileEditForm({
       setInterestSearch("")
     } catch (error) {
       console.error("Error creating interest:", error)
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      })
     } finally {
       setIsAddingInterest(false)
     }

@@ -7,6 +7,7 @@ import { Check, Search, X, Plus, Loader2 } from "lucide-react"
 import { useState, useEffect, useRef } from "react"
 import { cn } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
+import { useToast } from "@/hooks/use-toast"
 
 interface RootsStepProps {
     onNext: (data: any) => void
@@ -17,6 +18,7 @@ interface RootsStepProps {
 
 export function RootsStep({ onNext, onBack, initialData, availableInterests = [] }: RootsStepProps) {
     const supabase = createClient()
+    const { toast } = useToast()
     const [selected, setSelected] = useState<string[]>(initialData?.interests || [])
     const [allInterests, setAllInterests] = useState(availableInterests)
     const [searchQuery, setSearchQuery] = useState("")
@@ -48,16 +50,31 @@ export function RootsStep({ onNext, onBack, initialData, availableInterests = []
     }
 
     const handleCreateInterest = async (name: string) => {
+        if (!initialData?.tenantId) {
+            console.error("Missing tenantId for interest creation")
+            toast({
+                title: "Error",
+                description: "Required information (tenantId) is missing. Please try again.",
+                variant: "destructive",
+            })
+            return
+        }
+
         setIsAddingInterest(true)
         try {
             const { data: newInterest, error } = await supabase
                 .from("interests")
-                .insert({ name: name.trim(), tenant_id: initialData?.tenantId })
+                .insert({ name: name.trim(), tenant_id: initialData.tenantId })
                 .select()
                 .single()
 
             if (error) {
                 console.error("Error creating interest:", error)
+                toast({
+                    title: "Error",
+                    description: "Failed to create interest. Please try again.",
+                    variant: "destructive",
+                })
                 return
             }
 
@@ -66,6 +83,11 @@ export function RootsStep({ onNext, onBack, initialData, availableInterests = []
             setSearchQuery("")
         } catch (error) {
             console.error("Error creating interest:", error)
+            toast({
+                title: "Error",
+                description: "An unexpected error occurred. Please try again.",
+                variant: "destructive",
+            })
         } finally {
             setIsAddingInterest(false)
         }

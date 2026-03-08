@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { Combobox } from "@/components/ui/combobox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Loader2, X, Plus, AlertCircle, Mail, Phone, Languages, Lightbulb, Wrench, MapPin, User, MessageSquare, Calendar, Camera, Map as MapIcon } from "lucide-react"
+import { Loader2, X, Plus, AlertCircle, Mail, Phone, Languages, Lightbulb, Wrench, MapPin, User, MessageSquare, Calendar, Camera, Map as MapIcon, Search } from "lucide-react"
 import { COUNTRIES, LANGUAGES } from "@/lib/data/countries-languages"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { createClient } from "@/lib/supabase/client"
@@ -44,7 +44,7 @@ interface Resident {
   estimated_move_in_date: string | null
   estimated_construction_start_date: string | null
   estimated_construction_end_date: string | null
-  user_interests?: { interest_id: string }[]
+  user_interests?: { interest_id: string; interests?: { name: string } }[]
   user_skills?: { skill_id: string; skills?: { name: string }; open_to_requests: boolean }[]
   lot_id?: string
   lots?: {
@@ -99,6 +99,7 @@ export function ProfileEditForm({
 }: ProfileEditFormProps) {
   const router = useRouter()
   const { toast } = useToast()
+  const supabase = createClient()
   const [isLoading, setIsLoading] = useState(false)
 
   const [formData, setFormData] = useState({
@@ -129,6 +130,12 @@ export function ProfileEditForm({
     languageSearch: "",
   })
 
+  // Inline interest search+create state
+  const [allProfileInterests, setAllProfileInterests] = useState(availableInterests)
+  const [interestSearch, setInterestSearch] = useState("")
+  const [showInterestDropdown, setShowInterestDropdown] = useState(false)
+  const [isAddingInterest, setIsAddingInterest] = useState(false)
+
   const initials = [formData.firstName, formData.lastName]
     .filter(Boolean)
     .map((n) => n[0])
@@ -140,7 +147,6 @@ export function ProfileEditForm({
     setIsLoading(true)
 
     try {
-      const supabase = createClient()
 
       // Build update object with dirty checking
       const updates: any = {}
@@ -273,10 +279,45 @@ export function ProfileEditForm({
     setFormData({ ...formData, languages: formData.languages.filter((l) => l !== language) })
   }
 
+  const handleCreateInterest = async (name: string) => {
+    setIsAddingInterest(true)
+    try {
+      const { data: newInterest, error } = await supabase
+        .from("interests")
+        .insert({ name: name.trim(), tenant_id: resident.tenant_id })
+        .select()
+        .single()
+
+      if (error) {
+        console.error("Error creating interest:", error)
+        return
+      }
+
+      ProfileAnalytics.interestAdded(newInterest.name)
+      setAllProfileInterests((prev) => [...prev, newInterest])
+      setFormData((prev) => ({ ...prev, selectedInterests: [...prev.selectedInterests, newInterest.id] }))
+      setInterestSearch("")
+    } catch (error) {
+      console.error("Error creating interest:", error)
+    } finally {
+      setIsAddingInterest(false)
+    }
+  }
+
+  const toggleInterest = (interestId: string) => {
+    const interest = allProfileInterests.find(i => i.id === interestId)
+    if (formData.selectedInterests.includes(interestId)) {
+      if (interest) ProfileAnalytics.interestRemoved(interest.name)
+      setFormData((prev) => ({ ...prev, selectedInterests: prev.selectedInterests.filter(id => id !== interestId) }))
+    } else {
+      if (interest) ProfileAnalytics.interestAdded(interest.name)
+      setFormData((prev) => ({ ...prev, selectedInterests: [...prev.selectedInterests, interestId] }))
+    }
+  }
+
   const addSkill = () => {
     const newSkillTrimmed = formData.newSkill.trim()
     if (newSkillTrimmed) {
-      // Check if skill already exists in selected skills
       if (!formData.skills.some(s => s.skill_name.toLowerCase() === newSkillTrimmed.toLowerCase())) {
         ProfileAnalytics.skillAdded(newSkillTrimmed, false)
         setFormData({
@@ -550,29 +591,88 @@ export function ProfileEditForm({
           {/* Interests */}
           {tenant?.features?.interests && (
             <CollapsibleCard title="Interests" description="Things you're passionate about" icon={Lightbulb} defaultOpen={false}>
-              <div className="space-y-2">
-                <Label>Interests</Label>
-                <MultiSelect
-                  options={availableInterests.map(i => ({ value: i.id, label: i.name }))}
-                  selected={formData.selectedInterests}
-                  onChange={(selected) => {
-                    // Track analytics
-                    const added = selected.find(id => !formData.selectedInterests.includes(id))
-                    if (added) {
-                      const interest = availableInterests.find(i => i.id === added)
-                      if (interest) ProfileAnalytics.interestAdded(interest.name)
-                    }
-                    const removed = formData.selectedInterests.find(id => !selected.includes(id))
-                    if (removed) {
-                      const interest = availableInterests.find(i => i.id === removed)
-                      if (interest) ProfileAnalytics.interestRemoved(interest.name)
-                    }
-                    setFormData({ ...formData, selectedInterests: selected })
-                  }}
-                  placeholder="Select interests..."
-                  searchPlaceholder="Search interests..."
-                  emptyMessage="No interests found."
-                />
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Interests</Label>
+                  <p className="text-sm text-muted-foreground">Search for existing interests or create a new one</p>
+                </div>
+
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search interests or type to create new..."
+                    value={interestSearch}
+                    onChange={(e) => setInterestSearch(e.target.value)}
+                    onFocus={() => setShowInterestDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowInterestDropdown(false), 200)}
+                    className="pl-9"
+                  />
+
+                  {showInterestDropdown && (() => {
+                    const filtered = allProfileInterests.filter(
+                      (i) => i.name.toLowerCase().includes(interestSearch.toLowerCase()) && !formData.selectedInterests.includes(i.id)
+                    )
+                    const exactMatch = filtered.find((i) => i.name.toLowerCase() === interestSearch.toLowerCase())
+                    const showCreate = interestSearch.trim() && !exactMatch && !isAddingInterest
+
+                    return (
+                      <div className="absolute z-10 w-full mt-1 bg-popover border rounded-lg shadow-lg max-h-[300px] overflow-auto">
+                        {showCreate && (
+                          <button
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault()
+                              handleCreateInterest(interestSearch)
+                            }}
+                            disabled={isAddingInterest}
+                            className="w-full text-left px-3 py-2 hover:bg-accent transition-colors border-b flex items-center gap-2 bg-primary/5"
+                          >
+                            {isAddingInterest ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                            <span className="font-medium">Create &quot;{interestSearch}&quot;</span>
+                          </button>
+                        )}
+
+                        {filtered.length > 0 && (
+                          filtered.map((interest) => (
+                            <button
+                              key={interest.id}
+                              type="button"
+                              onMouseDown={(e) => {
+                                e.preventDefault()
+                                toggleInterest(interest.id)
+                                setInterestSearch("")
+                              }}
+                              className="w-full text-left px-3 py-2 hover:bg-accent transition-colors flex items-center justify-between"
+                            >
+                              <div className="font-medium text-sm">{interest.name}</div>
+                            </button>
+                          ))
+                        )}
+                        {filtered.length === 0 && !showCreate && (
+                          <div className="px-3 py-2 text-sm text-muted-foreground">
+                            {interestSearch ? `No interests found matching "${interestSearch}"` : "No more interests available"}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })()}
+                </div>
+
+                {formData.selectedInterests.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {formData.selectedInterests.map((interestId) => {
+                      const interest = allProfileInterests.find(i => i.id === interestId)
+                      return interest ? (
+                        <Badge key={interestId} variant="secondary" className="flex items-center gap-1">
+                          {interest.name}
+                          <button type="button" onClick={() => toggleInterest(interestId)} className="ml-1 hover:text-destructive">
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ) : null
+                    })}
+                  </div>
+                )}
               </div>
             </CollapsibleCard>
           )}

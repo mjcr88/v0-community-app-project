@@ -7,10 +7,9 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
-import { Loader2 } from "lucide-react"
+import { Loader2, Plus, Search, Check } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { createClient } from "@/lib/supabase/client"
-import { Search, Check } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { OnboardingAnalytics } from "@/lib/analytics"
 
@@ -32,14 +31,57 @@ export function InterestsForm({ tenant, resident, interests, residentInterests, 
   const router = useRouter()
   const supabase = createClient()
   const [isLoading, setIsLoading] = useState(false)
+  const [allInterests, setAllInterests] =
+    useState<Array<{ id: string; name: string; description: string | null; user_count?: number }>>(interests)
   const [selectedInterests, setSelectedInterests] = useState<string[]>(residentInterests)
   const [searchQuery, setSearchQuery] = useState("")
   const [showDropdown, setShowDropdown] = useState(false)
+  const [isAddingInterest, setIsAddingInterest] = useState(false)
 
   const toggleInterest = (interestId: string) => {
     setSelectedInterests((prev) =>
       prev.includes(interestId) ? prev.filter((id) => id !== interestId) : [...prev, interestId],
     )
+  }
+
+  const handleCreateInterest = async (interestName: string) => {
+    setIsAddingInterest(true)
+    try {
+      if (isSuperAdmin) {
+        console.log("[v0] Super admin test mode - simulating interest creation")
+        const tempId = `temp-${Date.now()}`
+        const newInterest = { id: tempId, name: interestName.trim(), description: null, user_count: 0 }
+        setAllInterests((prev) => [...prev, newInterest])
+        setSelectedInterests((prev) => [...prev, tempId])
+        setSearchQuery("")
+        setIsAddingInterest(false)
+        return
+      }
+
+      const { data: newInterest, error } = await supabase
+        .from("interests")
+        .insert({
+          name: interestName.trim(),
+          tenant_id: tenant.id,
+        })
+        .select()
+        .single()
+
+      if (error) {
+        console.error("[v0] Error creating interest:", error)
+        return
+      }
+
+      console.log("[v0] Created new interest:", newInterest)
+      const interestWithCount = { ...newInterest, user_count: 0 }
+      setAllInterests((prev) => [...prev, interestWithCount])
+      setSelectedInterests((prev) => [...prev, newInterest.id])
+      setSearchQuery("")
+    } catch (error) {
+      console.error("[v0] Error creating interest:", error)
+    } finally {
+      setIsAddingInterest(false)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -86,69 +128,86 @@ export function InterestsForm({ tenant, resident, interests, residentInterests, 
     router.push(`/t/${tenant.slug}/onboarding/skills`)
   }
 
-  const filteredInterests = interests.filter((interest) =>
-    interest.name.toLowerCase().includes(searchQuery.toLowerCase()),
+  const filteredInterests = allInterests.filter(
+    (interest) => interest.name.toLowerCase().includes(searchQuery.toLowerCase()) && !selectedInterests.includes(interest.id),
   )
 
-  const selectedInterestObjects = interests.filter((i) => selectedInterests.includes(i.id))
-  const unselectedInterests = filteredInterests.filter((i) => !selectedInterests.includes(i.id))
+  const selectedInterestObjects = allInterests.filter((i) => selectedInterests.includes(i.id))
+
+  const exactMatch = filteredInterests.find((interest) => interest.name.toLowerCase() === searchQuery.toLowerCase())
+  const showCreateOption = searchQuery.trim() && !exactMatch && !isAddingInterest
 
   return (
     <form onSubmit={handleSubmit}>
       <Card>
         <CardContent className="space-y-6">
-          {interests.length > 0 && (
-            <div className="space-y-3">
-              <Label className="text-base">Search Interests</Label>
-              <p className="text-sm text-muted-foreground">Find and select interests that match your passions</p>
+          <div className="space-y-3">
+            <Label className="text-base">Search or Add Interests</Label>
+            <p className="text-sm text-muted-foreground">Search for existing interests or create a new one</p>
 
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search interests..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onFocus={() => setShowDropdown(true)}
-                  onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
-                  className="pl-9"
-                />
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search interests or type to create new..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => setShowDropdown(true)}
+                onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+                className="pl-9"
+              />
 
-                {showDropdown && (
-                  <div className="absolute z-10 w-full mt-1 bg-popover border rounded-lg shadow-lg max-h-[300px] overflow-auto">
-                    {unselectedInterests.length > 0 ? (
-                      unselectedInterests.map((interest) => (
-                        <button
-                          key={interest.id}
-                          type="button"
-                          onClick={() => {
-                            toggleInterest(interest.id)
-                            setSearchQuery("")
-                          }}
-                          className="w-full text-left px-3 py-2 hover:bg-accent transition-colors flex items-center justify-between"
-                        >
-                          <div>
-                            <div className="font-medium text-sm">{interest.name}</div>
-                            {interest.description && (
-                              <div className="text-xs text-muted-foreground mt-0.5">{interest.description}</div>
-                            )}
-                          </div>
-                          {interest.user_count !== undefined && interest.user_count > 0 && (
-                            <Badge variant="secondary" className="text-xs">
-                              {interest.user_count} {interest.user_count === 1 ? "person" : "people"}
-                            </Badge>
+              {showDropdown && (
+                <div className="absolute z-10 w-full mt-1 bg-popover border rounded-lg shadow-lg max-h-[300px] overflow-auto">
+                  {showCreateOption && (
+                    <button
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault()
+                        handleCreateInterest(searchQuery)
+                      }}
+                      disabled={isAddingInterest}
+                      className="w-full text-left px-3 py-2 hover:bg-accent transition-colors border-b flex items-center gap-2 bg-primary/5"
+                    >
+                      {isAddingInterest ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                      <span className="font-medium">Create &quot;{searchQuery}&quot;</span>
+                    </button>
+                  )}
+
+                  {filteredInterests.length > 0 && (
+                    filteredInterests.map((interest) => (
+                      <button
+                        key={interest.id}
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault()
+                          toggleInterest(interest.id)
+                          setSearchQuery("")
+                        }}
+                        className="w-full text-left px-3 py-2 hover:bg-accent transition-colors flex items-center justify-between"
+                      >
+                        <div>
+                          <div className="font-medium text-sm">{interest.name}</div>
+                          {interest.description && (
+                            <div className="text-xs text-muted-foreground mt-0.5">{interest.description}</div>
                           )}
-                        </button>
-                      ))
-                    ) : (
-                      <div className="px-3 py-2 text-sm text-muted-foreground">
-                        {searchQuery ? `No interests found matching "${searchQuery}"` : "No more interests available"}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+                        </div>
+                        {interest.user_count !== undefined && interest.user_count > 0 && (
+                          <Badge variant="secondary" className="text-xs">
+                            {interest.user_count} {interest.user_count === 1 ? "person" : "people"}
+                          </Badge>
+                        )}
+                      </button>
+                    ))
+                  )}
+                  {filteredInterests.length === 0 && !showCreateOption && (
+                    <div className="px-3 py-2 text-sm text-muted-foreground">
+                      {searchQuery ? `No interests found matching "${searchQuery}"` : "No more interests available"}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-          )}
+          </div>
 
           {selectedInterestObjects.length > 0 && (
             <div className="space-y-3">
@@ -174,13 +233,6 @@ export function InterestsForm({ tenant, resident, interests, residentInterests, 
                   </Card>
                 ))}
               </div>
-            </div>
-          )}
-
-          {interests.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-              <p>No interests have been added yet.</p>
-              <p className="text-sm">Community admins can add interests from the admin panel.</p>
             </div>
           )}
 

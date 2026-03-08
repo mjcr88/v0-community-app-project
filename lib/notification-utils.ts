@@ -83,8 +83,9 @@ export function generateNotificationTitle(
     // Requests
     case "request_resident_reply":
     case "request_admin_reply":
-    case "request_status_changed":
       return "New message on request"
+    case "request_status_changed":
+      return "Request updated"
 
     // Mentions (future)
     case "mention":

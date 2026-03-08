@@ -13,7 +13,22 @@ UPDATE "public"."resident_requests"
 SET "is_public" = true
 WHERE "request_type" IN ('maintenance', 'safety') AND "is_anonymous" = false;
 
--- 4. Update residents_view_community_requests RLS policy to use is_public
+UPDATE "public"."resident_requests"
+SET "is_public" = false
+WHERE "is_anonymous" = true OR "request_type" IN ('complaint', 'account_access');
+
+-- 4. Add constraint to prevent invalid public requests
+ALTER TABLE "public"."resident_requests"
+ADD CONSTRAINT "resident_requests_public_visibility_check"
+CHECK (
+  NOT "is_public"
+  OR (
+    "is_anonymous" = false
+    AND "request_type" NOT IN ('complaint', 'account_access')
+  )
+);
+
+-- 5. Update residents_view_community_requests RLS policy to use is_public
 DROP POLICY IF EXISTS "residents_view_community_requests" ON "public"."resident_requests";
 
 CREATE POLICY "residents_view_community_requests" ON "public"."resident_requests" FOR SELECT USING (

@@ -67,3 +67,36 @@ WITH CHECK (
     )
   )
 );
+
+-- UPDATE POLICY: Users can update a comment if:
+-- 1. They belong to the same tenant, AND
+-- 2. They are the author
+CREATE POLICY "Users can update their own comments"
+ON public.comments
+FOR UPDATE
+USING (
+  tenant_id = (SELECT u.tenant_id FROM public.users u WHERE u.id = auth.uid()) AND
+  author_id = auth.uid()
+)
+WITH CHECK (
+  tenant_id = (SELECT u.tenant_id FROM public.users u WHERE u.id = auth.uid()) AND
+  author_id = auth.uid()
+);
+
+-- DELETE POLICY: Users can delete a comment if:
+-- 1. They belong to the same tenant, AND
+-- 2. They are the author OR an admin
+CREATE POLICY "Users can delete their own comments or if they are admins"
+ON public.comments
+FOR DELETE
+USING (
+  tenant_id = (SELECT u.tenant_id FROM public.users u WHERE u.id = auth.uid()) AND
+  (
+    author_id = auth.uid() OR
+    EXISTS (
+      SELECT 1 FROM public.users u 
+      WHERE u.id = auth.uid() 
+      AND (u.role IN ('tenant_admin', 'super_admin') OR u.is_tenant_admin = true)
+    )
+  )
+);

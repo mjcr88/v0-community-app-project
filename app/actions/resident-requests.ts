@@ -376,6 +376,115 @@ export async function addRequestComment(
   }
 }
 
+export async function updateRequestComment(
+  commentId: string,
+  requestId: string,
+  tenantId: string,
+  tenantSlug: string,
+  content: string
+) {
+  try {
+    const supabase = await createServerClient()
+    const adminClient = createAdminClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: "Not authenticated" }
+    }
+
+    const { data: comment } = await adminClient
+      .from("comments")
+      .select("author_id, tenant_id")
+      .eq("id", commentId)
+      .single()
+
+    if (!comment || comment.tenant_id !== tenantId) {
+      return { success: false, error: "Comment not found or tenant mismatch" }
+    }
+
+    if (comment.author_id !== user.id) {
+      return { success: false, error: "Unauthorized: You can only edit your own comments" }
+    }
+
+    const { error } = await adminClient
+      .from("comments")
+      .update({ content, updated_at: new Date().toISOString() })
+      .eq("id", commentId)
+
+    if (error) {
+      return { success: false, error: error.message }
+    }
+
+    revalidatePath(`/t/${tenantSlug}/dashboard/requests/${requestId}`)
+    revalidatePath(`/t/${tenantSlug}/admin/requests/${requestId}`)
+
+    return { success: true }
+  } catch (error) {
+    console.error("[v0] Error updating comment:", error)
+    return { success: false, error: "An unexpected error occurred" }
+  }
+}
+
+export async function deleteRequestComment(
+  commentId: string,
+  requestId: string,
+  tenantId: string,
+  tenantSlug: string
+) {
+  try {
+    const supabase = await createServerClient()
+    const adminClient = createAdminClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: "Not authenticated" }
+    }
+
+    const { data: comment } = await adminClient
+      .from("comments")
+      .select("author_id, tenant_id")
+      .eq("id", commentId)
+      .single()
+
+    if (!comment || comment.tenant_id !== tenantId) {
+      return { success: false, error: "Comment not found or tenant mismatch" }
+    }
+
+    if (comment.author_id !== user.id) {
+      // Check if admin
+      const { data: userData } = await adminClient
+        .from("users")
+        .select("role, is_tenant_admin")
+        .eq("id", user.id)
+        .eq("tenant_id", tenantId)
+        .single()
+
+      const isAdmin = userData && (['tenant_admin', 'super_admin'].includes(userData.role) || userData.is_tenant_admin)
+
+      if (!isAdmin) {
+        return { success: false, error: "Unauthorized: You do not have permission to delete this comment" }
+      }
+    }
+
+    const { error } = await adminClient
+      .from("comments")
+      .delete()
+      .eq("id", commentId)
+
+    if (error) {
+      return { success: false, error: error.message }
+    }
+
+    revalidatePath(`/t/${tenantSlug}/dashboard/requests/${requestId}`)
+    revalidatePath(`/t/${tenantSlug}/admin/requests/${requestId}`)
+
+    return { success: true }
+  } catch (error) {
+    console.error("[v0] Error deleting comment:", error)
+    return { success: false, error: "An unexpected error occurred" }
+  }
+}
+
 import { getResidentRequests, getResidentRequestById } from "@/lib/data/resident-requests"
 
 // ... (keep createResidentRequest, updateRequestStatus, addAdminReply)

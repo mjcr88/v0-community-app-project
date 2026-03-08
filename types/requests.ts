@@ -1,4 +1,21 @@
-import { Comment } from "@/lib/data/resident-requests"
+export interface Comment {
+  id: string
+  tenant_id: string
+  author_id: string
+  content: string
+  parent_id: string | null
+  resident_request_id: string | null
+  created_at: string
+  updated_at: string
+  author?: {
+    id: string
+    first_name: string
+    last_name: string
+    profile_picture_url: string | null
+    role?: string
+    is_tenant_admin?: boolean
+  }
+}
 
 export type RequestType = 'maintenance' | 'question' | 'complaint' | 'safety' | 'account_access' | 'other'
 export type RequestStatus = 'pending' | 'in_progress' | 'resolved' | 'rejected'

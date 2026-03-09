@@ -1,0 +1,21 @@
+
+> docs-site@0.0.0 build
+> docusaurus build
+
+[INFO] Website will be built for all these locales: 
+- en
+- es
+[INFO] [en] Creating an optimized production build...
+[webpackbar] ℹ Compiling Client
+[webpackbar] ℹ Compiling Server
+[webpackbar] ✔ Server: Compiled successfully in 361.17ms
+[webpackbar] ✔ Client: Compiled successfully in 458.02ms
+[SUCCESS] Generated static files in "build".
+[INFO] [es] Creating an optimized production build...
+[webpackbar] ℹ Compiling Client
+[webpackbar] ℹ Compiling Server
+[webpackbar] ✔ Server: Compiled successfully in 406.92ms
+[webpackbar] ✔ Client: Compiled successfully in 425.07ms
+
+[INFO] Docusaurus version: 3.9.2
+Node version: v23.11.0

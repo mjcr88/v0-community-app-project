@@ -107,7 +107,7 @@ export async function updateRequestStatus(
       .update(updateData)
       .eq("id", requestId)
       .eq("tenant_id", tenantId)
-      .select("created_by, title, request_type")
+      .select("created_by, original_submitter_id, title, request_type")
       .single()
 
     if (error) {
@@ -116,10 +116,11 @@ export async function updateRequestStatus(
     }
 
     // Send notification to resident about status change
-    if (request.created_by) {
+    const recipientId = request.original_submitter_id || request.created_by
+    if (recipientId) {
       await createNotification({
         tenant_id: tenantId,
-        recipient_id: request.created_by,
+        recipient_id: recipientId,
         type: 'request_status_changed',
         title: `Request ${status}: ${request.title}`,
         message: status === 'rejected' && reason
@@ -179,7 +180,7 @@ export async function reopenResidentRequest(
       })
       .eq("id", requestId)
       .eq("tenant_id", tenantId)
-      .select("created_by, title")
+      .select("created_by, original_submitter_id, title")
       .single()
 
     if (error) {
@@ -188,10 +189,11 @@ export async function reopenResidentRequest(
     }
 
     // Send notification to resident about reopening
-    if (request.created_by) {
+    const recipientId = request.original_submitter_id || request.created_by
+    if (recipientId) {
       await createNotification({
         tenant_id: tenantId,
-        recipient_id: request.created_by,
+        recipient_id: recipientId,
         type: 'request_status_changed',
         title: `Request Reopened: ${request.title}`,
         message: `Your request has been reopened and is now back in progress.`,
@@ -231,7 +233,7 @@ export async function addRequestComment(
     // Get the request details to figure out if the user is authorized to comment
     const { data: request } = await adminClient
       .from("resident_requests")
-      .select("tenant_id, created_by, title, request_type, is_public")
+      .select("tenant_id, created_by, original_submitter_id, title, request_type, is_public")
       .eq("id", requestId)
       .single()
 
@@ -252,7 +254,7 @@ export async function addRequestComment(
       .single()
 
     const isAdmin = userData && (['tenant_admin', 'super_admin'].includes(userData.role) || userData.is_tenant_admin)
-    const isCreator = request.created_by === user.id
+    const isCreator = request.created_by === user.id || request.original_submitter_id === user.id
     const isPublic = request.is_public === true
 
     // Authorization Logic: Creator OR Admin OR (Public post in the same tenant)
@@ -312,10 +314,11 @@ export async function addRequestComment(
         }
       } else if (isAdmin && !isCreator) {
         // Admin replied -> Notify Creator
-        if (request.created_by) {
+        const recipientId = request.original_submitter_id || request.created_by
+        if (recipientId) {
           await createNotification({
             tenant_id: tenantId,
-            recipient_id: request.created_by,
+            recipient_id: recipientId,
             type: 'request_admin_reply', // Reuse or add new type
             title: `Update on your request: ${request.title}`,
             message: content,
@@ -329,10 +332,11 @@ export async function addRequestComment(
         // Notify both original creator and admins
 
         // 1. Notify Creator
-        if (request.created_by) {
+        const recipientId = request.original_submitter_id || request.created_by
+        if (recipientId) {
           await createNotification({
             tenant_id: tenantId,
-            recipient_id: request.created_by,
+            recipient_id: recipientId,
             type: 'request_resident_reply',
             title: `New community comment on your request: ${request.title}`,
             message: content,

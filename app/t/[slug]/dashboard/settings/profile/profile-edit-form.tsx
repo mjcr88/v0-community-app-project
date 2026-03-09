@@ -1,6 +1,6 @@
 "use client"
 
-import type React from "react"
+import React from "react"
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
@@ -133,6 +133,17 @@ export function ProfileEditForm({
     languageSearch: "",
   })
 
+  const latestFormData = React.useRef(formData)
+  latestFormData.current = formData
+
+  const inFlightSave = React.useRef(false)
+  const pendingOverrides = React.useRef<Partial<typeof formData>>({})
+  const saveStatusTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
+  const persistedResident = React.useRef({
+    about: resident.about,
+    journeyStage: resident.journey_stage
+  })
+
   // Inline interest search+create state
   const [allProfileInterests, setAllProfileInterests] = useState(availableInterests)
   const [interestSearch, setInterestSearch] = useState("")
@@ -158,8 +169,18 @@ export function ProfileEditForm({
   const saveProfile = async (silent = false, overrides: Partial<typeof formData> = {}) => {
     if (!silent) setIsLoading(true)
     setSaveStatus("saving")
+    if (saveStatusTimeoutRef.current) {
+      clearTimeout(saveStatusTimeoutRef.current)
+      saveStatusTimeoutRef.current = null
+    }
 
-    const dataToSave = { ...formData, ...overrides }
+    Object.assign(pendingOverrides.current, overrides)
+
+    if (inFlightSave.current) {
+      return
+    }
+
+    inFlightSave.current = true
 
     try {
       if (isSuperAdmin) {
@@ -168,43 +189,61 @@ export function ProfileEditForm({
           router.refresh()
         }
         setSaveStatus("saved")
-        setTimeout(() => setSaveStatus("idle"), 2000)
+        saveStatusTimeoutRef.current = setTimeout(() => setSaveStatus("idle"), 2000)
         return
       }
 
-      await updateProfileAction(resident.id, {
-        firstName: dataToSave.firstName,
-        lastName: dataToSave.lastName,
-        phone: dataToSave.phone,
-        birthday: dataToSave.birthday || null,
-        birthCountry: dataToSave.birthCountry || null,
-        currentCountry: dataToSave.currentCountry || null,
-        about: dataToSave.about,
-        languages: dataToSave.languages,
-        preferredLanguage: dataToSave.preferredLanguage,
-        journeyStage: dataToSave.journeyStage,
-        estimatedMoveInDate: dataToSave.estimatedMoveInDate || null,
-        estimatedConstructionStartDate: dataToSave.estimatedConstructionStartDate || null,
-        estimatedConstructionEndDate: dataToSave.estimatedConstructionEndDate || null,
-        photos: dataToSave.photos,
-        heroPhoto: dataToSave.heroPhoto,
-        bannerImageUrl: dataToSave.bannerImageUrl,
-        userInterests: dataToSave.selectedInterests,
-        userSkills: dataToSave.skills.map(s => ({
-          id: s.skill_id || "",
-          skill_name: s.skill_name!,
-          open_to_requests: s.open_to_requests,
-          isNew: (s as any).isNew !== undefined ? (s as any).isNew : !s.skill_id
-        })),
-        tenantId: resident.tenant_id,
-        slug: tenantSlug,
-      })
+      while (true) {
+        const currentOverrides = { ...pendingOverrides.current }
+        pendingOverrides.current = {}
 
-      if (dataToSave.about !== resident.about) ProfileAnalytics.aboutUpdated("bio")
-      if (dataToSave.journeyStage !== resident.journey_stage) ProfileAnalytics.aboutUpdated("journey")
+        const dataToSave = { ...latestFormData.current, ...currentOverrides }
+        Object.assign(latestFormData.current, currentOverrides)
+
+        await updateProfileAction(resident.id, {
+          firstName: dataToSave.firstName,
+          lastName: dataToSave.lastName,
+          phone: dataToSave.phone,
+          birthday: dataToSave.birthday || null,
+          birthCountry: dataToSave.birthCountry || null,
+          currentCountry: dataToSave.currentCountry || null,
+          about: dataToSave.about,
+          languages: dataToSave.languages,
+          preferredLanguage: dataToSave.preferredLanguage,
+          journeyStage: dataToSave.journeyStage,
+          estimatedMoveInDate: dataToSave.estimatedMoveInDate || null,
+          estimatedConstructionStartDate: dataToSave.estimatedConstructionStartDate || null,
+          estimatedConstructionEndDate: dataToSave.estimatedConstructionEndDate || null,
+          photos: dataToSave.photos,
+          heroPhoto: dataToSave.heroPhoto,
+          bannerImageUrl: dataToSave.bannerImageUrl,
+          userInterests: dataToSave.selectedInterests,
+          userSkills: dataToSave.skills.map(s => ({
+            id: s.skill_id || "",
+            skill_name: s.skill_name!,
+            open_to_requests: s.open_to_requests,
+            isNew: (s as any).isNew !== undefined ? (s as any).isNew : !s.skill_id
+          })),
+          tenantId: resident.tenant_id,
+          slug: tenantSlug,
+        })
+
+        if (dataToSave.about !== persistedResident.current.about) {
+          ProfileAnalytics.aboutUpdated("bio")
+          persistedResident.current.about = dataToSave.about
+        }
+        if (dataToSave.journeyStage !== persistedResident.current.journeyStage) {
+          ProfileAnalytics.aboutUpdated("journey")
+          persistedResident.current.journeyStage = dataToSave.journeyStage
+        }
+
+        if (Object.keys(pendingOverrides.current).length === 0) {
+          break
+        }
+      }
 
       setSaveStatus("saved")
-      setTimeout(() => setSaveStatus("idle"), 2000)
+      saveStatusTimeoutRef.current = setTimeout(() => setSaveStatus("idle"), 2000)
 
       if (!silent) {
         toast({
@@ -226,6 +265,7 @@ export function ProfileEditForm({
         })
       }
     } finally {
+      inFlightSave.current = false
       if (!silent) setIsLoading(false)
     }
   }
@@ -247,13 +287,17 @@ export function ProfileEditForm({
 
   const addLanguage = (language: string) => {
     if (language && !formData.languages.includes(language)) {
-      setFormData({ ...formData, languages: [...formData.languages, language], languageSearch: "" })
+      const newLanguages = [...formData.languages, language]
+      setFormData({ ...formData, languages: newLanguages, languageSearch: "" })
+      saveProfile(true, { languages: newLanguages, languageSearch: "" })
       ProfileAnalytics.languageAdded(language)
     }
   }
 
   const removeLanguage = (language: string) => {
-    setFormData({ ...formData, languages: formData.languages.filter((l) => l !== language) })
+    const newLanguages = formData.languages.filter((l) => l !== language)
+    setFormData({ ...formData, languages: newLanguages })
+    saveProfile(true, { languages: newLanguages })
   }
 
 
@@ -262,10 +306,14 @@ export function ProfileEditForm({
     const interest = allProfileInterests.find(i => i.id === interestId)
     if (formData.selectedInterests.includes(interestId)) {
       if (interest) ProfileAnalytics.interestRemoved(interest.name)
-      setFormData((prev) => ({ ...prev, selectedInterests: prev.selectedInterests.filter(id => id !== interestId) }))
+      const newInterests = formData.selectedInterests.filter(id => id !== interestId)
+      setFormData((prev) => ({ ...prev, selectedInterests: newInterests }))
+      saveProfile(true, { selectedInterests: newInterests })
     } else {
       if (interest) ProfileAnalytics.interestAdded(interest.name)
-      setFormData((prev) => ({ ...prev, selectedInterests: [...prev.selectedInterests, interestId] }))
+      const newInterests = [...formData.selectedInterests, interestId]
+      setFormData((prev) => ({ ...prev, selectedInterests: newInterests }))
+      saveProfile(true, { selectedInterests: newInterests })
     }
   }
 
@@ -274,20 +322,24 @@ export function ProfileEditForm({
     if (newSkillTrimmed) {
       if (!formData.skills.some(s => s.skill_name.toLowerCase() === newSkillTrimmed.toLowerCase())) {
         ProfileAnalytics.skillAdded(newSkillTrimmed, false)
+        const newSkills = [...formData.skills, { skill_name: newSkillTrimmed, open_to_requests: false }]
         setFormData({
           ...formData,
-          skills: [...formData.skills, { skill_name: newSkillTrimmed, open_to_requests: false }],
+          skills: newSkills,
           newSkill: "",
         })
+        saveProfile(true, { skills: newSkills, newSkill: "" })
       }
     }
   }
 
   const removeSkill = (index: number) => {
+    const newSkills = formData.skills.filter((_: any, i: number) => i !== index)
     setFormData({
       ...formData,
-      skills: formData.skills.filter((_: any, i: number) => i !== index),
+      skills: newSkills,
     })
+    saveProfile(true, { skills: newSkills })
     const skillName = formData.skills[index]?.skill_name
     if (skillName) {
       ProfileAnalytics.skillRemoved(skillName)
@@ -298,6 +350,7 @@ export function ProfileEditForm({
     const updatedSkills = [...formData.skills]
     updatedSkills[index].open_to_requests = !updatedSkills[index].open_to_requests
     setFormData({ ...formData, skills: updatedSkills })
+    saveProfile(true, { skills: updatedSkills })
   }
 
   // Find the location for this resident's lot
@@ -428,7 +481,10 @@ export function ProfileEditForm({
                   <Combobox
                     options={COUNTRIES.map((c) => ({ value: c, label: c }))}
                     value={formData.birthCountry}
-                    onValueChange={(value) => setFormData({ ...formData, birthCountry: value })}
+                    onValueChange={(value) => {
+                      setFormData({ ...formData, birthCountry: value })
+                      saveProfile(true, { birthCountry: value })
+                    }}
                     placeholder="Select country"
                     searchPlaceholder="Search countries..."
                   />
@@ -439,7 +495,10 @@ export function ProfileEditForm({
                 <Combobox
                   options={COUNTRIES.map((c) => ({ value: c, label: c }))}
                   value={formData.currentCountry}
-                  onValueChange={(value) => setFormData({ ...formData, currentCountry: value })}
+                  onValueChange={(value) => {
+                    setFormData({ ...formData, currentCountry: value })
+                    saveProfile(true, { currentCountry: value })
+                  }}
                   placeholder="Select country"
                   searchPlaceholder="Search countries..."
                 />
@@ -481,7 +540,10 @@ export function ProfileEditForm({
                 <Combobox
                   options={LANGUAGES.map((l) => ({ value: l, label: l }))}
                   value={formData.preferredLanguage}
-                  onValueChange={(value) => setFormData({ ...formData, preferredLanguage: value })}
+                  onValueChange={(value) => {
+                    setFormData({ ...formData, preferredLanguage: value })
+                    saveProfile(true, { preferredLanguage: value })
+                  }}
                   placeholder="Select preferred language"
                 />
               </div>
@@ -498,7 +560,10 @@ export function ProfileEditForm({
                 <Label htmlFor="journeyStage">Journey Stage *</Label>
                 <Select
                   value={formData.journeyStage}
-                  onValueChange={(value) => setFormData({ ...formData, journeyStage: value })}
+                  onValueChange={(value) => {
+                    setFormData({ ...formData, journeyStage: value })
+                    saveProfile(true, { journeyStage: value })
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select stage" />
@@ -659,10 +724,12 @@ export function ProfileEditForm({
                     // Keep custom skills (no skill_id)
                     const customSkills = formData.skills.filter(s => !s.skill_id)
 
+                    const newSkillsList = [...existingSkills, ...newSkills, ...customSkills]
                     setFormData({
                       ...formData,
-                      skills: [...existingSkills, ...newSkills, ...customSkills]
+                      skills: newSkillsList
                     })
+                    saveProfile(true, { skills: newSkillsList })
                   }}
                   placeholder="Select skills..."
                   searchPlaceholder="Search skills..."

@@ -211,9 +211,9 @@ export function HouseholdStep({ onNext, onBack, onSave, initialData }: Household
             }
 
             await onSave({
-                familyMembers,
-                pets,
-                relationships,
+                familyMembers: overrides.familyMembers !== undefined ? overrides.familyMembers : familyMembers,
+                pets: overrides.pets !== undefined ? overrides.pets : pets,
+                relationships: overrides.relationships !== undefined ? overrides.relationships : relationships,
                 familyName: currentFamilyName,
                 ...overrides
             }, true)

@@ -222,6 +222,10 @@ export async function addRequestComment(
   content: string
 ) {
   try {
+    const trimmedContent = content.trim()
+    if (!trimmedContent) {
+      return { success: false, error: "Comment content cannot be empty" }
+    }
     const supabase = await createServerClient()
     const adminClient = createAdminClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -272,7 +276,7 @@ export async function addRequestComment(
         tenant_id: tenantId,
         author_id: user.id,
         resident_request_id: requestId,
-        content: content,
+        content: trimmedContent,
       })
       .select(`
         *,
@@ -305,7 +309,7 @@ export async function addRequestComment(
               recipient_id: admin.id,
               type: 'request_resident_reply',
               title: `Resident replied to request: ${request.title}`,
-              message: content,
+              message: trimmedContent,
               actor_id: user.id,
               resident_request_id: requestId,
               action_url: `/t/${tenantSlug}/admin/requests/${requestId}`,
@@ -321,7 +325,7 @@ export async function addRequestComment(
             recipient_id: recipientId,
             type: 'request_admin_reply', // Reuse or add new type
             title: `Update on your request: ${request.title}`,
-            message: content,
+            message: trimmedContent,
             actor_id: user.id,
             resident_request_id: requestId,
             action_url: `/t/${tenantSlug}/dashboard/requests/${requestId}`,
@@ -339,7 +343,7 @@ export async function addRequestComment(
             recipient_id: recipientId,
             type: 'request_resident_reply',
             title: `New community comment on your request: ${request.title}`,
-            message: content,
+            message: trimmedContent,
             actor_id: user.id,
             resident_request_id: requestId,
             action_url: `/t/${tenantSlug}/dashboard/requests/${requestId}`,
@@ -360,7 +364,7 @@ export async function addRequestComment(
               recipient_id: admin.id,
               type: 'request_resident_reply',
               title: `Community comment on request: ${request.title}`,
-              message: content,
+              message: trimmedContent,
               actor_id: user.id,
               resident_request_id: requestId,
               action_url: `/t/${tenantSlug}/admin/requests/${requestId}`,
@@ -396,6 +400,11 @@ export async function updateRequestComment(
       return { success: false, error: "Not authenticated" }
     }
 
+    const trimmedContent = content.trim()
+    if (!trimmedContent) {
+      return { success: false, error: "Comment content cannot be empty" }
+    }
+
     const { data: comment } = await adminClient
       .from("comments")
       .select("author_id, tenant_id")
@@ -412,7 +421,7 @@ export async function updateRequestComment(
 
     const { error } = await adminClient
       .from("comments")
-      .update({ content, updated_at: new Date().toISOString() })
+      .update({ content: trimmedContent, updated_at: new Date().toISOString() })
       .eq("id", commentId)
 
     if (error) {

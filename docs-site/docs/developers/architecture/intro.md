@@ -1,3 +1,0 @@
-# Architecture
-
-Nido System Architecture.

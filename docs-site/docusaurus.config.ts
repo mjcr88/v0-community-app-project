@@ -18,14 +18,10 @@ const config: Config = {
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
 
-  i18n: {
-    defaultLocale: 'en',
-    locales: ['en', 'es'],
-    localeConfigs: {
-      en: { label: 'English' },
-      es: { label: 'Español' },
-    },
-  },
+  // i18n: {
+  //   defaultLocale: 'en',
+  //   locales: ['en'],
+  // },
 
   presets: [
     [
@@ -67,16 +63,6 @@ const config: Config = {
           position: 'left',
           label: 'Developers',
         },
-        {
-          type: 'docSidebar',
-          sidebarId: 'featuresSidebar',
-          position: 'left',
-          label: 'Features',
-        },
-        {
-          type: 'localeDropdown',
-          position: 'right',
-        },
       ],
     },
     footer: {
@@ -85,9 +71,9 @@ const config: Config = {
         {
           title: 'Docs',
           items: [
-            { label: 'Residents', to: '/docs/guides/residents/intro' },
-            { label: 'Admins', to: '/docs/guides/admins/intro' },
-            { label: 'API Reference', to: '/docs/developers/api/intro' },
+            { label: 'Residents', to: '/docs/guides/resident/neighbours' },
+            { label: 'Admins', to: '/docs/guides/admin/directory-management' },
+            { label: 'Technical Docs', to: '/docs/developers/residents/schema' },
           ],
         },
         {

@@ -50,7 +50,7 @@ interface NeighboursPageClientProps {
     isTenantAdmin?: boolean
 }
 
-type FilterSection = "neighborhood" | "lot" | "interests" | "skills" | null
+type FilterSection = "neighborhood" | "lot" | "more" | null
 
 const RESIDENTS_PER_PAGE = 10
 
@@ -114,9 +114,10 @@ export function NeighboursPageClient({
 
     // Filter states - now arrays for multi-select
     const [selectedNeighborhoods, setSelectedNeighborhoods] = useState<string[]>([])
+    const [selectedLots, setSelectedLots] = useState<string[]>([])
     const [selectedInterests, setSelectedInterests] = useState<string[]>([])
     const [selectedSkills, setSelectedSkills] = useState<string[]>([])
-    const [selectedLots, setSelectedLots] = useState<string[]>([])
+    const [selectedJourneyStages, setSelectedJourneyStages] = useState<string[]>([])
 
     // Extract unique skills and lots from residents
     const uniqueSkills = useMemo(() => {
@@ -137,6 +138,15 @@ export function NeighboursPageClient({
             if (resident.lots?.lot_number) lots.add(resident.lots.lot_number)
         })
         return Array.from(lots).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+    }, [residents])
+
+    // Extract unique journey stages
+    const uniqueJourneyStages = useMemo(() => {
+        const stages = new Set<string>()
+        residents.forEach((resident) => {
+            if (resident.journey_stage) stages.add(resident.journey_stage)
+        })
+        return Array.from(stages).sort()
     }, [residents])
 
     // Filter residents
@@ -176,9 +186,14 @@ export function NeighboursPageClient({
                 (Array.isArray(resident.user_skills) &&
                     resident.user_skills.some((us: any) => selectedSkills.includes(us.skills?.name)))
 
-            return matchesSearch && matchesNeighborhood && matchesLot && matchesInterest && matchesSkill
+            // Journey Stage filter - match any selected
+            const matchesJourneyStage =
+                selectedJourneyStages.length === 0 ||
+                (resident.journey_stage && selectedJourneyStages.includes(resident.journey_stage));
+
+            return matchesSearch && matchesNeighborhood && matchesLot && matchesInterest && matchesSkill && matchesJourneyStage
         })
-    }, [residents, search, selectedNeighborhoods, selectedLots, selectedInterests, selectedSkills])
+    }, [residents, search, selectedNeighborhoods, selectedLots, selectedInterests, selectedSkills, selectedJourneyStages])
 
     // Filter families
     const filteredFamilies = useMemo(() => {
@@ -222,21 +237,22 @@ export function NeighboursPageClient({
         selectedNeighborhoods.length +
         selectedInterests.length +
         selectedSkills.length +
-        selectedLots.length
+        selectedLots.length +
+        selectedJourneyStages.length
 
     const clearAllFilters = () => {
         setSelectedNeighborhoods([])
         setSelectedInterests([])
         setSelectedSkills([])
         setSelectedLots([])
+        setSelectedJourneyStages([])
         setActiveFilter(null)
     }
 
     const filterSections = [
         { id: "neighborhood" as const, label: "Neighborhood", icon: MapPin },
         { id: "lot" as const, label: "Lot", icon: Home },
-        { id: "interests" as const, label: "Interests", icon: Lightbulb },
-        { id: "skills" as const, label: "Skills", icon: Wrench },
+        { id: "more" as const, label: "More Filters", icon: Plus },
     ]
 
     return (
@@ -451,6 +467,17 @@ export function NeighboursPageClient({
                                     <span className="ml-1">×</span>
                                 </Badge>
                             ))}
+                            {selectedJourneyStages.map((stage) => (
+                                <Badge
+                                    key={stage}
+                                    variant="secondary"
+                                    className="gap-1 cursor-pointer hover:bg-destructive/10 hover:text-destructive"
+                                    onClick={() => setSelectedJourneyStages(prev => prev.filter(s => s !== stage))}
+                                >
+                                    {stage.charAt(0).toUpperCase() + stage.slice(1)}
+                                    <span className="ml-1">×</span>
+                                </Badge>
+                            ))}
                             <Button variant="ghost" size="sm" onClick={clearAllFilters} className="h-6 px-2 text-xs">
                                 Clear all
                             </Button>
@@ -511,29 +538,41 @@ export function NeighboursPageClient({
                                             </div>
                                         )}
 
-                                        {activeFilter === "interests" && (
-                                            <div className="space-y-2">
-                                                <MultiSelect
-                                                    options={allInterests.map(i => ({ value: i.name, label: i.name }))}
-                                                    selected={selectedInterests}
-                                                    onChange={setSelectedInterests}
-                                                    placeholder="Select interests..."
-                                                    searchPlaceholder="Search interests..."
-                                                    emptyMessage="No interests found."
-                                                />
-                                            </div>
-                                        )}
-
-                                        {activeFilter === "skills" && (
-                                            <div className="space-y-2">
-                                                <MultiSelect
-                                                    options={uniqueSkills.map(s => ({ value: s, label: s }))}
-                                                    selected={selectedSkills}
-                                                    onChange={setSelectedSkills}
-                                                    placeholder="Select skills..."
-                                                    searchPlaceholder="Search skills..."
-                                                    emptyMessage="No skills found."
-                                                />
+                                        {activeFilter === "more" && (
+                                            <div className="space-y-6">
+                                                <div className="space-y-2">
+                                                    <h4 className="font-medium text-sm">Interests</h4>
+                                                    <MultiSelect
+                                                        options={allInterests.map(i => ({ value: i.name, label: i.name }))}
+                                                        selected={selectedInterests}
+                                                        onChange={setSelectedInterests}
+                                                        placeholder="Select interests..."
+                                                        searchPlaceholder="Search interests..."
+                                                        emptyMessage="No interests found."
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <h4 className="font-medium text-sm">Skills</h4>
+                                                    <MultiSelect
+                                                        options={uniqueSkills.map(s => ({ value: s, label: s }))}
+                                                        selected={selectedSkills}
+                                                        onChange={setSelectedSkills}
+                                                        placeholder="Select skills..."
+                                                        searchPlaceholder="Search skills..."
+                                                        emptyMessage="No skills found."
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <h4 className="font-medium text-sm">Journey Phase</h4>
+                                                    <MultiSelect
+                                                        options={uniqueJourneyStages.map(s => ({ value: s, label: s.charAt(0).toUpperCase() + s.slice(1) }))}
+                                                        selected={selectedJourneyStages}
+                                                        onChange={setSelectedJourneyStages}
+                                                        placeholder="Select journey phases..."
+                                                        searchPlaceholder="Search journey phases..."
+                                                        emptyMessage="No journey phases found."
+                                                    />
+                                                </div>
                                             </div>
                                         )}
                                     </CardContent>

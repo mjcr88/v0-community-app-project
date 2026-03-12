@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useRef, useState, useMemo, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Mail, User, Users, MapPin, Check, AlertCircle, Loader2 } from "lucide-react"
@@ -307,13 +307,31 @@ export function RequestAccessForm({ tenant }: RequestAccessFormProps) {
                             Lot Number <span className="text-mist-gray text-xs">(optional)</span>
                         </Label>
                         <Combobox
-                            options={[
-                                { value: "__none__", label: "— No lot selected —" },
-                                ...lots.map((lot) => ({
-                                    value: lot.id,
-                                    label: `${lot.is_occupied ? "🟡" : "🟢"} Lot ${lot.lot_number}`,
-                                })),
-                            ]}
+                            options={useMemo(() => [
+                                {
+                                    value: "__none__",
+                                    label: "— No lot selected —",
+                                    // Use a string that doesn't match common lot prefixes (A-F).
+                                    // This ensures that when a user starts typing a lot number, 
+                                    // the "None" option disappears and doesn't hijack focus/scrolling.
+                                    search: "zz-none-zz"
+                                },
+                                ...([...lots]) // Copy to avoid mutation
+                                    .sort((a, b) => {
+                                        // Natural sort: alphabetical prefix, then numerical value
+                                        return a.lot_number.localeCompare(b.lot_number, undefined, {
+                                            numeric: true,
+                                            sensitivity: 'base'
+                                        })
+                                    })
+                                    .map((lot) => ({
+                                        value: lot.id,
+                                        label: `${lot.is_occupied ? "🟡" : "🟢"} Lot ${lot.lot_number}`,
+                                        // Search Ranking Weighting:
+                                        // Absolute start match = highest score.
+                                        search: `${lot.lot_number} | ${lot.lot_number.replace(/[\s-]/g, "")} | Lot ${lot.lot_number}`,
+                                    })),
+                            ], [lots, lotsLoading])}
                             value={selectedLotId || "__none__"}
                             onValueChange={(val) => setSelectedLotId(val === "__none__" ? "" : val)}
                             placeholder={lotsLoading ? "Loading lots..." : "Search for your lot..."}

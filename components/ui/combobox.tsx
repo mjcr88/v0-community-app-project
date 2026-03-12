@@ -8,7 +8,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
 interface ComboboxProps {
-  options: { value: string; label: string }[]
+  options: { value: string; label: string; search?: string }[]
   value?: string
   onValueChange: (value: string) => void
   placeholder?: string
@@ -52,9 +52,9 @@ export function Combobox({
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
-                  value={option.value}
-                  onSelect={(currentValue) => {
-                    onValueChange(currentValue === value ? "" : currentValue)
+                  value={option.search || option.label}
+                  onSelect={() => {
+                    onValueChange(option.value === value ? "" : option.value)
                     setOpen(false)
                   }}
                 >

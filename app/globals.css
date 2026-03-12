@@ -54,6 +54,7 @@
     /* #D4A574 - Honey */
     --error: 6 50% 55%;
     /* #C25B4F - Clay */
+    --clay-red: 6 50% 55%;
     --info: var(--river);
     /* Information */
 
@@ -277,6 +278,7 @@
     --destructive: var(--error);
     --destructive-foreground: var(--sunlight);
 
+    --clay-red: 6 50% 55%;
     /* Borders */
     --border: 0 0% 25%;
     /* Twilight Stone #404040 */

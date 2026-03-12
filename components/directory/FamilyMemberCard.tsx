@@ -53,9 +53,9 @@ export function FamilyMemberCard({
 
                     {/* Content */}
                     <div className="flex-1 min-w-0 space-y-1">
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                             {/* Name */}
-                            <h4 className={`font-semibold truncate ${compact ? "text-sm" : "text-base"}`}>
+                            <h4 className={`font-semibold line-clamp-2 leading-tight ${compact ? "text-sm" : "text-base"}`}>
                                 {member.first_name} {member.last_name}
                             </h4>
                             {isPrimaryContact && (
@@ -85,7 +85,7 @@ export function FamilyMemberCard({
 
                         {/* Relationship if available */}
                         {member.family_relationship && (
-                            <p className="text-xs text-muted-foreground capitalize">
+                            <p className="text-xs text-muted-foreground capitalize line-clamp-2">
                                 {member.family_relationship}
                             </p>
                         )}

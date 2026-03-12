@@ -16,7 +16,7 @@ Sprint 5 focuses on stabilizing the mobile experience and resolving critical UX 
 | #116 | View on Map Refactor | UX | XS | [x] |
 | #114 | Mapbox Cleanup & Icons | Parked | XS |
 | #141 | Announcement Archive 404 | Bug | S | [x] |
-| #140 | Family UI Overflow | Bug | S |
+| #140 | Family UI Overflow | Bug | S | [x] |
 | #139 | Event Creation Test Icon | Polish | XS |
 | #156 | List Member Visibility | Bug | S |
 | #155 | Lot Search Fix | Bug | S | [x] |

@@ -247,19 +247,19 @@ export function ListDetailModal({ list, open, onOpenChange, allResidents }: List
                 <Separator className="my-2" />
 
                 {/* Member Search */}
-                <div className="px-6 py-2">
+                <div className="px-6 py-2 relative">
                     <Command className="border rounded-md shadow-sm overflow-visible">
                         <CommandInput
-                            placeholder="Add new member..."
+                            placeholder="Search names to add..."
                             onFocus={() => setSearchOpen(true)}
-                            onBlur={() => setTimeout(() => setSearchOpen(false), 200)} // Delay to allow click
+                            onBlur={() => setTimeout(() => setSearchOpen(false), 200)}
                         />
                         {searchOpen && (
-                            <div className="absolute top-10 left-0 right-0 bg-popover z-50 border rounded-md shadow-lg max-h-[300px] overflow-auto">
+                            <div className="absolute top-[calc(100%+4px)] left-6 right-6 bg-popover z-50 border rounded-md shadow-lg max-h-[300px] overflow-auto">
                                 <CommandList>
                                     <CommandEmpty>No neighbors found.</CommandEmpty>
                                     <CommandGroup heading="Neighbors">
-                                        {availableResidents.slice(0, 10).map((resident) => (
+                                        {availableResidents.map((resident) => (
                                             <CommandItem
                                                 key={resident.id}
                                                 onSelect={() => handleAddMember(resident.id)}

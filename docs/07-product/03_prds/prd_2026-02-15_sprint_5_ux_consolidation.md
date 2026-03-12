@@ -17,8 +17,8 @@ Sprint 5 focuses on stabilizing the mobile experience and resolving critical UX 
 | #114 | Mapbox Cleanup & Icons | Parked | XS |
 | #141 | Announcement Archive 404 | Bug | S | [x] |
 | #140 | Family UI Overflow | Bug | S | [x] |
-| #139 | Event Creation Test Icon | Polish | XS |
-| #156 | List Member Visibility | Bug | S |
+| #139 | Event Creation Test Icon | Polish | XS | [x] |
+| #156 | List Member Visibility | Bug | S | [x] |
 | #155 | Lot Search Fix | Bug | S | [x] |
 
 ## Architecture & Git Strategy
@@ -46,6 +46,6 @@ Sprint 5 focuses on stabilizing the mobile experience and resolving critical UX 
 - [ ] **AC1**: Map markers for facilities display icons or emojis without duplication (#114).
 - [ ] **AC2**: Family member cards do not cause horizontal scrolling on iPhone SE sized screens (#140).
 - [x] **AC3**: Lot search matches exact and partial strings regardless of spaces (#155).
-- [ ] **AC4**: All members are searchable in the List creation modall (#156).
+- [x] **AC4**: All members are searchable in the List creation modall (#156).
 - [x] **AC5**: Admin confirm rejection button is visible and correctly styled (#155).
 - [x] **AC6**: Announcement "View All" and "View Archive" links correctly point to the Official page announcements tab (#141).

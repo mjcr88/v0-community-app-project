@@ -9,10 +9,10 @@ export default async function ResidentCommunityMapPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>
-  searchParams: Promise<{ type?: string }>
+  searchParams: Promise<{ type?: string; highlightLocationId?: string }>
 }) {
   const { slug } = await params
-  const { type: initialTypeFilter } = await searchParams
+  const { type: initialTypeFilter, highlightLocationId } = await searchParams
 
   const supabase = await createClient()
 
@@ -180,6 +180,7 @@ export default async function ResidentCommunityMapPage({
       boundaryLocationId={boundaryLocation?.id}
       mapZoom={13}
       initialTypeFilter={initialTypeFilter}
+      highlightLocationId={highlightLocationId}
     />
   )
 }

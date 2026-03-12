@@ -887,10 +887,10 @@ export function FamilyManagementForm({
                       <AvatarFallback>{member.first_name[0]}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm">
+                      <p className="font-medium text-sm line-clamp-2">
                         {member.first_name} {member.last_name}
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground truncate">
                         {member.email || "No email"}
                       </p>
                     </div>
@@ -1017,9 +1017,9 @@ export function FamilyManagementForm({
                                 <AvatarImage src={petHeroPhoto || "/placeholder.svg"} />
                                 <AvatarFallback>{petInitials}</AvatarFallback>
                               </Avatar>
-                              <div>
-                                <p className="font-semibold">{pet.name}</p>
-                                <p className="text-xs text-muted-foreground">
+                              <div className="min-w-0">
+                                <p className="font-semibold line-clamp-2">{pet.name}</p>
+                                <p className="text-xs text-muted-foreground truncate">
                                   {pet.species} {pet.breed && `• ${pet.breed}`}
                                 </p>
                               </div>

@@ -389,9 +389,9 @@ export function NeighboursTable({
                         <Button variant="ghost" size="sm" asChild>
                           <Link href={`/t/${tenantSlug}/dashboard/neighbours/${resident.id}`}>View Profile</Link>
                         </Button>
-                        {resident.lots?.id && (
+                        {resident.lot_id && (
                           <Button variant="ghost" size="sm" asChild>
-                            <Link href={`/t/${tenantSlug}/dashboard/map?highlightLot=${resident.lots.id}`}>
+                            <Link href={`/t/${tenantSlug}/dashboard/community-map?highlightLocationId=${resident.lot_id}`}>
                               <Map className="h-4 w-4 mr-1" />
                               View on Map
                             </Link>

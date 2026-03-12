@@ -68,6 +68,7 @@ export function MapSectionLazy({
             checkIns={checkIns}
             showControls={false}
             className="h-full w-full"
+            highlightLocationId={lotLocationId}
           />
         )}
       </div>

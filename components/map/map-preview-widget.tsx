@@ -60,7 +60,7 @@ export function MapPreviewWidget({
           <p className="text-sm text-muted-foreground">Explore locations in your community</p>
         </div>
         <Button asChild size="sm" className="shadow-lg">
-          <Link href={`/t/${tenantSlug}/dashboard/map`}>
+          <Link href={`/t/${tenantSlug}/dashboard/community-map`}>
             <ExternalLink className="h-4 w-4 mr-2" />
             Map
           </Link>

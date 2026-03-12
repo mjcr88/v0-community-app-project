@@ -44,8 +44,8 @@ Sprint 5 focuses on stabilizing the mobile experience and resolving critical UX 
 
 ## Acceptance Criteria
 - [ ] **AC1**: Map markers for facilities display icons or emojis without duplication (#114).
-- [ ] **AC2**: Family member cards do not cause horizontal scrolling on iPhone SE sized screens (#140).
+- [ ] **AC2**: Family member cards do not cause horizontal scrolling on iPhone SE-sized screens (#140).
 - [x] **AC3**: Lot search matches exact and partial strings regardless of spaces (#155).
-- [x] **AC4**: All members are searchable in the List creation modall (#156).
+- [x] **AC4**: All members are searchable in the List creation modal (#156).
 - [x] **AC5**: Admin confirm rejection button is visible and correctly styled (#155).
 - [x] **AC6**: Announcement "View All" and "View Archive" links correctly point to the Official page announcements tab (#141).

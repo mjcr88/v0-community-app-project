@@ -259,7 +259,7 @@ export default async function LocationDetailsPage({ params }: { params: Promise<
             {/* Mobile Map Button */}
             <div className="md:hidden shrink-0">
               <Button variant="outline" size="sm" asChild>
-                <Link href={`/t/${slug}/dashboard/map?highlightLocation=${location.id}`}>
+                <Link href={`/t/${slug}/dashboard/community-map?highlightLocationId=${location.id}`}>
                   <MapIcon className="h-4 w-4 mr-2" />
                   Map
                 </Link>
@@ -276,7 +276,7 @@ export default async function LocationDetailsPage({ params }: { params: Promise<
             </Button>
           )}
           <Button variant="outline" asChild>
-            <Link href={`/t/${slug}/dashboard/map?highlightLocation=${location.id}`}>
+            <Link href={`/t/${slug}/dashboard/community-map?highlightLocationId=${location.id}`}>
               <MapIcon className="h-4 w-4 mr-2" />
               View on Map
             </Link>

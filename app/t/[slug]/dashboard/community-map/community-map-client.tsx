@@ -26,6 +26,7 @@ interface CommunityMapClientProps {
     boundaryLocationId?: string
     mapZoom?: number
     initialTypeFilter?: string
+    highlightLocationId?: string
 }
 
 export function CommunityMapClient({
@@ -35,10 +36,11 @@ export function CommunityMapClient({
     checkIns = [],
     mapCenter,
     mapZoom = 14,
+    highlightLocationId: propHighlightLocationId,
 }: CommunityMapClientProps) {
     const [searchQuery, setSearchQuery] = useState("")
     const [selectedFilters, setSelectedFilters] = useState<Set<string>>(new Set())
-    const [highlightedLocationId, setHighlightedLocationId] = useState<string | null>(null)
+    const [highlightedLocationId, setHighlightedLocationId] = useState<string | null>(propHighlightLocationId || null)
     const [showSearchResults, setShowSearchResults] = useState(false)
 
     // Filter locations based on search query
@@ -62,6 +64,17 @@ export function CommunityMapClient({
 
         return () => clearTimeout(timer)
     }, [searchQuery, filteredLocations.length])
+
+    // "Tidy up" URL by removing highlightLocationId once processed
+    useEffect(() => {
+        if (propHighlightLocationId) {
+            const url = new URL(window.location.href)
+            if (url.searchParams.has("highlightLocationId")) {
+                url.searchParams.delete("highlightLocationId")
+                window.history.replaceState({}, "", url.toString())
+            }
+        }
+    }, [propHighlightLocationId])
 
     // Calculate type counts
     const typeCounts = useMemo(() => {

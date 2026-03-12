@@ -15,7 +15,7 @@ Sprint 5 focuses on stabilizing the mobile experience and resolving critical UX 
 |-------|-------|------|------|
 | #116 | View on Map Refactor | UX | XS | [x] |
 | #114 | Mapbox Cleanup & Icons | Parked | XS |
-| #141 | Announcement Archive 404 | Bug | S |
+| #141 | Announcement Archive 404 | Bug | S | [x] |
 | #140 | Family UI Overflow | Bug | S |
 | #139 | Event Creation Test Icon | Polish | XS |
 | #156 | List Member Visibility | Bug | S |
@@ -48,3 +48,4 @@ Sprint 5 focuses on stabilizing the mobile experience and resolving critical UX 
 - [x] **AC3**: Lot search matches exact and partial strings regardless of spaces (#155).
 - [ ] **AC4**: All members are searchable in the List creation modall (#156).
 - [x] **AC5**: Admin confirm rejection button is visible and correctly styled (#155).
+- [x] **AC6**: Announcement "View All" and "View Archive" links correctly point to the Official page announcements tab (#141).

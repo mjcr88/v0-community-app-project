@@ -59,7 +59,7 @@ export function AnnouncementsWidget({ slug, tenantId, userId }: AnnouncementsWid
         message="You're all caught up! Check the archive for past updates."
         action={
           <Button asChild variant="outline" size="sm">
-            <Link href={`/t/${slug}/dashboard/announcements`}>View Archive</Link>
+            <Link href={`/t/${slug}/dashboard/official?tab=announcements`}>View Archive</Link>
           </Button>
         }
       />
@@ -78,7 +78,7 @@ export function AnnouncementsWidget({ slug, tenantId, userId }: AnnouncementsWid
           )}
         </div>
         <Button asChild variant="ghost" size="sm">
-          <Link href={`/t/${slug}/dashboard/announcements`}>View All</Link>
+          <Link href={`/t/${slug}/dashboard/official?tab=announcements`}>View All</Link>
         </Button>
       </div>
 

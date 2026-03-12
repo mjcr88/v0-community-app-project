@@ -361,3 +361,10 @@ This ensures only occupied interests are shown, and newly created interests appe
 **Context**: Issue #155 (Lot Search). The dropdown was jumping to the bottom because the currently selected item ("None") matched the search query and $cmdk$ prioritized keeping the focused item in view.
 **Problem**: If a low-score match is currently selected, common list components may auto-scroll to it, obscuring higher-score matches at the top.
 **Fix**: Ensure non-priority options (like "None" or "Reset") have search values that do NOT match common search prefixes (e.g., set `search: "zz-none-zz"`). This forces the item to disappear during specific searches, resetting the focus to the top match.
+
+### [2026-03-12] Tab-Based Feature Migration
+**Type**: Pattern
+**Context**: Issue #141 (Announcement Archive 404). A feature (Announcements) was moved from its own dedicated route to a tab inside a unified "Official" page.
+**Problem**: Hardcoded links in widgets continued to point to the old route (`/dashboard/announcements`), leading to 404 errors.
+**Fix**: Update navigational links across the codebase to use the new unified route with appropriate search parameters (e.g., `/dashboard/official?tab=announcements`). Use `revalidatePath` on the old paths to clear any stale cache, even if the route is technically "dead".
+**Strategy**: When consolidating features into tabs, audit global components (Widgets, Notifications, Feed) for navigational debt.

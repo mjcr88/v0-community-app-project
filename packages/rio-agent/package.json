@@ -1,0 +1,26 @@
+{
+    "name": "rio-agent",
+    "version": "0.1.0",
+    "description": "Río AI Community Assistant — Mastra agent service (Sprint 0 scaffold)",
+    "type": "module",
+    "scripts": {
+        "build": "tsc",
+        "start": "node dist/index.js",
+        "dev": "tsx watch src/index.ts",
+        "typecheck": "tsc --noEmit",
+        "lint": "eslint src --ext .ts"
+    },
+    "dependencies": {
+        "@mastra/core": "latest",
+        "fastify": "^5.8.2"
+    },
+    "devDependencies": {
+        "@types/node": "^22",
+        "eslint": "^9",
+        "tsx": "^4",
+        "typescript": "^5"
+    },
+    "engines": {
+        "node": ">=20"
+    }
+}

@@ -12,3 +12,6 @@ dist/
 
 # OS artifacts
 .DS_Store
+
+# Mastra
+.mastra/

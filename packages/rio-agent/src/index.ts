@@ -9,10 +9,18 @@ import { rioAgent } from "./agents/rio-agent.js";
  * This file replaces the previous Fastify implementation.
  * The Mastra CLI ('mastra start' / 'mastra dev') looks for an exported 'mastra' instance.
  */
+const connectionString = process.env.DATABASE_URL;
+
+if (!connectionString) {
+    throw new Error(
+        "DATABASE_URL is not set. Please add the Supabase Connection String (Transaction Pooler) to your environment variables.",
+    );
+}
+
 export const mastra = new Mastra({
     storage: new PostgresStore({
         id: "rio-storage",
-        connectionString: process.env.DATABASE_URL!,
+        connectionString,
     }),
     agents: {
         "rio-agent": rioAgent,

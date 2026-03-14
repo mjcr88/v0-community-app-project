@@ -78,6 +78,24 @@ export const mastra = new Mastra({
                     });
                 },
             }),
+            /**
+             * Manual verification route to check environment variables.
+             * Returns masked values to confirm they are set correctly on Railway.
+             */
+            registerApiRoute("/config-check", {
+                method: "GET",
+                requiresAuth: false,
+                handler: async (c) => {
+                    const mask = (val?: string) => (val ? `${val.slice(0, 4)}...${val.slice(-4)}` : "MISSING");
+                    return c.json({
+                        RIO_DATABASE_URL: mask(process.env.RIO_DATABASE_URL),
+                        OPENROUTER_API_KEY: mask(process.env.OPENROUTER_API_KEY),
+                        SUPABASE_URL: mask(process.env.SUPABASE_URL),
+                        NODE_ENV: process.env.NODE_ENV || "not set",
+                        PORT: process.env.PORT || "not set",
+                    });
+                },
+            }),
         ],
     },
 });

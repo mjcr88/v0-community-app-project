@@ -18,7 +18,7 @@ function requireEnv(name: string): string {
     return value;
 }
 
-const connectionString = requireEnv("DATABASE_URL");
+const connectionString = requireEnv("RIO_DATABASE_URL");
 
 export const mastra = new Mastra({
     storage: new PostgresStore({

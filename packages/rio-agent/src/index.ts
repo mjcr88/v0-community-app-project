@@ -1,68 +1,38 @@
-import Fastify, { FastifyReply, FastifyRequest } from "fastify";
+import { Mastra } from "@mastra/core";
+import { registerApiRoute } from "@mastra/core/server";
 import { rioAgent } from "./agents/rio-agent.js";
 
-const server = Fastify({ logger: true });
-const PORT = Number(process.env.PORT) || 3001;
-
 /**
- * AC1: Health check endpoint.
- * Returns 200 { status: "ok" } — used by Railway to verify the service is alive.
- */
-server.get("/health", async (_request: FastifyRequest, reply: FastifyReply) => {
-    return reply.status(200).send({ status: "ok" });
-});
-
-/**
- * AC2: Mock SSE streaming endpoint.
+ * RioAgent Service — native Mastra implementation.
  *
- * Returns a text/event-stream response that emits 5 mock token events,
- * then closes with data: [DONE]. This validates the SSE pipeline before
- * real LLM integration in Sprint 8.
+ * This file replaces the previous Fastify implementation.
+ * The Mastra CLI ('mastra start' / 'mastra dev') looks for an exported 'mastra' instance.
  */
-server.post("/api/chat", async (_request: FastifyRequest, reply: FastifyReply) => {
-    const mockTokens = [
-        "Hola,",
-        " soy",
-        " Río.",
-        " ¿En",
-        " qué",
-        " puedo",
-        " ayudarte",
-        " hoy?",
-    ];
-
-    reply.raw.writeHead(200, {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
-        "Access-Control-Allow-Origin": "*",
-    });
-
-    for (const token of mockTokens) {
-        const event = `data: ${JSON.stringify({ token })}\n\n`;
-        reply.raw.write(event);
-        await sleep(150);
-    }
-
-    reply.raw.write("data: [DONE]\n\n");
-    reply.raw.end();
+export const mastra = new Mastra({
+    agents: {
+        "rio-agent": rioAgent,
+    },
+    server: {
+        port: Number(process.env.PORT) || 3001,
+        host: "0.0.0.0",
+        studioBase: "/", // Mount the Playground/Studio UI at the root
+        build: {
+            swaggerUI: true, // Enable interactive OpenAPI docs at /swagger-ui
+        },
+        apiRoutes: [
+            /**
+             * AC1: Health check endpoint for Railway.
+             * Note: registerApiRoute prefixes must NOT start with '/api' (reserved).
+             */
+            registerApiRoute("/health", {
+                method: "GET",
+                requiresAuth: false,
+                handler: async (c) => {
+                    return c.json({ status: "ok" });
+                },
+            }),
+        ],
+    },
 });
 
-function sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-const start = async (): Promise<void> => {
-    try {
-        // Ensure RioAgent is referenced so it initializes and logs on startup (AC3)
-        void rioAgent;
-
-        await server.listen({ port: PORT, host: "0.0.0.0" });
-        server.log.info(`Río agent service listening on port ${PORT}`);
-    } catch (err) {
-        server.log.error(err);
-        process.exit(1);
-    }
-};
-
-void start();
+console.log("RioAgent initialized via native Mastra server");

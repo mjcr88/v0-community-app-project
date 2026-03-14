@@ -20,7 +20,14 @@
 - **Production Start**: Updated `start` script to point directly to `.mastra/output/index.mjs` and set `MASTRA_STUDIO_PATH` for production Studio support.
 - **Verification**: Local build successful; pushing to Railway for verified deployment.
 
-## Next Steps
-- Monitor Railway build.
-- Verify Playground at root `/`.
-- Verify `/health` (Custom Route).
+## [11:30] Session Memory & Database Connectivity
+- **Mastra Memory**: Discovered that `Memory` class is now in a separate `@mastra/memory` package. Installed it and updated `rio-agent.ts`.
+- **Database Store**: Configured `PostgresStore` from `@mastra/pg` in `src/index.ts`.
+- **Connectivity Issue**: High-risk "Gotcha" found — standard Supabase direct connection host (`db.xxx.supabase.co`) failed with `ENOTFOUND` locally.
+- **Fix**: Switched to the **Supabase Transaction Pooler** URI (port `6543`) which resolved the dns/connectivity issue.
+- **Verification**: Verified connection using a standalone `test-db.js` script and successfully restarted `mastra dev`.
+
+## [12:00] Final Verification & Closeout
+- **AC Verification**: Confirmed AC1-AC4 are functionally complete with persistent memory wired.
+- **Documentation**: Updated `lessons_learned.md` and `documentation_gaps.md` with Pooler and Mastra-package specific insights.
+- **Sprint 7 PRD**: Updated PRD tracking for #167 to `✅ Done`.

@@ -1,4 +1,5 @@
 import { Agent } from "@mastra/core/agent";
+import { Memory } from "@mastra/memory";
 
 /**
  * RioAgent — Sprint 0 scaffold stub.
@@ -20,6 +21,7 @@ export const rioAgent = new Agent({
         url: "https://openrouter.ai/api/v1",
         apiKey: process.env.OPENROUTER_API_KEY ?? "stub-key",
     },
+    memory: new Memory(),
 });
 
 console.log("RioAgent initialized");

@@ -1,9 +1,10 @@
 import { x as __commonJS, y as __require } from './index.mjs';
 import '@mastra/core/evals/scoreTraces';
-import './mastra.mjs';
 import '@mastra/core';
+import '@mastra/pg';
 import '@mastra/core/server';
 import '@mastra/core/agent';
+import '@mastra/memory';
 import 'fs/promises';
 import 'https';
 import 'path';
@@ -12,10 +13,8 @@ import 'http';
 import 'http2';
 import 'stream';
 import 'crypto';
-import 'hono/utils/mime';
 import 'fs';
 import 'process';
-import 'hono/html';
 import '@mastra/core/tools';
 import 'zod';
 import '@mastra/core/schema';
@@ -39,13 +38,7 @@ import 'child_process';
 import 'util';
 import 'os';
 import '@mastra/core/workflows';
-import 'hono';
 import 'buffer';
-import 'hono/compress';
-import 'hono/cors';
-import 'hono/logger';
-import 'hono/timeout';
-import 'hono/http-exception';
 import './tools.mjs';
 
 

@@ -1,4 +1,5 @@
 import { Mastra } from "@mastra/core";
+import { PostgresStore } from "@mastra/pg";
 import { registerApiRoute } from "@mastra/core/server";
 import { rioAgent } from "./agents/rio-agent.js";
 
@@ -9,6 +10,10 @@ import { rioAgent } from "./agents/rio-agent.js";
  * The Mastra CLI ('mastra start' / 'mastra dev') looks for an exported 'mastra' instance.
  */
 export const mastra = new Mastra({
+    storage: new PostgresStore({
+        id: "rio-storage",
+        connectionString: process.env.DATABASE_URL!,
+    }),
     agents: {
         "rio-agent": rioAgent,
     },

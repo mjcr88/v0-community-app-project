@@ -1,6 +1,7 @@
 import { Mastra } from "@mastra/core";
 import { PostgresStore } from "@mastra/pg";
 import { registerApiRoute } from "@mastra/core/server";
+import { streamText } from "hono/streaming";
 import { rioAgent } from "./agents/rio-agent.js";
 
 /**
@@ -9,13 +10,15 @@ import { rioAgent } from "./agents/rio-agent.js";
  * This file replaces the previous Fastify implementation.
  * The Mastra CLI ('mastra start' / 'mastra dev') looks for an exported 'mastra' instance.
  */
-const connectionString = process.env.DATABASE_URL;
-
-if (!connectionString) {
-    throw new Error(
-        "DATABASE_URL is not set. Please add the Supabase Connection String (Transaction Pooler) to your environment variables.",
-    );
+function requireEnv(name: string): string {
+    const value = process.env[name];
+    if (!value) {
+        throw new Error(`Missing required environment variable: ${name}`);
+    }
+    return value;
 }
+
+const connectionString = requireEnv("DATABASE_URL");
 
 export const mastra = new Mastra({
     storage: new PostgresStore({
@@ -31,6 +34,7 @@ export const mastra = new Mastra({
         studioBase: "/", // Mount the Playground/Studio UI at the root
         build: {
             swaggerUI: true, // Enable interactive OpenAPI docs at /swagger-ui
+            openAPIDocs: true, // Required for Swagger UI to function
         },
         apiRoutes: [
             /**
@@ -42,6 +46,36 @@ export const mastra = new Mastra({
                 requiresAuth: false,
                 handler: async (c) => {
                     return c.json({ status: "ok" });
+                },
+            }),
+            /**
+             * AC2: Mock SSE streaming endpoint.
+             * Note: registerApiRoute prefixes must NOT start with '/api' (reserved).
+             * Exposed as POST /api/chat.
+             */
+            registerApiRoute("/chat", {
+                method: "POST",
+                requiresAuth: false,
+                handler: async (c) => {
+                    return streamText(c, async (stream) => {
+                        const mockTokens = [
+                            "Hola,",
+                            " soy",
+                            " Río.",
+                            " ¿En",
+                            " qué",
+                            " puedo",
+                            " ayudarte",
+                            " hoy?",
+                        ];
+
+                        for (const token of mockTokens) {
+                            await stream.write(`data: ${JSON.stringify({ token })}\n\n`);
+                            await stream.sleep(150);
+                        }
+
+                        await stream.write("data: [DONE]\n\n");
+                    });
                 },
             }),
         ],

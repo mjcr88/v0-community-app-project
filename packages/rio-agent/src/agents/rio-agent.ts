@@ -1,6 +1,14 @@
 import { Agent } from "@mastra/core/agent";
 import { Memory } from "@mastra/memory";
 
+const openRouterApiKey = process.env.OPENROUTER_API_KEY;
+
+if (!openRouterApiKey && process.env.NODE_ENV !== "development") {
+    throw new Error(
+        "OPENROUTER_API_KEY is not set. Please add the OpenRouter API key to your environment variables.",
+    );
+}
+
 /**
  * RioAgent — Sprint 0 scaffold stub.
  *
@@ -19,7 +27,7 @@ export const rioAgent = new Agent({
     model: {
         id: "openai/gpt-4o-mini" as `${string}/${string}`,
         url: "https://openrouter.ai/api/v1",
-        apiKey: process.env.OPENROUTER_API_KEY ?? "stub-key",
+        apiKey: openRouterApiKey ?? "stub-key",
     },
     memory: new Memory(),
 });

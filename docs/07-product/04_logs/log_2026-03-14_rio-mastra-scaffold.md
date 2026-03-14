@@ -29,5 +29,5 @@
 
 ## [12:00] Final Verification & Closeout
 - **AC Verification**: Confirmed AC1-AC4 are functionally complete with persistent memory wired.
-- **Documentation**: Updated `lessons_learned.md` and `documentation_gaps.md` with Pooler and Mastra-package specific insights.
+- **Documentation**: Updated `lessons_learned.md` and `documentation_gaps.md` with Pooler and Mastra-package-specific insights.
 - **Sprint 7 PRD**: Updated PRD tracking for #167 to `✅ Done`.

@@ -14,7 +14,13 @@
 - **Studio**: Configured `studioBase: "/"` and `swaggerUI: true` to expose the Admin UI.
 - **Verification**: `npm run typecheck` passed for the new architecture.
 
+## [11:10] Debugging Railway Build Failure
+- **Issue**: `mastra build -s` failed with error `{}` because it couldn't find the source files (it defaults to a `mastra/` folder).
+- **Fix**: Added `-d src` to `mastra build` and `mastra dev` commands in `package.json`.
+- **Production Start**: Updated `start` script to point directly to `.mastra/output/index.mjs` and set `MASTRA_STUDIO_PATH` for production Studio support.
+- **Verification**: Local build successful; pushing to Railway for verified deployment.
+
 ## Next Steps
-- Commit and push to `feat/167-rio-mastra-scaffold`.
-- Monitor Railway deployment for the new Studio UI.
-- Verify Playground accessibility.
+- Monitor Railway build.
+- Verify Playground at root `/`.
+- Verify `/health` (Custom Route).

@@ -4,9 +4,9 @@
     "description": "Río AI Community Assistant — Mastra agent service (Sprint 0 scaffold)",
     "type": "module",
     "scripts": {
-        "dev": "mastra dev",
-        "build": "mastra build -s",
-        "start": "mastra start",
+        "dev": "mastra dev -d src",
+        "build": "mastra build -s -d src",
+        "start": "MASTRA_STUDIO_PATH=.mastra/output/studio node .mastra/output/index.mjs",
         "typecheck": "tsc --noEmit",
         "lint": "eslint src --ext .ts"
     },

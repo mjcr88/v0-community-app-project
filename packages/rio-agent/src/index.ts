@@ -1,7 +1,7 @@
 import { Mastra } from "@mastra/core";
 import { PostgresStore } from "@mastra/pg";
 import { registerApiRoute } from "@mastra/core/server";
-import { streamText } from "hono/streaming";
+import { streamSSE } from "hono/streaming";
 import { rioAgent } from "./agents/rio-agent.js";
 
 /**
@@ -29,7 +29,11 @@ export const mastra = new Mastra({
         "rio-agent": rioAgent,
     },
     server: {
-        port: Number(process.env.PORT) || 3001,
+        port: (() => {
+            const port = Number(process.env.PORT) || 3001;
+            if (port < 1 || port > 65535) throw new Error(`Invalid PORT: ${port}`);
+            return port;
+        })(),
         host: "0.0.0.0",
         studioBase: "/", // Mount the Playground/Studio UI at the root
         build: {
@@ -57,7 +61,12 @@ export const mastra = new Mastra({
                 method: "POST",
                 requiresAuth: false,
                 handler: async (c) => {
-                    return streamText(c, async (stream) => {
+                    return streamSSE(c, async (stream) => {
+                        let closed = false;
+                        c.req.raw.signal.addEventListener("abort", () => {
+                            closed = true;
+                        });
+
                         const mockTokens = [
                             "Hola,",
                             " soy",
@@ -70,11 +79,14 @@ export const mastra = new Mastra({
                         ];
 
                         for (const token of mockTokens) {
-                            await stream.write(`data: ${JSON.stringify({ token })}\n\n`);
+                            if (closed) break;
+                            await stream.writeSSE({ data: JSON.stringify({ token }) });
                             await stream.sleep(150);
                         }
 
-                        await stream.write("data: [DONE]\n\n");
+                        if (!closed) {
+                            await stream.writeSSE({ data: "[DONE]" });
+                        }
                     });
                 },
             }),
@@ -86,6 +98,9 @@ export const mastra = new Mastra({
                 method: "GET",
                 requiresAuth: false,
                 handler: async (c) => {
+                    if (process.env.NODE_ENV === "production") {
+                        return c.json({ error: "Not Found" }, 404);
+                    }
                     const mask = (val?: string) => (val ? `${val.slice(0, 4)}...${val.slice(-4)}` : "MISSING");
                     return c.json({
                         RIO_DATABASE_URL: mask(process.env.RIO_DATABASE_URL),

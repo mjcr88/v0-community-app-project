@@ -13,7 +13,8 @@
     "build-storybook": "storybook build",
     "test": "vitest",
     "docs:dev": "cd docs-site && npm start -- --port 3001",
-    "docs:build": "cd docs-site && npm run build"
+    "docs:build": "cd docs-site && npm run build",
+    "dev:agent": "cd packages/rio-agent && npm run dev"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

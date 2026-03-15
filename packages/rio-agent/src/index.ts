@@ -2,7 +2,7 @@ import { Mastra } from "@mastra/core";
 import { PostgresStore } from "@mastra/pg";
 import { registerApiRoute } from "@mastra/core/server";
 import { streamSSE } from "hono/streaming";
-import { rioAgent } from "./agents/rio-agent.js";
+import { rioAgent, memory } from "./agents/rio-agent.js";
 
 /**
  * RioAgent Service — native Mastra implementation.
@@ -61,31 +61,73 @@ export const mastra = new Mastra({
                 method: "POST",
                 requiresAuth: false,
                 handler: async (c) => {
+                    const body = await c.req.json();
+                    const { messages, threadId, resourceId } = body;
+
+                    const tenantId = c.req.header("x-tenant-id");
+                    const userId = c.req.header("x-user-id");
+                    const effectiveThreadId = (threadId || resourceId) as string;
+
+                    if (!effectiveThreadId) {
+                        return c.json({ error: "threadId or resourceId is required for memory isolation" }, 400);
+                    }
+
+                    // Sync thread metadata to ensure RLS columns are populated via DB trigger
+                    try {
+                        const thread = await memory.getThreadById({ threadId: effectiveThreadId });
+                        if (!thread) {
+                            await memory.createThread({
+                                threadId: effectiveThreadId,
+                                resourceId: resourceId || "rio-chat",
+                                metadata: { tenantId, userId },
+                            });
+                        } else if (!thread.metadata?.tenantId || !thread.metadata?.userId) {
+                            await memory.updateThread({
+                                id: effectiveThreadId,
+                                title: thread.title || "New Thread",
+                                metadata: { ...thread.metadata, tenantId, userId },
+                            });
+                        }
+                    } catch (e) {
+                        console.error("[RIO-AGENT] Metadata sync warning:", e);
+                    }
+
+                    // Mastra v1.x .stream() returns a MastraModelOutput object
+                    const result = await rioAgent.stream(messages, {
+                        memory: {
+                            thread: effectiveThreadId,
+                            resource: "rio-chat",
+                            // This metadata will be included in the message content JSON, 
+                            // which our DB trigger parses to populate tenant_id and user_id columns.
+                            metadata: { tenantId, userId },
+                        } as any,
+                    });
+
                     return streamSSE(c, async (stream) => {
                         let closed = false;
                         c.req.raw.signal.addEventListener("abort", () => {
                             closed = true;
                         });
 
-                        const mockTokens = [
-                            "Hola,",
-                            " soy",
-                            " Río.",
-                            " ¿En",
-                            " qué",
-                            " puedo",
-                            " ayudarte",
-                            " hoy?",
-                        ];
+                        try {
+                            // Use the textStream which is a ReadableStream<string>
+                            const reader = result.textStream.getReader();
 
-                        for (const token of mockTokens) {
-                            if (closed) break;
-                            await stream.writeSSE({ data: JSON.stringify({ token }) });
-                            await stream.sleep(150);
-                        }
+                            while (true) {
+                                if (closed) break;
+                                const { done, value } = await reader.read();
+                                if (done) break;
 
-                        if (!closed) {
-                            await stream.writeSSE({ data: "[DONE]" });
+                                if (value) {
+                                    await stream.writeSSE({ data: JSON.stringify({ token: value }) });
+                                }
+                            }
+                        } catch (err) {
+                            console.error("Streaming error:", err);
+                        } finally {
+                            if (!closed) {
+                                await stream.writeSSE({ data: "[DONE]" });
+                            }
                         }
                     });
                 },

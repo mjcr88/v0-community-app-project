@@ -16,6 +16,8 @@ if (!openRouterApiKey && process.env.NODE_ENV !== "development") {
  * correctly inside the Railway service. No tools or memory are wired yet;
  * those are added in Sprint 8 (Foundation).
  */
+export const memory = new Memory();
+
 export const rioAgent = new Agent({
     id: "rio-agent",
     name: "RioAgent",
@@ -30,7 +32,7 @@ export const rioAgent = new Agent({
         url: "https://openrouter.ai/api/v1",
         apiKey: openRouterApiKey ?? "stub-key",
     },
-    memory: new Memory(),
+    memory,
 });
 
 console.log("RioAgent initialized");

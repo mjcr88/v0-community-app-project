@@ -24,6 +24,7 @@
     - **Memory Isolation**: Implemented `threadId` forwarding in BFF and enforced it in the Agent to ensure conversation context isolation.
     - **Request Robustness**: Added 30s timeout with `AbortController` and 504 Gateway Timeout handling in the BFF.
     - **Frontend Polish**: Integrated stable `threadId` in `page.tsx`, removed debug logs, and fixed duplicate text rendering logic.
+    - **RLS Hardening**: Fixed a critical "Cardinal Sin" by enabling RLS on all 27 Mastra tables. Patched it with a database trigger that extracts identity from session variables/metadata to ensure tenant isolation. Verified that message-save failures were caused by trigger-metadata mismatch in Mastra 1.x.
 
 ## Blockers & Errors
 - `TypeError: append is not a function`: Fixed by using `sendMessage` in `@ai-sdk/react` v3.x.
@@ -37,3 +38,23 @@
 ## Lessons Learned
 - Always check the internal Zod schema (`uiMessageChunkSchema`) of the Vercel AI SDK when writing custom proxy routes; it expects specific event sequences (`text-start` -> `text-delta`).
 - Mastra v1.x `stream()` returns an object with nested streams; direct iteration is no longer the standard for text-only proxying.
+
+## 📋 QA Findings: Issue #168 Review
+### Phase 0-1: Alignment & Readiness
+- **PRD Alignment**: [Pass] Features align with the Technical Spike PRD.
+- **Git Strategy**: [Pass] Correct branch hierarchy used.
+- **Test Readiness**: [Pass/Partial] Test page verified; automated E2E gap noted for future sprints.
+
+### Phase 2: Specialized Audit
+- **Security Check**:
+    - [FAIL] **"Cardinal Sin"**: `mastra_*` tables on `nido.dev` have `rowsecurity: false` (RLS disabled).
+    - [PASS] BFF correctly enforces Supabase Auth for Railway agent proxy.
+    - [PASS] No leaked secrets in client-side code.
+- **Vibe Code Check**: [FAIL] due to the RLS policy gap mentioned above.
+- **Performance**: [Pass] Minimal overhead in BFF transformation stream.
+
+### Phase 3: Documentation & Release Planning
+- **Doc Gaps**:
+    - Missing `rio-agent/overview.md`.
+    - Missing API reference for `/health` and `POST /api/chat`.
+- **Release Strategy**: Ready for merge once RLS policy status is clarified/addressed.

@@ -64,10 +64,14 @@ export const mastra = new Mastra({
                     const body = await c.req.json();
                     const { messages, threadId, resourceId } = body;
 
+                    if (!threadId && !resourceId) {
+                        return c.json({ error: "threadId or resourceId is required for memory isolation" }, 400);
+                    }
+
                     // Mastra v1.x .stream() returns a MastraModelOutput object
                     const result = await rioAgent.stream(messages, {
                         memory: {
-                            thread: threadId || resourceId || "default-thread",
+                            thread: threadId || resourceId,
                             resource: "rio-chat",
                         },
                     });

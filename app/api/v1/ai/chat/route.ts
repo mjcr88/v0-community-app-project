@@ -15,24 +15,27 @@ import { errorResponse } from '@/lib/api/response'
  * 4. Transform the Mastra SSE stream format -> Vercel AI SDK stream format.
  */
 export async function POST(req: NextRequest) {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 30000) // 30s timeout
+
     try {
         // 1. Authenticate and extract tenant
         const supabase = await createServerClient()
         const { data: { user }, error: authError } = await supabase.auth.getUser()
 
         if (authError || !user) {
+            clearTimeout(timeoutId)
             return NextResponse.json(
                 { success: false, error: { message: 'Unauthorized', code: 'UNAUTHORIZED' } },
                 { status: 401 }
             )
         }
 
-        // We assume the user metadata holds the tenant_id or we get it from the request body if they belong to multiple
-        // For this spike, we'll try to extract from the request or fallback to parsing from user app_metadata 
         const body = await req.json().catch(() => ({}))
         const tenantId = body.tenantId || user.app_metadata?.tenant_id
 
         if (!tenantId) {
+            clearTimeout(timeoutId)
             return NextResponse.json(
                 { success: false, error: { message: 'Tenant ID required', code: 'BAD_REQUEST' } },
                 { status: 400 }
@@ -40,30 +43,34 @@ export async function POST(req: NextRequest) {
         }
 
         const messages = body.messages || []
+        const threadId = body.threadId
+        const resourceId = body.resourceId || tenantId
 
         // 2. Forward to Railway
-        const railwayUrl = process.env.RIO_RAILWAY_URL || 'http://localhost:3001' // Default to local mastra dev server
+        const railwayUrl = process.env.RIO_RAILWAY_URL || 'http://localhost:3001'
 
         const response = await fetch(`${railwayUrl}/chat`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                // We'll pass the tenantId and userId to the Mastra agent securely via headers or body
                 'x-tenant-id': tenantId,
                 'x-user-id': user.id
             },
-            body: JSON.stringify({ messages })
+            body: JSON.stringify({
+                messages,
+                threadId,
+                resourceId
+            }),
+            signal: controller.signal
         })
+
+        clearTimeout(timeoutId)
 
         if (!response.ok || !response.body) {
             throw new Error(`Railway agent returned ${response.status}`)
         }
 
         // 3. Transform Stream for Vercel AI SDK
-        // Mastra returns `data: {"token":"..."}` (as seen in our mock in index.ts)
-        // Vercel AI SDK `DefaultChatTransport` expects SSE chunks matching `uiMessageChunkSchema`
-        // e.g., `data: {"type":"text-delta","delta":"..."}`
-
         let buffer = ''
         let hasStarted = false
         const msgId = 'msg-' + Date.now().toString()
@@ -74,7 +81,7 @@ export async function POST(req: NextRequest) {
                 buffer += text
 
                 const lines = buffer.split('\n')
-                buffer = lines.pop() || '' // Keep the last incomplete line in the buffer
+                buffer = lines.pop() || ''
 
                 for (const line of lines) {
                     if (line.trim() === '') continue
@@ -90,14 +97,10 @@ export async function POST(req: NextRequest) {
                             if (data.token) {
                                 if (!hasStarted) {
                                     hasStarted = true
-                                    const startData = {
-                                        type: 'text-start',
-                                        id: msgId
-                                    }
+                                    const startData = { type: 'text-start', id: msgId }
                                     controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(startData)}\n\n`))
                                 }
 
-                                // Vercel AI format for uiMessageChunkSchema
                                 const chunkData = {
                                     type: 'text-delta',
                                     id: msgId,
@@ -113,7 +116,6 @@ export async function POST(req: NextRequest) {
             },
             flush(controller) {
                 if (buffer.trim() !== '') {
-                    // process any remaining buffer
                     if (buffer.startsWith('data: ')) {
                         const dataStr = buffer.slice(6)
                         if (dataStr !== '[DONE]') {
@@ -122,10 +124,7 @@ export async function POST(req: NextRequest) {
                                 if (data.token) {
                                     if (!hasStarted) {
                                         hasStarted = true
-                                        const startData = {
-                                            type: 'text-start',
-                                            id: msgId
-                                        }
+                                        const startData = { type: 'text-start', id: msgId }
                                         controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(startData)}\n\n`))
                                     }
                                     const chunkData = {
@@ -146,7 +145,6 @@ export async function POST(req: NextRequest) {
 
         const stream = response.body.pipeThrough(transformStream)
 
-        // 4. Return SSE stream
         return new NextResponse(stream, {
             headers: {
                 'Content-Type': 'text/event-stream',
@@ -156,6 +154,15 @@ export async function POST(req: NextRequest) {
         })
 
     } catch (error) {
+        clearTimeout(timeoutId)
+        if (error instanceof Error && error.name === 'AbortError') {
+            console.error('[API/v1/ai/chat] Request to Railway timed out after 30s')
+            return NextResponse.json(
+                { success: false, error: { message: 'Gateway Timeout connecting to AI agent', code: 'GATEWAY_TIMEOUT' } },
+                { status: 504 }
+            )
+        }
+
         console.error('[API/v1/ai/chat] Error:', error)
         if (error instanceof Error) {
             return errorResponse(error)

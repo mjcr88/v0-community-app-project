@@ -14,6 +14,7 @@ import { useState } from 'react'
 export default function RioSseTestPage({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = use(params)
     const [tenantId, setTenantId] = useState(slug || 'demo-tenant-id') // Initialize with URL slug
+    const [threadId] = useState(() => `thread-${Date.now()}-${Math.random().toString(36).slice(2)}`)
     const [inputValue, setInputValue] = useState('')
 
     const chatHelpers = useChat({
@@ -21,6 +22,7 @@ export default function RioSseTestPage({ params }: { params: Promise<{ slug: str
             api: '/api/v1/ai/chat',
             body: {
                 tenantId,
+                threadId,
             }
         }),
         onError: (err: any) => {
@@ -29,8 +31,6 @@ export default function RioSseTestPage({ params }: { params: Promise<{ slug: str
     })
     const { messages, sendMessage, status, error } = chatHelpers
     const isLoading = status === 'streaming' || status === 'submitted'
-
-    console.log('Current messages state:', messages)
 
     const onSubmit = async (e: any) => {
         e.preventDefault()
@@ -85,10 +85,12 @@ export default function RioSseTestPage({ params }: { params: Promise<{ slug: str
                                             : 'bg-muted'
                                             }`}>
                                             <div className="whitespace-pre-wrap">
-                                                {m.content}
-                                                {m.parts?.filter((p: any) => p.type === 'text').map((p: any, i: number) => (
-                                                    <span key={i}>{p.text}</span>
-                                                ))}
+                                                {m.parts?.length > 0
+                                                    ? m.parts.filter((p: any) => p.type === 'text').map((p: any, i: number) => (
+                                                        <span key={i}>{p.text}</span>
+                                                    ))
+                                                    : m.content
+                                                }
                                             </div>
                                         </div>
 

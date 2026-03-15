@@ -61,31 +61,42 @@ export const mastra = new Mastra({
                 method: "POST",
                 requiresAuth: false,
                 handler: async (c) => {
+                    const body = await c.req.json();
+                    const { messages, threadId, resourceId } = body;
+
+                    // Mastra v1.x .stream() returns a MastraModelOutput object
+                    const result = await rioAgent.stream(messages, {
+                        memory: {
+                            thread: threadId || resourceId || "default-thread",
+                            resource: "rio-chat",
+                        },
+                    });
+
                     return streamSSE(c, async (stream) => {
                         let closed = false;
                         c.req.raw.signal.addEventListener("abort", () => {
                             closed = true;
                         });
 
-                        const mockTokens = [
-                            "Hola,",
-                            " soy",
-                            " Río.",
-                            " ¿En",
-                            " qué",
-                            " puedo",
-                            " ayudarte",
-                            " hoy?",
-                        ];
+                        try {
+                            // Use the textStream which is a ReadableStream<string>
+                            const reader = result.textStream.getReader();
 
-                        for (const token of mockTokens) {
-                            if (closed) break;
-                            await stream.writeSSE({ data: JSON.stringify({ token }) });
-                            await stream.sleep(150);
-                        }
+                            while (true) {
+                                if (closed) break;
+                                const { done, value } = await reader.read();
+                                if (done) break;
 
-                        if (!closed) {
-                            await stream.writeSSE({ data: "[DONE]" });
+                                if (value) {
+                                    await stream.writeSSE({ data: JSON.stringify({ token: value }) });
+                                }
+                            }
+                        } catch (err) {
+                            console.error("Streaming error:", err);
+                        } finally {
+                            if (!closed) {
+                                await stream.writeSSE({ data: "[DONE]" });
+                            }
                         }
                     });
                 },

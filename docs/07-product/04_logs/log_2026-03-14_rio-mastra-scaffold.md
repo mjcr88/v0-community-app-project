@@ -43,10 +43,10 @@
 ## [13:15] Phase 0: Activation & Code Analysis (QA Audit)
 - **PR Review Scan**: Analyzed feedback from CodeRabbit on PR #221.
 - **Critical Findings**:
-    - [ ] **Security**: `/config-check` route exposes masked secrets (DATABASE_URL, API_KEYS) without authentication.
-    - [ ] **Acceptance**: `/api/chat` uses `streamText` (text/plain) instead of `streamSSE` (text/event-stream), potentially breaking client contracts for AC2.
-    - [ ] **Reliability**: `nixpacks.toml` uses `npm install` instead of `npm ci`.
-    - [ ] **Configuration**: `PORT` parsing is loose (`Number() || 3001`).
+    - [x] **Security**: `/config-check` route exposes masked secrets (DATABASE_URL, API_KEYS) without authentication.
+    - [x] **Acceptance**: `/api/chat` uses `streamText` (text/plain) instead of `streamSSE` (text/event-stream), potentially breaking client contracts for AC2.
+    - [x] **Reliability**: `nixpacks.toml` uses `npm install` instead of `npm ci`.
+    - [x] **Configuration**: `PORT` parsing is loose (`Number() || 3001`).
 - **Resolved Findings**:
     - [x] `@mastra/core` pinned to `^1.13.2`.
     - [x] `DATABASE_URL` renamed to `RIO_DATABASE_URL` with `requireEnv` validation.
@@ -64,9 +64,9 @@
 
 ## [13:25] Phase 2: Specialized Audit
 - **Security Findings**:
-    - 🚩 **Critical**: `POST /api/chat` uses `streamText` which defaults to `text/plain`. Client expects `text/event-stream`.
-    - 🚩 **Critical**: `GET /api/config-check` is unauthenticated and returns masked sensitive data (`RIO_DATABASE_URL`).
-    - 🚩 **High**: `nixpacks.toml` uses `npm install` which risks non-deterministic builds.
+    - ✅ **Resolved**: `POST /api/chat` uses `streamSSE` correctly setting `text/event-stream`.
+    - ✅ **Resolved**: `GET /api/config-check` is unauthenticated but returns 404 in production.
+    - ✅ **Resolved**: `nixpacks.toml` uses `npm ci` ensuring deterministic builds.
 - **Vibe Code Check**: FAIL
     - **Cardinal Sins Found**:
         - ✅ Client-side DB access: Not found (Agent logic is server-side).
@@ -82,8 +82,8 @@
     - [ ] Missing API Reference for `GET /health`, `POST /api/chat`.
     - [ ] Missing schema docs for `mastra_threads`, `mastra_messages`.
 - **AC Tracker Verification**:
-    - AC1 (Railway Health): ✅ Functionally pass, but hardening required.
-    - AC2 (SSE Pipeline): ⚠️ Partial. streaming works, but incorrect Content-Type will break standard SSE clients.
+    - AC1 (Railway Health): ✅ Functionally pass, hardened.
+    - AC2 (SSE Pipeline): ✅ Pass. Streaming works with correct `text/event-stream` Content-Type.
 - **Lessons Learned**:
     - Documented Supabase Transaction Pooler (port 6543) preference for local dev.
     - Documented `@mastra/memory` package extraction from core.

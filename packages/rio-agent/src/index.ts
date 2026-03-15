@@ -101,11 +101,11 @@ export const mastra = new Mastra({
                     if (process.env.NODE_ENV === "production") {
                         return c.json({ error: "Not Found" }, 404);
                     }
-                    const mask = (val?: string) => (val ? `${val.slice(0, 4)}...${val.slice(-4)}` : "MISSING");
+                    const present = (val?: string) => (val ? "SET" : "MISSING");
                     return c.json({
-                        RIO_DATABASE_URL: mask(process.env.RIO_DATABASE_URL),
-                        OPENROUTER_API_KEY: mask(process.env.OPENROUTER_API_KEY),
-                        SUPABASE_URL: mask(process.env.SUPABASE_URL),
+                        RIO_DATABASE_URL: present(process.env.RIO_DATABASE_URL),
+                        OPENROUTER_API_KEY: present(process.env.OPENROUTER_API_KEY),
+                        SUPABASE_URL: present(process.env.SUPABASE_URL),
                         NODE_ENV: process.env.NODE_ENV || "not set",
                         PORT: process.env.PORT || "not set",
                     });
